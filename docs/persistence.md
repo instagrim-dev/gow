@@ -504,19 +504,15 @@ CREATE TABLE holdout_leakage_check (
   holdout_set_id TEXT NOT NULL REFERENCES holdout_set(id),
   normalization_revision_id TEXT NOT NULL REFERENCES normalization_revision(id),
   checked_scope TEXT NOT NULL CHECK (checked_scope IN ('training_sources', 'training_evidence')),
-  failure_basis TEXT NOT NULL CHECK (failure_basis IN ('pending', 'no_overlap', 'source_overlap', 'evidence_overlap')),
+  failure_basis TEXT NOT NULL CHECK (failure_basis IN ('no_overlap', 'source_overlap', 'evidence_overlap')),
   overlap_count INTEGER NOT NULL DEFAULT 0,
-  status TEXT NOT NULL CHECK (status IN ('pending', 'passed', 'failed')),
+  status TEXT NOT NULL CHECK (status IN ('passed', 'failed')),
   checked_at TEXT NOT NULL,
   CHECK (
-    (checked_scope = 'training_sources' AND failure_basis IN ('pending', 'no_overlap', 'source_overlap')) OR
-    (checked_scope = 'training_evidence' AND failure_basis IN ('pending', 'no_overlap', 'evidence_overlap'))
+    (checked_scope = 'training_sources' AND failure_basis IN ('no_overlap', 'source_overlap')) OR
+    (checked_scope = 'training_evidence' AND failure_basis IN ('no_overlap', 'evidence_overlap'))
   ),
   CHECK (
-    (status = 'pending' AND (
-      (overlap_count = 0 AND failure_basis = 'pending') OR
-      (overlap_count > 0 AND failure_basis IN ('source_overlap', 'evidence_overlap'))
-    )) OR
     (status = 'passed' AND failure_basis = 'no_overlap' AND overlap_count = 0) OR
     (status = 'failed' AND failure_basis IN ('source_overlap', 'evidence_overlap') AND overlap_count > 0)
   ),
@@ -547,20 +543,16 @@ BEGIN
   END;
 END;
 
-CREATE TRIGGER holdout_leakage_check_overlap_after_insert
-AFTER INSERT ON holdout_leakage_check_overlap
+CREATE TRIGGER holdout_leakage_check_overlap_immutable_update
+BEFORE UPDATE ON holdout_leakage_check_overlap
 BEGIN
-  UPDATE holdout_leakage_check
-  SET overlap_count = overlap_count + 1
-  WHERE id = NEW.holdout_leakage_check_id;
+  SELECT RAISE(ABORT, 'holdout_leakage_check_overlap rows are immutable');
 END;
 
-CREATE TRIGGER holdout_leakage_check_overlap_after_delete
-AFTER DELETE ON holdout_leakage_check_overlap
+CREATE TRIGGER holdout_leakage_check_overlap_immutable_delete
+BEFORE DELETE ON holdout_leakage_check_overlap
 BEGIN
-  UPDATE holdout_leakage_check
-  SET overlap_count = overlap_count - 1
-  WHERE id = OLD.holdout_leakage_check_id;
+  SELECT RAISE(ABORT, 'holdout_leakage_check_overlap rows are immutable');
 END;
 
 -- Evaluation and baselines
@@ -650,13 +642,15 @@ CREATE TABLE evaluation_metric (
   metric_scale TEXT NOT NULL CHECK (metric_scale IN ('numeric', 'ordinal', 'categorical')),
   numeric_value REAL,
   ordinal_value TEXT,
+  ordinal_scale_key TEXT,
+  ordinal_scale_version TEXT,
   categorical_value TEXT,
   comparator TEXT, -- baseline id/name
   created_at TEXT NOT NULL,
   CHECK (
-    (metric_scale = 'numeric' AND numeric_value IS NOT NULL AND ordinal_value IS NULL AND categorical_value IS NULL) OR
-    (metric_scale = 'ordinal' AND numeric_value IS NULL AND ordinal_value IS NOT NULL AND categorical_value IS NULL) OR
-    (metric_scale = 'categorical' AND numeric_value IS NULL AND ordinal_value IS NULL AND categorical_value IS NOT NULL)
+    (metric_scale = 'numeric' AND numeric_value IS NOT NULL AND ordinal_value IS NULL AND ordinal_scale_key IS NULL AND ordinal_scale_version IS NULL AND categorical_value IS NULL) OR
+    (metric_scale = 'ordinal' AND numeric_value IS NULL AND ordinal_value IS NOT NULL AND ordinal_scale_key IS NOT NULL AND ordinal_scale_version IS NOT NULL AND categorical_value IS NULL) OR
+    (metric_scale = 'categorical' AND numeric_value IS NULL AND ordinal_value IS NULL AND ordinal_scale_key IS NULL AND ordinal_scale_version IS NULL AND categorical_value IS NOT NULL)
   )
 );
 
@@ -718,9 +712,10 @@ CREATE TABLE success_invariant_failure_invariant (
 - `holdout_leakage_check` records the pass/fail result for a
   `holdout_set`/`normalization_revision` pair; generation and holdout evaluation
   reference that row rather than relying on narrative notes.
-- Leakage checks are written as `pending`, overlap detail rows are added if
-  needed, and the parent row is finalized to `passed`/`failed` only when the
-  typed overlap constraints are satisfied.
+- Leakage checks are persisted only once their result is finalized; repositories
+  compute the overlap set first, then write the finalized parent row
+  (`overlap_count` included) plus any immutable overlap-detail rows in the same
+  transaction.
 - `holdout_leakage_check_overlap` stores the concrete overlapping source/evidence
   rows when a leakage check fails, so audits can show exactly what violated the
   split.
