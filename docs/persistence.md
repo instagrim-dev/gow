@@ -392,11 +392,16 @@ CREATE TRIGGER invariant_state_transition_validate_insert
 BEFORE INSERT ON invariant_state_transition
 BEGIN
   SELECT CASE
-    WHEN NEW.transition_seq <> COALESCE((
+    WHEN COALESCE((
       SELECT itc.last_transition_seq
       FROM invariant_transition_counter itc
       WHERE itc.invariant_id = NEW.invariant_id
-    ), -1) THEN RAISE(ABORT, 'transition_seq must match the atomically allocated invariant counter')
+    ), 0) = 0 THEN RAISE(ABORT, 'transition_seq requires a prior counter allocation')
+    WHEN NEW.transition_seq <> (
+      SELECT itc.last_transition_seq
+      FROM invariant_transition_counter itc
+      WHERE itc.invariant_id = NEW.invariant_id
+    ) THEN RAISE(ABORT, 'transition_seq must match the atomically allocated invariant counter')
     WHEN NEW.from_state <> COALESCE((
       SELECT t.to_state
       FROM invariant_state_transition t
@@ -651,6 +656,25 @@ END;
 
 CREATE TABLE evaluation_metric (
   id TEXT PRIMARY KEY,
+  evaluation_id TEXT NOT NULL REFERENCES evaluation(id),
+  metric_name TEXT NOT NULL,
+  metric_scale TEXT NOT NULL CHECK (metric_scale IN ('numeric', 'ordinal', 'categorical')),
+  numeric_value REAL,
+  ordinal_value TEXT,
+  ordinal_scale_key TEXT,
+  ordinal_scale_version TEXT,
+  categorical_value TEXT,
+  comparator TEXT, -- baseline id/name
+  created_at TEXT NOT NULL,
+  CHECK (
+    (metric_scale = 'numeric' AND numeric_value IS NOT NULL AND ordinal_value IS NULL AND ordinal_scale_key IS NULL AND ordinal_scale_version IS NULL AND categorical_value IS NULL) OR
+    (metric_scale = 'ordinal' AND numeric_value IS NULL AND ordinal_value IS NOT NULL AND ordinal_scale_key IS NOT NULL AND ordinal_scale_version IS NOT NULL AND categorical_value IS NULL) OR
+    (metric_scale = 'categorical' AND numeric_value IS NULL AND ordinal_value IS NULL AND ordinal_scale_key IS NULL AND ordinal_scale_version IS NULL AND categorical_value IS NOT NULL)
+  )
+);
+
+CREATE TABLE evaluation_run_metric (
+  id TEXT PRIMARY KEY,
   evaluation_run_id TEXT NOT NULL REFERENCES evaluation_run(id),
   metric_name TEXT NOT NULL,
   metric_scale TEXT NOT NULL CHECK (metric_scale IN ('numeric', 'ordinal', 'categorical')),
@@ -726,10 +750,9 @@ CREATE TABLE success_invariant_failure_invariant (
 - `holdout_leakage_check` records the pass/fail result for a
   `holdout_set`/`normalization_revision` pair; generation and holdout evaluation
   reference that row rather than relying on narrative notes.
-- Leakage checks are persisted only once their result is finalized; repositories
-  compute the overlap set first, then write the finalized parent row
-  (`overlap_count` included) plus any immutable overlap-detail rows in the same
-  transaction.
+- Leakage checks are persisted as finalized results only: passed checks write the
+  parent row alone with `overlap_count = 0`, while failed checks write the
+  parent row plus immutable overlap-detail rows in the same transaction.
 - `holdout_leakage_check_overlap` stores the concrete overlapping source/evidence
   rows when a leakage check fails, so audits can show exactly what violated the
   split.
@@ -742,5 +765,6 @@ CREATE TABLE success_invariant_failure_invariant (
 ## Experiment comparison
 
 - Compare runs by `problem_id`, revision lineage, provider role/model, and baseline type.
-- Store metrics in normalized `evaluation_metric` rows rather than opaque JSON.
+- Store proposal-level metrics in `evaluation_metric`, run aggregates in
+  `evaluation_run_metric`, rather than opaque JSON.
 - Open-ended model raw payloads can be retained in optional side tables (`provider_payload_json`) only for forensic replay, never as primary query surface.

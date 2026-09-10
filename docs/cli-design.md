@@ -170,7 +170,8 @@ Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statu
   - `evaluation_run`
   - `evaluation`
   - `evaluation_holdout_match` rows when scoring holdout-family/source recovery
-  - `evaluation_metric`
+  - `evaluation_metric` (per-evaluation / per-proposal)
+  - `evaluation_run_metric` (run-level aggregates and baseline comparisons)
   - `holdout_set` (when creating from `--holdout-source-id`/`--holdout-family-label` inputs for holdout mode)
   - baseline comparison rows
 - Idempotency: new evaluation run per invocation.
