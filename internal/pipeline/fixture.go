@@ -175,7 +175,7 @@ func (a *App) SeedMechanismFixtureForProblem(ctx context.Context, input SeedFixt
 		ID:          domain.NewRunID(now),
 		ProblemID:   input.ProblemID,
 		Operation:   "mechanism seed-fixture",
-		Status:      domain.RunStatusInitialized,
+		Status:      domain.RunStatusRunning,
 		InputRef:    "fixture:" + filepath.Base(input.Path),
 		ToolName:    "newf",
 		ToolVersion: a.version,
@@ -202,6 +202,7 @@ func (a *App) SeedMechanismFixtureForProblem(ctx context.Context, input SeedFixt
 		ObservedAt:  now,
 	})
 	if err != nil {
+		a.failRun(ctx, repoStore, ingestRun.ID, err)
 		return SeedFixtureResponse{}, err
 	}
 
@@ -211,11 +212,17 @@ func (a *App) SeedMechanismFixtureForProblem(ctx context.Context, input SeedFixt
 		SnapshotID: admission.Snapshot.ID,
 	}, now)
 	if err != nil {
+		a.failRun(ctx, repoStore, ingestRun.ID, err)
 		return SeedFixtureResponse{}, err
 	}
 
 	result, err := repoStore.PersistNormalization(ctx, normInput)
 	if err != nil {
+		a.failRun(ctx, repoStore, ingestRun.ID, err)
+		return SeedFixtureResponse{}, err
+	}
+
+	if err := a.finalizeRun(ctx, repoStore, ingestRun.ID, nil); err != nil {
 		return SeedFixtureResponse{}, err
 	}
 

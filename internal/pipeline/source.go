@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -56,7 +57,7 @@ func (a *App) IngestSources(ctx context.Context, input IngestInput) (IngestRespo
 		ID:          domain.NewRunID(now),
 		ProblemID:   input.ProblemID,
 		Operation:   "ingest",
-		Status:      domain.RunStatusCompleted,
+		Status:      domain.RunStatusRunning,
 		InputRef:    "ingest",
 		ToolName:    "newf",
 		ToolVersion: a.version,
@@ -107,10 +108,17 @@ func (a *App) IngestSources(ctx context.Context, input IngestInput) (IngestRespo
 	sort.Slice(results, func(i, j int) bool { return results[i].Input < results[j].Input })
 
 	successCount := 0
+	var failures []string
 	for _, result := range results {
 		if result.Status != "failed" {
 			successCount++
+		} else {
+			failures = append(failures, fmt.Sprintf("%s: %s", result.Input, result.Error))
 		}
+	}
+
+	if err := a.finalizeRun(ctx, repoStore, run.ID, failures); err != nil {
+		return IngestResponse{}, err
 	}
 
 	return IngestResponse{

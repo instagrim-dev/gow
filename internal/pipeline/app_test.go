@@ -155,6 +155,8 @@ type fakeProblemStore struct {
 	createdProblem          *domain.NewProblem
 	createdCreateRun        *domain.NewRun
 	createdRun              *domain.NewRun
+	updatedRunStatus        *domain.RunStatus
+	updatedRunSummary       *string
 }
 
 func (f *fakeProblemStore) Close() error { return nil }
@@ -217,6 +219,12 @@ func (f *fakeProblemStore) CreateRun(_ context.Context, run domain.NewRun) (doma
 
 func (f *fakeProblemStore) GetProblem(context.Context, string) (domain.Problem, error) {
 	return domain.Problem{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) UpdateRunStatus(_ context.Context, _ string, status domain.RunStatus, _ time.Time, summary *string) error {
+	f.updatedRunStatus = &status
+	f.updatedRunSummary = summary
+	return nil
 }
 
 func (f *fakeProblemStore) ListProblems(context.Context) ([]domain.Problem, error) {

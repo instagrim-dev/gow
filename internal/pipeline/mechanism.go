@@ -89,7 +89,7 @@ func (a *App) buildAndPersistSignature(ctx context.Context, repoStore problemSto
 		ID:          domain.NewRunID(now),
 		ProblemID:   detail.Approach.ProblemID,
 		Operation:   "mechanism signature",
-		Status:      domain.RunStatusInitialized,
+		Status:      domain.RunStatusRunning,
 		InputRef:    "mechanism:" + mechanismID,
 		ToolName:    "newf",
 		ToolVersion: a.version,
@@ -103,7 +103,11 @@ func (a *App) buildAndPersistSignature(ctx context.Context, repoStore problemSto
 	record := signatureRecord(sig, mechanismID, run.ID, now)
 	result, err := repoStore.PersistSignature(ctx, record)
 	if err != nil {
+		a.failRun(ctx, repoStore, run.ID, err)
 		return store.SignatureRecord{}, false, err
+	}
+	if ferr := a.finalizeRun(ctx, repoStore, run.ID, nil); ferr != nil {
+		return store.SignatureRecord{}, false, ferr
 	}
 	return result.Record, result.Created, nil
 }
@@ -154,7 +158,7 @@ func (a *App) CompareMechanisms(ctx context.Context, input CompareInput) (Compar
 			ID:          domain.NewRunID(now),
 			ProblemID:   detail.Approach.ProblemID,
 			Operation:   "mechanism compare",
-			Status:      domain.RunStatusInitialized,
+			Status:      domain.RunStatusRunning,
 			InputRef:    "compare:" + input.MechanismAID + ":" + input.MechanismBID,
 			ToolName:    "newf",
 			ToolVersion: a.version,
@@ -186,6 +190,10 @@ func (a *App) CompareMechanisms(ctx context.Context, input CompareInput) (Compar
 			})
 		}
 		if err := repoStore.PersistComparison(ctx, rec); err != nil {
+			a.failRun(ctx, repoStore, run.ID, err)
+			return CompareResponse{}, err
+		}
+		if err := a.finalizeRun(ctx, repoStore, run.ID, nil); err != nil {
 			return CompareResponse{}, err
 		}
 		resp.ComparisonRunID = comparisonID

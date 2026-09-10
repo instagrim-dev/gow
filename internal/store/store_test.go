@@ -464,6 +464,90 @@ func seedProblemForSourceTests(t *testing.T, ctx context.Context, repo *Store) (
 	return problemID, ingestRunID
 }
 
+func TestUpdateRunStatusTransitionsLifecycle(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	store := openTestStore(t)
+	defer store.Close()
+
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	runID := domain.NewRunID(now)
+	problem := domain.NewProblem{
+		ID:             domain.NewProblemID(now),
+		Slug:           "run-status-lifecycle",
+		Statement:      "run status lifecycle",
+		Status:         domain.ProblemStatusActive,
+		CreatedAt:      now,
+		CreatedByRunID: runID,
+	}
+	run := domain.NewRun{
+		ID:          runID,
+		ProblemID:   problem.ID,
+		Operation:   "ingest",
+		Status:      domain.RunStatusRunning,
+		InputRef:    "ingest",
+		ToolName:    "newf",
+		ToolVersion: "dev",
+		StartedAt:   now,
+		CompletedAt: now,
+	}
+	if _, _, err := store.CreateProblemWithRun(ctx, problem, run); err != nil {
+		t.Fatalf("CreateProblemWithRun() error = %v", err)
+	}
+
+	summary := "1 item(s) failed: a: boom"
+	later := now.Add(time.Second)
+	if err := store.UpdateRunStatus(ctx, runID, domain.RunStatusFailed, later, &summary); err != nil {
+		t.Fatalf("UpdateRunStatus() error = %v", err)
+	}
+
+	got, err := store.GetRun(ctx, runID)
+	if err != nil {
+		t.Fatalf("GetRun() error = %v", err)
+	}
+	if got.Status != domain.RunStatusFailed {
+		t.Fatalf("GetRun().Status = %q, want %q", got.Status, domain.RunStatusFailed)
+	}
+	if got.ErrorSummary == nil || *got.ErrorSummary != summary {
+		t.Fatalf("GetRun().ErrorSummary = %v, want %q", got.ErrorSummary, summary)
+	}
+	if !got.CompletedAt.Equal(later) {
+		t.Fatalf("GetRun().CompletedAt = %v, want %v", got.CompletedAt, later)
+	}
+
+	// Clearing error_summary on a subsequent completed transition must persist nil.
+	if err := store.UpdateRunStatus(ctx, runID, domain.RunStatusCompleted, later, nil); err != nil {
+		t.Fatalf("UpdateRunStatus(completed) error = %v", err)
+	}
+	got, err = store.GetRun(ctx, runID)
+	if err != nil {
+		t.Fatalf("GetRun() error = %v", err)
+	}
+	if got.Status != domain.RunStatusCompleted {
+		t.Fatalf("GetRun().Status = %q, want completed", got.Status)
+	}
+	if got.ErrorSummary != nil {
+		t.Fatalf("GetRun().ErrorSummary = %v, want nil", got.ErrorSummary)
+	}
+}
+
+func TestUpdateRunStatusRejectsUnknownRunAndStatus(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	store := openTestStore(t)
+	defer store.Close()
+
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	if err := store.UpdateRunStatus(ctx, domain.NewRunID(now), domain.RunStatusCompleted, now, nil); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("UpdateRunStatus(missing run) error = %v, want ErrNotFound", err)
+	}
+	if err := store.UpdateRunStatus(ctx, domain.NewRunID(now), domain.RunStatus("bogus"), now, nil); err == nil {
+		t.Fatal("UpdateRunStatus(bogus status) succeeded, want error")
+	}
+}
+
 func openTestStore(t *testing.T, opts ...Option) *Store {
 	t.Helper()
 

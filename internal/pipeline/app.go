@@ -3,8 +3,11 @@ package pipeline
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/instagrim-dev/newf/internal/config"
@@ -28,6 +31,7 @@ type problemStore interface {
 	NextProblemSlug(context.Context, string) (string, error)
 	CreateProblemWithRun(context.Context, domain.NewProblem, domain.NewRun) (domain.Problem, domain.Run, error)
 	CreateRun(context.Context, domain.NewRun) (domain.Run, error)
+	UpdateRunStatus(context.Context, string, domain.RunStatus, time.Time, *string) error
 	GetProblem(context.Context, string) (domain.Problem, error)
 	ListProblems(context.Context) ([]domain.Problem, error)
 	GetRun(context.Context, string) (domain.Run, error)
@@ -338,4 +342,32 @@ func runView(run domain.Run) RunView {
 		CompletedAt:  run.CompletedAt.Format(time.RFC3339Nano),
 		ErrorSummary: run.ErrorSummary,
 	}
+}
+
+// finalizeRun transitions a just-executed run to its terminal lifecycle state so
+// `run show` reflects the real command outcome instead of the status chosen
+// before work happened. An empty failures slice yields `completed`; otherwise
+// the run is marked `failed` with a deterministic, order-independent
+// error_summary aggregating the failing items. The failure detail lives at the
+// per-item result level; the run-level summary is a stable count + joined
+// reasons so automation treating `run show` as source-of-truth is not misled.
+func (a *App) finalizeRun(ctx context.Context, repoStore problemStore, runID string, failures []string) error {
+	if len(failures) == 0 {
+		return repoStore.UpdateRunStatus(ctx, runID, domain.RunStatusCompleted, a.now(), nil)
+	}
+	sorted := make([]string, len(failures))
+	copy(sorted, failures)
+	sort.Strings(sorted)
+	summary := fmt.Sprintf("%d item(s) failed: %s", len(sorted), strings.Join(sorted, "; "))
+	return repoStore.UpdateRunStatus(ctx, runID, domain.RunStatusFailed, a.now(), &summary)
+}
+
+// failRun marks a single-outcome run as failed with the error as its summary. It
+// is best-effort on an already-failing path: the caller returns the original
+// error regardless, so a telemetry-write failure here must not mask the real
+// cause. Used by commands that either fully succeed or return early with an
+// error, where a per-item failures slice does not apply.
+func (a *App) failRun(ctx context.Context, repoStore problemStore, runID string, cause error) {
+	summary := cause.Error()
+	_ = repoStore.UpdateRunStatus(ctx, runID, domain.RunStatusFailed, a.now(), &summary)
 }

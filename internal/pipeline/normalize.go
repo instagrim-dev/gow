@@ -85,7 +85,7 @@ func (a *App) Normalize(ctx context.Context, input NormalizeInput) (NormalizeRes
 		ID:          domain.NewRunID(now),
 		ProblemID:   input.ProblemID,
 		Operation:   "normalize",
-		Status:      domain.RunStatusCompleted,
+		Status:      domain.RunStatusRunning,
 		InputRef:    normalizeInputRef(input),
 		ToolName:    "newf",
 		ToolVersion: a.version,
@@ -117,6 +117,16 @@ func (a *App) Normalize(ctx context.Context, input NormalizeInput) (NormalizeRes
 	sort.Slice(response.Results, func(i, j int) bool {
 		return response.Results[i].SnapshotID < response.Results[j].SnapshotID
 	})
+
+	var failures []string
+	for _, result := range response.Results {
+		if result.Status == "failed" {
+			failures = append(failures, fmt.Sprintf("%s: %s", result.SnapshotID, result.Message))
+		}
+	}
+	if err := a.finalizeRun(ctx, repoStore, run.ID, failures); err != nil {
+		return NormalizeResponse{}, err
+	}
 
 	return response, nil
 }

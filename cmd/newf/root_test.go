@@ -215,6 +215,44 @@ func TestCLIIngestReportsPerInputFailures(t *testing.T) {
 	if !failed {
 		t.Fatalf("expected at least one failed ingest result: %#v", result["results"])
 	}
+
+	// Run-level telemetry must reflect the per-item failure, not report a
+	// completed run for an operation that partially failed.
+	runID := result["run_id"].(string)
+	runShow := runCLIJSON(t, []string{"--db", dbPath, "--json", "run", "show", runID})
+	run := runShow["run"].(map[string]any)
+	if run["status"] != "failed" {
+		t.Fatalf("run show status = %v, want failed", run["status"])
+	}
+	if summary, ok := run["error_summary"].(string); !ok || summary == "" {
+		t.Fatalf("run show error_summary = %v, want non-empty", run["error_summary"])
+	}
+}
+
+func TestCLIIngestSuccessReportsCompletedRun(t *testing.T) {
+	t.Parallel()
+
+	workspace := t.TempDir()
+	dbPath := filepath.Join(workspace, ".newf", "newf.db")
+	validFile := filepath.Join(workspace, "ok.md")
+	if err := os.WriteFile(validFile, []byte("ok"), 0o644); err != nil {
+		t.Fatalf("WriteFile(valid) error = %v", err)
+	}
+
+	initResponse := runCLIJSON(t, []string{"--db", dbPath, "--json", "init", "Problem"})
+	problemID := initResponse["problem_id"].(string)
+
+	result := runCLIJSON(t, []string{"--db", dbPath, "--json", "ingest", validFile, "--problem", problemID})
+	runID := result["run_id"].(string)
+
+	runShow := runCLIJSON(t, []string{"--db", dbPath, "--json", "run", "show", runID})
+	run := runShow["run"].(map[string]any)
+	if run["status"] != "completed" {
+		t.Fatalf("run show status = %v, want completed", run["status"])
+	}
+	if run["error_summary"] != nil {
+		t.Fatalf("run show error_summary = %v, want nil for a clean run", run["error_summary"])
+	}
 }
 
 func repoRoot(t *testing.T) string {

@@ -363,6 +363,38 @@ WHERE id = ?
 	return run, nil
 }
 
+// UpdateRunStatus transitions a run to a terminal (or running) lifecycle state
+// after execution, recording completed_at and an optional error_summary. Run
+// status is otherwise write-once at creation; this is the only mutation path,
+// so run telemetry (`run show`) can model `running` -> `completed`/`failed`
+// instead of being frozen at the value chosen before work happened.
+func (s *Store) UpdateRunStatus(ctx context.Context, id string, status domain.RunStatus, completedAt time.Time, errorSummary *string) error {
+	if err := domain.ValidateRunID(id); err != nil {
+		return err
+	}
+	switch status {
+	case domain.RunStatusInitialized, domain.RunStatusRunning, domain.RunStatusCompleted, domain.RunStatusFailed:
+	default:
+		return fmt.Errorf("invalid run status %q", status)
+	}
+
+	result, err := s.db.ExecContext(ctx, `
+UPDATE runs SET status = ?, completed_at = ?, error_summary = ?
+WHERE id = ?
+`, status, formatTime(completedAt.UTC()), errorSummary, id)
+	if err != nil {
+		return err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return fmt.Errorf("%w: run %s", ErrNotFound, id)
+	}
+	return nil
+}
+
 type SnapshotAdmission struct {
 	ProblemID   string
 	Kind        domain.SourceKind

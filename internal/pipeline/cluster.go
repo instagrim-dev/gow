@@ -107,7 +107,7 @@ func (a *App) BuildClustering(ctx context.Context, input ClusterBuildInput) (Clu
 		ID:          domain.NewRunID(now),
 		ProblemID:   input.ProblemID,
 		Operation:   "cluster build",
-		Status:      domain.RunStatusInitialized,
+		Status:      domain.RunStatusRunning,
 		InputRef:    "problem:" + input.ProblemID,
 		ToolName:    "newf",
 		ToolVersion: a.version,
@@ -121,6 +121,10 @@ func (a *App) BuildClustering(ctx context.Context, input ClusterBuildInput) (Clu
 	record := clusterRunRecord(clustering, input.ProblemID, run.ID, now)
 	result, err := repoStore.PersistClusterRun(ctx, record)
 	if err != nil {
+		a.failRun(ctx, repoStore, run.ID, err)
+		return ClusterBuildResponse{}, err
+	}
+	if err := a.finalizeRun(ctx, repoStore, run.ID, nil); err != nil {
 		return ClusterBuildResponse{}, err
 	}
 
@@ -387,7 +391,7 @@ func (a *App) BuildFailureSpace(ctx context.Context, input FailureSpaceBuildInpu
 		ID:          domain.NewRunID(now),
 		ProblemID:   input.ProblemID,
 		Operation:   "failure-space build",
-		Status:      domain.RunStatusInitialized,
+		Status:      domain.RunStatusRunning,
 		InputRef:    "cluster_run:" + clusterRunID,
 		ToolName:    "newf",
 		ToolVersion: a.version,
@@ -424,6 +428,10 @@ func (a *App) BuildFailureSpace(ctx context.Context, input FailureSpaceBuildInpu
 
 	result, err := repoStore.PersistFailureSpace(ctx, record)
 	if err != nil {
+		a.failRun(ctx, repoStore, run.ID, err)
+		return FailureSpaceBuildResponse{}, err
+	}
+	if err := a.finalizeRun(ctx, repoStore, run.ID, nil); err != nil {
 		return FailureSpaceBuildResponse{}, err
 	}
 
