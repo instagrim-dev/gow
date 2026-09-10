@@ -15,6 +15,10 @@ import (
 // failure path is observable.
 type failingMiner struct{}
 
+func (failingMiner) Identity() provider.MinerIdentity {
+	return provider.MinerIdentity{ContractVersion: provider.InvariantMinerVersion, ProviderName: "fixture", ProviderVersion: "v1", ModelName: "failing-fixture"}
+}
+
 func (failingMiner) Mine(context.Context, provider.MiningRequest) (provider.MiningResponse, error) {
 	return provider.MiningResponse{}, errors.New("simulated miner transport failure")
 }

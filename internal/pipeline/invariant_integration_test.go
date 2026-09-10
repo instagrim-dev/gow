@@ -19,6 +19,13 @@ type dataDrivenMiner struct {
 	obstruction bool
 }
 
+func (dataDrivenMiner) Identity() provider.MinerIdentity {
+	return provider.MinerIdentity{
+		ContractVersion: provider.InvariantMinerVersion,
+		ProviderName:    "fixture", ProviderVersion: "v1", ModelName: "deterministic-fixture",
+	}
+}
+
 func (m dataDrivenMiner) Mine(_ context.Context, req provider.MiningRequest) (provider.MiningResponse, error) {
 	var id domain.CanonicalID
 	for _, f := range req.Families {
@@ -41,6 +48,31 @@ func (m dataDrivenMiner) Mine(_ context.Context, req provider.MiningRequest) (pr
 	}
 	return provider.MiningResponse{
 		Proposals:       proposals,
+		Metadata:        provider.Metadata{ProviderName: "fixture", ProviderVersion: "v1", ModelName: "deterministic-fixture", SchemaVersion: invariant.PredicateSchemaV1},
+		RequestPayload:  "req",
+		ResponsePayload: "resp",
+	}, nil
+}
+
+// outcomeReadingMiner proposes a predicate that reads the outcome axis. Such a
+// predicate matches the support cohort's own labels by definition and must be
+// rejected at mine-time (F2), failing the run rather than being stored.
+type outcomeReadingMiner struct{}
+
+func (outcomeReadingMiner) Identity() provider.MinerIdentity {
+	return provider.MinerIdentity{ContractVersion: provider.InvariantMinerVersion, ProviderName: "fixture", ProviderVersion: "v1", ModelName: "deterministic-fixture"}
+}
+
+func (outcomeReadingMiner) Mine(_ context.Context, _ provider.MiningRequest) (provider.MiningResponse, error) {
+	return provider.MiningResponse{
+		Proposals: []provider.CandidateProposal{{
+			Predicate: invariant.Predicate{
+				Schema: invariant.PredicateSchemaV1,
+				Root:   invariant.Node{Op: invariant.OpIn, Field: invariant.FieldOutcome, Values: []string{"failure", "partial_failure"}},
+			},
+			Statement:        "failures have a failure outcome",
+			AbstractionLevel: "mechanism",
+		}},
 		Metadata:        provider.Metadata{ProviderName: "fixture", ProviderVersion: "v1", ModelName: "deterministic-fixture", SchemaVersion: invariant.PredicateSchemaV1},
 		RequestPayload:  "req",
 		ResponsePayload: "resp",
@@ -158,5 +190,173 @@ func TestIntegrationInvariantMineIdempotentReMine(t *testing.T) {
 	}
 	if !third.Created {
 		t.Fatal("changing min-support must create a new revision")
+	}
+}
+
+// unknownTermMiner proposes a predicate whose canonical_id is syntactically
+// valid but absent from the pinned vocabulary. ValidateReferences must reject
+// it at mine-time so it cannot evaluate to a permanent violates/unknown (F3).
+type unknownTermMiner struct{}
+
+func (unknownTermMiner) Identity() provider.MinerIdentity {
+	return provider.MinerIdentity{ContractVersion: provider.InvariantMinerVersion, ProviderName: "fixture", ProviderVersion: "v1", ModelName: "deterministic-fixture"}
+}
+
+func (unknownTermMiner) Mine(_ context.Context, _ provider.MiningRequest) (provider.MiningResponse, error) {
+	return provider.MiningResponse{
+		Proposals: []provider.CandidateProposal{{
+			Predicate: invariant.Predicate{
+				Schema: invariant.PredicateSchemaV1,
+				Root:   invariant.Node{Op: invariant.OpContains, Field: invariant.FieldPreserves, CanonicalID: "domain.number_theory.property.nonexistent_term"},
+			},
+			Statement:        "failures preserve a term that does not exist",
+			AbstractionLevel: "mechanism",
+		}},
+		Metadata:        provider.Metadata{ProviderName: "fixture", ProviderVersion: "v1", ModelName: "deterministic-fixture", SchemaVersion: invariant.PredicateSchemaV1},
+		RequestPayload:  "req",
+		ResponsePayload: "resp",
+	}, nil
+}
+
+// countingMiner wraps dataDrivenMiner with a call counter and a configurable
+// identity, so tests can assert reuse-check-first (identical request calls the
+// provider once) and config-sensitivity (a changed identity is a new revision).
+type countingMiner struct {
+	inner    dataDrivenMiner
+	identity provider.MinerIdentity
+	calls    *int
+}
+
+func (m countingMiner) Identity() provider.MinerIdentity { return m.identity }
+
+func (m countingMiner) Mine(ctx context.Context, req provider.MiningRequest) (provider.MiningResponse, error) {
+	*m.calls++
+	return m.inner.Mine(ctx, req)
+}
+
+// TestIntegrationInvariantMineReuseChecksBeforeInvoking asserts the F5 contract:
+// an identical re-mine reuses the prior revision WITHOUT calling the provider a
+// second time (reuse-check-first), while changing the miner identity
+// (provider/model/config) produces a new revision and does call the provider.
+func TestIntegrationInvariantMineReuseChecksBeforeInvoking(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+
+	problemID, runID, snapshotID := seedProblemAndSnapshot(t, ctx, dbPath, now)
+	seedClusterCorpus(t, ctx, app, dbPath, problemID, runID, snapshotID, canon.VocabularyMechanismV1)
+	if _, err := app.BuildClustering(ctx, ClusterBuildInput{DBPath: dbPath, ProblemID: problemID}); err != nil {
+		t.Fatalf("cluster build: %v", err)
+	}
+	if _, err := app.BuildFailureSpace(ctx, FailureSpaceBuildInput{DBPath: dbPath, ProblemID: problemID}); err != nil {
+		t.Fatalf("failure-space build: %v", err)
+	}
+
+	calls := 0
+	idA := provider.MinerIdentity{ContractVersion: provider.InvariantMinerVersion, ProviderName: "prov-a", ProviderVersion: "v1", ModelName: "model-a"}
+	app.invariantMinerFn = countingMiner{identity: idA, calls: &calls}
+
+	first, err := app.MineInvariants(ctx, InvariantMineInput{DBPath: dbPath, ProblemID: problemID, MinSupport: 1})
+	if err != nil {
+		t.Fatalf("first mine: %v", err)
+	}
+	if !first.Created {
+		t.Fatal("first mine should create a revision")
+	}
+	if calls != 1 {
+		t.Fatalf("first mine should call provider once, got %d", calls)
+	}
+
+	// Identical request + identical identity: reuse WITHOUT invoking the provider.
+	second, err := app.MineInvariants(ctx, InvariantMineInput{DBPath: dbPath, ProblemID: problemID, MinSupport: 1})
+	if err != nil {
+		t.Fatalf("second mine: %v", err)
+	}
+	if second.Created {
+		t.Fatal("identical re-mine must reuse (Created=false)")
+	}
+	if second.Revision.ID != first.Revision.ID {
+		t.Fatalf("reuse returned a different revision: %s vs %s", second.Revision.ID, first.Revision.ID)
+	}
+	if calls != 1 {
+		t.Fatalf("reuse-check-first must NOT re-invoke the provider, got %d calls", calls)
+	}
+
+	// Changed model (a different identity) is a different reuse key: new revision,
+	// and the provider IS invoked.
+	idB := idA
+	idB.ModelName = "model-b"
+	app.invariantMinerFn = countingMiner{identity: idB, calls: &calls}
+	third, err := app.MineInvariants(ctx, InvariantMineInput{DBPath: dbPath, ProblemID: problemID, MinSupport: 1})
+	if err != nil {
+		t.Fatalf("third mine: %v", err)
+	}
+	if !third.Created {
+		t.Fatal("changed miner identity must create a new revision")
+	}
+	if third.Revision.ID == first.Revision.ID {
+		t.Fatal("changed identity must not reuse the prior revision")
+	}
+	if calls != 2 {
+		t.Fatalf("changed identity must invoke the provider, got %d calls", calls)
+	}
+}
+func TestIntegrationInvariantMineRejectsOutcomeReadingProposal(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = outcomeReadingMiner{}
+
+	problemID, runID, snapshotID := seedProblemAndSnapshot(t, ctx, dbPath, now)
+	seedClusterCorpus(t, ctx, app, dbPath, problemID, runID, snapshotID, canon.VocabularyMechanismV1)
+	if _, err := app.BuildClustering(ctx, ClusterBuildInput{DBPath: dbPath, ProblemID: problemID}); err != nil {
+		t.Fatalf("cluster build: %v", err)
+	}
+	if _, err := app.BuildFailureSpace(ctx, FailureSpaceBuildInput{DBPath: dbPath, ProblemID: problemID}); err != nil {
+		t.Fatalf("failure-space build: %v", err)
+	}
+
+	_, err := app.MineInvariants(ctx, InvariantMineInput{DBPath: dbPath, ProblemID: problemID, MinSupport: 1})
+	if err == nil {
+		t.Fatal("expected MineInvariants to reject an outcome-reading proposal")
+	}
+	// No revision should have been persisted.
+	listed, lerr := app.ListInvariants(ctx, InvariantListInput{DBPath: dbPath, ProblemID: problemID})
+	if lerr != nil {
+		t.Fatalf("invariant list: %v", lerr)
+	}
+	if len(listed.Revisions) != 0 {
+		t.Fatalf("rejected mine must persist no revision, got %d", len(listed.Revisions))
+	}
+}
+
+// TestIntegrationInvariantMineRejectsUnknownVocabularyTerm proves the F3
+// reference-resolution contract end to end: a proposal referencing a term not in
+// the pinned vocabulary fails the run, and nothing is persisted.
+func TestIntegrationInvariantMineRejectsUnknownVocabularyTerm(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = unknownTermMiner{}
+
+	problemID, runID, snapshotID := seedProblemAndSnapshot(t, ctx, dbPath, now)
+	seedClusterCorpus(t, ctx, app, dbPath, problemID, runID, snapshotID, canon.VocabularyMechanismV1)
+	if _, err := app.BuildClustering(ctx, ClusterBuildInput{DBPath: dbPath, ProblemID: problemID}); err != nil {
+		t.Fatalf("cluster build: %v", err)
+	}
+	if _, err := app.BuildFailureSpace(ctx, FailureSpaceBuildInput{DBPath: dbPath, ProblemID: problemID}); err != nil {
+		t.Fatalf("failure-space build: %v", err)
+	}
+
+	_, err := app.MineInvariants(ctx, InvariantMineInput{DBPath: dbPath, ProblemID: problemID, MinSupport: 1})
+	if err == nil {
+		t.Fatal("expected MineInvariants to reject a proposal referencing an unknown vocabulary term")
+	}
+	listed, lerr := app.ListInvariants(ctx, InvariantListInput{DBPath: dbPath, ProblemID: problemID})
+	if lerr != nil {
+		t.Fatalf("invariant list: %v", lerr)
+	}
+	if len(listed.Revisions) != 0 {
+		t.Fatalf("rejected mine must persist no revision, got %d", len(listed.Revisions))
 	}
 }

@@ -616,6 +616,8 @@ type CandidateInvariantView struct {
 	DistinctFamilySupport        int                             `json:"distinct_family_support"`
 	FailureCoverageNum           int                             `json:"failure_coverage_num"`
 	FailureCoverageDen           int                             `json:"failure_coverage_den"`
+	ContrastViolatingNum         int                             `json:"contrast_violating_num"`
+	ContrastEligibleDen          int                             `json:"contrast_eligible_den"`
 	SupportExplicitCount         int                             `json:"support_explicit_count"`
 	SupportInferredCount         int                             `json:"support_inferred_count"`
 	SupportOtherCount            int                             `json:"support_other_count"`

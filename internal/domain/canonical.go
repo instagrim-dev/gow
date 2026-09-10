@@ -88,6 +88,37 @@ func (s ClaimStatus) Valid() bool {
 	}
 }
 
+// FieldCompleteness records whether a set-valued signature field was
+// exhaustively extracted. It exists so downstream evaluation can distinguish a
+// verified-empty field (the source genuinely lists nothing) from an unrecorded
+// one (extraction never populated it). An absent value in a `complete` field is
+// a real negative; in a `partial` or `unobserved` field it is an epistemic gap,
+// not evidence of absence. The default is `unobserved`: absence of a signal is
+// never silently promoted to completeness.
+type FieldCompleteness string
+
+const (
+	// CompletenessUnobserved: the field was not (known to be) extracted. Absence
+	// of a value carries no information. This is the safe default.
+	CompletenessUnobserved FieldCompleteness = "unobserved"
+	// CompletenessPartial: some values were extracted, but the set is not known
+	// to be exhaustive. Absence still cannot be read as a negative.
+	CompletenessPartial FieldCompleteness = "partial"
+	// CompletenessComplete: the field was exhaustively extracted, so a missing
+	// value is a verified absence.
+	CompletenessComplete FieldCompleteness = "complete"
+)
+
+// Valid reports whether the completeness marker is a known value.
+func (c FieldCompleteness) Valid() bool {
+	switch c {
+	case CompletenessUnobserved, CompletenessPartial, CompletenessComplete:
+		return true
+	default:
+		return false
+	}
+}
+
 // FieldKind enumerates the mechanism-signature spine fields #9 canonicalizes.
 // The set-valued kinds (representation..auxiliary_object) intentionally match
 // the existing mechanism_attributes.kind CHECK values one-to-one, so canonical

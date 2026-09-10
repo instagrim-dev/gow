@@ -81,12 +81,33 @@ type MechanismSignature struct {
 	OutcomeClass domain.OutcomeClass
 	Boundaries   []Boundary
 
+	// SetFieldCompleteness records, per set-valued field, whether that field was
+	// exhaustively extracted. It is provenance (excluded from the fingerprint):
+	// two mechanisms with identical resolved content but different extraction
+	// completeness share one identity. Evaluation reads it so an absent value is
+	// treated as a verified negative only when the field is `complete`; otherwise
+	// absence is an epistemic gap (F3). A missing entry defaults to `unobserved`.
+	SetFieldCompleteness map[domain.FieldKind]domain.FieldCompleteness
+
 	// Provenance for the non-vocabulary fields. These are preserved epistemic
 	// statuses, never promoted: an unprovenanced posture axis or outcome is
 	// ClaimUnknown, not ClaimExplicit, so downstream invariant mining cannot
 	// mistake an omission for a source-backed claim.
 	PostureProvenance PostureProvenance
 	OutcomeProvenance domain.ClaimStatus
+}
+
+// FieldCompleteness returns the recorded completeness for a set-valued field
+// kind, defaulting to unobserved when unset. Callers use it to decide whether a
+// missing value is a verified negative (complete) or an epistemic gap.
+func (s MechanismSignature) FieldCompleteness(kind domain.FieldKind) domain.FieldCompleteness {
+	if s.SetFieldCompleteness == nil {
+		return domain.CompletenessUnobserved
+	}
+	if c, ok := s.SetFieldCompleteness[kind]; ok && c.Valid() {
+		return c
+	}
+	return domain.CompletenessUnobserved
 }
 
 // MechanismClaimInput is one surface-labeled field value to canonicalize, with

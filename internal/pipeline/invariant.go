@@ -49,11 +49,15 @@ func defaultStatus(s string) string {
 }
 
 // familiesForFailureSpace rehydrates the distinct mechanism families behind a
-// failure space: for each cluster, every non-redundant member signature is
-// loaded (per-member outcome comes from signature_outcomes.class via
-// GetSignature — it is not on the member row) with full epistemic provenance,
-// so mixed families can split member-wise and support carries real per-claim
-// strength.
+// failure space: for each cluster, EVERY member signature is loaded (per-member
+// outcome comes from signature_outcomes.class via GetSignature — it is not on
+// the member row) with full epistemic provenance, so mixed families can split
+// member-wise and support carries real per-claim strength. Redundant members
+// are NOT dropped here: the engine caps each family's support at one distinct
+// family, so deduplication happens in the COUNT, not by withholding evidence.
+// Withholding members previously let a redundant paraphrase erase a family's
+// only support unit and could discard a mixed family's success-side (contrast)
+// member, undoing the member-wise contrast contract (F1).
 func familiesForFailureSpace(ctx context.Context, repoStore problemStore, clusterRun store.ClusterRunRecord) ([]invariant.Family, error) {
 	families := make([]invariant.Family, 0, len(clusterRun.Clusters))
 	for _, c := range clusterRun.Clusters {
@@ -66,7 +70,6 @@ func familiesForFailureSpace(ctx context.Context, repoStore problemStore, cluste
 		for _, m := range c.Members {
 			if m.Redundant {
 				redundantMembers++
-				continue
 			}
 			rec, err := repoStore.GetSignature(ctx, m.SignatureID)
 			if err != nil {
@@ -79,21 +82,12 @@ func familiesForFailureSpace(ctx context.Context, repoStore problemStore, cluste
 				OutcomeClass: domain.OutcomeClass(rec.OutcomeClass),
 			})
 		}
-		// A family whose members are all #11-redundant contributes no
-		// non-redundant support unit.
+		// Redundant is retained only as a provider-visible hint (all members are
+		// #11-redundant paraphrases). It no longer gates engine support: the
+		// distinct-family cap already prevents inflation, and the members above
+		// are always evaluated so a fully-redundant family still contributes its
+		// one support unit and cannot hide a counterexample.
 		fam.Redundant = len(c.Members) > 0 && redundantMembers == len(c.Members)
-		if fam.Redundant {
-			// Still evaluate it (visibility), via its representative.
-			rec, err := repoStore.GetSignature(ctx, c.RepresentativeSignatureID)
-			if err != nil {
-				return nil, fmt.Errorf("load representative signature %s: %w", c.RepresentativeSignatureID, err)
-			}
-			fam.Members = append(fam.Members, invariant.Member{
-				SignatureID:  c.RepresentativeSignatureID,
-				Signature:    signatureFromRecordWithProvenance(rec),
-				OutcomeClass: domain.OutcomeClass(rec.OutcomeClass),
-			})
-		}
 		families = append(families, fam)
 	}
 	return families, nil
@@ -222,6 +216,35 @@ func (a *App) MineInvariants(ctx context.Context, input InvariantMineInput) (Inv
 	}
 	req := miningRequestForFamilies(input.ProblemID, fs.ID, minSupport, families)
 
+	miner := a.invariantMinerFn
+	if miner == nil {
+		miner = provider.NewDerivingFixtureInvariantMiner()
+	}
+	// The reuse key folds the COMPLETE miner identity (provider/model/config) into
+	// miner_version, and we check it BEFORE invoking the provider (F5). This means
+	// (a) an identical request never re-runs the miner, and (b) a changed
+	// provider/model/config is a different key, so it cannot execute a new mining
+	// attempt and then silently return a revision produced by another config.
+	minerVersion := miner.Identity().Version()
+	reuseKey := store.InvariantReuseKey{
+		ProblemID:       input.ProblemID,
+		FailureSpaceID:  fs.ID,
+		MinerVersion:    minerVersion,
+		PredicateSchema: invariant.PredicateSchemaV1,
+		MinSupport:      minSupport,
+	}
+	if existing, found, lerr := repoStore.LookupInvariantRevision(ctx, reuseKey); lerr != nil {
+		return InvariantMineResponse{}, lerr
+	} else if found {
+		return InvariantMineResponse{
+			OK:       true,
+			Command:  "invariants mine",
+			Store:    dbPath,
+			Created:  false,
+			Revision: invariantRevisionView(existing),
+		}, nil
+	}
+
 	now := a.now()
 	run, err := repoStore.CreateRun(ctx, domain.NewRun{
 		ID:          domain.NewRunID(now),
@@ -238,11 +261,17 @@ func (a *App) MineInvariants(ctx context.Context, input InvariantMineInput) (Inv
 		return InvariantMineResponse{}, err
 	}
 
-	miner := a.invariantMinerFn
-	if miner == nil {
-		miner = provider.NewDerivingFixtureInvariantMiner()
-	}
 	resp, err := miner.Mine(ctx, req)
+	if err != nil {
+		a.failRun(ctx, repoStore, run.ID, err)
+		return InvariantMineResponse{}, err
+	}
+
+	// Load the vocabulary the corpus was canonicalized under, so predicate
+	// references can be resolved against it (F3): a syntactically-valid but
+	// nonexistent term must be rejected before storage, not left to evaluate to
+	// a permanent violates/unknown.
+	vocab, err := a.loadVocabulary(ctx, repoStore, clusterRun.VocabularyVersion)
 	if err != nil {
 		a.failRun(ctx, repoStore, run.ID, err)
 		return InvariantMineResponse{}, err
@@ -252,7 +281,11 @@ func (a *App) MineInvariants(ctx context.Context, input InvariantMineInput) (Inv
 	// fails the run rather than being silently stored.
 	proposals := make([]invariant.Proposal, 0, len(resp.Proposals))
 	for _, p := range resp.Proposals {
-		if verr := p.Predicate.Validate(); verr != nil {
+		if verr := p.Predicate.ValidateForMining(); verr != nil {
+			a.failRun(ctx, repoStore, run.ID, verr)
+			return InvariantMineResponse{}, verr
+		}
+		if verr := invariant.ValidateReferences(p.Predicate, vocab); verr != nil {
 			a.failRun(ctx, repoStore, run.ID, verr)
 			return InvariantMineResponse{}, verr
 		}
@@ -265,7 +298,7 @@ func (a *App) MineInvariants(ctx context.Context, input InvariantMineInput) (Inv
 	}
 	cands := invariant.EvaluateCandidates(proposals, families, minSupport)
 
-	record, err := invariantRevisionRecord(input.ProblemID, fs, run.ID, minSupport, resp, req.Fingerprint(), cands, now)
+	record, err := invariantRevisionRecord(input.ProblemID, fs, run.ID, minSupport, minerVersion, resp, req.Fingerprint(), cands, now)
 	if err != nil {
 		a.failRun(ctx, repoStore, run.ID, err)
 		return InvariantMineResponse{}, err
@@ -375,6 +408,8 @@ func invariantRevisionView(rec store.InvariantRevisionRecord) InvariantRevisionV
 			DistinctFamilySupport:        c.DistinctFamilySupport,
 			FailureCoverageNum:           c.FailureCoverageNum,
 			FailureCoverageDen:           c.FailureCoverageDen,
+			ContrastViolatingNum:         c.ContrastViolatingNum,
+			ContrastEligibleDen:          c.ContrastEligibleDen,
 			SupportExplicitCount:         c.SupportExplicitCount,
 			SupportInferredCount:         c.SupportInferredCount,
 			SupportOtherCount:            c.SupportOtherCount,
@@ -402,14 +437,14 @@ func invariantRevisionView(rec store.InvariantRevisionRecord) InvariantRevisionV
 }
 
 // invariantRevisionRecord flattens evaluated candidates into store rows.
-func invariantRevisionRecord(problemID string, fs store.FailureSpaceRecord, runID string, minSupport int, resp provider.MiningResponse, requestHash string, cands []invariant.Candidate, now time.Time) (store.InvariantRevisionRecord, error) {
+func invariantRevisionRecord(problemID string, fs store.FailureSpaceRecord, runID string, minSupport int, minerVersion string, resp provider.MiningResponse, requestHash string, cands []invariant.Candidate, now time.Time) (store.InvariantRevisionRecord, error) {
 	rec := store.InvariantRevisionRecord{
 		ID:              domain.NewInvariantRevisionID(now),
 		ProblemID:       problemID,
 		FailureSpaceID:  fs.ID,
 		ClusterRunID:    fs.ClusterRunID,
 		RunID:           runID,
-		MinerVersion:    provider.InvariantMinerVersion,
+		MinerVersion:    minerVersion,
 		PredicateSchema: invariant.PredicateSchemaV1,
 		MinSupport:      minSupport,
 		CandidateCount:  len(cands),
@@ -443,6 +478,8 @@ func invariantRevisionRecord(problemID string, fs store.FailureSpaceRecord, runI
 			DistinctFamilySupport:        c.DistinctFamilySupport,
 			FailureCoverageNum:           c.FailureCoverageNum,
 			FailureCoverageDen:           c.FailureCoverageDen,
+			ContrastViolatingNum:         c.ContrastViolatingNum,
+			ContrastEligibleDen:          c.ContrastEligibleDen,
 			SupportExplicitCount:         c.SupportEpistemic.Explicit,
 			SupportInferredCount:         c.SupportEpistemic.Inferred,
 			SupportOtherCount:            c.SupportEpistemic.Other,

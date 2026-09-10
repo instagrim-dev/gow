@@ -31,6 +31,8 @@ const (
 	FailureSpaceIDPrefix          = "fsp_"
 	InvariantRevisionIDPrefix     = "ivr_"
 	CandidateInvariantIDPrefix    = "inv_"
+	InvariantChallengeIDPrefix    = "chl_"
+	SyntheticArtifactIDPrefix     = "syn_"
 )
 
 var (
@@ -52,6 +54,8 @@ var (
 	ErrInvalidFailureSpaceID          = errors.New("invalid failure space id")
 	ErrInvalidInvariantRevisionID     = errors.New("invalid invariant revision id")
 	ErrInvalidCandidateInvariantID    = errors.New("invalid candidate invariant id")
+	ErrInvalidInvariantChallengeID    = errors.New("invalid invariant challenge id")
+	ErrInvalidSyntheticArtifactID     = errors.New("invalid synthetic artifact id")
 
 	entropyMu sync.Mutex
 	entropy   = ulid.Monotonic(defaultEntropy(), 0)
@@ -171,6 +175,22 @@ func ValidateInvariantRevisionID(id string) error {
 
 func ValidateCandidateInvariantID(id string) error {
 	return validateID(id, CandidateInvariantIDPrefix, ErrInvalidCandidateInvariantID)
+}
+
+func NewInvariantChallengeID(now time.Time) string {
+	return newID(InvariantChallengeIDPrefix, now)
+}
+
+func NewSyntheticArtifactID(now time.Time) string {
+	return newID(SyntheticArtifactIDPrefix, now)
+}
+
+func ValidateInvariantChallengeID(id string) error {
+	return validateID(id, InvariantChallengeIDPrefix, ErrInvalidInvariantChallengeID)
+}
+
+func ValidateSyntheticArtifactID(id string) error {
+	return validateID(id, SyntheticArtifactIDPrefix, ErrInvalidSyntheticArtifactID)
 }
 
 func ValidateNormalizationRevisionID(id string) error {

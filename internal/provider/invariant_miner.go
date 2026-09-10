@@ -80,10 +80,39 @@ type MiningResponse struct {
 	ResponsePayload string
 }
 
+// MinerIdentity is the complete, provider-declared identity of a mining
+// configuration: everything that could change the produced proposals other than
+// the request itself. It is knowable WITHOUT executing the miner, so the reuse
+// check can run before any (potentially costly) provider invocation (F5).
+type MinerIdentity struct {
+	ContractVersion string `json:"contract_version"` // the invariant/vN miner contract
+	ProviderName    string `json:"provider_name"`
+	ProviderVersion string `json:"provider_version"`
+	ModelName       string `json:"model_name"`
+	// ConfigFingerprint captures prompt/template/sampling parameters (temperature,
+	// top_p, seed, etc.) that affect output. Deterministic fixtures leave it
+	// empty; a live adapter folds its full configuration here.
+	ConfigFingerprint string `json:"config_fingerprint,omitempty"`
+}
+
+// Version renders the identity as the durable miner_version string stored on and
+// keying an invariant revision. Folding the full configuration into this single
+// column means changing provider/model/config produces a DIFFERENT reuse key, so
+// a new configuration cannot silently return a revision produced by another one.
+func (id MinerIdentity) Version() string {
+	raw, _ := json.Marshal(id)
+	sum := sha256.Sum256(raw)
+	// Human-readable prefix + content hash: greppable contract, exact identity.
+	return id.ContractVersion + "+" + hex.EncodeToString(sum[:])[:16]
+}
+
 // InvariantMiner is the replaceable provider-facing interface for the compress
 // operator (Set -> CandidateInvariant[]). Transport failures are errors; a
-// well-formed but unmineable request returns an empty proposal set.
+// well-formed but unmineable request returns an empty proposal set. Identity
+// returns the complete mining configuration identity WITHOUT executing, so the
+// reuse check can precede invocation (F5).
 type InvariantMiner interface {
+	Identity() MinerIdentity
 	Mine(ctx context.Context, req MiningRequest) (MiningResponse, error)
 }
 
@@ -108,6 +137,17 @@ func NewFixtureInvariantMiner(byFingerprint map[string][]CandidateProposal) *Fix
 		m.byFingerprint[k] = v
 	}
 	return m
+}
+
+// Identity returns the fixture's deterministic mining identity. The fixture has
+// no prompt/sampling configuration, so ConfigFingerprint is empty.
+func (m *FixtureInvariantMiner) Identity() MinerIdentity {
+	return MinerIdentity{
+		ContractVersion: InvariantMinerVersion,
+		ProviderName:    FixtureProviderName,
+		ProviderVersion: FixtureMinerVersion,
+		ModelName:       FixtureModelName,
+	}
 }
 
 // Mine returns the canned proposals for the request fingerprint, validating

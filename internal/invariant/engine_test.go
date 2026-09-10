@@ -24,6 +24,23 @@ func baseSig() canon.MechanismSignature {
 		Assumptions: []canon.FieldClaim{}, Preserves: []canon.FieldClaim{},
 		Breaks: []canon.FieldClaim{}, AuxiliaryObjects: []canon.FieldClaim{},
 		Boundaries: []canon.Boundary{},
+		// Synthetic test signatures are fully specified by their author, so their
+		// set fields are `complete`: an absent value is a verified negative. F3
+		// tests that need an unrecorded field override this explicitly.
+		SetFieldCompleteness: completeAllSetFields(),
+	}
+}
+
+// completeAllSetFields marks every set-valued field complete, the default for
+// fully-specified synthetic test signatures.
+func completeAllSetFields() map[domain.FieldKind]domain.FieldCompleteness {
+	return map[domain.FieldKind]domain.FieldCompleteness{
+		domain.FieldRepresentation:  domain.CompletenessComplete,
+		domain.FieldOperator:        domain.CompletenessComplete,
+		domain.FieldAssumption:      domain.CompletenessComplete,
+		domain.FieldPreserves:       domain.CompletenessComplete,
+		domain.FieldBreaks:          domain.CompletenessComplete,
+		domain.FieldAuxiliaryObject: domain.CompletenessComplete,
 	}
 }
 
@@ -126,16 +143,56 @@ func TestEnginePredicateMatchingNothingEarnsZeroSupport(t *testing.T) {
 	}
 }
 
-func TestEngineRedundantSupporterDoesNotInflate(t *testing.T) {
-	a := failFamily("a", idResidue)
-	b := failFamily("b", idResidue)
-	b.Redundant = true
-	got := EvaluateCandidates([]Proposal{containsResidue()}, []Family{a, b}, 2)
-	if got[0].DistinctFamilySupport != 1 {
-		t.Fatalf("redundant supporter must not inflate: expected 1, got %d", got[0].DistinctFamilySupport)
+// A redundant paraphrase WITHIN a family does not add a support unit (the
+// distinct-family cap holds) and, critically, does not remove the family's
+// existing support unit or hide a counterexample. This is the F1 contract:
+// deduplicate the count, not the evidence.
+func TestEngineRedundantMemberDoesNotAddOrRemoveSupport(t *testing.T) {
+	two := []Family{failFamily("a", idResidue), failFamily("b", idResidue)}
+	base := EvaluateCandidates([]Proposal{containsResidue()}, two, 2)
+	if base[0].DistinctFamilySupport != 2 {
+		t.Fatalf("two distinct families must give support 2, got %d", base[0].DistinctFamilySupport)
 	}
-	if got[0].AssociationStatus == AssocRecurring {
-		t.Fatal("should not be recurring with support below threshold")
+
+	// Add a paraphrase (a second member reading the same id) inside family "a".
+	// Support must stay 2: the paraphrase neither inflates (cap at one per
+	// family) nor erases family "a"'s existing support unit.
+	paraphrased := []Family{failFamily("a", idResidue), failFamily("b", idResidue)}
+	dupSig := baseSig()
+	dupSig.Preserves = append(dupSig.Preserves, resolved(domain.FieldPreserves, domain.CanonicalID(idResidue), domain.ClaimExplicit))
+	paraphrased[0].Members = append(paraphrased[0].Members, Member{
+		SignatureID: "msig_a_paraphrase", Signature: dupSig, OutcomeClass: domain.OutcomeFailure,
+	})
+	paraphrased[0].Redundant = true // the family-level hint is set; it must not gate support
+	got := EvaluateCandidates([]Proposal{containsResidue()}, paraphrased, 2)
+	if got[0].DistinctFamilySupport != 2 {
+		t.Fatalf("adding a paraphrase must preserve support 2 (not add, not remove), got %d", got[0].DistinctFamilySupport)
+	}
+	if got[0].AssociationStatus != AssocRecurring {
+		t.Fatalf("support 2 >= minSupport 2 must be recurring, got %s", got[0].AssociationStatus)
+	}
+	if len(got[0].Counterexamples) != 0 {
+		t.Fatalf("a supporting paraphrase must not introduce a counterexample, got %d", len(got[0].Counterexamples))
+	}
+}
+
+// A redundant member that VIOLATES the predicate must still surface as a
+// counterexample: a redundant family flag cannot suppress evaluation of its
+// members (the pre-F1 representative-only fallback could have hidden this).
+func TestEngineRedundantFamilyStillYieldsCounterexample(t *testing.T) {
+	fams := []Family{failFamily("a", idResidue), failFamily("b", idResidue)}
+	// Family "b" is flagged redundant but its member does NOT preserve residue
+	// (it reads sieve instead): resolved-absent -> violates -> counterexample.
+	bSig := baseSig()
+	bSig.Preserves = []canon.FieldClaim{resolved(domain.FieldPreserves, domain.CanonicalID(idSieve), domain.ClaimExplicit)}
+	fams[1].Members = []Member{{SignatureID: "msig_b", Signature: bSig, OutcomeClass: domain.OutcomeFailure}}
+	fams[1].Redundant = true
+	got := EvaluateCandidates([]Proposal{containsResidue()}, fams, 2)
+	if got[0].DistinctFamilySupport != 1 {
+		t.Fatalf("only family a supports, got %d", got[0].DistinctFamilySupport)
+	}
+	if len(got[0].Counterexamples) != 1 || got[0].Counterexamples[0].ClusterID != "b" {
+		t.Fatalf("redundant family b must still surface as a counterexample, got %+v", got[0].Counterexamples)
 	}
 }
 
@@ -146,8 +203,13 @@ func TestEngineDiscriminativeWhenAbsentInSuccess(t *testing.T) {
 	fams = append(fams, Family{ClusterID: "s", OutcomeClass: domain.OutcomeSuccess,
 		Members: []Member{{SignatureID: "msig_s", Signature: succ, OutcomeClass: domain.OutcomeSuccess}}})
 	got := EvaluateCandidates([]Proposal{containsResidue()}, fams, 2)
-	if got[0].AssociationStatus != AssocDiscriminative {
-		t.Fatalf("expected discriminative, got %s", got[0].AssociationStatus)
+	if got[0].AssociationStatus != AssocContrastObserved {
+		t.Fatalf("expected contrast_observed, got %s", got[0].AssociationStatus)
+	}
+	// Complete contrast counts are recorded (F2): one eligible success family,
+	// one violating (residue absent where the failures preserve it).
+	if got[0].ContrastEligibleDen != 1 || got[0].ContrastViolatingNum != 1 {
+		t.Fatalf("expected contrast 1/1, got %d/%d", got[0].ContrastViolatingNum, got[0].ContrastEligibleDen)
 	}
 }
 

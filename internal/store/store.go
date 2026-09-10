@@ -66,6 +66,18 @@ func (s *Store) Close() error {
 }
 
 func (s *Store) Migrate(ctx context.Context) error {
+	// SQLite requires foreign_keys to be toggled OUTSIDE a transaction. Disable it
+	// for the duration of migration so that a table rebuild which must drop and
+	// recreate a parent referenced by existing children (e.g. the legacy
+	// cluster_runs identity change in v10) does not fail its deferred FK check at
+	// commit. Children keep their textual parent ids across the rebuild, so a
+	// PRAGMA foreign_key_check before commit still proves no reference was broken.
+	// Re-enable on the way out regardless of outcome.
+	if _, err := s.db.ExecContext(ctx, `PRAGMA foreign_keys = OFF`); err != nil {
+		return fmt.Errorf("%w: %v", ErrMigration, err)
+	}
+	defer func() { _, _ = s.db.ExecContext(ctx, `PRAGMA foreign_keys = ON`) }()
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -116,6 +128,25 @@ func (s *Store) Migrate(ctx context.Context) error {
 	if err := validateSchemaTables(ctx, tx); err != nil {
 		return err
 	}
+
+	// With foreign_keys disabled during migration, prove no rebuild broke a
+	// reference before committing. Any dangling FK here is a migration bug.
+	fkRows, err := tx.QueryContext(ctx, `PRAGMA foreign_key_check`)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrMigration, err)
+	}
+	if fkRows.Next() {
+		var table, parent any
+		var rowid, fkid any
+		_ = fkRows.Scan(&table, &rowid, &parent, &fkid)
+		_ = fkRows.Close()
+		return fmt.Errorf("%w: foreign_key_check reported a dangling reference after migration (table=%v parent=%v)", ErrMigration, table, parent)
+	}
+	if err := fkRows.Err(); err != nil {
+		_ = fkRows.Close()
+		return fmt.Errorf("%w: %v", ErrMigration, err)
+	}
+	_ = fkRows.Close()
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("%w: %v", ErrMigration, err)
@@ -925,6 +956,10 @@ func validateSchemaTables(ctx context.Context, tx *sql.Tx) error {
 		"failure_spaces", "failure_space_outcomes", "failure_space_axes",
 		"invariant_revisions", "candidate_invariants", "invariant_predicates",
 		"invariant_family_evaluations", "invariant_counterexamples",
+		"invariant_challenges", "invariant_transition_counters",
+		"invariant_state_transitions", "invariant_challenge_evidence",
+		"synthetic_artifacts", "invariant_challenge_synthetic_artifacts",
+		"invariant_lineage",
 	} {
 		row := tx.QueryRowContext(ctx, `
 SELECT EXISTS(
@@ -961,14 +996,17 @@ SELECT EXISTS(
 	}
 	// A column probe cannot see a CHECK constraint, so a database left on the
 	// v3 normalize-only provider_invocations.role CHECK would pass the checks
-	// above while silently rejecting invariant-mining invocations. Assert the
-	// v11 role generalization by reading the table DDL directly.
-	allowsInvariant, err := providerRoleAllowsInvariant(ctx, tx)
-	if err != nil {
-		return fmt.Errorf("%w: %v", ErrCorruptStore, err)
-	}
-	if !allowsInvariant {
-		return fmt.Errorf("%w: provider_invocations.role CHECK does not permit 'invariant' for current schema", ErrCorruptStore)
+	// above while silently rejecting invariant-mining or challenge invocations.
+	// Assert the v11 ('invariant') and v13 ('challenge') role generalizations by
+	// reading the table DDL directly.
+	for _, role := range []string{"invariant", "challenge"} {
+		allows, err := providerRoleAllows(ctx, tx, role)
+		if err != nil {
+			return fmt.Errorf("%w: %v", ErrCorruptStore, err)
+		}
+		if !allows {
+			return fmt.Errorf("%w: provider_invocations.role CHECK does not permit %q for current schema", ErrCorruptStore, role)
+		}
 	}
 	return nil
 }

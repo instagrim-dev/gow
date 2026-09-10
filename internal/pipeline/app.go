@@ -66,6 +66,7 @@ type problemStore interface {
 	GetFailureSpace(context.Context, string) (store.FailureSpaceRecord, error)
 	LatestFailureSpace(context.Context, string) (store.FailureSpaceRecord, bool, error)
 	PersistInvariantRevision(context.Context, store.InvariantRevisionRecord) (store.PersistInvariantRevisionResult, error)
+	LookupInvariantRevision(context.Context, store.InvariantReuseKey) (store.InvariantRevisionRecord, bool, error)
 	GetInvariantRevision(context.Context, string) (store.InvariantRevisionRecord, error)
 	ListInvariantRevisions(context.Context, string) ([]store.InvariantRevisionRecord, error)
 	LatestInvariantRevision(context.Context, string) (string, bool, error)

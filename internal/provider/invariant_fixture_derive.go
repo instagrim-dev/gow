@@ -30,6 +30,17 @@ func NewDerivingFixtureInvariantMiner() *DerivingFixtureInvariantMiner {
 	return &DerivingFixtureInvariantMiner{}
 }
 
+// Identity returns the deriving fixture's deterministic mining identity,
+// matching the Metadata it records on each invocation.
+func (m *DerivingFixtureInvariantMiner) Identity() MinerIdentity {
+	return MinerIdentity{
+		ContractVersion: InvariantMinerVersion,
+		ProviderName:    FixtureProviderName,
+		ProviderVersion: FixtureMinerVersion,
+		ModelName:       derivingMinerModelName,
+	}
+}
+
 // derivingMinerModelName distinguishes derived-fixture provenance from the
 // canned fixture in recorded invocations.
 const derivingMinerModelName = "deterministic-fixture-deriving"

@@ -5,9 +5,10 @@
 // predicate against every eligible member signature (code computes support; the
 // model cannot self-certify it), rolls up member-wise to families (mixed
 // families split member-wise by each member's own outcome), keeps FailureCoverage
-// and Contrast as separate axes, discounts #11-redundant members from the
-// distinct-family count, carries the epistemic composition of matched claims,
-// and assigns association_status only from what code measured.
+// and Contrast as separate axes, caps each distinct family's support at one so a
+// redundant paraphrase cannot inflate the count, carries the epistemic
+// composition of matched claims, and assigns association_status only from what
+// code measured.
 package invariant
 
 import (
@@ -43,7 +44,7 @@ type Family struct {
 	ClusterID    string
 	OutcomeClass domain.OutcomeClass // #11 aggregate class (non-mixed families)
 	OutcomeMixed bool                // #11 mixed flag: triggers member-wise split
-	Redundant    bool                // whole-family redundancy; members also carry it
+	Redundant    bool                // provider-visible hint only; does NOT gate support
 	Members      []Member
 }
 
@@ -101,7 +102,7 @@ type AssociationStatus string
 
 const (
 	AssocRecurring            AssociationStatus = "recurring"
-	AssocDiscriminative       AssociationStatus = "discriminative"
+	AssocContrastObserved     AssociationStatus = "contrast_observed"
 	AssocCandidateObstruction AssociationStatus = "candidate_obstruction"
 	AssocUnknown              AssociationStatus = "unknown"
 )
@@ -121,6 +122,16 @@ type Candidate struct {
 	FailureCoverageNum    int // supporting failure families
 	FailureCoverageDen    int // eligible failure families
 	SupportEpistemic      EpistemicComposition
+
+	// Complete contrast counts (F2). Contrast is no longer collapsed to a single
+	// boolean: ContrastViolatingNum is the number of success/partial-success
+	// families in which the predicate is violated (absent where present would be
+	// expected), ContrastEligibleDen is the eligible contrast families evaluated.
+	// A directional discrimination criterion is deferred; until then the recorded
+	// signal is `contrast_observed` (>=1 contrast violation), never a claim that
+	// the predicate is more prevalent among failures than successes.
+	ContrastViolatingNum int
+	ContrastEligibleDen  int
 
 	FamilyEvaluations []FamilyEvaluation
 	Counterexamples   []Counterexample
@@ -212,6 +223,8 @@ func evaluateOne(prop Proposal, families []Family, minSupport int) Candidate {
 	supportFamilies := map[string]struct{}{}
 	failureEligible := 0
 	failureSatisfied := 0
+	contrastEligible := 0
+	contrastViolating := 0
 	violatesInContrast := false
 
 	for _, fam := range families {
@@ -266,9 +279,14 @@ func evaluateOne(prop Proposal, families []Family, minSupport int) Candidate {
 				switch s.verdict {
 				case FamilySatisfies:
 					failureSatisfied++
-					if !fam.Redundant {
-						supportFamilies[fam.ClusterID] = struct{}{}
-					}
+					// Support is a DISTINCT-FAMILY count: the ClusterID set caps
+					// each family's contribution at one, so a paraphrase within a
+					// family (a #11-redundant member) cannot inflate support. We
+					// deduplicate the COUNT here, not the evidence available to
+					// evaluation: every non-redundant member is still evaluated
+					// above, so a family cannot silently lose its only support unit
+					// or hide a counterexample by adding a redundant sample.
+					supportFamilies[fam.ClusterID] = struct{}{}
 					cand.SupportEpistemic = cand.SupportEpistemic.plus(s.comp)
 				case FamilyViolates:
 					cand.Counterexamples = append(cand.Counterexamples, Counterexample{
@@ -276,7 +294,9 @@ func evaluateOne(prop Proposal, families []Family, minSupport int) Candidate {
 					})
 				}
 			case RoleContrast:
+				contrastEligible++
 				if s.verdict == FamilyViolates {
+					contrastViolating++
 					violatesInContrast = true
 				}
 			}
@@ -288,6 +308,8 @@ func evaluateOne(prop Proposal, families []Family, minSupport int) Candidate {
 	cand.DistinctFamilySupport = len(supportFamilies)
 	cand.FailureCoverageNum = failureSatisfied
 	cand.FailureCoverageDen = failureEligible
+	cand.ContrastViolatingNum = contrastViolating
+	cand.ContrastEligibleDen = contrastEligible
 
 	sort.Slice(cand.FamilyEvaluations, func(i, j int) bool {
 		if cand.FamilyEvaluations[i].ClusterID != cand.FamilyEvaluations[j].ClusterID {
@@ -314,13 +336,18 @@ func memberRole(fam Family, m Member) (FamilyRole, bool) {
 // (KTD-6, R5). It never assigns candidate_obstruction: obstruction is a model
 // hypothesis carried separately (ObstructionIsHypothesis) and never produced by
 // code alone. recurring requires meeting the distinct-family support threshold;
-// discriminative additionally requires a reproducible contrast (violates in
-// >=1 success/partial-success family).
+// contrast_observed additionally requires a reproducible contrast (violates in
+// >=1 success/partial-success family). It is deliberately NOT named
+// `discriminative`: a single violating contrast family does not establish that
+// the predicate is directionally more prevalent among failures than successes
+// (a predicate matching 2/100 failures and 99/100 successes still trips one
+// contrast violation). `contrast_observed` records only that a contrast exists;
+// a directional discrimination criterion is future work (F2).
 func classify(support, minSupport int, violatesInContrast bool) AssociationStatus {
 	recurring := support >= minSupport && minSupport > 0
 	if recurring {
 		if violatesInContrast {
-			return AssocDiscriminative
+			return AssocContrastObserved
 		}
 		return AssocRecurring
 	}

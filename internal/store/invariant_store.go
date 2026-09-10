@@ -54,6 +54,8 @@ type CandidateInvariantRow struct {
 	DistinctFamilySupport        int
 	FailureCoverageNum           int
 	FailureCoverageDen           int
+	ContrastViolatingNum         int
+	ContrastEligibleDen          int
 	SupportExplicitCount         int
 	SupportInferredCount         int
 	SupportOtherCount            int
@@ -143,9 +145,9 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 
 	for _, c := range record.Candidates {
 		if _, err := tx.ExecContext(ctx, `
-INSERT INTO candidate_invariants(id, invariant_revision_id, predicate_fingerprint, statement, abstraction_level, association_status, obstruction_is_model_hypothesis, distinct_family_support, failure_coverage_num, failure_coverage_den, support_explicit_count, support_inferred_count, support_other_count, confidence_ordinal, ordinal)
-VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`, c.ID, record.ID, c.PredicateFingerprint, c.Statement, c.AbstractionLevel, c.AssociationStatus, boolToInt(c.ObstructionIsModelHypothesis), c.DistinctFamilySupport, c.FailureCoverageNum, c.FailureCoverageDen, c.SupportExplicitCount, c.SupportInferredCount, c.SupportOtherCount, c.ConfidenceOrdinal, c.Ordinal); err != nil {
+INSERT INTO candidate_invariants(id, invariant_revision_id, predicate_fingerprint, statement, abstraction_level, association_status, obstruction_is_model_hypothesis, distinct_family_support, failure_coverage_num, failure_coverage_den, contrast_violating_num, contrast_eligible_den, support_explicit_count, support_inferred_count, support_other_count, confidence_ordinal, ordinal)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, c.ID, record.ID, c.PredicateFingerprint, c.Statement, c.AbstractionLevel, c.AssociationStatus, boolToInt(c.ObstructionIsModelHypothesis), c.DistinctFamilySupport, c.FailureCoverageNum, c.FailureCoverageDen, c.ContrastViolatingNum, c.ContrastEligibleDen, c.SupportExplicitCount, c.SupportInferredCount, c.SupportOtherCount, c.ConfidenceOrdinal, c.Ordinal); err != nil {
 			return PersistInvariantRevisionResult{}, err
 		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO invariant_predicates(invariant_id, predicate_json) VALUES(?, ?)`, c.ID, c.PredicateJSON); err != nil {
@@ -189,6 +191,41 @@ WHERE problem_id = ? AND failure_space_id = ? AND miner_version = ? AND predicat
 	return id, true, nil
 }
 
+// InvariantReuseKey is the complete identity that keys revision reuse: the
+// problem/failure-space plus the full miner identity (folded into miner_version),
+// the predicate schema, and the support threshold. Callers compute it BEFORE
+// invoking a provider so an identical request reuses the prior revision without
+// re-running (F5).
+type InvariantReuseKey struct {
+	ProblemID       string
+	FailureSpaceID  string
+	MinerVersion    string
+	PredicateSchema string
+	MinSupport      int
+}
+
+// LookupInvariantRevision returns the existing revision for a reuse key, if any,
+// without side effects. It lets the pipeline perform a reuse-check-first before
+// any (potentially costly) provider invocation.
+func (s *Store) LookupInvariantRevision(ctx context.Context, key InvariantReuseKey) (InvariantRevisionRecord, bool, error) {
+	row := s.db.QueryRowContext(ctx, `
+SELECT id FROM invariant_revisions
+WHERE problem_id = ? AND failure_space_id = ? AND miner_version = ? AND predicate_schema = ? AND min_support = ?
+`, key.ProblemID, key.FailureSpaceID, key.MinerVersion, key.PredicateSchema, key.MinSupport)
+	var id string
+	if err := row.Scan(&id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return InvariantRevisionRecord{}, false, nil
+		}
+		return InvariantRevisionRecord{}, false, err
+	}
+	rec, err := s.loadInvariantRevision(ctx, id)
+	if err != nil {
+		return InvariantRevisionRecord{}, false, err
+	}
+	return rec, true, nil
+}
+
 // GetInvariantRevision loads a full mining pass by id.
 func (s *Store) GetInvariantRevision(ctx context.Context, id string) (InvariantRevisionRecord, error) {
 	if err := domain.ValidateInvariantRevisionID(id); err != nil {
@@ -210,7 +247,7 @@ FROM invariant_revisions WHERE id = ?
 		return InvariantRevisionRecord{}, err
 	}
 	candRows, err := s.db.QueryContext(ctx, `
-SELECT id, predicate_fingerprint, statement, abstraction_level, association_status, obstruction_is_model_hypothesis, distinct_family_support, failure_coverage_num, failure_coverage_den, support_explicit_count, support_inferred_count, support_other_count, confidence_ordinal, ordinal
+SELECT id, predicate_fingerprint, statement, abstraction_level, association_status, obstruction_is_model_hypothesis, distinct_family_support, failure_coverage_num, failure_coverage_den, contrast_violating_num, contrast_eligible_den, support_explicit_count, support_inferred_count, support_other_count, confidence_ordinal, ordinal
 FROM candidate_invariants WHERE invariant_revision_id = ? ORDER BY ordinal
 `, id)
 	if err != nil {
@@ -220,7 +257,7 @@ FROM candidate_invariants WHERE invariant_revision_id = ? ORDER BY ordinal
 	for candRows.Next() {
 		var c CandidateInvariantRow
 		var obstruction int
-		if err := candRows.Scan(&c.ID, &c.PredicateFingerprint, &c.Statement, &c.AbstractionLevel, &c.AssociationStatus, &obstruction, &c.DistinctFamilySupport, &c.FailureCoverageNum, &c.FailureCoverageDen, &c.SupportExplicitCount, &c.SupportInferredCount, &c.SupportOtherCount, &c.ConfidenceOrdinal, &c.Ordinal); err != nil {
+		if err := candRows.Scan(&c.ID, &c.PredicateFingerprint, &c.Statement, &c.AbstractionLevel, &c.AssociationStatus, &obstruction, &c.DistinctFamilySupport, &c.FailureCoverageNum, &c.FailureCoverageDen, &c.ContrastViolatingNum, &c.ContrastEligibleDen, &c.SupportExplicitCount, &c.SupportInferredCount, &c.SupportOtherCount, &c.ConfidenceOrdinal, &c.Ordinal); err != nil {
 			return InvariantRevisionRecord{}, err
 		}
 		c.ObstructionIsModelHypothesis = obstruction != 0

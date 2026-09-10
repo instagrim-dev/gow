@@ -355,6 +355,10 @@ func (f *fakeProblemStore) PersistInvariantRevision(context.Context, store.Invar
 	return store.PersistInvariantRevisionResult{}, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) LookupInvariantRevision(context.Context, store.InvariantReuseKey) (store.InvariantRevisionRecord, bool, error) {
+	return store.InvariantRevisionRecord{}, false, nil
+}
+
 func (f *fakeProblemStore) GetInvariantRevision(context.Context, string) (store.InvariantRevisionRecord, error) {
 	return store.InvariantRevisionRecord{}, errors.New("unexpected call")
 }

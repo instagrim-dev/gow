@@ -106,21 +106,28 @@ var setFields = map[string]struct{}{
 	FieldPreserves: {}, FieldBreaks: {}, FieldAuxiliaryObjects: {},
 }
 
+// enumFieldValues lists the values each enum axis may be QUERIED for. The
+// per-axis `unknown` sentinel is deliberately excluded: an axis recorded as
+// unknown is an epistemic gap, not a conserved mechanistic value, so a predicate
+// may not assert "this axis equals unknown" as if it were structure. Evaluate
+// already returns unknown (never satisfies/violates) when it reads an
+// unknown-recorded axis; excluding the sentinel here means such a predicate is
+// rejected at Validate rather than stored as a permanently-unsatisfiable claim.
 var enumFieldValues = map[string]map[string]struct{}{
 	FieldLocality: {
-		string(domain.LocalityUnknown): {}, string(domain.LocalityLocal): {},
+		string(domain.LocalityLocal):  {},
 		string(domain.LocalityGlobal): {}, string(domain.LocalityMixed): {},
 	},
 	FieldConstruction: {
-		string(domain.ConstructionUnknown): {}, string(domain.ConstructionConstructive): {},
-		string(domain.ConstructionExistential): {}, string(domain.ConstructionMixed): {},
+		string(domain.ConstructionConstructive): {},
+		string(domain.ConstructionExistential):  {}, string(domain.ConstructionMixed): {},
 	},
 	FieldUncertainty: {
-		string(domain.UncertaintyUnknown): {}, string(domain.UncertaintyDeterministic): {},
+		string(domain.UncertaintyDeterministic): {},
 		string(domain.UncertaintyProbabilistic): {}, string(domain.UncertaintyMixed): {},
 	},
 	FieldOutcome: {
-		string(domain.OutcomeUnknown): {}, string(domain.OutcomeFailure): {},
+		string(domain.OutcomeFailure):        {},
 		string(domain.OutcomePartialFailure): {}, string(domain.OutcomePartialSuccess): {},
 		string(domain.OutcomeSuccess): {},
 	},
@@ -137,6 +144,72 @@ func Validate(p Predicate) error {
 
 // Validate is the method form of Validate for callers holding a Predicate.
 func (p Predicate) Validate() error { return Validate(p) }
+
+// ValidateForMining is the stricter contract for candidate FAILURE-MECHANISM
+// invariants produced by the miner. In addition to the general grammar, it
+// prohibits any read of the `outcome` axis, recursively. A mined invariant is
+// meant to identify a conserved MECHANISM shared by failures; a predicate such
+// as `outcome in [failure, partial_failure]` earns perfect failure coverage and
+// success contrast BY DEFINITION (those are the labels used to build the support
+// cohort), identifying no mechanism. Prohibiting the read at validation keeps
+// such a tautology out of storage. The general Validate still permits outcome
+// reads for other consumers (e.g. diagnostic queries) — this is a mining-scope
+// restriction, not a grammar change (F2).
+func ValidateForMining(p Predicate) error {
+	if err := Validate(p); err != nil {
+		return err
+	}
+	for _, f := range FieldsRead(p) {
+		if f == FieldOutcome {
+			return fmt.Errorf("%w: mined failure-mechanism predicate may not read the outcome axis (tautological support/contrast)", ErrInvalidPredicate)
+		}
+	}
+	return nil
+}
+
+// ValidateForMining is the method form for callers holding a Predicate.
+func (p Predicate) ValidateForMining() error { return ValidateForMining(p) }
+
+// ValidateReferences resolves every canonical-ID reference in the predicate
+// against the pinned vocabulary, so a syntactically-valid but nonexistent term
+// (or a term whose field kind does not match the queried set field) is rejected
+// before storage rather than silently evaluating to a permanent violates/unknown
+// (F3). It is complementary to Validate (syntax/grammar) and ValidateForMining
+// (outcome-read prohibition): callers at the mining boundary run all three.
+func ValidateReferences(p Predicate, vocab *canon.Vocabulary) error {
+	if vocab == nil {
+		return fmt.Errorf("%w: vocabulary required to validate references", ErrInvalidPredicate)
+	}
+	return validateReferences(p.Root, vocab)
+}
+
+func validateReferences(n Node, vocab *canon.Vocabulary) error {
+	switch n.Op {
+	case OpContains:
+		term, ok := vocab.Term(domain.CanonicalID(n.CanonicalID))
+		if !ok {
+			return fmt.Errorf("%w: canonical_id %q not in pinned vocabulary", ErrInvalidPredicate, n.CanonicalID)
+		}
+		if want := setFieldKind(n.Field); term.FieldKind != want {
+			return fmt.Errorf("%w: canonical_id %q is a %s term, not valid for field %q", ErrInvalidPredicate, n.CanonicalID, term.FieldKind, n.Field)
+		}
+	case OpBoundary:
+		term, ok := vocab.Term(domain.CanonicalID(n.CanonicalID))
+		if !ok {
+			return fmt.Errorf("%w: boundary canonical_id %q not in pinned vocabulary", ErrInvalidPredicate, n.CanonicalID)
+		}
+		if term.FieldKind != domain.FieldBoundary {
+			return fmt.Errorf("%w: canonical_id %q is a %s term, not a boundary", ErrInvalidPredicate, n.CanonicalID, term.FieldKind)
+		}
+	case OpAll, OpAny, OpNot:
+		for _, c := range n.Children {
+			if err := validateReferences(c, vocab); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
 
 // Fingerprint is the method form of Fingerprint.
 func (p Predicate) Fingerprint() string { return Fingerprint(p) }
@@ -311,10 +384,12 @@ func ParsePredicate(raw string) (Predicate, error) {
 }
 
 // Evaluate applies the predicate to one canonical mechanism signature and
-// returns satisfies/violates/unknown. It distinguishes field-unresolved
-// (any non-resolved claim in a read field -> unknown) from value-absent
-// (resolved field lacking the queried id -> violates), mirroring how
-// comparison marks fields incomparable.
+// returns satisfies/violates/unknown. It distinguishes field-unresolved (any
+// non-resolved claim in a read field -> unknown) from value-absent, and among
+// value-absent it further distinguishes verified absence (the field was
+// exhaustively extracted -> violates) from an unrecorded field (completeness
+// unobserved/partial -> unknown), so a missing annotation never masquerades as
+// negative evidence (F3).
 func Evaluate(p Predicate, sig canon.MechanismSignature) Verdict {
 	return evalNode(Canonicalize(p).Root, sig)
 }
@@ -330,6 +405,14 @@ func evalNode(n Node, sig canon.MechanismSignature) Verdict {
 			if string(c.CanonicalID) == n.CanonicalID {
 				return VerdictSatisfies
 			}
+		}
+		// Value absent. This is a verified negative ONLY when the field was
+		// exhaustively extracted; otherwise the value could be absent merely
+		// because the field was never (fully) recorded, so absence is an
+		// epistemic gap, not evidence (F3). A missing completeness marker
+		// defaults to unobserved, so the safe (non-inflating) answer is unknown.
+		if sig.FieldCompleteness(setFieldKind(n.Field)) != domain.CompletenessComplete {
+			return VerdictUnknown
 		}
 		return VerdictViolates
 	case OpBoundary:
@@ -427,6 +510,28 @@ func setFieldClaims(field string, sig canon.MechanismSignature) []canon.FieldCla
 	}
 }
 
+// setFieldKind maps a predicate set-field name to the domain FieldKind used as
+// the completeness key on the signature. Non-set fields return an empty kind
+// (their completeness is not tracked here).
+func setFieldKind(field string) domain.FieldKind {
+	switch field {
+	case FieldRepresentations:
+		return domain.FieldRepresentation
+	case FieldOperators:
+		return domain.FieldOperator
+	case FieldAssumptions:
+		return domain.FieldAssumption
+	case FieldPreserves:
+		return domain.FieldPreserves
+	case FieldBreaks:
+		return domain.FieldBreaks
+	case FieldAuxiliaryObjects:
+		return domain.FieldAuxiliaryObject
+	default:
+		return ""
+	}
+}
+
 func hasUnresolvedClaims(claims []canon.FieldClaim) bool {
 	for _, c := range claims {
 		if c.State != domain.ResolutionResolved {
@@ -437,9 +542,11 @@ func hasUnresolvedClaims(claims []canon.FieldClaim) bool {
 }
 
 // enumAxisValue returns the signature's value for an enum axis; known=false
-// when the axis is recorded as its unknown sentinel (an unknown posture axis
-// is an epistemic gap, so a predicate reading it must yield unknown unless it
-// explicitly targets "unknown").
+// when the axis is empty or recorded as its unknown sentinel. An unknown
+// posture axis is an epistemic gap, so a predicate reading it yields unknown.
+// Predicates cannot target the unknown sentinel as a query value (Validate
+// rejects it via enumFieldValues), so known=false here is always the correct
+// terminal answer for an unknown-recorded axis.
 func enumAxisValue(field string, sig canon.MechanismSignature) (string, bool) {
 	switch field {
 	case FieldLocality:

@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 11
+const currentSchemaVersion = 13
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -523,9 +523,10 @@ CREATE TABLE IF NOT EXISTS cluster_runs (
   signature_count INTEGER NOT NULL,
   family_count INTEGER NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('clean', 'degraded')),
-  created_at TEXT NOT NULL,
-  UNIQUE(problem_id, schema_version, vocabulary_version, profile_version, cluster_algo_version, thresholds_hash)
+  created_at TEXT NOT NULL
 );
+CREATE UNIQUE INDEX IF NOT EXISTS ux_cluster_runs_identity
+  ON cluster_runs(problem_id, schema_version, vocabulary_version, profile_version, cluster_algo_version, thresholds_hash);
 
 CREATE TABLE IF NOT EXISTS mechanism_clusters (
   id TEXT PRIMARY KEY,
@@ -719,6 +720,36 @@ END;
 		// already permits 'invariant' and the edit is skipped.
 		apply: migrateV11CandidateInvariants,
 	},
+	{
+		version: 12,
+		// M4.2 semantic hardening (F2). Two additive changes to candidate_invariants:
+		// (1) add contrast_violating_num + contrast_eligible_den so contrast is
+		// recorded as complete counts rather than collapsed into the boolean the
+		// association_status carried; (2) rename the association_status enum value
+		// 'discriminative' -> 'contrast_observed' in the CHECK, because a single
+		// violating contrast family does not establish directional discrimination.
+		// The columns are plain ADD COLUMN (FK-safe). The CHECK is edited in place
+		// via writable_schema (never a DROP+RENAME parent rebuild, which is not
+		// FK-safe: invariant_predicates/_family_evaluations/_counterexamples all
+		// reference candidate_invariants). Introspective + idempotent: a fresh v12
+		// database already has the target shape and the checks are no-ops.
+		apply: migrateV12ContrastCountsAndRename,
+	},
+	{
+		version: 13,
+		// M4.3 challenge/falsify lifecycle (#13). Additive challenge, synthetic-
+		// artifact, lineage, and append-only state-transition tables with the
+		// blueprint's transition-validating trigger and the invariant_current_state
+		// read view (docs/persistence.md, names pluralized to the shipped
+		// convention; challenge evidence links reference the real persisted rows —
+		// clusters/signatures/snapshots — because the sketched evidence_record
+		// table was never shipped). Also widens provider_invocations.role to admit
+		// 'challenge' via the same guarded in-place writable_schema CHECK edit v11
+		// used (FK-safe by construction; normalization_revisions holds live FKs
+		// into the table). Introspective + idempotent: a fresh v13 database already
+		// has the target shape and every step is a no-op.
+		apply: migrateV13ChallengeLifecycle,
+	},
 }
 
 // invariantTablesSQL is the additive DDL for the candidate-invariant layer
@@ -752,11 +783,13 @@ CREATE TABLE IF NOT EXISTS candidate_invariants (
   statement TEXT NOT NULL,
   abstraction_level TEXT NOT NULL,
   initial_state TEXT NOT NULL DEFAULT 'proposed' CHECK (initial_state = 'proposed'),
-  association_status TEXT NOT NULL CHECK (association_status IN ('recurring','discriminative','candidate_obstruction','unknown')),
+  association_status TEXT NOT NULL CHECK (association_status IN ('recurring','contrast_observed','candidate_obstruction','unknown')),
   obstruction_is_model_hypothesis INTEGER NOT NULL DEFAULT 0,
   distinct_family_support INTEGER NOT NULL,
   failure_coverage_num INTEGER NOT NULL,
   failure_coverage_den INTEGER NOT NULL,
+  contrast_violating_num INTEGER NOT NULL DEFAULT 0,
+  contrast_eligible_den INTEGER NOT NULL DEFAULT 0,
   support_explicit_count INTEGER NOT NULL,
   support_inferred_count INTEGER NOT NULL,
   support_other_count INTEGER NOT NULL,
@@ -890,7 +923,8 @@ func providerRoleAllowsInvariant(ctx context.Context, tx *sql.Tx) (bool, error) 
 // preserved by construction. This is a targeted, single-table DDL-text edit
 // (widening one CHECK enum), guarded by providerRoleAllowsInvariant so it is a
 // no-op on a fresh v11 DB, and followed by an integrity_check to reject a
-// corrupted schema edit. The immutability triggers are untouched.
+// schema whose btree/index structure was corrupted by the write. The
+// immutability triggers are untouched.
 func generalizeProviderInvocationsRole(ctx context.Context, tx *sql.Tx) error {
 	var ddl string
 	if err := tx.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type='table' AND name='provider_invocations'`).Scan(&ddl); err != nil {
@@ -918,14 +952,96 @@ func generalizeProviderInvocationsRole(ctx context.Context, tx *sql.Tx) error {
 	if _, err := tx.ExecContext(ctx, fmt.Sprintf(`PRAGMA schema_version = %d`, schemaVersion+1)); err != nil {
 		return err
 	}
-	// A writable_schema edit bypasses parser validation, so verify the schema is
-	// still coherent before trusting it.
+	// integrity_check validates btree/index/data consistency, not DDL
+	// parseability, so it confirms the writable_schema write did not corrupt
+	// storage structures. The edited CHECK's parseability is proven separately:
+	// the new sqlite_master text is re-parsed on the next connection, and
+	// TestV11ProviderRoleGeneralizationFromPreV11 asserts an 'invariant' role
+	// row inserts (accepted) while an out-of-enum role is still rejected.
 	var res string
 	if err := tx.QueryRowContext(ctx, `PRAGMA integrity_check`).Scan(&res); err != nil {
 		return err
 	}
 	if res != "ok" {
 		return fmt.Errorf("v11: integrity_check after role generalization: %s", res)
+	}
+	return nil
+}
+
+// editTableCheckInPlace performs an FK-safe, in-place edit of a single table's
+// DDL text (typically widening or renaming a CHECK enum) via PRAGMA
+// writable_schema, then forces a schema reparse and runs integrity_check. It
+// never drops the parent table, so child FKs are preserved by construction —
+// the pattern v11 established after the v10-style DROP+RENAME rebuild proved not
+// FK-safe with existing child rows. old must occur exactly once in the current
+// DDL; a no-op (old absent) is reported as an error so callers can guard with an
+// introspective idempotency check first.
+func editTableCheckInPlace(ctx context.Context, tx *sql.Tx, table, old, new string) error {
+	var ddl string
+	if err := tx.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type='table' AND name=?`, table).Scan(&ddl); err != nil {
+		return err
+	}
+	updated := strings.Replace(ddl, old, new, 1)
+	if updated == ddl {
+		return fmt.Errorf("in-place CHECK edit: could not locate %q in %s DDL", old, table)
+	}
+	var schemaVersion int
+	if err := tx.QueryRowContext(ctx, `PRAGMA schema_version`).Scan(&schemaVersion); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `PRAGMA writable_schema = ON`); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE sqlite_master SET sql = ? WHERE type='table' AND name=?`, updated, table); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `PRAGMA writable_schema = OFF`); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, fmt.Sprintf(`PRAGMA schema_version = %d`, schemaVersion+1)); err != nil {
+		return err
+	}
+	var res string
+	if err := tx.QueryRowContext(ctx, `PRAGMA integrity_check`).Scan(&res); err != nil {
+		return err
+	}
+	if res != "ok" {
+		return fmt.Errorf("integrity_check after %s CHECK edit: %s", table, res)
+	}
+	return nil
+}
+
+// migrateV12ContrastCountsAndRename applies the M4.2 semantic-hardening schema
+// changes (F2): additive contrast count columns and the association_status enum
+// rename discriminative -> contrast_observed. Introspective + idempotent.
+func migrateV12ContrastCountsAndRename(ctx context.Context, tx *sql.Tx) error {
+	// (1) Additive contrast count columns (FK-safe ADD COLUMN, guarded).
+	for _, col := range []struct{ name, ddl string }{
+		{"contrast_violating_num", "ALTER TABLE candidate_invariants ADD COLUMN contrast_violating_num INTEGER NOT NULL DEFAULT 0"},
+		{"contrast_eligible_den", "ALTER TABLE candidate_invariants ADD COLUMN contrast_eligible_den INTEGER NOT NULL DEFAULT 0"},
+	} {
+		has, err := columnExists(ctx, tx, "candidate_invariants", col.name)
+		if err != nil {
+			return err
+		}
+		if !has {
+			if _, err := tx.ExecContext(ctx, col.ddl); err != nil {
+				return err
+			}
+		}
+	}
+	// (2) Rename the association_status enum value in the CHECK, in place. Guard
+	// on whether the legacy value is still present so a fresh v12 DB is a no-op.
+	var ddl string
+	if err := tx.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type='table' AND name='candidate_invariants'`).Scan(&ddl); err != nil {
+		return err
+	}
+	if strings.Contains(ddl, "'discriminative'") {
+		if err := editTableCheckInPlace(ctx, tx, "candidate_invariants",
+			"'recurring','discriminative','candidate_obstruction','unknown'",
+			"'recurring','contrast_observed','candidate_obstruction','unknown'"); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -956,30 +1072,95 @@ func migrateV10ClusterIdentityAndOutcome(ctx context.Context, tx *sql.Tx) error 
 		}
 	}
 
-	// 2. cluster_runs.input_set_hash + UNIQUE rebuild. The UNIQUE key must gain
-	//    input_set_hash; SQLite cannot ALTER a UNIQUE, so when the column is
-	//    absent we rebuild via create-copy-drop-rename (preserving any rows and
-	//    the immutable triggers).
+	// 2. cluster_runs.input_set_hash + UNIQUE. The idempotency UNIQUE must gain
+	//    input_set_hash. The original v10 code rebuilt the table
+	//    (create-copy-DROP-rename) to widen the UNIQUE, but dropping cluster_runs
+	//    is NOT FK-safe: mechanism_clusters, cluster_distances,
+	//    cluster_coverage_axes, cluster_discrimination_losses, failure_spaces and
+	//    invariant_revisions all reference it, and with foreign_keys=ON a
+	//    populated pre-v10 database fails at commit after the parent is dropped
+	//    (the same hazard v11 documents for provider_invocations). Instead we ADD
+	//    COLUMN (FK-safe, never drops the parent) and enforce the widened key with
+	//    a UNIQUE INDEX — a UNIQUE index is equivalent to a table-level UNIQUE
+	//    constraint for conflict detection (F4).
 	has, err := columnExists(ctx, tx, "cluster_runs", "input_set_hash")
 	if err != nil {
 		return err
 	}
 	if !has {
-		if err := rebuildClusterRunsWithInputSetHash(ctx, tx); err != nil {
+		if err := addClusterRunsInputSetHashFKSafe(ctx, tx); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// rebuildClusterRunsWithInputSetHash rebuilds cluster_runs to add input_set_hash
-// and include it in the idempotency UNIQUE. Existing rows (if any) receive an
-// empty input_set_hash, which is a distinct identity from any real population.
-func rebuildClusterRunsWithInputSetHash(ctx context.Context, tx *sql.Tx) error {
-	stmts := []string{
-		`DROP TRIGGER IF EXISTS cluster_runs_immutable_update`,
-		`DROP TRIGGER IF EXISTS cluster_runs_immutable_delete`,
-		`CREATE TABLE cluster_runs__v10 (
+// addClusterRunsInputSetHashFKSafe adds cluster_runs.input_set_hash and widens
+// the idempotency UNIQUE without dropping the parent table, so every child FK is
+// preserved by construction (F4). It handles both fresh v7+ databases (identity
+// enforced by a named UNIQUE INDEX ux_cluster_runs_identity) and legacy
+// databases created under the earlier v7 that used an inline table-level UNIQUE
+// (backed by an sqlite_autoindex). In both cases the 6-column identity is
+// replaced by a 7-column UNIQUE INDEX that includes input_set_hash. The
+// immutability triggers are untouched because the table is never recreated.
+func addClusterRunsInputSetHashFKSafe(ctx context.Context, tx *sql.Tx) error {
+	if _, err := tx.ExecContext(ctx, `ALTER TABLE cluster_runs ADD COLUMN input_set_hash TEXT NOT NULL DEFAULT ''`); err != nil {
+		return err
+	}
+	// Fresh v7+ path: identity was enforced by a droppable named index. Drop the
+	// 6-column index and replace it with the 7-column one. No inline UNIQUE exists
+	// in the DDL, so no rebuild is required.
+	if _, err := tx.ExecContext(ctx, `DROP INDEX IF EXISTS ux_cluster_runs_identity`); err != nil {
+		return err
+	}
+	// Legacy path: databases created under the earliest v7 carry an inline
+	// table-level UNIQUE(6 columns) backed by an sqlite_autoindex. That constraint
+	// is stricter than the widened key and would reject a re-cluster that differs
+	// only by input_set_hash, so it must be removed. An autoindex cannot be
+	// dropped directly, and editing it out of the schema in place corrupts the
+	// freelist. The only robust removal is a table rebuild — which is FK-safe here
+	// because Migrate runs with foreign_keys=OFF and performs a foreign_key_check
+	// before commit. rebuildLegacyClusterRuns is a no-op on a fresh database whose
+	// DDL has no inline UNIQUE.
+	if err := rebuildLegacyClusterRuns(ctx, tx); err != nil {
+		return err
+	}
+	// Enforce the widened 7-column identity with a UNIQUE index.
+	if _, err := tx.ExecContext(ctx, `CREATE UNIQUE INDEX IF NOT EXISTS ux_cluster_runs_identity
+ON cluster_runs(problem_id, schema_version, vocabulary_version, profile_version, cluster_algo_version, thresholds_hash, input_set_hash)`); err != nil {
+		return err
+	}
+	return nil
+}
+
+// rebuildLegacyClusterRuns rebuilds cluster_runs to drop the legacy inline
+// table-level UNIQUE (present only in databases created under the earliest v7
+// DDL) by creating a constraint-free replacement, copying every row, dropping
+// the old table, and renaming. It is FK-safe only under foreign_keys=OFF (the
+// mode Migrate establishes); children keep their textual parent ids across the
+// swap and Migrate's pre-commit foreign_key_check proves none dangled. The
+// cluster_runs immutability triggers are dropped by DROP TABLE and recreated
+// against the new table. On a fresh database (no inline UNIQUE) it is a no-op.
+func rebuildLegacyClusterRuns(ctx context.Context, tx *sql.Tx) error {
+	var ddl string
+	if err := tx.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type='table' AND name='cluster_runs'`).Scan(&ddl); err != nil {
+		return err
+	}
+	if !strings.Contains(ddl, "UNIQUE(problem_id") {
+		return nil // fresh DB: no inline UNIQUE to remove.
+	}
+	// Determine the current column list so the copy is exact regardless of which
+	// pre-v10 additive columns are present. input_set_hash has already been added
+	// by the caller, so it is included and copied through.
+	cols, err := tableColumnNames(ctx, tx, "cluster_runs")
+	if err != nil {
+		return err
+	}
+	colList := strings.Join(cols, ", ")
+	// Constraint-free replacement (no inline UNIQUE; the widened UNIQUE INDEX is
+	// created by the caller afterward). Columns mirror the seed v7 DDL plus any
+	// additively-migrated columns copied verbatim.
+	if _, err := tx.ExecContext(ctx, `CREATE TABLE cluster_runs__rebuild (
   id TEXT PRIMARY KEY,
   problem_id TEXT NOT NULL REFERENCES problems(id),
   run_id TEXT NOT NULL REFERENCES runs(id),
@@ -988,35 +1169,75 @@ func rebuildClusterRunsWithInputSetHash(ctx context.Context, tx *sql.Tx) error {
   profile_version TEXT NOT NULL,
   cluster_algo_version TEXT NOT NULL,
   thresholds_hash TEXT NOT NULL,
-  input_set_hash TEXT NOT NULL DEFAULT '',
   signature_count INTEGER NOT NULL,
   family_count INTEGER NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('clean', 'degraded')),
   created_at TEXT NOT NULL,
-  UNIQUE(problem_id, schema_version, vocabulary_version, profile_version, cluster_algo_version, thresholds_hash, input_set_hash)
-)`,
-		`INSERT INTO cluster_runs__v10(id, problem_id, run_id, schema_version, vocabulary_version, profile_version, cluster_algo_version, thresholds_hash, input_set_hash, signature_count, family_count, status, created_at)
-  SELECT id, problem_id, run_id, schema_version, vocabulary_version, profile_version, cluster_algo_version, thresholds_hash, '', signature_count, family_count, status, created_at FROM cluster_runs`,
-		`DROP TABLE cluster_runs`,
-		`ALTER TABLE cluster_runs__v10 RENAME TO cluster_runs`,
-		`CREATE INDEX IF NOT EXISTS idx_cluster_runs_problem ON cluster_runs(problem_id)`,
-		`CREATE TRIGGER IF NOT EXISTS cluster_runs_immutable_update
+  input_set_hash TEXT NOT NULL DEFAULT ''
+)`); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, fmt.Sprintf(`INSERT INTO cluster_runs__rebuild (%s) SELECT %s FROM cluster_runs`, colList, colList)); err != nil {
+		return err
+	}
+	// Drop the immutability triggers before dropping the table so the rename does
+	// not collide, then drop and rename.
+	if _, err := tx.ExecContext(ctx, `DROP TRIGGER IF EXISTS cluster_runs_immutable_update`); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DROP TRIGGER IF EXISTS cluster_runs_immutable_delete`); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DROP TABLE cluster_runs`); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `ALTER TABLE cluster_runs__rebuild RENAME TO cluster_runs`); err != nil {
+		return err
+	}
+	// Recreate the immutability triggers and the problem index on the new table.
+	if _, err := tx.ExecContext(ctx, `CREATE TRIGGER IF NOT EXISTS cluster_runs_immutable_update
 BEFORE UPDATE ON cluster_runs
 BEGIN
   SELECT RAISE(ABORT, 'cluster runs are immutable');
-END`,
-		`CREATE TRIGGER IF NOT EXISTS cluster_runs_immutable_delete
+END`); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `CREATE TRIGGER IF NOT EXISTS cluster_runs_immutable_delete
 BEFORE DELETE ON cluster_runs
 BEGIN
   SELECT RAISE(ABORT, 'cluster runs are immutable');
-END`,
+END`); err != nil {
+		return err
 	}
-	for _, s := range stmts {
-		if _, err := tx.ExecContext(ctx, s); err != nil {
-			return err
-		}
+	if _, err := tx.ExecContext(ctx, `CREATE INDEX IF NOT EXISTS idx_cluster_runs_problem ON cluster_runs(problem_id)`); err != nil {
+		return err
 	}
 	return nil
+}
+
+// tableColumnNames returns the column names of table in schema (declaration)
+// order via PRAGMA table_info.
+func tableColumnNames(ctx context.Context, tx *sql.Tx, table string) ([]string, error) {
+	rows, err := tx.QueryContext(ctx, fmt.Sprintf(`PRAGMA table_info(%s)`, table))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var cols []string
+	for rows.Next() {
+		var (
+			cid        int
+			name, ctyp string
+			notnull    int
+			dflt       any
+			pk         int
+		)
+		if err := rows.Scan(&cid, &name, &ctyp, &notnull, &dflt, &pk); err != nil {
+			return nil, err
+		}
+		cols = append(cols, name)
+	}
+	return cols, rows.Err()
 }
 
 // migrateV9RepairAndRejected upgrades a pre-fix v6-era schema and adds durable
@@ -1168,4 +1389,233 @@ END`,
 		}
 	}
 	return nil
+}
+
+// challengeTablesSQL is the additive DDL for the M4.3 challenge lifecycle
+// (migration v13): immutable challenge rows, the mutable per-invariant
+// transition counter (the ONLY mutation surface), append-only state transitions
+// guarded by the blueprint's validating trigger, the invariant_current_state
+// read view, evidence links to real persisted rows, synthetic artifacts, and
+// split/merge/weaken lineage. State lives only in transitions (KTD-1).
+const challengeTablesSQL = `
+CREATE TABLE IF NOT EXISTS invariant_challenges (
+  id TEXT PRIMARY KEY,
+  invariant_id TEXT NOT NULL REFERENCES candidate_invariants(id),
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  provider_invocation_id TEXT NOT NULL REFERENCES provider_invocations(id),
+  challenge_type TEXT NOT NULL CHECK (challenge_type IN (
+    'known-counterexample', 'synthetic-counterexample', 'success-preserving',
+    'split', 'merge', 'bias-critique', 'independent-verification')),
+  claimed_verdict TEXT NOT NULL DEFAULT '',
+  result_summary TEXT NOT NULL CHECK (result_summary IN ('confirmed', 'unconfirmed')),
+  detail TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS invariant_transition_counters (
+  invariant_id TEXT PRIMARY KEY REFERENCES candidate_invariants(id),
+  last_transition_seq INTEGER NOT NULL DEFAULT 0 CHECK (last_transition_seq >= 0)
+);
+
+CREATE TABLE IF NOT EXISTS invariant_state_transitions (
+  invariant_id TEXT NOT NULL REFERENCES candidate_invariants(id),
+  transition_seq INTEGER NOT NULL,
+  challenge_id TEXT NOT NULL REFERENCES invariant_challenges(id),
+  from_state TEXT NOT NULL CHECK (from_state IN ('proposed', 'challenged', 'surviving', 'weaken')),
+  to_state TEXT NOT NULL CHECK (to_state IN ('challenged', 'surviving', 'weaken', 'falsified', 'established')),
+  created_at TEXT NOT NULL,
+  PRIMARY KEY(invariant_id, transition_seq)
+);
+
+CREATE TRIGGER IF NOT EXISTS invariant_state_transitions_validate_insert
+BEFORE INSERT ON invariant_state_transitions
+BEGIN
+  SELECT CASE
+    WHEN COALESCE((
+      SELECT itc.last_transition_seq
+      FROM invariant_transition_counters itc
+      WHERE itc.invariant_id = NEW.invariant_id
+    ), 0) = 0 THEN RAISE(ABORT, 'transition_seq requires a prior counter allocation')
+    WHEN NEW.transition_seq <> (
+      SELECT itc.last_transition_seq
+      FROM invariant_transition_counters itc
+      WHERE itc.invariant_id = NEW.invariant_id
+    ) THEN RAISE(ABORT, 'transition_seq must match the atomically allocated invariant counter')
+    WHEN NEW.from_state <> COALESCE((
+      SELECT t.to_state
+      FROM invariant_state_transitions t
+      WHERE t.invariant_id = NEW.invariant_id
+      ORDER BY t.transition_seq DESC
+      LIMIT 1
+    ), (
+      SELECT ci.initial_state
+      FROM candidate_invariants ci
+      WHERE ci.id = NEW.invariant_id
+    )) THEN RAISE(ABORT, 'from_state must match current invariant state')
+    WHEN NOT (
+      (NEW.from_state = 'proposed' AND NEW.to_state = 'challenged') OR
+      (NEW.from_state = 'challenged' AND NEW.to_state IN ('surviving', 'weaken', 'falsified')) OR
+      (NEW.from_state = 'surviving' AND NEW.to_state IN ('challenged', 'weaken', 'falsified', 'established')) OR
+      (NEW.from_state = 'weaken' AND NEW.to_state IN ('challenged', 'surviving', 'falsified'))
+    ) THEN RAISE(ABORT, 'invalid invariant state transition')
+  END;
+END;
+
+CREATE VIEW IF NOT EXISTS invariant_current_state AS
+WITH ranked AS (
+  SELECT
+    t.invariant_id,
+    t.to_state,
+    t.created_at,
+    ROW_NUMBER() OVER (
+      PARTITION BY t.invariant_id
+      ORDER BY t.transition_seq DESC
+    ) AS rn
+  FROM invariant_state_transitions t
+),
+latest AS (
+  SELECT invariant_id, to_state, created_at
+  FROM ranked
+  WHERE rn = 1
+)
+SELECT ci.id AS invariant_id,
+       COALESCE(latest.to_state, ci.initial_state) AS state,
+       COALESCE(latest.created_at, ir.created_at) AS as_of
+FROM candidate_invariants ci
+JOIN invariant_revisions ir ON ir.id = ci.invariant_revision_id
+LEFT JOIN latest ON latest.invariant_id = ci.id;
+
+CREATE TABLE IF NOT EXISTS invariant_challenge_evidence (
+  challenge_id TEXT NOT NULL REFERENCES invariant_challenges(id),
+  kind TEXT NOT NULL CHECK (kind IN (
+    'counterexample_member', 'success_family', 'support_recount',
+    'grounding', 'independent_source')),
+  cluster_id TEXT REFERENCES mechanism_clusters(id),
+  signature_id TEXT REFERENCES mechanism_signatures(id),
+  snapshot_id TEXT REFERENCES source_snapshots(id),
+  detail TEXT NOT NULL DEFAULT '',
+  ordinal INTEGER NOT NULL,
+  PRIMARY KEY(challenge_id, ordinal)
+);
+
+CREATE TABLE IF NOT EXISTS synthetic_artifacts (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  artifact_type TEXT NOT NULL CHECK (artifact_type IN ('synthetic_attempt', 'synthetic_counterexample')),
+  content TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS invariant_challenge_synthetic_artifacts (
+  challenge_id TEXT NOT NULL REFERENCES invariant_challenges(id),
+  synthetic_artifact_id TEXT NOT NULL REFERENCES synthetic_artifacts(id),
+  PRIMARY KEY(challenge_id, synthetic_artifact_id)
+);
+
+CREATE TABLE IF NOT EXISTS invariant_lineage (
+  parent_invariant_id TEXT NOT NULL REFERENCES candidate_invariants(id),
+  child_invariant_id TEXT NOT NULL REFERENCES candidate_invariants(id),
+  relation TEXT NOT NULL CHECK (relation IN ('split', 'merge', 'weaken')),
+  PRIMARY KEY(parent_invariant_id, child_invariant_id, relation)
+);
+
+CREATE INDEX IF NOT EXISTS idx_invariant_challenges_invariant ON invariant_challenges(invariant_id);
+CREATE INDEX IF NOT EXISTS idx_invariant_state_transitions_invariant ON invariant_state_transitions(invariant_id);
+
+CREATE TRIGGER IF NOT EXISTS invariant_challenges_immutable_update
+BEFORE UPDATE ON invariant_challenges
+BEGIN
+  SELECT RAISE(ABORT, 'invariant challenges are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS invariant_challenges_immutable_delete
+BEFORE DELETE ON invariant_challenges
+BEGIN
+  SELECT RAISE(ABORT, 'invariant challenges are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS invariant_state_transitions_immutable_update
+BEFORE UPDATE ON invariant_state_transitions
+BEGIN
+  SELECT RAISE(ABORT, 'invariant state transitions are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS invariant_state_transitions_immutable_delete
+BEFORE DELETE ON invariant_state_transitions
+BEGIN
+  SELECT RAISE(ABORT, 'invariant state transitions are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS invariant_challenge_evidence_immutable_update
+BEFORE UPDATE ON invariant_challenge_evidence
+BEGIN
+  SELECT RAISE(ABORT, 'invariant challenge evidence is immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS invariant_challenge_evidence_immutable_delete
+BEFORE DELETE ON invariant_challenge_evidence
+BEGIN
+  SELECT RAISE(ABORT, 'invariant challenge evidence is immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS synthetic_artifacts_immutable_update
+BEFORE UPDATE ON synthetic_artifacts
+BEGIN
+  SELECT RAISE(ABORT, 'synthetic artifacts are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS synthetic_artifacts_immutable_delete
+BEFORE DELETE ON synthetic_artifacts
+BEGIN
+  SELECT RAISE(ABORT, 'synthetic artifacts are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS invariant_challenge_synthetic_artifacts_immutable_update
+BEFORE UPDATE ON invariant_challenge_synthetic_artifacts
+BEGIN
+  SELECT RAISE(ABORT, 'invariant challenge synthetic links are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS invariant_challenge_synthetic_artifacts_immutable_delete
+BEFORE DELETE ON invariant_challenge_synthetic_artifacts
+BEGIN
+  SELECT RAISE(ABORT, 'invariant challenge synthetic links are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS invariant_lineage_immutable_update
+BEFORE UPDATE ON invariant_lineage
+BEGIN
+  SELECT RAISE(ABORT, 'invariant lineage is immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS invariant_lineage_immutable_delete
+BEFORE DELETE ON invariant_lineage
+BEGIN
+  SELECT RAISE(ABORT, 'invariant lineage is immutable');
+END;
+`
+
+// migrateV13ChallengeLifecycle creates the M4.3 challenge tables and widens the
+// provider_invocations.role CHECK to admit 'challenge'. Both steps are guarded
+// and idempotent: the DDL is IF NOT EXISTS throughout, and the CHECK edit runs
+// only when 'challenge' is not already permitted (a fresh v13 database is
+// untouched).
+func migrateV13ChallengeLifecycle(ctx context.Context, tx *sql.Tx) error {
+	if _, err := tx.ExecContext(ctx, challengeTablesSQL); err != nil {
+		return err
+	}
+	allows, err := providerRoleAllows(ctx, tx, "challenge")
+	if err != nil {
+		return err
+	}
+	if !allows {
+		if err := editTableCheckInPlace(ctx, tx, "provider_invocations",
+			"role IN ('normalize','invariant')",
+			"role IN ('normalize','invariant','challenge')"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// providerRoleAllows reports whether the provider_invocations.role CHECK
+// already admits the given role, by reading the table DDL from sqlite_master
+// (deterministic and side-effect-free).
+func providerRoleAllows(ctx context.Context, tx *sql.Tx, role string) (bool, error) {
+	var ddl string
+	row := tx.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type='table' AND name='provider_invocations'`)
+	if err := row.Scan(&ddl); err != nil {
+		return false, err
+	}
+	return strings.Contains(ddl, "'"+role+"'"), nil
 }

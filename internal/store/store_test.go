@@ -228,8 +228,15 @@ func TestMigrateRejectsMissingSchemaTables(t *testing.T) {
 	if _, err := store.db.ExecContext(ctx, `CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)`); err != nil {
 		t.Fatalf("create schema_migrations error = %v", err)
 	}
-	if _, err := store.db.ExecContext(ctx, `INSERT INTO schema_migrations(version, applied_at) VALUES(?, ?)`, currentSchemaVersion, time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
-		t.Fatalf("insert schema_migrations row error = %v", err)
+	// Stamp EVERY known migration as applied so none run, leaving the schema with
+	// only schema_migrations. Migrate must then fail in validateSchemaTables
+	// because the required tables are absent. (Stamping only the highest version
+	// would let migrations 1..N-1 run and create the tables, defeating the test.)
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	for v := 1; v <= currentSchemaVersion; v++ {
+		if _, err := store.db.ExecContext(ctx, `INSERT INTO schema_migrations(version, applied_at) VALUES(?, ?)`, v, now); err != nil {
+			t.Fatalf("insert schema_migrations row error = %v", err)
+		}
 	}
 
 	if err := store.Migrate(ctx); !errors.Is(err, ErrCorruptStore) {
