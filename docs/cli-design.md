@@ -134,7 +134,7 @@ Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statu
   - `invariant_challenge`
   - `invariant_state_transition` (with current state exposed through derived `invariant_current_state` view)
   - optional `invariant_lineage`
-  - optional child/sibling invariants for split/merged lineage cases
+  - optional child/sibling invariants for split/merge lineage cases
 - Idempotency: always appends new challenge record; invariant state reflects latest accepted transition.
 - Failure semantics: unknown invariant, invalid transition, provider/evidence fetch failure.
 - Human output: challenge result, old/new state, cited evidence IDs.
@@ -162,7 +162,10 @@ Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statu
 - Required input:
   - proposal mode: `--proposal-id <prop-id>` (repeatable) or `--frontier-generation-run-id <run-id>`
   - holdout mode: either `--holdout-set-id <set-id>` or raw holdout definition inputs (`--cutoff`, `--holdout-source-id`, `--holdout-family-label`), plus a holdout-filtered upstream chain (`--normalization-rev`, `--cluster-rev`, `--invariant-rev`, `--frontier-generation-run-id`) derived from the same excluded holdout set
-- Optional flags: `--mode proposal|holdout`, `--baseline undirected|semantic-summary`, `--cutoff`, `--holdout-source-id <src-id>` (repeatable), `--holdout-family-label <label>` (repeatable), `--judge-provider`, `--proposal-id <prop-id>` (repeatable), `--frontier-generation-run-id <run-id>`, `--normalization-rev`, `--cluster-rev`, `--invariant-rev`.
+- Optional flags:
+  - shared: `--mode proposal|holdout`, `--baseline undirected|semantic-summary`, `--judge-provider`
+  - holdout-set creation (required only when `--holdout-set-id` is omitted in holdout mode): `--cutoff`, `--holdout-source-id <src-id>` (repeatable), `--holdout-family-label <label>` (repeatable)
+  - upstream revision selectors (required in holdout mode): `--normalization-rev`, `--cluster-rev`, `--invariant-rev`, `--frontier-generation-run-id`
 - Persists:
   - `evaluation_run`
   - `evaluation`
@@ -196,11 +199,11 @@ Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statu
 ## Invariant lifecycle state machine
 
 ```text
-proposed -> challenged -> surviving | weakened | split | merged | falsified | established
+proposed -> challenged -> surviving | weaken | split | merge | falsified | established
 ```
 
 - `established` requires external independent evidence (e.g., theorem/proof-check or independently replicated experiment), never model consensus alone.
-- split/merged cases produce lineage edges so history remains queryable.
+- split/merge cases produce lineage edges so history remains queryable.
 
 ## Human + machine UX expectations
 

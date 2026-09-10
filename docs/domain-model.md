@@ -51,10 +51,10 @@ Source evidence is immutable and never overwritten. Model/provider interpretatio
 
 ## Invariant lifecycle
 
-`proposed -> challenged -> surviving | weakened | split | merged | falsified | established`
+`proposed -> challenged -> surviving | weaken | split | merge | falsified | established`
 
 - `split`: one parent invariant to many children invariants.
-- `merged`: many parent invariants to one child invariant.
+- `merge`: many parent invariants to one child invariant.
 - `established`: requires independent external evidence class stronger than model output.
 
 ## Go type skeletons
@@ -77,9 +77,9 @@ const (
     InvariantProposed    InvariantState = "proposed"
     InvariantChallenged  InvariantState = "challenged"
     InvariantSurviving   InvariantState = "surviving"
-    InvariantWeakened    InvariantState = "weakened"
+    InvariantWeaken      InvariantState = "weaken"
     InvariantSplit       InvariantState = "split"
-    InvariantMerged      InvariantState = "merged"
+    InvariantMerge       InvariantState = "merge"
     InvariantFalsified   InvariantState = "falsified"
     InvariantEstablished InvariantState = "established"
 )

@@ -359,7 +359,7 @@ CREATE TABLE invariant_support_evidence (
 CREATE TABLE invariant_lineage (
   parent_invariant_id TEXT NOT NULL REFERENCES candidate_invariant(id),
   child_invariant_id TEXT NOT NULL REFERENCES candidate_invariant(id),
-  relation TEXT NOT NULL CHECK (relation IN ('split', 'merged', 'weakened')),
+  relation TEXT NOT NULL CHECK (relation IN ('split', 'merge', 'weaken')),
   PRIMARY KEY(parent_invariant_id, child_invariant_id, relation)
 );
 
@@ -377,8 +377,8 @@ CREATE TABLE invariant_state_transition (
   invariant_id TEXT NOT NULL REFERENCES candidate_invariant(id),
   challenge_id TEXT NOT NULL REFERENCES invariant_challenge(id),
   transition_seq INTEGER NOT NULL,
-  from_state TEXT NOT NULL CHECK (from_state IN ('proposed', 'challenged', 'surviving', 'weakened')),
-  to_state TEXT NOT NULL CHECK (to_state IN ('proposed', 'challenged', 'surviving', 'weakened', 'split', 'merged', 'falsified', 'established')),
+  from_state TEXT NOT NULL CHECK (from_state IN ('proposed', 'challenged', 'surviving', 'weaken')),
+  to_state TEXT NOT NULL CHECK (to_state IN ('proposed', 'challenged', 'surviving', 'weaken', 'split', 'merge', 'falsified', 'established')),
   created_at TEXT NOT NULL,
   UNIQUE(invariant_id, transition_seq)
 );
@@ -405,9 +405,9 @@ BEGIN
     )) THEN RAISE(ABORT, 'from_state must match current invariant state')
     WHEN NOT (
       (NEW.from_state = 'proposed' AND NEW.to_state = 'challenged') OR
-      (NEW.from_state = 'challenged' AND NEW.to_state IN ('surviving', 'weakened', 'split', 'merged', 'falsified')) OR
-      (NEW.from_state = 'surviving' AND NEW.to_state IN ('challenged', 'weakened', 'split', 'merged', 'falsified', 'established')) OR
-      (NEW.from_state = 'weakened' AND NEW.to_state IN ('challenged', 'surviving', 'split', 'merged', 'falsified'))
+      (NEW.from_state = 'challenged' AND NEW.to_state IN ('surviving', 'weaken', 'split', 'merge', 'falsified')) OR
+      (NEW.from_state = 'surviving' AND NEW.to_state IN ('challenged', 'weaken', 'split', 'merge', 'falsified', 'established')) OR
+      (NEW.from_state = 'weaken' AND NEW.to_state IN ('challenged', 'surviving', 'split', 'merge', 'falsified'))
     ) THEN RAISE(ABORT, 'invalid invariant state transition')
   END;
 END;
@@ -506,7 +506,7 @@ CREATE TABLE holdout_leakage_check (
     (status = 'passed' AND failure_basis = 'no_overlap') OR
     (status = 'failed' AND failure_basis IN ('source_overlap', 'evidence_overlap'))
   ),
-  UNIQUE(holdout_set_id, normalization_revision_id)
+  UNIQUE(holdout_set_id, normalization_revision_id, checked_scope)
 );
 
 CREATE TABLE holdout_leakage_check_overlap (
@@ -557,6 +557,7 @@ CREATE TABLE evaluation_holdout_match (
   id TEXT PRIMARY KEY,
   evaluation_id TEXT NOT NULL REFERENCES evaluation(id),
   holdout_set_id TEXT NOT NULL REFERENCES holdout_set(id),
+  target_key TEXT NOT NULL,
   holdout_source_id TEXT REFERENCES source(id),
   holdout_family_label TEXT,
   match_kind TEXT NOT NULL CHECK (match_kind IN ('source_recovery', 'family_recovery', 'structural_break')),
@@ -567,6 +568,7 @@ CREATE TABLE evaluation_holdout_match (
     (match_kind = 'family_recovery' AND holdout_source_id IS NULL AND holdout_family_label IS NOT NULL) OR
     (match_kind = 'structural_break' AND holdout_source_id IS NULL AND holdout_family_label IS NOT NULL)
   ),
+  UNIQUE(evaluation_id, target_key),
   FOREIGN KEY (holdout_set_id, holdout_source_id)
     REFERENCES holdout_set_source(holdout_set_id, source_id),
   FOREIGN KEY (holdout_set_id, holdout_family_label)
