@@ -36,6 +36,7 @@ Each slice must ship a usable CLI behavior, persisted artifacts, and tests.
 - Tests:
   - schema validation of normalized outputs
   - re-normalization creates new revision, preserves old
+  - `failure_boundary` creation and `outcome_boundary` linkage persistence
   - provenance links to evidence and provider calls
 
 ## Slice 4 — cluster and inspect mechanism families

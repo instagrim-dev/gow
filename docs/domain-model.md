@@ -44,7 +44,7 @@ Source evidence is immutable and never overwritten. Model/provider interpretatio
 - `CandidateInvariant 1--* InvariantChallenge`
 - `FrontierGenerationRun 1--* FrontierProposal`, `FrontierProposal *--* CandidateInvariant`
 - `EvaluationRun 1--* Evaluation`, `Evaluation -> FrontierProposal`
-- `SuccessInvariantRevision 1--* SuccessInvariant`, linked to `Evaluation` and possibly `CandidateInvariant`
+- `SuccessInvariantRevision 1--* SuccessInvariant`, linked to `EvaluationRun` and possibly `CandidateInvariant`
 - `SuccessInvariant *--* FailureBoundary` and `SuccessInvariant *--* CandidateInvariant` via explicit link records
 - `Run 1--* RunEvent`, and each derived record points to originating run + provider call(s)
 

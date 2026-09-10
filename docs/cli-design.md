@@ -68,7 +68,6 @@ Common machine envelope:
   - `run_event` provenance
 - Notes: synthetic/generated attempts are persisted as `synthetic_artifact` via challenge/generation/evaluation flows, not as source evidence.
 - Idempotency: content hash + canonical source ref dedupe by default.
-- Failure semantics: unreadable source, unsupported scheme, parse failure (partial ingest allowed; failures become artifacts).
 - Failure semantics: unreadable source, unsupported scheme, parse failure, or generated/synthetic material sent to ingest (must use synthetic-artifact flow).
 - Human output: ingested count, duplicate count, failed inputs with reasons.
 - Depends on: `init`.
