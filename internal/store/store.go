@@ -59,6 +59,10 @@ func Open(path string, opts ...Option) (*Store, error) {
 	return store, nil
 }
 
+func IsUniqueSlugError(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed: problems.slug")
+}
+
 func (s *Store) Close() error {
 	return s.db.Close()
 }

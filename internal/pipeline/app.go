@@ -125,6 +125,37 @@ func (a *App) InitProblem(ctx context.Context, input InitProblemInput) (InitResp
 
 	persistedProblem, persistedRun, err := repoStore.CreateProblemWithRun(ctx, problem, run)
 	if err != nil {
+		if !input.ForceNew && store.IsUniqueSlugError(err) {
+			existing, found, findErr := repoStore.FindProblemBySlug(ctx, slug)
+			if findErr != nil {
+				return InitResponse{}, findErr
+			}
+			if found {
+				fallbackRun, createErr := repoStore.CreateRun(ctx, domain.NewRun{
+					ID:          domain.NewRunID(now),
+					ProblemID:   existing.ID,
+					Operation:   "init",
+					Status:      domain.RunStatusSucceeded,
+					InputRef:    "problem_slug:" + slug,
+					ToolName:    "newf",
+					ToolVersion: a.version,
+					StartedAt:   now,
+					CompletedAt: now,
+				})
+				if createErr != nil {
+					return InitResponse{}, createErr
+				}
+				return InitResponse{
+					OK:        true,
+					Command:   "init",
+					ProblemID: existing.ID,
+					RunID:     fallbackRun.ID,
+					Store:     dbPath,
+					Created:   false,
+					Problem:   existing.Statement,
+				}, nil
+			}
+		}
 		return InitResponse{}, err
 	}
 
