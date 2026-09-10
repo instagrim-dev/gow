@@ -343,6 +343,11 @@ CREATE TABLE candidate_invariant (
   confidence_ordinal TEXT
 );
 
+CREATE TABLE invariant_transition_counter (
+  invariant_id TEXT PRIMARY KEY REFERENCES candidate_invariant(id),
+  next_transition_seq INTEGER NOT NULL CHECK (next_transition_seq >= 1)
+);
+
 CREATE TABLE invariant_support_cluster (
   invariant_id TEXT NOT NULL REFERENCES candidate_invariant(id),
   cluster_id TEXT NOT NULL REFERENCES mechanism_cluster(id),
@@ -504,7 +509,14 @@ CREATE TABLE holdout_leakage_check (
   status TEXT NOT NULL CHECK (status IN ('pending', 'passed', 'failed')),
   checked_at TEXT NOT NULL,
   CHECK (
-    (status = 'pending' AND failure_basis = 'pending') OR
+    (checked_scope = 'training_sources' AND failure_basis IN ('pending', 'no_overlap', 'source_overlap')) OR
+    (checked_scope = 'training_evidence' AND failure_basis IN ('pending', 'no_overlap', 'evidence_overlap'))
+  ),
+  CHECK (
+    (status = 'pending' AND (
+      (overlap_count = 0 AND failure_basis IN ('pending', 'no_overlap')) OR
+      (overlap_count > 0 AND failure_basis IN ('source_overlap', 'evidence_overlap'))
+    )) OR
     (status = 'passed' AND failure_basis = 'no_overlap' AND overlap_count = 0) OR
     (status = 'failed' AND failure_basis IN ('source_overlap', 'evidence_overlap') AND overlap_count > 0)
   ),
@@ -618,6 +630,19 @@ BEGIN
   END;
 END;
 
+CREATE TRIGGER evaluation_holdout_match_holdout_set_guard_update
+BEFORE UPDATE ON evaluation_holdout_match
+BEGIN
+  SELECT CASE
+    WHEN COALESCE(NEW.holdout_set_id, '') <> COALESCE((
+      SELECT er.holdout_set_id
+      FROM evaluation e
+      JOIN evaluation_run er ON er.id = e.evaluation_run_id
+      WHERE e.id = NEW.evaluation_id
+    ), '') THEN RAISE(ABORT, 'evaluation_holdout_match holdout_set_id must match parent evaluation_run')
+  END;
+END;
+
 CREATE TABLE evaluation_metric (
   id TEXT PRIMARY KEY,
   evaluation_run_id TEXT NOT NULL REFERENCES evaluation_run(id),
@@ -700,9 +725,9 @@ CREATE TABLE success_invariant_failure_invariant (
   rows when a leakage check fails, so audits can show exactly what violated the
   split.
 - `invariant_state_transition` inserts are validated by trigger, and repositories
-  allocate `transition_seq` with `INSERT ... SELECT COALESCE(MAX(...)+1, 1)` in
-  the same `BEGIN IMMEDIATE` transaction so competing writers cannot create
-  gaps, replays, or impossible transitions.
+  allocate `transition_seq` from `invariant_transition_counter` with an atomic
+  `UPDATE ... RETURNING` step before inserting the transition row, so competing
+  writers cannot derive the same sequence number or rely on `MAX(...)+1`.
 
 ## Experiment comparison
 
