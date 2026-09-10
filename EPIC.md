@@ -309,6 +309,28 @@ Exit condition:
 
 ### M4.3 — Challenge and falsify candidate invariants
 
+**Status: delivered.** `newf challenge <invariant-id>` (or `--problem <id>
+--all`) attacks each candidate with typed challenges — known counterexample,
+synthetic counterexample, success-preserving, split, merge, bias-critique —
+where the challenger *proposes* and pure code-owned verifiers *confirm* against
+persisted signatures (`ModelJudgment != Verification`; an unconfirmable claim
+is recorded inert and drives no transition). Every confirmed challenge yields
+concrete evidence (real cluster/signature/snapshot links, persisted
+`synthetic_artifacts`, recomputed support recounts, grounding facts) plus an
+append-only state transition on the trigger-guarded ledger (schema `v13`;
+state lives only in transitions, read via `invariant_current_state`). A
+confirmed KNOWN counterexample falsifies; synthetic constructibility,
+success-preservation, support collapse under redundancy, and grounded
+split/merge weaken (split/merge children are persisted as real `proposed`
+candidates with `invariant_lineage`); a campaign whose attacks all fail
+confirmation leaves the invariant `surviving`. `established` is code-gated:
+`newf invariant establish` requires operator-supplied independent snapshot
+evidence — no provider path reaches it. `newf invariant state <id>` and
+`newf invariant list --problem <id> --state surviving` expose the lifecycle;
+filtered to `surviving`/`established` this is the M5.1 frontier read surface.
+See [`docs/invariant-challenge.md`](docs/invariant-challenge.md). Deterministic
+offline fixture challenger; CI makes no network/model calls.
+
 Goal:
 
 Attack every candidate before it influences frontier allocation.
@@ -374,6 +396,31 @@ Do not collapse this to a fake-precision scalar unless evidence later justifies 
 Exit condition:
 
 - frontier proposals are explainably unlike known failures and are cheap to kill when wrong.
+
+**Status: delivered.** `newf frontier generate --problem <id>` generates typed
+break-proposals against a problem's **surviving** candidate invariants (only
+`surviving` is a legal target; `proposed`/`weaken`/`falsified`/`established` are
+excluded) and `newf frontier list/show` inspect them. A provider (Generator
+role, `generate` — added to the shared `provider_invocations.role` CHECK at
+schema **v14** via the same FK-safe in-place `writable_schema` edit v11/v13 used)
+authors a candidate mechanism signature plus the required directed-generation
+prose (structural-violation claim, novelty argument, cheapest falsification
+path). Everything truth-sensitive is **code-owned** (`internal/frontier`, pure —
+no SQL/Cobra/provider concepts): the nearest failure family and a
+`mechanistic_distance` ordinal are computed by `canon.CompareWithProfile`
+against every cluster representative, and the claimed structural violation is
+**verified** by evaluating each target's `invariant-predicate/v1` predicate
+against the proposed signature — a proposal that *claims* a break but whose
+signature still `satisfies` the invariant is recorded honestly as not-violated
+(`ModelJudgment != Verification`; the F3 completeness discipline keeps an
+ambiguous read `unknown`, never a coerced violation). Proposals are ranked by
+the ordinal objective (confirmed-violation → mechanistic distance → expected
+information gain → −evaluation cost → −redundancy), lexicographically and
+without a fabricated scalar, deduped on a stable `proposal_hash`. Persisted as
+immutable, per-problem-revisioned `frontier_generation_runs` /
+`frontier_proposals` (+ `frontier_target_invariants`, `frontier_nearest_clusters`),
+each proposal's `result` deliberately left NULL for M5.2 evaluation to populate
+exactly once. Deterministic and offline via `DerivingFixtureGenerator`.
 
 ### M5.2 — Evaluation and verifier routing
 

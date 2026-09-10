@@ -370,3 +370,39 @@ func (f *fakeProblemStore) ListInvariantRevisions(context.Context, string) ([]st
 func (f *fakeProblemStore) LatestInvariantRevision(context.Context, string) (string, bool, error) {
 	return "", false, errors.New("unexpected call")
 }
+
+func (f *fakeProblemStore) PersistChallengeCampaign(context.Context, store.ChallengeCampaignRecord) error {
+	return errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetInvariantState(context.Context, string) (store.InvariantStateRow, error) {
+	return store.InvariantStateRow{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListInvariantStates(context.Context, string, string) ([]store.InvariantStateRow, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListChallengesForInvariant(context.Context, string) ([]store.ChallengeRecord, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) FindInvariantRevisionForCandidate(context.Context, string) (string, error) {
+	return "", errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetFrontierGeneration(context.Context, string) (store.FrontierGenerationRecord, error) {
+	return store.FrontierGenerationRecord{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistFrontierGeneration(context.Context, store.FrontierGenerationRecord) (store.PersistFrontierGenerationResult, error) {
+	return store.PersistFrontierGenerationResult{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListFrontierGenerations(context.Context, string) ([]store.FrontierGenerationRecord, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) LatestFrontierGeneration(context.Context, string) (string, bool, error) {
+	return "", false, errors.New("unexpected call")
+}

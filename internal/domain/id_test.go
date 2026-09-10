@@ -80,6 +80,16 @@ func TestGeneratedIDsValidate(t *testing.T) {
 	if err := ValidateCandidateInvariantID(candidateInvariantID); err != nil {
 		t.Fatalf("ValidateCandidateInvariantID() error = %v", err)
 	}
+
+	frontierGenerationRunID := NewFrontierGenerationRunID(now)
+	frontierProposalID := NewFrontierProposalID(now)
+
+	if err := ValidateFrontierGenerationRunID(frontierGenerationRunID); err != nil {
+		t.Fatalf("ValidateFrontierGenerationRunID() error = %v", err)
+	}
+	if err := ValidateFrontierProposalID(frontierProposalID); err != nil {
+		t.Fatalf("ValidateFrontierProposalID() error = %v", err)
+	}
 }
 
 func TestValidateRejectsCrossClassIDs(t *testing.T) {
@@ -117,5 +127,13 @@ func TestValidateRejectsCrossClassIDs(t *testing.T) {
 	}
 	if err := ValidateInvariantRevisionID(clusterRunID); err == nil {
 		t.Fatal("ValidateInvariantRevisionID() succeeded for cluster run ID")
+	}
+
+	frontierGenerationRunID := NewFrontierGenerationRunID(time.Now().UTC())
+	if err := ValidateFrontierProposalID(frontierGenerationRunID); err == nil {
+		t.Fatal("ValidateFrontierProposalID() succeeded for frontier generation run ID")
+	}
+	if err := ValidateFrontierGenerationRunID(clusterRunID); err == nil {
+		t.Fatal("ValidateFrontierGenerationRunID() succeeded for cluster run ID")
 	}
 }

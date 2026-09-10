@@ -676,3 +676,88 @@ type InvariantShowResponse struct {
 	Store    string                `json:"store"`
 	Revision InvariantRevisionView `json:"revision"`
 }
+
+// FrontierTargetView is one targeted surviving invariant plus the code-verified
+// per-target violation verdict.
+type FrontierTargetView struct {
+	InvariantID string `json:"invariant_id"`
+	Verdict     string `json:"verdict"`
+	Violated    bool   `json:"violated"`
+}
+
+// FrontierNearestView is one code-computed nearest failure family.
+type FrontierNearestView struct {
+	ClusterID      string `json:"cluster_id"`
+	Classification string `json:"classification"`
+	Proximity      string `json:"proximity_ordinal"`
+}
+
+// FrontierProposalView is one ranked frontier proposal: the required directed-
+// generation prose, code-computed mechanistic distance + violation checks +
+// nearest families, and the ordinal scores. Result is empty until M5.2
+// evaluation populates it.
+type FrontierProposalView struct {
+	ID                        string                `json:"id"`
+	ProposalHash              string                `json:"proposal_hash"`
+	StructuralViolationClaim  string                `json:"structural_violation_claim"`
+	NoveltyArgument           string                `json:"novelty_argument"`
+	CheapestFalsificationPath string                `json:"cheapest_falsification_path"`
+	MechanisticDistance       string                `json:"mechanistic_distance_ordinal"`
+	ExpectedInformationGain   string                `json:"expected_information_gain_ordinal"`
+	EvaluationCost            string                `json:"evaluation_cost_ordinal"`
+	ViolatesAnyTarget         bool                  `json:"violates_any_target"`
+	Rank                      int                   `json:"rank"`
+	Result                    string                `json:"result,omitempty"`
+	Targets                   []FrontierTargetView  `json:"targets"`
+	NearestClusters           []FrontierNearestView `json:"nearest_clusters"`
+}
+
+// FrontierGenerationView is a full generation pass.
+type FrontierGenerationView struct {
+	ID               string                 `json:"id"`
+	ProblemID        string                 `json:"problem_id"`
+	ClusterRunID     string                 `json:"cluster_run_id"`
+	RunID            string                 `json:"run_id"`
+	GeneratorVersion string                 `json:"generator_version"`
+	RequestedCount   int                    `json:"requested_count"`
+	ProposalCount    int                    `json:"proposal_count"`
+	Revision         int                    `json:"revision"`
+	CreatedAt        string                 `json:"created_at"`
+	Proposals        []FrontierProposalView `json:"proposals"`
+}
+
+// FrontierGenerationSummaryView is a compact list row.
+type FrontierGenerationSummaryView struct {
+	ID               string `json:"id"`
+	ClusterRunID     string `json:"cluster_run_id"`
+	GeneratorVersion string `json:"generator_version"`
+	RequestedCount   int    `json:"requested_count"`
+	ProposalCount    int    `json:"proposal_count"`
+	Revision         int    `json:"revision"`
+	CreatedAt        string `json:"created_at"`
+}
+
+// FrontierGenerateResponse is returned by `newf frontier generate`.
+type FrontierGenerateResponse struct {
+	OK         bool                   `json:"ok"`
+	Command    string                 `json:"command"`
+	Store      string                 `json:"store"`
+	Created    bool                   `json:"created"`
+	Generation FrontierGenerationView `json:"generation"`
+}
+
+// FrontierListResponse is returned by `newf frontier list`.
+type FrontierListResponse struct {
+	OK          bool                            `json:"ok"`
+	Command     string                          `json:"command"`
+	Store       string                          `json:"store"`
+	Generations []FrontierGenerationSummaryView `json:"generations"`
+}
+
+// FrontierShowResponse is returned by `newf frontier show`.
+type FrontierShowResponse struct {
+	OK         bool                   `json:"ok"`
+	Command    string                 `json:"command"`
+	Store      string                 `json:"store"`
+	Generation FrontierGenerationView `json:"generation"`
+}

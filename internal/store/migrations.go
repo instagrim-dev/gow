@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 13
+const currentSchemaVersion = 14
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -749,6 +749,20 @@ END;
 		// into the table). Introspective + idempotent: a fresh v13 database already
 		// has the target shape and every step is a no-op.
 		apply: migrateV13ChallengeLifecycle,
+	},
+	{
+		version: 14,
+		// M5.1 frontier generation (#14). Additive frontier_generation_runs,
+		// frontier_proposals, frontier_target_invariants, and
+		// frontier_nearest_clusters tables (docs/persistence.md 534-569, names
+		// pluralized to the shipped convention; the nullable holdout_leakage_check
+		// link is deferred to M7 and not created here). frontier_proposals dedups
+		// on UNIQUE(problem_id, proposal_hash) and leaves `result` NULL for M5.2 to
+		// populate. Also widens provider_invocations.role to admit 'generate' via
+		// the same guarded in-place writable_schema CHECK edit v11/v13 used
+		// (FK-safe by construction). Introspective + idempotent: a fresh v14
+		// database already has the target shape and every step is a no-op.
+		apply: migrateV14FrontierGeneration,
 	},
 }
 
@@ -1618,4 +1632,149 @@ func providerRoleAllows(ctx context.Context, tx *sql.Tx, role string) (bool, err
 		return false, err
 	}
 	return strings.Contains(ddl, "'"+role+"'"), nil
+}
+
+// frontierTablesSQL is the additive DDL for the M5.1 frontier layer. Every table
+// is immutable by trigger and append-only; a proposal's `result` is left NULL
+// here (M5.2 evaluation populates it). The holdout_leakage_check link from the
+// persistence blueprint is deferred to M7 and intentionally omitted.
+const frontierTablesSQL = `
+CREATE TABLE IF NOT EXISTS frontier_generation_runs (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  cluster_run_id TEXT NOT NULL REFERENCES cluster_runs(id),
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  provider_invocation_id TEXT NOT NULL REFERENCES provider_invocations(id),
+  generator_version TEXT NOT NULL,
+  requested_count INTEGER NOT NULL,
+  proposal_count INTEGER NOT NULL,
+  revision INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(problem_id, revision)
+);
+
+CREATE TABLE IF NOT EXISTS frontier_proposals (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  frontier_generation_run_id TEXT NOT NULL REFERENCES frontier_generation_runs(id),
+  proposal_hash TEXT NOT NULL,
+  structural_violation_claim TEXT NOT NULL,
+  novelty_argument TEXT NOT NULL,
+  cheapest_falsification_path TEXT NOT NULL,
+  mechanistic_distance_ordinal TEXT NOT NULL,
+  expected_information_gain_ordinal TEXT NOT NULL,
+  evaluation_cost_ordinal TEXT NOT NULL,
+  violates_any_target INTEGER NOT NULL DEFAULT 0,
+  rank_ordinal INTEGER NOT NULL,
+  result TEXT,
+  created_at TEXT NOT NULL,
+  UNIQUE(problem_id, proposal_hash)
+);
+
+CREATE TABLE IF NOT EXISTS frontier_target_invariants (
+  proposal_id TEXT NOT NULL REFERENCES frontier_proposals(id),
+  invariant_id TEXT NOT NULL REFERENCES candidate_invariants(id),
+  verdict TEXT NOT NULL CHECK (verdict IN ('satisfies','violates','unknown')),
+  violated INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY(proposal_id, invariant_id)
+);
+
+CREATE TABLE IF NOT EXISTS frontier_nearest_clusters (
+  proposal_id TEXT NOT NULL REFERENCES frontier_proposals(id),
+  cluster_id TEXT NOT NULL REFERENCES mechanism_clusters(id),
+  classification TEXT NOT NULL,
+  proximity_ordinal TEXT NOT NULL,
+  PRIMARY KEY(proposal_id, cluster_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_frontier_proposals_run
+  ON frontier_proposals(frontier_generation_run_id);
+CREATE INDEX IF NOT EXISTS idx_frontier_generation_runs_problem
+  ON frontier_generation_runs(problem_id);
+
+CREATE TRIGGER IF NOT EXISTS frontier_generation_runs_immutable_update
+BEFORE UPDATE ON frontier_generation_runs
+BEGIN
+  SELECT RAISE(ABORT, 'frontier generation runs are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS frontier_generation_runs_immutable_delete
+BEFORE DELETE ON frontier_generation_runs
+BEGIN
+  SELECT RAISE(ABORT, 'frontier generation runs are immutable');
+END;
+
+-- frontier_proposals is append-only, EXCEPT the M5.2 result column: an
+-- evaluation may set result exactly once (NULL -> a verdict). Any other column
+-- change, or overwriting a non-null result, aborts. Deletes always abort.
+CREATE TRIGGER IF NOT EXISTS frontier_proposals_immutable_update
+BEFORE UPDATE ON frontier_proposals
+BEGIN
+  SELECT CASE
+    WHEN NEW.id <> OLD.id
+      OR NEW.problem_id <> OLD.problem_id
+      OR NEW.frontier_generation_run_id <> OLD.frontier_generation_run_id
+      OR NEW.proposal_hash <> OLD.proposal_hash
+      OR NEW.structural_violation_claim <> OLD.structural_violation_claim
+      OR NEW.novelty_argument <> OLD.novelty_argument
+      OR NEW.cheapest_falsification_path <> OLD.cheapest_falsification_path
+      OR NEW.mechanistic_distance_ordinal <> OLD.mechanistic_distance_ordinal
+      OR NEW.expected_information_gain_ordinal <> OLD.expected_information_gain_ordinal
+      OR NEW.evaluation_cost_ordinal <> OLD.evaluation_cost_ordinal
+      OR NEW.violates_any_target <> OLD.violates_any_target
+      OR NEW.rank_ordinal <> OLD.rank_ordinal
+      OR NEW.created_at <> OLD.created_at
+      OR OLD.result IS NOT NULL
+    THEN RAISE(ABORT, 'frontier proposals are immutable except a one-time result set')
+  END;
+END;
+CREATE TRIGGER IF NOT EXISTS frontier_proposals_immutable_delete
+BEFORE DELETE ON frontier_proposals
+BEGIN
+  SELECT RAISE(ABORT, 'frontier proposals are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS frontier_target_invariants_immutable_update
+BEFORE UPDATE ON frontier_target_invariants
+BEGIN
+  SELECT RAISE(ABORT, 'frontier target invariants are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS frontier_target_invariants_immutable_delete
+BEFORE DELETE ON frontier_target_invariants
+BEGIN
+  SELECT RAISE(ABORT, 'frontier target invariants are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS frontier_nearest_clusters_immutable_update
+BEFORE UPDATE ON frontier_nearest_clusters
+BEGIN
+  SELECT RAISE(ABORT, 'frontier nearest clusters are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS frontier_nearest_clusters_immutable_delete
+BEFORE DELETE ON frontier_nearest_clusters
+BEGIN
+  SELECT RAISE(ABORT, 'frontier nearest clusters are immutable');
+END;
+`
+
+// migrateV14FrontierGeneration creates the M5.1 frontier tables and widens the
+// provider_invocations.role CHECK to admit 'generate'. Both steps are guarded
+// and idempotent: the DDL is IF NOT EXISTS throughout, and the CHECK edit runs
+// only when 'generate' is not already permitted (a fresh v14 database is
+// untouched).
+func migrateV14FrontierGeneration(ctx context.Context, tx *sql.Tx) error {
+	if _, err := tx.ExecContext(ctx, frontierTablesSQL); err != nil {
+		return err
+	}
+	allows, err := providerRoleAllows(ctx, tx, "generate")
+	if err != nil {
+		return err
+	}
+	if !allows {
+		if err := editTableCheckInPlace(ctx, tx, "provider_invocations",
+			"role IN ('normalize','invariant','challenge')",
+			"role IN ('normalize','invariant','challenge','generate')"); err != nil {
+			return err
+		}
+	}
+	return nil
 }

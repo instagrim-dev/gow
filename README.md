@@ -57,8 +57,14 @@ newf failure-space build --problem <problem-id> [--cluster-run <id>]
 newf failure-space show [--problem <problem-id> | --id <failure-space-id>]
 newf failure-space coverage [--problem <problem-id> | --id <failure-space-id>]
 newf invariants mine --problem <problem-id> [--failure-space <id>] [--min-support <n>]
-newf invariant list --problem <problem-id>
+newf invariant list --problem <problem-id> [--state <lifecycle-state>]
 newf invariant show [invariant-revision-id] [--problem <problem-id>]
+newf invariant state <invariant-id>
+newf invariant establish <invariant-id> --snapshot <snap-id> --locator <loc>
+newf challenge <invariant-id> | --problem <problem-id> --all
+newf frontier generate --problem <problem-id> [--count <n>]
+newf frontier list --problem <problem-id>
+newf frontier show [frontier-generation-id] [--problem <problem-id>]
 ```
 
 Build it with:
@@ -354,9 +360,11 @@ of the matched claims (`explicit`/`inferred`/other). `recurring` and
 
 ## Invariant critic
 
-Every inferred invariant must be attacked before it controls search allocation.
+Every inferred invariant must be attacked before it controls search allocation
+(**shipped**: `newf challenge`, see
+[`docs/invariant-challenge.md`](docs/invariant-challenge.md)).
 
-The critic should try to:
+The critic tries to:
 
 1. find a known failed approach that violates the candidate invariant;
 2. generate a synthetic failed approach that violates it;
@@ -365,11 +373,18 @@ The critic should try to:
 5. raise the abstraction level and see whether several invariants collapse;
 6. distinguish causal obstruction from sampling or publication bias.
 
-A candidate that survives criticism becomes a search constraint, not a fact.
+The challenger *proposes* each attack; deterministic code *confirms or denies*
+it against persisted signatures, and only confirmed attacks move the
+trigger-guarded, append-only lifecycle
+(`proposed → challenged → surviving | weaken | falsified`; `established` only
+via operator-supplied independent evidence). A candidate that survives
+criticism becomes a search constraint, not a fact.
 
 ## Frontier generation
 
-The generator should not receive only:
+The generator (**shipped**: `newf frontier generate`, see
+[`docs/frontier-generation.md`](docs/frontier-generation.md)) should not receive
+only:
 
 ```text
 find another solution
@@ -481,13 +496,12 @@ The first falsifiable claim is:
 
 The shipped surface above already covers `init` → `ingest` → `normalize` →
 `mechanism signature`/`compare` → `cluster` → `failure-space` → `invariants
-mine`/`invariant list`/`invariant show`. The remaining loop stages are
+mine`/`invariant list`/`invariant show` → `challenge` → `frontier
+generate`/`frontier list`/`frontier show`. The remaining loop stages are
 **planned, not yet shipped**:
 
 ```text
-newf challenge <invariant-id>                     # planned: adversarial invariant falsification
-newf generate --against <invariant-id> --count <n> # planned: frontier proposals
-newf evaluate                                     # planned: historical-holdout scoring
+newf evaluate                                     # planned: verifier routing + historical-holdout scoring
 newf compress                                     # planned: success-invariant compression
 ```
 

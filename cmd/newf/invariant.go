@@ -67,14 +67,35 @@ func newInvariantCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions)
 		Short: "Inspect mined candidate invariants",
 	}
 
-	var listProblem string
+	var (
+		listProblem string
+		listState   string
+	)
 	listCmd := &cobra.Command{
 		Use:   "list",
-		Short: "List invariant revisions for a problem",
+		Short: "List invariant revisions for a problem (or candidates by lifecycle state)",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if listProblem == "" {
 				return wrapCommandError("invariant list", errors.New("--problem is required"))
+			}
+			// --state switches to the per-candidate lifecycle surface (M4.3);
+			// filtered to surviving/established it is the M5.1 frontier read.
+			if listState != "" {
+				result, err := app.ListInvariantStates(cmd.Context(), pipeline.InvariantStatesInput{
+					DBPath:     opts.dbPath,
+					ProblemID:  listProblem,
+					State:      listState,
+					JSONOutput: opts.jsonOutput,
+				})
+				if err != nil {
+					return wrapCommandError("invariant list", err)
+				}
+				if opts.jsonOutput {
+					return writeJSON(stdout, result)
+				}
+				writeInvariantStatesHuman(stdout, result)
+				return nil
 			}
 			result, err := app.ListInvariants(cmd.Context(), pipeline.InvariantListInput{
 				DBPath:     opts.dbPath,
@@ -92,7 +113,10 @@ func newInvariantCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions)
 		},
 	}
 	listCmd.Flags().StringVar(&listProblem, "problem", "", "Problem ID")
+	listCmd.Flags().StringVar(&listState, "state", "", "Filter candidates by lifecycle state (proposed|challenged|surviving|weaken|falsified|established)")
 	cmd.AddCommand(listCmd)
+	cmd.AddCommand(newInvariantStateCommand(stdout, app, opts))
+	cmd.AddCommand(newInvariantEstablishCommand(stdout, app, opts))
 
 	var showProblem string
 	showCmd := &cobra.Command{

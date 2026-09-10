@@ -960,6 +960,8 @@ func validateSchemaTables(ctx context.Context, tx *sql.Tx) error {
 		"invariant_state_transitions", "invariant_challenge_evidence",
 		"synthetic_artifacts", "invariant_challenge_synthetic_artifacts",
 		"invariant_lineage",
+		"frontier_generation_runs", "frontier_proposals",
+		"frontier_target_invariants", "frontier_nearest_clusters",
 	} {
 		row := tx.QueryRowContext(ctx, `
 SELECT EXISTS(
@@ -997,9 +999,9 @@ SELECT EXISTS(
 	// A column probe cannot see a CHECK constraint, so a database left on the
 	// v3 normalize-only provider_invocations.role CHECK would pass the checks
 	// above while silently rejecting invariant-mining or challenge invocations.
-	// Assert the v11 ('invariant') and v13 ('challenge') role generalizations by
-	// reading the table DDL directly.
-	for _, role := range []string{"invariant", "challenge"} {
+	// Assert the v11 ('invariant'), v13 ('challenge'), and v14 ('generate') role
+	// generalizations by reading the table DDL directly.
+	for _, role := range []string{"invariant", "challenge", "generate"} {
 		allows, err := providerRoleAllows(ctx, tx, role)
 		if err != nil {
 			return fmt.Errorf("%w: %v", ErrCorruptStore, err)

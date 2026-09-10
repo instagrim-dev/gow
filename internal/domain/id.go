@@ -33,6 +33,11 @@ const (
 	CandidateInvariantIDPrefix    = "inv_"
 	InvariantChallengeIDPrefix    = "chl_"
 	SyntheticArtifactIDPrefix     = "syn_"
+	FrontierGenerationRunIDPrefix = "fgr_"
+	FrontierProposalIDPrefix      = "fpr_"
+	EvaluationRunIDPrefix         = "evr_"
+	EvaluationIDPrefix            = "evl_"
+	EvaluationMetricIDPrefix      = "evm_"
 )
 
 var (
@@ -56,6 +61,11 @@ var (
 	ErrInvalidCandidateInvariantID    = errors.New("invalid candidate invariant id")
 	ErrInvalidInvariantChallengeID    = errors.New("invalid invariant challenge id")
 	ErrInvalidSyntheticArtifactID     = errors.New("invalid synthetic artifact id")
+	ErrInvalidFrontierGenerationRunID = errors.New("invalid frontier generation run id")
+	ErrInvalidFrontierProposalID      = errors.New("invalid frontier proposal id")
+	ErrInvalidEvaluationRunID         = errors.New("invalid evaluation run id")
+	ErrInvalidEvaluationID            = errors.New("invalid evaluation id")
+	ErrInvalidEvaluationMetricID      = errors.New("invalid evaluation metric id")
 
 	entropyMu sync.Mutex
 	entropy   = ulid.Monotonic(defaultEntropy(), 0)
@@ -191,6 +201,22 @@ func ValidateInvariantChallengeID(id string) error {
 
 func ValidateSyntheticArtifactID(id string) error {
 	return validateID(id, SyntheticArtifactIDPrefix, ErrInvalidSyntheticArtifactID)
+}
+
+func NewFrontierGenerationRunID(now time.Time) string {
+	return newID(FrontierGenerationRunIDPrefix, now)
+}
+
+func NewFrontierProposalID(now time.Time) string {
+	return newID(FrontierProposalIDPrefix, now)
+}
+
+func ValidateFrontierGenerationRunID(id string) error {
+	return validateID(id, FrontierGenerationRunIDPrefix, ErrInvalidFrontierGenerationRunID)
+}
+
+func ValidateFrontierProposalID(id string) error {
+	return validateID(id, FrontierProposalIDPrefix, ErrInvalidFrontierProposalID)
 }
 
 func ValidateNormalizationRevisionID(id string) error {

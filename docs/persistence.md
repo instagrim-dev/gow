@@ -985,6 +985,82 @@ is now insertable, so a DB left on the `normalize`-only `CHECK` is reported
 corrupt rather than accepted; a pre-v11 migration test additionally asserts a
 pre-existing child FK still resolves after the change.
 
+## Implemented challenge / lifecycle schema (#13, migration `v13`)
+
+Migration `v13` ships the M4.3 challenge lifecycle from the blueprint above,
+reconciled to the shipped conventions (names pluralized; evidence links point
+at real persisted rows because the sketched `evidence_record` table was never
+shipped):
+
+- **`invariant_challenges`** — one immutable row per attack: type
+  (`known-counterexample` / `synthetic-counterexample` / `success-preserving` /
+  `split` / `merge` / `bias-critique` / `independent-verification`), the
+  provider's `claimed_verdict`, the CODE-verified `result_summary`
+  (`confirmed`/`unconfirmed`), and the challenge-role provider invocation.
+- **`invariant_transition_counters`** — the ONLY mutable surface: the atomic
+  per-invariant sequence allocator.
+- **`invariant_state_transitions`** — the append-only state ledger, guarded by
+  the blueprint's validating trigger (seq must equal the allocated counter;
+  `from_state` must match the ledger head; only the legal machine edges pass).
+  There is no state column anywhere; **state lives only in transitions**, read
+  through the **`invariant_current_state`** view.
+- **`invariant_challenge_evidence`** — evidence handles into real rows
+  (`mechanism_clusters`, `mechanism_signatures`, `source_snapshots`) plus
+  structured detail (support recounts, grounding facts).
+- **`synthetic_artifacts`** + link table — persisted constructed
+  counterexamples/attempts.
+- **`invariant_lineage`** — split/merge/weaken relations; confirmed split/merge
+  children are persisted as real candidates in a `challenge-split/v1` /
+  `challenge-merge/v1` revision and enter `proposed` with no inherited
+  authority.
+
+`v13` repeats the v11 pattern for its one non-additive step: the
+`provider_invocations.role` `CHECK` is widened in place (`writable_schema`,
+guarded, idempotent, FK-safe) to admit `'challenge'`. `validateSchemaTables`
+asserts the new tables and that the role CHECK admits both `invariant` and
+`challenge`. A challenge campaign is persisted in one transaction: an illegal
+transition aborts the whole campaign, leaving no partial rows. `established`
+is code-gated in the pipeline (operator-supplied snapshot evidence required);
+the trigger permits it structurally from `surviving` only. See
+[`invariant-challenge.md`](invariant-challenge.md).
+
+## Implemented frontier schema (#14, migration `v14`)
+
+Migration `v14` ships the M5.1 frontier layer from the `## Core schema`
+blueprint above, reconciled to the shipped conventions (names pluralized; the
+nullable `holdout_leakage_check` link is deferred to M7 and not created here):
+
+- **`frontier_generation_runs`** — one immutable row per generation pass:
+  problem/cluster-run/run links, the `generate`-role provider invocation, the
+  generator contract version, the requested proposal budget, the persisted
+  proposal count, and a per-problem monotonic `revision`.
+- **`frontier_proposals`** — one row per ranked proposal, deduped on
+  `UNIQUE(problem_id, proposal_hash)` (a re-derived identical directed attack
+  never double-writes across runs). It stores the required directed-generation
+  prose (`structural_violation_claim`, `novelty_argument`,
+  `cheapest_falsification_path`), the CODE-computed `mechanistic_distance_ordinal`
+  and `violates_any_target`, the provider-reported
+  `expected_information_gain_ordinal` / `evaluation_cost_ordinal`, the
+  `rank_ordinal`, and a **`result`** column left **NULL** for M5.2 evaluation.
+  Its immutability trigger is append-only **except** a one-time `result` set
+  (`NULL → verdict`): any other column change, overwriting a non-null result,
+  or a delete aborts.
+- **`frontier_target_invariants`** — per-proposal target links carrying the
+  code-verified per-target `verdict` (`satisfies`/`violates`/`unknown`) and a
+  `violated` flag. Only surviving candidate invariants are targeted (the
+  pipeline filters against `invariant_current_state`).
+- **`frontier_nearest_clusters`** — per-proposal nearest-family links with the
+  code-computed `classification` (`mechanism-near` / `mechanism-distinct` / …)
+  and `proximity_ordinal`.
+
+`v14` repeats the v11/v13 pattern for its one non-additive step: the
+`provider_invocations.role` `CHECK` is widened in place (`writable_schema`,
+guarded, idempotent, FK-safe) to admit `'generate'`. `validateSchemaTables`
+asserts the four new tables and that the role CHECK admits `invariant`,
+`challenge`, and `generate`. A generation pass is persisted in one transaction.
+Nothing in this slice writes `frontier_proposals.result`; populating it (and
+failure-atlas re-entry) is M5.2. See [`frontier-generation.md`](frontier-generation.md).
+
 ## Immutable vs mutable/revisioned
 
 - Immutable: `source`, `evidence_record` (enforced with update/delete-rejecting

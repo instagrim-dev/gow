@@ -24,6 +24,8 @@ type App struct {
 	openStoreFn      func(context.Context, string) (string, problemStore, error)
 	normalizers      map[string]provider.Normalizer
 	invariantMinerFn provider.InvariantMiner
+	challengerFn     provider.Challenger
+	generatorFn      provider.Generator
 }
 
 type problemStore interface {
@@ -70,6 +72,15 @@ type problemStore interface {
 	GetInvariantRevision(context.Context, string) (store.InvariantRevisionRecord, error)
 	ListInvariantRevisions(context.Context, string) ([]store.InvariantRevisionRecord, error)
 	LatestInvariantRevision(context.Context, string) (string, bool, error)
+	PersistChallengeCampaign(context.Context, store.ChallengeCampaignRecord) error
+	GetInvariantState(context.Context, string) (store.InvariantStateRow, error)
+	ListInvariantStates(context.Context, string, string) ([]store.InvariantStateRow, error)
+	ListChallengesForInvariant(context.Context, string) ([]store.ChallengeRecord, error)
+	FindInvariantRevisionForCandidate(context.Context, string) (string, error)
+	PersistFrontierGeneration(context.Context, store.FrontierGenerationRecord) (store.PersistFrontierGenerationResult, error)
+	GetFrontierGeneration(context.Context, string) (store.FrontierGenerationRecord, error)
+	ListFrontierGenerations(context.Context, string) ([]store.FrontierGenerationRecord, error)
+	LatestFrontierGeneration(context.Context, string) (string, bool, error)
 }
 
 type InitProblemInput struct {
