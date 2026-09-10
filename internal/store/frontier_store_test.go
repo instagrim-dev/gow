@@ -188,3 +188,97 @@ func TestV14ProviderRoleAllowsGenerate(t *testing.T) {
 		t.Fatal("v14 must widen provider_invocations.role to permit 'generate'")
 	}
 }
+
+// TestPersistFrontierGenerationIDByHashCoversDedup is the Finding-1 regression:
+// the applied-bias log must be able to attribute a policy-biased re-generation
+// to persisted proposal ids EVEN when every proposal deduped onto a pre-existing
+// row (ProposalCount == 0). The returned ProposalIDByHash must therefore map the
+// re-derived hash to the ORIGINAL persisted proposal id, not be empty.
+func TestPersistFrontierGenerationIDByHashCoversDedup(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+	rec := sampleFrontier(t, st)
+	first, err := st.PersistFrontierGeneration(ctx, rec)
+	if err != nil {
+		t.Fatalf("first persist: %v", err)
+	}
+	originalID := first.Record.Proposals[0].ID
+	hash := first.Record.Proposals[0].ProposalHash
+
+	rec2 := sampleFrontierReusingProblem(t, st, rec)
+	second, err := st.PersistFrontierGeneration(ctx, rec2)
+	if err != nil {
+		t.Fatalf("second persist: %v", err)
+	}
+	if second.Record.ProposalCount != 0 {
+		t.Fatalf("expected all proposals deduped, got %d new", second.Record.ProposalCount)
+	}
+	// The map must still resolve the deduped hash to the original persisted id.
+	got, ok := second.ProposalIDByHash[hash]
+	if !ok {
+		t.Fatal("ProposalIDByHash must cover deduped proposals (applied-bias log would be empty otherwise)")
+	}
+	if got != originalID {
+		t.Fatalf("deduped hash maps to %s, want original %s", got, originalID)
+	}
+}
+
+// TestRedundantAttackKeysMatchesRedundancyKeyFormat is the Finding-4 regression:
+// two proposals sharing the same (targets, nearest clusters) are the SAME
+// directed attack; RedundantAttackKeys must return that key (count >= 2) in the
+// exact "t:<ids>,|n:<ids>," format frontier.RedundancyKey produces, so a
+// penalize/redundant_attack directive keyed by Derive fires in policy.Apply.
+func TestRedundantAttackKeysMatchesRedundancyKeyFormat(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+	rec := sampleFrontier(t, st)
+	if _, err := st.PersistFrontierGeneration(ctx, rec); err != nil {
+		t.Fatalf("first persist: %v", err)
+	}
+	// A second, DISTINCT proposal (different hash so it persists) but the SAME
+	// target set + nearest cluster set: same directed attack.
+	now := time.Now().UTC()
+	second := rec
+	second.ID = domain.NewFrontierGenerationRunID(now)
+	second.Invocation.ID = domain.NewProviderInvocationID(now)
+	prop := rec.Proposals[0]
+	prop.ID = domain.NewFrontierProposalID(now)
+	prop.ProposalHash = "hash-2" // distinct → actually persists
+	second.Proposals = []FrontierProposalRow{prop}
+	if _, err := st.PersistFrontierGeneration(ctx, second); err != nil {
+		t.Fatalf("second persist: %v", err)
+	}
+
+	problemID := rec.ProblemID
+	invID := rec.Proposals[0].Targets[0].InvariantID
+	clusterID := rec.Proposals[0].NearestClusters[0].ClusterID
+	wantKey := "t:" + invID + ",|n:" + clusterID + ","
+
+	keys, err := st.RedundantAttackKeys(ctx, problemID, 2)
+	if err != nil {
+		t.Fatalf("RedundantAttackKeys: %v", err)
+	}
+	found := false
+	for _, k := range keys {
+		if k == wantKey {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected redundant-attack key %q (>=2 proposals), got %v", wantKey, keys)
+	}
+
+	// A single proposal must NOT be flagged redundant (count < 2 filtered out).
+	single := openMigratedStore(t)
+	solo := sampleFrontier(t, single)
+	if _, err := single.PersistFrontierGeneration(ctx, solo); err != nil {
+		t.Fatalf("solo persist: %v", err)
+	}
+	soloKeys, err := single.RedundantAttackKeys(ctx, solo.ProblemID, 2)
+	if err != nil {
+		t.Fatalf("solo RedundantAttackKeys: %v", err)
+	}
+	if len(soloKeys) != 0 {
+		t.Fatalf("a single attack must not be redundant, got %v", soloKeys)
+	}
+}

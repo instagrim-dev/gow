@@ -15,6 +15,7 @@ import (
 type FrontierProviderInvocation struct {
 	ID              string
 	RunID           string
+	Role            string // defaults to 'generate' when empty (M7 arms set 'summarize-next'/'brainstorm')
 	ProviderName    string
 	ProviderVersion string
 	ModelName       string
@@ -84,6 +85,13 @@ type FrontierGenerationRecord struct {
 type PersistFrontierGenerationResult struct {
 	Record  FrontierGenerationRecord
 	Created bool
+	// ProposalIDByHash maps EVERY candidate's proposal_hash to its persisted
+	// proposal id — both proposals newly written by this pass AND proposals that
+	// deduped onto a pre-existing row for the problem. The applied-bias log
+	// (M6.2) keys on this so a policy-biased generation records the bias for the
+	// whole ranked set, not only the newly-written subset (which is empty for a
+	// deterministic re-generation).
+	ProposalIDByHash map[string]string
 }
 
 // PersistFrontierGeneration writes a generation pass transactionally, assigning
@@ -115,10 +123,14 @@ func (s *Store) PersistFrontierGeneration(ctx context.Context, record FrontierGe
 	record.Revision = int(maxRev.Int64) + 1
 
 	inv := record.Invocation
+	role := inv.Role
+	if role == "" {
+		role = "generate"
+	}
 	if _, err := tx.ExecContext(ctx, `
 INSERT INTO provider_invocations(id, run_id, role, provider_name, provider_version, model_name, schema_version, request_hash, request_payload, response_payload, created_at)
-VALUES(?, ?, 'generate', ?, ?, ?, ?, ?, ?, ?, ?)
-`, inv.ID, inv.RunID, inv.ProviderName, inv.ProviderVersion, inv.ModelName, inv.SchemaVersion, inv.RequestHash, inv.RequestPayload, inv.ResponsePayload, inv.CreatedAt); err != nil {
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, inv.ID, inv.RunID, role, inv.ProviderName, inv.ProviderVersion, inv.ModelName, inv.SchemaVersion, inv.RequestHash, inv.RequestPayload, inv.ResponsePayload, inv.CreatedAt); err != nil {
 		return PersistFrontierGenerationResult{}, err
 	}
 
@@ -129,15 +141,20 @@ VALUES(?, ?, 'generate', ?, ?, ?, ?, ?, ?, ?, ?)
 	// is by INSERT OR IGNORE into the sidecar keyed by the EXISTING proposal id —
 	// the immutable proposal row itself is never updated.
 	persisted := make([]FrontierProposalRow, 0, len(record.Proposals))
+	idByHash := make(map[string]string, len(record.Proposals))
 	for _, p := range record.Proposals {
 		var existingID string
 		err := tx.QueryRowContext(ctx, `SELECT id FROM frontier_proposals WHERE problem_id = ? AND proposal_hash = ?`, record.ProblemID, p.ProposalHash).Scan(&existingID)
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
 			persisted = append(persisted, p)
+			idByHash[p.ProposalHash] = p.ID
 		case err != nil:
 			return PersistFrontierGenerationResult{}, err
 		default:
+			// Deduped onto a pre-existing proposal row: record the existing id so
+			// the applied-bias log can still attribute this run's policy bias to it.
+			idByHash[p.ProposalHash] = existingID
 			if p.SignatureJSON != "" {
 				if _, ierr := tx.ExecContext(ctx, `
 INSERT OR IGNORE INTO frontier_proposal_signatures(proposal_id, canonical_fingerprint, signature_json, created_at)
@@ -192,7 +209,7 @@ INSERT INTO frontier_nearest_clusters(proposal_id, cluster_id, classification, p
 	if err := tx.Commit(); err != nil {
 		return PersistFrontierGenerationResult{}, err
 	}
-	return PersistFrontierGenerationResult{Record: record, Created: true}, nil
+	return PersistFrontierGenerationResult{Record: record, Created: true, ProposalIDByHash: idByHash}, nil
 }
 
 // GetFrontierGeneration loads a full generation pass by id.
@@ -316,4 +333,55 @@ func (s *Store) LatestFrontierGeneration(ctx context.Context, problemID string) 
 		return "", false, err
 	}
 	return id, true, nil
+}
+
+// RedundantAttackKeys returns the directed-attack redundancy keys (in the exact
+// format frontier.RedundancyKey produces: "t:<target ids>,|n:<cluster ids>,")
+// that appear on at least minCount DISTINCT persisted proposals for the problem.
+// Search policy uses these to derive penalize/redundant_attack directives from
+// accumulated evidence, so a mechanism repeatedly attacked the same way is
+// down-ranked in future generations (AGENTS.md: penalize mechanisms repeatedly
+// shown redundant). Reconstructed deterministically from the child tables; the
+// target/cluster orderings match the insert-time ORDER BY that RedundancyKey
+// also relies on.
+func (s *Store) RedundantAttackKeys(ctx context.Context, problemID string, minCount int) ([]string, error) {
+	if err := domain.ValidateProblemID(problemID); err != nil {
+		return nil, err
+	}
+	if minCount < 1 {
+		minCount = 1
+	}
+	// Build the per-proposal target segment ("t:a,b,") and cluster segment
+	// ("n:x,y,") via ordered aggregation, then combine and count distinct
+	// proposals per full key. group_concat preserves the ORDER BY within each
+	// aggregate group on SQLite.
+	rows, err := s.db.QueryContext(ctx, `
+WITH t AS (
+  SELECT fp.id AS pid,
+         COALESCE((SELECT group_concat(ti.invariant_id || ',', '')
+                   FROM (SELECT invariant_id FROM frontier_target_invariants
+                         WHERE proposal_id = fp.id ORDER BY invariant_id) ti), '') AS tseg,
+         COALESCE((SELECT group_concat(nc.cluster_id || ',', '')
+                   FROM (SELECT cluster_id FROM frontier_nearest_clusters
+                         WHERE proposal_id = fp.id ORDER BY cluster_id) nc), '') AS nseg
+  FROM frontier_proposals fp
+  WHERE fp.problem_id = ?
+)
+SELECT 't:' || tseg || '|n:' || nseg AS key, COUNT(*) AS n
+FROM t GROUP BY key HAVING n >= ? ORDER BY key
+`, problemID, minCount)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var keys []string
+	for rows.Next() {
+		var key string
+		var n int
+		if err := rows.Scan(&key, &n); err != nil {
+			return nil, err
+		}
+		keys = append(keys, key)
+	}
+	return keys, rows.Err()
 }

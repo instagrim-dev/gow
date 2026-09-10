@@ -74,10 +74,12 @@ func Apply(pol SearchPolicy, candidates []frontier.Candidate, satisfiedPrefer ma
 		case d.Kind == KindPenalize && d.TargetKind == TargetRedundantAttack:
 			penalizeAttack[d.TargetID] = d
 		}
-		// KindExpand and KindPenalize/TargetRepeatedFailure bias GENERATION
-		// (which families / mechanisms to draw from), not post-hoc ranking of an
-		// already-generated set; they are carried in the persisted policy for the
-		// generation-request path and do not fire here.
+		// KindExpand and KindPenalize/TargetRepeatedFailure are GENERATION-path
+		// levers (which families / mechanisms to draw from), not post-hoc ranking
+		// of an already-generated set. The generation-request path does not yet
+		// consume policy, so these are DEFERRED: carried in the persisted policy
+		// for provenance/inspection but not yet applied. See docs/search-policy.md
+		// "Deferred". They intentionally do not fire in this rerank.
 	}
 
 	floor := computeFalsifiabilityFloor(candidates)

@@ -66,7 +66,31 @@ const defaultFrontierCount = 8
 // evaluating the target predicates against the proposed signature. Proposals are
 // ranked by the ordinal objective and persisted as an immutable, revisioned
 // generation with each proposal's result left NULL for M5.2.
+// frontierArmOptions parameterizes a generation pass for M7 experiment arms
+// without changing the default CLI behavior. Zero value == the directed B3 arm:
+// surviving targets on, search policy on, default deriving generator, role
+// 'generate'. Baselines set noTargets (B0/B1/B2 do not attack invariants),
+// noPolicy, an alternate generator, and their own provenance role.
+type frontierArmOptions struct {
+	noTargets bool
+	noPolicy  bool
+	generator provider.Generator
+	role      string
+}
+
+// GenerateFrontier runs the directed B3 frontier operator (surviving targets +
+// search policy) under the real run lifecycle.
 func (a *App) GenerateFrontier(ctx context.Context, input FrontierGenerateInput) (FrontierGenerateResponse, error) {
+	resp, _, err := a.generateFrontierWith(ctx, input, frontierArmOptions{noPolicy: input.NoPolicy})
+	return resp, err
+}
+
+// generateFrontierWith is the shared generation core for the CLI and the M7
+// experiment arms. All arms flow through THIS one path so distance, violation
+// verification, hashing, ranking, and persistence are identical across arms;
+// only target selection, policy application, generator, and provenance role
+// vary by arm.
+func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateInput, opts frontierArmOptions) (FrontierGenerateResponse, store.PersistFrontierGenerationResult, error) {
 	count := input.Count
 	if count <= 0 {
 		count = defaultFrontierCount
@@ -74,42 +98,50 @@ func (a *App) GenerateFrontier(ctx context.Context, input FrontierGenerateInput)
 
 	dbPath, repoStore, err := a.openStoreFn(ctx, input.DBPath)
 	if err != nil {
-		return FrontierGenerateResponse{}, err
+		return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
 	}
 	defer repoStore.Close()
 
 	if _, err := repoStore.GetProblem(ctx, input.ProblemID); err != nil {
-		return FrontierGenerateResponse{}, err
+		return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
 	}
 
-	// Surviving invariants are the only legal targets. If none survive, there is
-	// nothing to generate against — a legitimate empty outcome, not an error.
-	survivors, err := a.survivingInvariants(ctx, repoStore, input.ProblemID)
-	if err != nil {
-		return FrontierGenerateResponse{}, err
+	// Surviving invariants are the only legal targets for the directed arm. If
+	// none survive, there is nothing to generate against — a legitimate empty
+	// outcome, not an error. Baseline arms (opts.noTargets) attack nothing.
+	var survivors []frontier.SurvivingInvariant
+	if !opts.noTargets {
+		var err error
+		survivors, err = a.survivingInvariants(ctx, repoStore, input.ProblemID)
+		if err != nil {
+			return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
+		}
 	}
 
 	// Families come from the latest cluster run: their representatives are the
 	// known failure structure a proposal is measured against.
 	clusterRunID, found, err := repoStore.LatestClusterRun(ctx, input.ProblemID)
 	if err != nil {
-		return FrontierGenerateResponse{}, err
+		return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
 	}
 	if !found {
-		return FrontierGenerateResponse{}, fmt.Errorf("no cluster run for problem %s; run `cluster build` first", input.ProblemID)
+		return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, fmt.Errorf("no cluster run for problem %s; run `cluster build` first", input.ProblemID)
 	}
 	clusterRun, err := repoStore.GetClusterRun(ctx, clusterRunID)
 	if err != nil {
-		return FrontierGenerateResponse{}, err
+		return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
 	}
 	engineFamilies, err := frontierFamilies(ctx, repoStore, clusterRun)
 	if err != nil {
-		return FrontierGenerateResponse{}, err
+		return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
 	}
 
 	req := generationRequestForSurvivors(input.ProblemID, count, survivors, engineFamilies)
 
-	generator := a.generatorFn
+	generator := opts.generator
+	if generator == nil {
+		generator = a.generatorFn
+	}
 	if generator == nil {
 		generator = provider.NewDerivingFixtureGenerator()
 	}
@@ -127,13 +159,13 @@ func (a *App) GenerateFrontier(ctx context.Context, input FrontierGenerateInput)
 		CompletedAt: now,
 	})
 	if err != nil {
-		return FrontierGenerateResponse{}, err
+		return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
 	}
 
 	resp, err := generator.Generate(ctx, req)
 	if err != nil {
 		a.failRun(ctx, repoStore, run.ID, err)
-		return FrontierGenerateResponse{}, err
+		return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
 	}
 
 	// Convert provider proposals + surviving targets into engine inputs. Code
@@ -163,30 +195,31 @@ func (a *App) GenerateFrontier(ctx context.Context, input FrontierGenerateInput)
 	// reader can reproduce why a proposal was favored or suppressed.
 	var appliedBias []policy.AppliedBias
 	var policyRevisionID string
-	if !input.NoPolicy {
+	if !opts.noPolicy {
 		candidates, appliedBias, policyRevisionID, err = a.applySearchPolicy(ctx, repoStore, input.ProblemID, survivors, candidates)
 		if err != nil {
 			a.failRun(ctx, repoStore, run.ID, err)
-			return FrontierGenerateResponse{}, err
+			return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
 		}
 	}
 
-	record := frontierGenerationRecord(input.ProblemID, clusterRun.ID, run.ID, count, req.Fingerprint(), resp, candidates, now)
+	record := frontierGenerationRecord(input.ProblemID, clusterRun.ID, run.ID, count, req.Fingerprint(), resp, candidates, now, opts.role)
 	result, err := repoStore.PersistFrontierGeneration(ctx, record)
 	if err != nil {
 		a.failRun(ctx, repoStore, run.ID, err)
-		return FrontierGenerateResponse{}, err
+		return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
 	}
-	// Persist the applied-bias log keyed on the PERSISTED proposal ids (immutable
-	// insert; a generation with no policy writes nothing).
+	// Persist the applied-bias log keyed on the PERSISTED proposal ids for the
+	// WHOLE ranked set (result.ProposalIDByHash covers both newly-written and
+	// deduped proposals); a generation with no policy writes nothing.
 	if policyRevisionID != "" && len(appliedBias) > 0 {
-		if perr := a.persistPolicyBias(ctx, repoStore, result.Record, policyRevisionID, appliedBias); perr != nil {
+		if perr := a.persistPolicyBias(ctx, repoStore, result, policyRevisionID, appliedBias); perr != nil {
 			a.failRun(ctx, repoStore, run.ID, perr)
-			return FrontierGenerateResponse{}, perr
+			return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, perr
 		}
 	}
 	if err := a.finalizeRun(ctx, repoStore, run.ID, nil); err != nil {
-		return FrontierGenerateResponse{}, err
+		return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
 	}
 
 	return FrontierGenerateResponse{
@@ -195,7 +228,7 @@ func (a *App) GenerateFrontier(ctx context.Context, input FrontierGenerateInput)
 		Store:      dbPath,
 		Created:    result.Created,
 		Generation: frontierGenerationView(result.Record),
-	}, nil
+	}, result, nil
 }
 
 // survivingInvariants reads the problem's candidate invariants whose CURRENT
@@ -407,7 +440,7 @@ func frontierGenerationView(rec store.FrontierGenerationRecord) FrontierGenerati
 	}
 	return view
 }
-func frontierGenerationRecord(problemID, clusterRunID, runID string, count int, requestHash string, resp provider.GenerationResponse, candidates []frontier.Candidate, now time.Time) store.FrontierGenerationRecord {
+func frontierGenerationRecord(problemID, clusterRunID, runID string, count int, requestHash string, resp provider.GenerationResponse, candidates []frontier.Candidate, now time.Time, role string) store.FrontierGenerationRecord {
 	rec := store.FrontierGenerationRecord{
 		ID:               domain.NewFrontierGenerationRunID(now),
 		ProblemID:        problemID,
@@ -419,6 +452,7 @@ func frontierGenerationRecord(problemID, clusterRunID, runID string, count int, 
 		Invocation: store.FrontierProviderInvocation{
 			ID:              domain.NewProviderInvocationID(now),
 			RunID:           runID,
+			Role:            role,
 			ProviderName:    resp.Metadata.ProviderName,
 			ProviderVersion: resp.Metadata.ProviderVersion,
 			ModelName:       resp.Metadata.ModelName,

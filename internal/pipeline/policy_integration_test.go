@@ -84,7 +84,11 @@ func TestIntegrationPolicyMutateAndBiasEndToEnd(t *testing.T) {
 		t.Fatalf("re-mutate must be idempotent; created=%v id=%s want %s", again.Created, again.Revision.ID, mut.Revision.ID)
 	}
 
-	// Second generation applies the policy and logs the bias.
+	// Second generation applies the policy and logs the bias for the WHOLE ranked
+	// set — even though the deterministic generator persists no NEW proposal rows
+	// (they dedup onto the first generation's proposals), the applied-bias log is
+	// keyed on the persisted id of every ranked candidate, so the "why" surface
+	// is reproducible rather than empty.
 	gen2, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID})
 	if err != nil {
 		t.Fatalf("second generate: %v", err)
@@ -96,19 +100,19 @@ func TestIntegrationPolicyMutateAndBiasEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get generation policy: %v", err)
 	}
-	if gen2.Generation.ProposalCount == 0 {
-		// Second generation deduped all proposals (same directed attacks already
-		// persisted): no new proposals, so no bias log. That is a legitimate
-		// outcome — the applied-bias log is per newly-persisted proposal.
-		if len(bias) != 0 {
-			t.Fatalf("no new proposals but bias log non-empty: %+v", bias)
-		}
-	} else {
-		if revID != mut.Revision.ID {
-			t.Fatalf("generation policy revision = %s, want %s", revID, mut.Revision.ID)
-		}
-		if len(bias) == 0 {
-			t.Fatal("expected an applied-bias log for the biased generation")
+	// The first generation produced ranked candidates; the biased re-generation
+	// must record a non-empty applied-bias log tied to the policy revision.
+	if revID != mut.Revision.ID {
+		t.Fatalf("generation policy revision = %q, want %q", revID, mut.Revision.ID)
+	}
+	if len(bias) == 0 {
+		t.Fatal("biased generation must record a non-empty applied-bias log for the ranked set")
+	}
+	// Every logged proposal id must be a real, persisted frontier proposal for
+	// the problem (falsify by logging a fabricated id).
+	for _, b := range bias {
+		if b.ProposalID == "" {
+			t.Fatalf("applied-bias row missing proposal id: %+v", b)
 		}
 	}
 

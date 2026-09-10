@@ -31,11 +31,19 @@ favored or suppressed.
   `partial_failure`) from the M5.2 failure atlas.
 
 The provider (`role='policy-mutate'`) MAY propose directives, but every proposal
-is **re-verified against the resolvable evidence set** before it counts: a
-directive whose target does not resolve to a persisted row is recorded
-`inert_proposals` and biases nothing. `ModelJudgment != Verification`. The
-code-owned derivation is the source of truth; a provider fold-in can only add
-verified directives, never invent targets. `--no-provider` runs the pure code
+passes through the ONE engine-owned admission gate
+(`policy.AdmitProposedDirective`) — the same evidence requirements `Derive`
+applies to its own output. A resolvable reference is **not** sufficient
+evidence for the requested action: the (kind, target-kind) pairing must be one
+`Derive` itself emits, the target must resolve to a persisted evidence row, the
+target-specific support gates hold (a success invariant with zero distinct
+support earns no preference, from a provider exactly as from code), and the
+admitted weight is the evidence-derived weight **capped at medium** — a
+provider can confirm evidence-backed bias, never amplify it. Anything failing a
+gate is recorded `inert_proposals` and biases nothing.
+`ModelJudgment != Verification`. The code-owned derivation is the source of
+truth; a provider fold-in can only add gate-passing directives, never invent
+targets or bypass support requirements. `--no-provider` runs the pure code
 derivation.
 
 ## Typed directives with strength-weighted preference
@@ -46,8 +54,9 @@ Directives are typed over typed targets:
 |---|---|---|
 | `prefer` | `success_invariant` | favor proposals whose signature satisfies a supported success condition |
 | `avoid` | `surviving_invariant` | steer away from re-preserving conserved failure structure |
-| `expand` | `mechanism_family` | sample under-covered mechanism families |
-| `penalize` | `redundant_attack` / `repeated_failure` | dampen mechanisms shown redundant or repeatedly failing |
+| `expand` | `mechanism_family` | sample under-covered mechanism families *(derived + persisted; generation-path application deferred — see below)* |
+| `penalize` | `redundant_attack` | dampen directed attacks seen on ≥2 distinct proposals (down-rank in the applied rerank) |
+| `penalize` | `repeated_failure` | dampen repeatedly-failing mechanisms *(generation-path lever; deferred — see below)* |
 
 Each directive carries an ordinal `weight`, an `epistemic_source`, and
 provenance back to the justifying evidence rows. Preference weight for a success
@@ -70,6 +79,30 @@ support composition** — never promoted beyond what the counts show.
   success invariant's stored predicate against every candidate's proposed
   signature — the policy names an invariant; code decides which proposals
   satisfy it.
+
+## Applied vs. deferred levers
+
+The applied levers — those that change the *current* rerank — are `prefer`
+(success invariant), `avoid` (surviving invariant), and `penalize`
+(redundant_attack). These fire in `policy.Apply` over the ranked candidate set,
+and their per-proposal effect is recorded in the applied-bias log.
+
+Two lever kinds are **derived and persisted for provenance/inspection but not
+yet applied**, because they are *generation-path* levers (they change which
+families/mechanisms are drawn *before* ranking) and the generation-request path
+does not yet consume the persisted policy:
+
+- `expand` (`mechanism_family`) — would broaden sampling into under-covered
+  families;
+- `penalize` (`repeated_failure`) — would dampen repeatedly-failing mechanisms.
+
+They are carried in the revision so an operator can see the accumulated
+intent, and `policy.Apply` intentionally does not fire them (a comment in
+`internal/policy/apply.go` marks the deferral). Wiring the generation request to
+consume policy is deferred to a follow-up so this slice stays a bounded,
+testable rerank rather than a change to generation semantics. Until then,
+`expand`/`repeated_failure` directives do not alter search behavior, and this is
+stated rather than implied.
 
 ## Idempotent, revisioned persistence (migration `v19`)
 

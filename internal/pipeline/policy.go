@@ -35,7 +35,7 @@ func (a *App) MutatePolicy(ctx context.Context, input PolicyMutateInput) (Policy
 		return PolicyMutateResponse{}, err
 	}
 
-	evidence, resolvable, err := a.buildPolicyEvidence(ctx, repoStore, input.ProblemID)
+	evidence, _, err := a.buildPolicyEvidence(ctx, repoStore, input.ProblemID)
 	if err != nil {
 		return PolicyMutateResponse{}, err
 	}
@@ -73,7 +73,7 @@ func (a *App) MutatePolicy(ctx context.Context, input PolicyMutateInput) (Policy
 			a.failRun(ctx, repoStore, run.ID, merr)
 			return PolicyMutateResponse{}, merr
 		}
-		verified, inertCount := verifyProviderDirectives(resp.Proposals, resolvable)
+		verified, inertCount := verifyProviderDirectives(resp.Proposals, evidence)
 		inert = inertCount
 		// Union the code derivation with verified provider directives (dedup by
 		// (kind,target)). The code derivation already covers the deterministic
@@ -180,21 +180,25 @@ func (a *App) buildPolicyEvidence(ctx context.Context, repoStore problemStore, p
 			}
 		}
 	}
-	if fails, lerr := repoStore.ListEvaluatedFailures(ctx, problemID); lerr == nil {
-		seen := map[string]bool{}
-		for _, f := range fails {
-			fp := evaluatedFailureFingerprint(f)
-			if fp == "" || seen[fp] {
-				continue
-			}
-			seen[fp] = true
-			ev.RepeatedFailures = append(ev.RepeatedFailures, fp)
-			rv.repeatedFail[fp] = true
+	// Repeated-failure penalize directives are DEFERRED (see docs/search-policy.md
+	// "Deferred"): they would bias GENERATION (which mechanisms to draw from),
+	// but the generation-request path does not yet consume policy, and keying a
+	// penalize on a single evaluated-failure proposal id would emit an unbounded
+	// set of single-use directives rather than penalizing a repeated MECHANISM.
+	// We therefore do not derive repeated-failure directives until the generation
+	// path can consume them, rather than persist mis-keyed inert directives.
+
+	// Redundant directed attacks: keys seen on >= 2 distinct persisted proposals.
+	// A mechanism repeatedly attacked the same way earns a penalize directive.
+	if keys, lerr := repoStore.RedundantAttackKeys(ctx, problemID, 2); lerr == nil {
+		for _, k := range keys {
+			ev.RedundantAttacks = append(ev.RedundantAttacks, k)
+			rv.redundant[k] = true
 		}
 	}
 
 	sort.Strings(ev.UncoveredFamilies)
-	sort.Strings(ev.RepeatedFailures)
+	sort.Strings(ev.RedundantAttacks)
 	return ev, rv, nil
 }
 
@@ -216,13 +220,6 @@ func dominantStrength(si store.SuccessInvariantRow) string {
 	}
 }
 
-// evaluatedFailureFingerprint derives a stable mechanism key for a re-entered
-// failure. The evaluated_failures row carries the proposal id; we key on it so
-// repeated failures of the same directed attack accumulate.
-func evaluatedFailureFingerprint(f store.EvaluatedFailureRow) string {
-	return f.ProposalID
-}
-
 func policyEvidenceProjection(problemID string, ev policy.Evidence) provider.PolicyEvidence {
 	proj := provider.PolicyEvidence{ProblemID: problemID}
 	for _, s := range ev.Successes {
@@ -241,45 +238,25 @@ func policyEvidenceProjection(problemID string, ev policy.Evidence) provider.Pol
 	return proj
 }
 
-// verifyProviderDirectives keeps only proposals whose kind/target are valid AND
-// whose target resolves to a persisted evidence row (KTD-1). Others are inert.
-func verifyProviderDirectives(proposals []provider.DirectiveProposal, rv resolvableEvidence) (policy.SearchPolicy, int) {
+// verifyProviderDirectives admits provider proposals through the ONE engine-
+// owned gate (policy.AdmitProposedDirective): the same evidence requirements
+// Derive applies to its own output — kind/target pairing, resolvable target,
+// support gates (a zero-support success invariant earns no preference), and an
+// evidence-derived weight capped at medium. A resolvable reference alone is
+// not sufficient evidence for the requested action; anything failing a gate is
+// inert.
+func verifyProviderDirectives(proposals []provider.DirectiveProposal, ev policy.Evidence) (policy.SearchPolicy, int) {
 	var ds []policy.Directive
 	inert := 0
 	for _, p := range proposals {
-		kind := policy.Kind(p.Kind)
-		tk := policy.TargetKind(p.TargetKind)
-		if !kind.Valid() || !tk.Valid() || !resolves(tk, p.TargetID, rv) {
+		d, admitted := policy.AdmitProposedDirective(policy.Kind(p.Kind), policy.TargetKind(p.TargetKind), p.TargetID, ev)
+		if !admitted {
 			inert++
 			continue
 		}
-		ds = append(ds, policy.Directive{
-			Kind:       kind,
-			TargetKind: tk,
-			TargetID:   p.TargetID,
-			Weight:     domain.OrdinalMedium,
-		})
+		ds = append(ds, d)
 	}
 	return policy.SearchPolicy{Directives: ds}, inert
-}
-
-func resolves(tk policy.TargetKind, id string, rv resolvableEvidence) bool {
-	switch tk {
-	case policy.TargetSuccessInvariant:
-		_, ok := rv.successFP[id]
-		return ok
-	case policy.TargetSurvivingInvariant:
-		_, ok := rv.surviving[id]
-		return ok
-	case policy.TargetMechanismFamily:
-		return rv.families[id]
-	case policy.TargetRedundantAttack:
-		return rv.redundant[id]
-	case policy.TargetRepeatedFailure:
-		return rv.repeatedFail[id]
-	default:
-		return false
-	}
 }
 
 // unionPolicies merges two policies, deduping on (kind, target-kind, target-id)
@@ -472,18 +449,18 @@ func (a *App) preferredSuccessPredicates(ctx context.Context, repoStore problemS
 }
 
 // persistPolicyBias writes the applied-bias log against the persisted proposal
-// ids. Candidates dedup on proposal_hash during persistence, so we map each
-// logged bias (keyed by hash) to the persisted proposal id.
-func (a *App) persistPolicyBias(ctx context.Context, repoStore problemStore, gen store.FrontierGenerationRecord, policyRevisionID string, bias []policy.AppliedBias) error {
-	idByHash := map[string]string{}
-	for _, p := range gen.Proposals {
-		idByHash[p.ProposalHash] = p.ID
-	}
+// ids for the WHOLE ranked set. It keys on result.ProposalIDByHash, which maps
+// every candidate's proposal_hash to its persisted id (both newly-written and
+// deduped-onto-existing) — so the reproducible "why was this favored/suppressed"
+// log covers the biased ordering even when a deterministic re-generation
+// persists no new proposal rows.
+func (a *App) persistPolicyBias(ctx context.Context, repoStore problemStore, gen store.PersistFrontierGenerationResult, policyRevisionID string, bias []policy.AppliedBias) error {
+	idByHash := gen.ProposalIDByHash
 	var rows []store.FrontierGenerationPolicyRow
 	for _, ab := range bias {
 		id, ok := idByHash[ab.ProposalHash]
 		if !ok {
-			continue // proposal deduped out of this generation; nothing to log
+			continue // candidate not persisted for this problem; nothing to log
 		}
 		rows = append(rows, store.FrontierGenerationPolicyRow{
 			ProposalID:     id,
@@ -497,7 +474,7 @@ func (a *App) persistPolicyBias(ctx context.Context, repoStore problemStore, gen
 	if len(rows) == 0 {
 		return nil
 	}
-	return repoStore.PersistFrontierGenerationPolicy(ctx, gen.ID, policyRevisionID, rows)
+	return repoStore.PersistFrontierGenerationPolicy(ctx, gen.Record.ID, policyRevisionID, rows)
 }
 
 // ListPolicies lists policy-revision headers for a problem.

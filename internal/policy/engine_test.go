@@ -186,6 +186,53 @@ func TestApplyAvoidanceSuppressesNonFloorCandidate(t *testing.T) {
 	}
 }
 
+// TestApplyPenalizeRedundantAttackFires is the Finding-4 application half: a
+// penalize/redundant_attack directive whose target equals a candidate's
+// frontier.RedundancyKey must actually fire (Penalized true, net negative before
+// floor). Guards against the directive being derived but never applied.
+func TestApplyPenalizeRedundantAttackFires(t *testing.T) {
+	t.Parallel()
+	// Two violating candidates that are the SAME directed attack (identical
+	// targets + nearest clusters) so their RedundancyKey collides; one is the
+	// falsifiability floor. A third, distinct attack is the penalize target.
+	redundant := frontier.Candidate{
+		ProposalHash:        "r1",
+		ViolatesAnyTarget:   true,
+		TargetInvariantIDs:  []string{"inv-x"},
+		NearestClusters:     []frontier.NearestCluster{{ClusterID: "cl-1"}},
+		ViolationChecks:     []frontier.ViolationCheck{{InvariantID: "inv-x", Verdict: invariant.VerdictViolates, Violated: true}},
+		MechanisticDistance: domain.OrdinalMedium,
+		EvaluationCost:      domain.OrdinalHigh, // NOT the cheapest → not floor-protected
+	}
+	cheaper := frontier.Candidate{
+		ProposalHash:        "r0",
+		ViolatesAnyTarget:   true,
+		TargetInvariantIDs:  []string{"inv-x"},
+		NearestClusters:     []frontier.NearestCluster{{ClusterID: "cl-9"}},
+		ViolationChecks:     []frontier.ViolationCheck{{InvariantID: "inv-x", Verdict: invariant.VerdictViolates, Violated: true}},
+		MechanisticDistance: domain.OrdinalMedium,
+		EvaluationCost:      domain.OrdinalLow, // cheapest falsifier of inv-x → floor-protected, freeing r1 for the penalty
+	}
+	key := frontier.RedundancyKey(redundant)
+	pol := Derive(Evidence{RedundantAttacks: []string{key}})
+	if _, ok := findOptionalDirective(pol, KindPenalize, TargetRedundantAttack, key); !ok {
+		t.Fatalf("Derive must emit a penalize/redundant_attack directive for %q", key)
+	}
+	res := Apply(pol, []frontier.Candidate{redundant, cheaper}, nil)
+	var got AppliedBias
+	for _, ab := range res.Bias {
+		if ab.ProposalHash == "r1" {
+			got = ab
+		}
+	}
+	if !got.Penalized {
+		t.Fatalf("redundant attack must be penalized, got %+v", got)
+	}
+	if got.Net >= 0 {
+		t.Fatalf("penalize must push net negative (r1 is not floor-protected), got net=%d", got.Net)
+	}
+}
+
 func TestApplyIsDeterministic(t *testing.T) {
 	t.Parallel()
 	cands := []frontier.Candidate{
@@ -202,6 +249,15 @@ func TestApplyIsDeterministic(t *testing.T) {
 }
 
 // --- helpers ---
+
+func findOptionalDirective(pol SearchPolicy, kind Kind, tk TargetKind, target string) (Directive, bool) {
+	for _, d := range pol.Directives {
+		if d.Kind == kind && d.TargetKind == tk && d.TargetID == target {
+			return d, true
+		}
+	}
+	return Directive{}, false
+}
 
 func findDirective(t *testing.T, pol SearchPolicy, kind Kind, target string) Directive {
 	t.Helper()
