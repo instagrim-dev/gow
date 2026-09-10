@@ -245,6 +245,7 @@ CREATE TABLE invariant_challenge (
   invariant_id TEXT NOT NULL REFERENCES candidate_invariant(id),
   run_id TEXT NOT NULL REFERENCES run(id),
   challenge_type TEXT NOT NULL,
+  previous_state TEXT,
   result_state TEXT NOT NULL,
   result_summary TEXT,
   created_at TEXT NOT NULL
@@ -260,16 +261,22 @@ CREATE TABLE invariant_state_transition (
 );
 
 CREATE VIEW invariant_current_state AS
-WITH latest AS (
-  SELECT t.invariant_id, t.to_state, t.created_at
+WITH ranked AS (
+  SELECT
+    t.invariant_id,
+    t.to_state,
+    t.created_at,
+    t.id,
+    ROW_NUMBER() OVER (
+      PARTITION BY t.invariant_id
+      ORDER BY t.created_at DESC, t.id DESC
+    ) AS rn
   FROM invariant_state_transition t
-  JOIN (
-    SELECT invariant_id, MAX(created_at) AS max_created_at
-    FROM invariant_state_transition
-    GROUP BY invariant_id
-  ) mx
-  ON mx.invariant_id = t.invariant_id
-  AND mx.max_created_at = t.created_at
+),
+latest AS (
+  SELECT invariant_id, to_state, created_at
+  FROM ranked
+  WHERE rn = 1
 )
 SELECT ci.id AS invariant_id,
        COALESCE(latest.to_state, ci.initial_state) AS state,

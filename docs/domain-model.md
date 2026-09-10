@@ -225,9 +225,10 @@ type FrontierProposal struct {
 type Evaluation struct {
     ID            ID
     EvaluationRunID ID
-    FrontierProposalID *ID
+    ProposalID    *ID
     Verdict       string
-    Confidence    string
+    ConfidenceOrdinal string
+    Notes         string
 }
 
 type EvaluationRun struct {
@@ -240,7 +241,7 @@ type EvaluationRun struct {
     InvariantRevisionID     *ID
     FrontierGenerationRunID *ID
     Mode       string // proposal|holdout
-    Baseline   string
+    BaselineType *string
     CutoffTime *string
     CreatedAt  string
 }
