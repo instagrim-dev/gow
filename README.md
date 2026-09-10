@@ -294,6 +294,14 @@ newf compress
 SQLite is sufficient initially. Source/evidence records should be immutable;
 derived judgments should be stored separately with provenance.
 
+Design details for implementation:
+
+- [`docs/cli-design.md`](docs/cli-design.md)
+- [`docs/domain-model.md`](docs/domain-model.md)
+- [`docs/persistence.md`](docs/persistence.md)
+- [`docs/evaluation.md`](docs/evaluation.md)
+- [`docs/implementation-plan.md`](docs/implementation-plan.md)
+
 ## v0 exit criteria
 
 Promote the mechanism beyond an experiment when it can repeatedly:
