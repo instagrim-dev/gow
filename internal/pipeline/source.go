@@ -139,19 +139,14 @@ func (a *App) ListSources(ctx context.Context, input SourceListInput) (SourceLis
 		return SourceListResponse{}, err
 	}
 
-	sources, err := repoStore.ListSourcesByProblem(ctx, input.ProblemID)
+	summaries, err := repoStore.ListSourcesWithSnapshotStats(ctx, input.ProblemID)
 	if err != nil {
 		return SourceListResponse{}, err
 	}
 
-	views := make([]SourceListView, 0, len(sources))
-	for _, source := range sources {
-		snapshots, listErr := repoStore.ListSourceSnapshots(ctx, source.ID)
-		if listErr != nil {
-			return SourceListResponse{}, listErr
-		}
-		view := sourceListView(source, snapshots)
-		views = append(views, view)
+	views := make([]SourceListView, 0, len(summaries))
+	for _, summary := range summaries {
+		views = append(views, sourceListView(summary.Source, summary.SnapshotCount, summary.LatestSnapshotID))
 	}
 
 	return SourceListResponse{
@@ -183,7 +178,7 @@ func (a *App) ShowSource(ctx context.Context, input LookupInput) (SourceShowResp
 		OK:        true,
 		Command:   "source show",
 		Store:     dbPath,
-		Source:    sourceListView(source, snapshots),
+		Source:    sourceListView(source, len(snapshots), latestSnapshotID(snapshots)),
 		Snapshots: snapshotViews(snapshots),
 	}, nil
 }
@@ -209,7 +204,7 @@ func (a *App) ShowSnapshot(ctx context.Context, input LookupInput) (SourceSnapsh
 		Command:            "source snapshot show",
 		Store:              dbPath,
 		Snapshot:           snapshotView(snapshot),
-		Source:             sourceListView(source, nil),
+		Source:             sourceListView(source, 0, nil),
 		ObjectAbsolutePath: filepath.Join(filepath.Dir(dbPath), "objects", filepath.FromSlash(snapshot.ObjectPath)),
 	}, nil
 }
@@ -449,11 +444,14 @@ func persistObject(shaRoot, logicalName, mediaTypeOverride string, reader io.Rea
 	dest := filepath.Join(destDir, digest)
 	if _, err := os.Stat(dest); err == nil {
 		_ = os.Remove(tempPath)
-	} else {
+	} else if errors.Is(err, os.ErrNotExist) {
 		if err := os.Rename(tempPath, dest); err != nil {
 			_ = os.Remove(tempPath)
 			return 0, "", "", "", err
 		}
+	} else {
+		_ = os.Remove(tempPath)
+		return 0, "", "", "", err
 	}
 
 	mediaType := detectMediaType(logicalName, sniff, mediaTypeOverride)
@@ -480,21 +478,25 @@ func detectMediaType(logicalName string, sniff []byte, override string) string {
 	return detected
 }
 
-func sourceListView(source domain.Source, snapshots []domain.SourceSnapshot) SourceListView {
+func sourceListView(source domain.Source, snapshotCount int, latestSnapshotID *string) SourceListView {
 	view := SourceListView{
-		ID:            source.ID,
-		ProblemID:     source.ProblemID,
-		Kind:          string(source.Kind),
-		LogicalName:   source.LogicalName,
-		Origin:        source.Origin,
-		CreatedAt:     source.CreatedAt.Format(timeLayout),
-		SnapshotCount: len(snapshots),
-	}
-	if len(snapshots) > 0 {
-		latest := snapshots[0]
-		view.LatestSnapshotID = &latest.ID
+		ID:               source.ID,
+		ProblemID:        source.ProblemID,
+		Kind:             string(source.Kind),
+		LogicalName:      source.LogicalName,
+		Origin:           source.Origin,
+		CreatedAt:        source.CreatedAt.Format(timeLayout),
+		SnapshotCount:    snapshotCount,
+		LatestSnapshotID: latestSnapshotID,
 	}
 	return view
+}
+
+func latestSnapshotID(snapshots []domain.SourceSnapshot) *string {
+	if len(snapshots) == 0 {
+		return nil
+	}
+	return &snapshots[0].ID
 }
 
 func snapshotViews(snapshots []domain.SourceSnapshot) []SourceSnapshotView {

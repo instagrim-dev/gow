@@ -31,6 +31,7 @@ type problemStore interface {
 	GetRun(context.Context, string) (domain.Run, error)
 	CreateSourceSnapshot(context.Context, store.SnapshotAdmission) (store.SnapshotAdmissionResult, error)
 	ListSourcesByProblem(context.Context, string) ([]domain.Source, error)
+	ListSourcesWithSnapshotStats(context.Context, string) ([]store.SourceSummary, error)
 	GetSource(context.Context, string) (domain.Source, error)
 	GetSourceSnapshot(context.Context, string) (domain.SourceSnapshot, error)
 	ListSourceSnapshots(context.Context, string) ([]domain.SourceSnapshot, error)

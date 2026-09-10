@@ -379,6 +379,12 @@ type SnapshotAdmissionResult struct {
 	CreatedSource bool
 }
 
+type SourceSummary struct {
+	Source           domain.Source
+	SnapshotCount    int
+	LatestSnapshotID *string
+}
+
 func (s *Store) CreateSourceSnapshot(ctx context.Context, input SnapshotAdmission) (SnapshotAdmissionResult, error) {
 	if err := domain.ValidateProblemID(input.ProblemID); err != nil {
 		return SnapshotAdmissionResult{}, err
@@ -551,6 +557,70 @@ WHERE id = ?
 		return domain.Source{}, err
 	}
 	return source, nil
+}
+
+func (s *Store) ListSourcesWithSnapshotStats(ctx context.Context, problemID string) ([]SourceSummary, error) {
+	if err := domain.ValidateProblemID(problemID); err != nil {
+		return nil, err
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT
+  s.id,
+  s.problem_id,
+  s.kind,
+  s.logical_name,
+  s.origin,
+  s.created_at,
+  (
+    SELECT COUNT(1)
+    FROM source_snapshots ss_count
+    WHERE ss_count.source_id = s.id
+  ) AS snapshot_count,
+  (
+    SELECT ss_latest.id
+    FROM source_snapshots ss_latest
+    WHERE ss_latest.source_id = s.id
+    ORDER BY ss_latest.observed_at DESC, ss_latest.id DESC
+    LIMIT 1
+  ) AS latest_snapshot_id
+FROM sources s
+WHERE s.problem_id = ?
+ORDER BY s.created_at ASC, s.id ASC
+`, problemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var summaries []SourceSummary
+	for rows.Next() {
+		var source domain.Source
+		var kind string
+		var createdAt string
+		var latestSnapshotID sql.NullString
+		var snapshotCount int
+		if err := rows.Scan(&source.ID, &source.ProblemID, &kind, &source.LogicalName, &source.Origin, &createdAt, &snapshotCount, &latestSnapshotID); err != nil {
+			return nil, err
+		}
+		parsedCreatedAt, err := parseTime(createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrCorruptStore, err)
+		}
+		source.Kind = domain.SourceKind(kind)
+		source.CreatedAt = parsedCreatedAt
+		summary := SourceSummary{
+			Source:        source,
+			SnapshotCount: snapshotCount,
+		}
+		if latestSnapshotID.Valid {
+			summary.LatestSnapshotID = &latestSnapshotID.String
+		}
+		summaries = append(summaries, summary)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return summaries, nil
 }
 
 func (s *Store) GetSourceSnapshot(ctx context.Context, snapshotID string) (domain.SourceSnapshot, error) {

@@ -235,6 +235,10 @@ func (f *fakeProblemStore) ListSourcesByProblem(context.Context, string) ([]doma
 	return nil, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) ListSourcesWithSnapshotStats(context.Context, string) ([]store.SourceSummary, error) {
+	return nil, errors.New("unexpected call")
+}
+
 func (f *fakeProblemStore) GetSource(context.Context, string) (domain.Source, error) {
 	return domain.Source{}, errors.New("unexpected call")
 }

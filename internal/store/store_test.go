@@ -403,6 +403,19 @@ func TestCreateSourceSnapshotDedupesBytesButKeepsDistinctSources(t *testing.T) {
 	if first.Snapshot.ObjectPath != second.Snapshot.ObjectPath {
 		t.Fatalf("object paths differ: %s vs %s", first.Snapshot.ObjectPath, second.Snapshot.ObjectPath)
 	}
+
+	summaries, err := repo.ListSourcesWithSnapshotStats(ctx, problemID)
+	if err != nil {
+		t.Fatalf("ListSourcesWithSnapshotStats() error = %v", err)
+	}
+	if len(summaries) != 2 {
+		t.Fatalf("len(summaries) = %d, want 2", len(summaries))
+	}
+	for _, summary := range summaries {
+		if summary.SnapshotCount != 1 || summary.LatestSnapshotID == nil {
+			t.Fatalf("unexpected summary = %+v", summary)
+		}
+	}
 }
 
 func seedProblemForSourceTests(t *testing.T, ctx context.Context, repo *Store) (string, string) {
