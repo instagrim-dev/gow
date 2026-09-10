@@ -583,36 +583,51 @@ func (a *App) runArm(ctx context.Context, repoStore problemStore, dbPath, proble
 	if err != nil {
 		return "", nil, fmt.Errorf("%s generation: %w", arm, err)
 	}
-	ids := make([]string, 0, len(result.ProposalIDByHash))
-	for _, id := range result.ProposalIDByHash {
-		ids = append(ids, id)
-	}
-	rows, rerr := repoStore.ListProposalContentsByIDs(ctx, ids)
+	// Read content by the AUTHORITATIVE per-arm order: this run's ranked proposal
+	// ids (result.RankedProposalIDs), NOT the read-back rank_ordinal. rank_ordinal
+	// is assigned per generation; when an arm mixes newly-written and
+	// cross-generation-deduped proposals those values are not unique across the
+	// mixed set, and feeding them to the rank-only assessment sort would make
+	// FirstRecoveryRank / membership / budget-consumption non-deterministic. Here
+	// each proposal's per-arm rank is its POSITION in this run's ranked list —
+	// unique, deterministic, and stable across idempotent replays.
+	contentByID, rerr := loadProposalContentByID(ctx, repoStore, result.RankedProposalIDs)
 	if rerr != nil {
 		return "", nil, rerr
 	}
-	contents, cerr := rehydrateProposalContents(rows, budget)
-	return result.Record.ID, contents, cerr
+	contents := make([]experiment.ProposalContent, 0, len(result.RankedProposalIDs))
+	for _, id := range result.RankedProposalIDs {
+		c, ok := contentByID[id]
+		if !ok {
+			continue // pre-v17 content gap; recovery cannot fabricate it
+		}
+		if budget > 0 && len(contents) >= budget {
+			break // shared per-arm budget is a stopping condition, not silent truncation
+		}
+		c.Rank = len(contents) // per-arm position: unique, deterministic total order
+		contents = append(contents, c)
+	}
+	return result.Record.ID, contents, nil
 }
 
-// rehydrateProposalContents unmarshals sidecar content, skipping pre-v17 gaps
-// (recovery cannot fabricate content). A positive budget caps the set — the
-// shared per-arm budget is a stopping condition, never a silent truncation
-// (the caller records budget_exhausted).
-func rehydrateProposalContents(rows []store.ProposalContentRow, budget int) ([]experiment.ProposalContent, error) {
-	var out []experiment.ProposalContent
+// loadProposalContentByID rehydrates persisted proposal content keyed by id,
+// skipping pre-v17 sidecar gaps (recovery cannot fabricate content). The caller
+// imposes ordering; this only resolves id -> content.
+func loadProposalContentByID(ctx context.Context, repoStore problemStore, ids []string) (map[string]experiment.ProposalContent, error) {
+	rows, err := repoStore.ListProposalContentsByIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]experiment.ProposalContent, len(rows))
 	for _, r := range rows {
-		if budget > 0 && len(out) >= budget {
-			break
-		}
 		if r.SignatureJSON == "" {
-			continue // pre-v17 content gap; recovery cannot fabricate it
+			continue
 		}
 		var sig canon.MechanismSignature
 		if err := json.Unmarshal([]byte(r.SignatureJSON), &sig); err != nil {
 			return nil, fmt.Errorf("proposal %s: corrupt persisted signature: %w", r.ProposalID, err)
 		}
-		out = append(out, experiment.ProposalContent{ProposalID: r.ProposalID, Rank: r.Rank, Signature: sig})
+		out[r.ProposalID] = experiment.ProposalContent{ProposalID: r.ProposalID, Signature: sig}
 	}
 	return out, nil
 }

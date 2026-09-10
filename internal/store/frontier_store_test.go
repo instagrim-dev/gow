@@ -92,6 +92,37 @@ func TestPersistFrontierGenerationRoundTrip(t *testing.T) {
 	}
 }
 
+// F3 boundary: ListProposalContentsByIDs batches its IN-list so an id set larger
+// than SQLite's bound-parameter ceiling (historically 999) does not error. Only
+// the persisted proposal is returned; the >900 non-existent ids are ignored.
+func TestListProposalContentsByIDsBatchesPastParameterLimit(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+	rec := sampleFrontier(t, st)
+	res, err := st.PersistFrontierGeneration(ctx, rec)
+	if err != nil {
+		t.Fatalf("persist: %v", err)
+	}
+	realID := res.Record.Proposals[0].ID
+	if _, err := st.db.ExecContext(ctx, `
+INSERT INTO frontier_proposal_signatures(proposal_id, signature_json, canonical_fingerprint, created_at)
+VALUES(?, ?, ?, ?)`, realID, `{"schema_version":"mechanism/v1"}`, "cfp-batch", formatTime(time.Now().UTC())); err != nil {
+		t.Fatalf("insert signature: %v", err)
+	}
+
+	ids := []string{realID}
+	for i := 0; i < 2500; i++ { // well past both the 900 batch size and the 999 ceiling
+		ids = append(ids, domain.NewFrontierProposalID(time.Now().UTC()))
+	}
+	rows, err := st.ListProposalContentsByIDs(ctx, ids)
+	if err != nil {
+		t.Fatalf("ListProposalContentsByIDs must batch past the parameter limit: %v", err)
+	}
+	if len(rows) != 1 || rows[0].ProposalID != realID || rows[0].SignatureJSON == "" {
+		t.Fatalf("want exactly the one persisted proposal with content, got %+v", rows)
+	}
+}
+
 func TestPersistFrontierGenerationDedupAcrossRuns(t *testing.T) {
 	st := openMigratedStore(t)
 	ctx := context.Background()

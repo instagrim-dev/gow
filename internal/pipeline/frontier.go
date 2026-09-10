@@ -209,6 +209,21 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 		a.failRun(ctx, repoStore, run.ID, err)
 		return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
 	}
+	// Ranked per-run proposal IDs: the AUTHORITATIVE per-arm order for M7
+	// experiment arms. frontier.Rank produced a deterministic total order over
+	// candidates (final tiebreak on ProposalHash); ProposalIDByHash resolves
+	// every candidate — newly written OR cross-run deduped — to its persisted
+	// id. Consuming THIS order (not the read-back rank_ordinal, which is
+	// per-generation and collides when one arm mixes new + deduped proposals)
+	// is what makes an arm's assessment reproducible. Stored on the result so
+	// runArm needs no second query.
+	orderedIDs := make([]string, 0, len(candidates))
+	for _, c := range candidates {
+		if id, ok := result.ProposalIDByHash[c.ProposalHash]; ok {
+			orderedIDs = append(orderedIDs, id)
+		}
+	}
+	result.RankedProposalIDs = orderedIDs
 	// Persist the applied-bias log keyed on the PERSISTED proposal ids for the
 	// WHOLE ranked set (result.ProposalIDByHash covers both newly-written and
 	// deduped proposals); a generation with no policy writes nothing.

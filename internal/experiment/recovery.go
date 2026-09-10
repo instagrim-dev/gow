@@ -68,7 +68,13 @@ var classificationStrength = map[canon.Classification]int{
 // Deterministic in proposal rank order.
 func DetectRecovery(proposals []ProposalContent, target canon.MechanismSignature, profile canon.ComparisonProfile) ArmRecovery {
 	ordered := append([]ProposalContent(nil), proposals...)
-	sort.Slice(ordered, func(i, j int) bool { return ordered[i].Rank < ordered[j].Rank })
+	// Deterministic total order: rank, then proposal id (see AssessProposals).
+	sort.Slice(ordered, func(i, j int) bool {
+		if ordered[i].Rank != ordered[j].Rank {
+			return ordered[i].Rank < ordered[j].Rank
+		}
+		return ordered[i].ProposalID < ordered[j].ProposalID
+	})
 
 	out := ArmRecovery{FirstRecoveryRank: -1, NearestClassification: canon.ClassUnknown}
 	for _, p := range ordered {
@@ -140,7 +146,16 @@ type ArmAssessment struct {
 // budget <= 0 means unlimited (every comparison runs).
 func AssessProposals(proposals []ProposalContent, targets []canon.MechanismSignature, profile canon.ComparisonProfile, budget int) ArmAssessment {
 	ordered := append([]ProposalContent(nil), proposals...)
-	sort.Slice(ordered, func(i, j int) bool { return ordered[i].Rank < ordered[j].Rank })
+	// Deterministic TOTAL order: rank, then proposal id. Callers assign a unique
+	// per-arm rank, but the ProposalID tiebreak keeps assessment (and therefore
+	// FirstRecoveryRank, membership order, and budget consumption) reproducible
+	// even if a caller ever supplies colliding ranks.
+	sort.Slice(ordered, func(i, j int) bool {
+		if ordered[i].Rank != ordered[j].Rank {
+			return ordered[i].Rank < ordered[j].Rank
+		}
+		return ordered[i].ProposalID < ordered[j].ProposalID
+	})
 
 	out := ArmAssessment{FirstRecoveryRank: -1, NearestClassification: canon.ClassUnknown}
 	for _, p := range ordered {

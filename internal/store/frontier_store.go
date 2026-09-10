@@ -92,6 +92,13 @@ type PersistFrontierGenerationResult struct {
 	// whole ranked set, not only the newly-written subset (which is empty for a
 	// deterministic re-generation).
 	ProposalIDByHash map[string]string
+	// RankedProposalIDs is the persisted proposal ids in this run's deterministic
+	// rank order (populated by the pipeline after persist, not by the store).
+	// M7 experiment arms consume this as the authoritative per-arm order so
+	// assessment is reproducible even when an arm mixes newly-written and
+	// cross-generation-deduped proposals (whose per-generation rank_ordinal
+	// values are not unique across the mixed set).
+	RankedProposalIDs []string
 }
 
 // PersistFrontierGeneration writes a generation pass transactionally, assigning

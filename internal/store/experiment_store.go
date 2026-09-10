@@ -607,41 +607,56 @@ ORDER BY p.created_at, p.rank_ordinal, p.id
 	return out, rows.Err()
 }
 
-// ListProposalContentsByIDs returns the persisted content + rank for a specific
-// set of proposal ids, rank-ordered. It is the dedup-stable per-arm read: an
-// experiment arm keys on exactly the proposals ITS generator produced this run
-// (resolved through cross-run dedup to their canonical persisted ids), so
-// arms writing into the same problem never contaminate each other's set and a
-// replay whose proposals all dedup still returns the same canonical content.
+// ListProposalContentsByIDs returns the persisted content + per-generation rank
+// for a set of proposal ids. Ordering is NOT imposed here (the returned Rank is
+// the per-generation rank_ordinal, which is not unique across a set spanning
+// multiple generations) — the caller supplies the id list in its authoritative
+// order and re-associates content by id. Batched to stay under SQLite's
+// bound-parameter ceiling.
 func (s *Store) ListProposalContentsByIDs(ctx context.Context, ids []string) ([]ProposalContentRow, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
-	args := make([]any, 0, len(ids))
-	for _, id := range ids {
-		args = append(args, id)
-	}
-	rows, err := s.db.QueryContext(ctx, `
+	// Batch to stay under SQLite's bound-parameter ceiling (SQLITE_MAX_VARIABLE_NUMBER,
+	// historically 999). Callers impose ordering from the id list, so per-batch
+	// order does not matter here.
+	const batch = 900
+	var out []ProposalContentRow
+	for start := 0; start < len(ids); start += batch {
+		end := start + batch
+		if end > len(ids) {
+			end = len(ids)
+		}
+		chunk := ids[start:end]
+		placeholders := strings.TrimSuffix(strings.Repeat("?,", len(chunk)), ",")
+		args := make([]any, 0, len(chunk))
+		for _, id := range chunk {
+			args = append(args, id)
+		}
+		rows, err := s.db.QueryContext(ctx, `
 SELECT p.id, p.rank_ordinal, COALESCE(fps.signature_json, '')
 FROM frontier_proposals p
 LEFT JOIN frontier_proposal_signatures fps ON fps.proposal_id = p.id
 WHERE p.id IN (`+placeholders+`)
-ORDER BY p.rank_ordinal, p.id
 `, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out []ProposalContentRow
-	for rows.Next() {
-		var r ProposalContentRow
-		if err := rows.Scan(&r.ProposalID, &r.Rank, &r.SignatureJSON); err != nil {
+		if err != nil {
 			return nil, err
 		}
-		out = append(out, r)
+		for rows.Next() {
+			var r ProposalContentRow
+			if err := rows.Scan(&r.ProposalID, &r.Rank, &r.SignatureJSON); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			out = append(out, r)
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		rows.Close()
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // ListExperiments returns experiment headers for a problem, newest first.

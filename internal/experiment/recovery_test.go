@@ -177,3 +177,47 @@ func TestAssessProposalsUnknownOnlyIsNotDecisive(t *testing.T) {
 		t.Fatalf("assessment = %s, want unknown", out.Proposals[0].Assessment)
 	}
 }
+
+// F1 regression: when two proposals carry the SAME rank (reachable when a
+// pipeline arm mixes newly-written and cross-generation-deduped proposals whose
+// per-generation rank_ordinal collides), the assessment order — and therefore
+// FirstRecoveryRank, membership order, and budget consumption — must still be
+// deterministic. The (rank, proposalID) total order makes it so: with a budget
+// that admits exactly one comparison, the lexicographically-first proposal id
+// is always the one evaluated, regardless of input slice order.
+func TestAssessProposalsCollidingRanksAreDeterministic(t *testing.T) {
+	targets := []canon.MechanismSignature{expSignature(expIDLattice)}
+	// Both rank 0. "fpr_a" (recovers) sorts before "fpr_b" (distinct) by id.
+	recovers := ProposalContent{ProposalID: "fpr_a", Rank: 0, Signature: expSignature(expIDLattice)}
+	distinct := ProposalContent{ProposalID: "fpr_b", Rank: 0, Signature: expSignature(expIDResidue)}
+
+	for _, order := range [][]ProposalContent{{recovers, distinct}, {distinct, recovers}} {
+		out := AssessProposals(order, targets, canon.ProfileMechanismV1(), 1) // budget: one comparison
+		if len(out.Proposals) == 0 || out.Proposals[0].ProposalID != "fpr_a" {
+			t.Fatalf("tiebreak must evaluate fpr_a first regardless of input order: %+v", out.Proposals)
+		}
+		if out.RecoveredCount != 1 || out.FirstRecoveryRank != 0 {
+			t.Fatalf("fpr_a recovers within the single-comparison budget: %+v", out)
+		}
+		// The second proposal never got its comparison → unassessed, not decisive.
+		if out.UnassessedCount != 1 || out.DecisiveNoCount != 0 {
+			t.Fatalf("budget-starved second proposal must be unassessed: %+v", out)
+		}
+	}
+}
+
+// F1 sibling regression: DetectRecovery shares the same total-order tiebreak, so
+// colliding ranks yield a stable fact order independent of input order.
+func TestDetectRecoveryCollidingRanksAreDeterministic(t *testing.T) {
+	target := expSignature(expIDLattice)
+	a := ProposalContent{ProposalID: "fpr_a", Rank: 0, Signature: expSignature(expIDResidue)}
+	b := ProposalContent{ProposalID: "fpr_b", Rank: 0, Signature: expSignature(expIDLattice)}
+	first := DetectRecovery([]ProposalContent{a, b}, target, canon.ProfileMechanismV1())
+	second := DetectRecovery([]ProposalContent{b, a}, target, canon.ProfileMechanismV1())
+	if len(first.Facts) != 2 || first.Facts[0].ProposalID != "fpr_a" || first.Facts[1].ProposalID != "fpr_b" {
+		t.Fatalf("fact order must be id-stable under equal ranks: %+v", first.Facts)
+	}
+	if second.Facts[0].ProposalID != first.Facts[0].ProposalID || second.Facts[1].ProposalID != first.Facts[1].ProposalID {
+		t.Fatalf("fact order must not depend on input order: %+v vs %+v", first.Facts, second.Facts)
+	}
+}
