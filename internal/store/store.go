@@ -141,34 +141,25 @@ WHERE slug = ?
 }
 
 func (s *Store) NextProblemSlug(ctx context.Context, base string) (string, error) {
-	rows, err := s.db.QueryContext(ctx, `
-SELECT slug
+	row := s.db.QueryRowContext(ctx, `
+SELECT
+  EXISTS(SELECT 1 FROM problems WHERE slug = ?) AS base_used,
+  COALESCE(
+    MAX(
+      CASE
+        WHEN slug GLOB ? THEN CAST(substr(slug, length(?) + 2) AS INTEGER)
+        ELSE NULL
+      END
+    ),
+    1
+  ) AS max_suffix
 FROM problems
 WHERE slug = ? OR slug GLOB ?
-`, base, base+"-[0-9]*")
-	if err != nil {
-		return "", err
-	}
-	defer rows.Close()
+`, base, base+"-[0-9]*", base, base, base+"-[0-9]*")
 
-	baseUsed := false
-	maxSuffix := 1
-	for rows.Next() {
-		var slug string
-		if err := rows.Scan(&slug); err != nil {
-			return "", err
-		}
-		if slug == base {
-			baseUsed = true
-			continue
-		}
-
-		var suffix int
-		if _, err := fmt.Sscanf(strings.TrimPrefix(slug, base+"-"), "%d", &suffix); err == nil && suffix > maxSuffix {
-			maxSuffix = suffix
-		}
-	}
-	if err := rows.Err(); err != nil {
+	var baseUsed bool
+	var maxSuffix int
+	if err := row.Scan(&baseUsed, &maxSuffix); err != nil {
 		return "", err
 	}
 
