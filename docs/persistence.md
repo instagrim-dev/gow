@@ -159,8 +159,9 @@ CREATE TABLE outcome (
 CREATE TABLE failure_boundary (
   id TEXT PRIMARY KEY,
   problem_id TEXT NOT NULL REFERENCES problem(id),
+  normalization_revision_id TEXT NOT NULL REFERENCES normalization_revision(id),
   label TEXT NOT NULL,
-  UNIQUE(problem_id, label)
+  UNIQUE(normalization_revision_id, label)
 );
 
 CREATE TABLE outcome_boundary (
@@ -184,7 +185,8 @@ CREATE TABLE mechanism_cluster (
   id TEXT PRIMARY KEY,
   cluster_revision_id TEXT NOT NULL REFERENCES cluster_revision(id),
   label TEXT,
-  rationale TEXT
+  rationale TEXT,
+  UNIQUE(cluster_revision_id, label)
 );
 
 CREATE TABLE cluster_evidence (

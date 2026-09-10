@@ -177,6 +177,7 @@ type Outcome struct {
 type FailureBoundary struct {
     ID        ID
     ProblemID ID
+    NormalizationRevisionID ID
     Label     string
 }
 
@@ -201,7 +202,6 @@ type InvariantChallenge struct {
     InvariantID    ID
     RunID          ID
     ChallengeType  string
-    StateTransitionID ID
     ResultSummary  string
     CreatedAt      string
 }

@@ -79,7 +79,7 @@ Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statu
 
 - Purpose: map evidence-derived approaches into typed mechanisms/outcomes; separate interpretation from source.
 - Required input: existing ingested evidence for problem.
-- Optional flags: `--source-filter`, `--provider`, `--revision-note`, `--from-cutoff`.
+- Optional flags: `--source-filter`, `--provider`, `--revision-note`.
 - Persists:
   - `normalization_revision`
   - `approach`, `mechanism`, `outcome`, `failure_boundary` (all linked to revision)
