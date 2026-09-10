@@ -407,3 +407,15 @@ type CompareResponse struct {
 	ComparisonRunID string         `json:"comparison_run_id,omitempty"`
 	Comparison      ComparisonView `json:"comparison"`
 }
+
+type SeedFixtureResponse struct {
+	OK           bool     `json:"ok"`
+	Command      string   `json:"command"`
+	Store        string   `json:"store"`
+	ProblemID    string   `json:"problem_id"`
+	RunID        string   `json:"run_id"`
+	SnapshotID   string   `json:"source_snapshot_id"`
+	RevisionID   string   `json:"normalization_revision_id"`
+	ApproachIDs  []string `json:"approach_ids"`
+	MechanismIDs []string `json:"mechanism_ids"`
+}

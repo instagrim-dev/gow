@@ -2,9 +2,12 @@ package pipeline
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -120,6 +123,116 @@ func (a *App) SeedMechanismFixture(ctx context.Context, input MechanismFixtureSe
 		seed.MechanismIDs = append(seed.MechanismIDs, ref.MechanismID)
 	}
 	return seed, nil
+}
+
+// SeedFixtureForProblemInput is the CLI-facing seed request: given only a
+// problem, provision a run and a synthetic source snapshot from the fixture
+// content, then seed the mechanism records. This is a manual-exploration
+// convenience over SeedMechanismFixture; it stays fully offline and
+// deterministic and reuses the existing store admission + normalization paths.
+type SeedFixtureForProblemInput struct {
+	DBPath     string
+	ProblemID  string
+	Path       string
+	JSONOutput bool
+}
+
+// SeedMechanismFixtureForProblem provisions a run + source snapshot for a
+// problem and seeds the given fixture in a single store session. The snapshot's
+// bytes are the fixture file itself, so provenance points at real content.
+func (a *App) SeedMechanismFixtureForProblem(ctx context.Context, input SeedFixtureForProblemInput) (SeedFixtureResponse, error) {
+	if strings.TrimSpace(input.Path) == "" {
+		return SeedFixtureResponse{}, fmt.Errorf("fixture path is required")
+	}
+	raw, err := os.ReadFile(input.Path)
+	if err != nil {
+		return SeedFixtureResponse{}, fmt.Errorf("read mechanism fixture: %w", err)
+	}
+	var fixture MechanismFixture
+	dec := json.NewDecoder(strings.NewReader(string(raw)))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&fixture); err != nil {
+		return SeedFixtureResponse{}, fmt.Errorf("decode mechanism fixture %q: %w", input.Path, err)
+	}
+	if len(fixture.Approaches) == 0 {
+		return SeedFixtureResponse{}, fmt.Errorf("mechanism fixture has no approaches")
+	}
+
+	dbPath, repoStore, err := a.openStoreFn(ctx, input.DBPath)
+	if err != nil {
+		return SeedFixtureResponse{}, err
+	}
+	defer repoStore.Close()
+
+	if _, err := repoStore.GetProblem(ctx, input.ProblemID); err != nil {
+		return SeedFixtureResponse{}, err
+	}
+
+	now := a.now()
+
+	// Provision an ingest run for the synthetic snapshot.
+	ingestRun, err := repoStore.CreateRun(ctx, domain.NewRun{
+		ID:          domain.NewRunID(now),
+		ProblemID:   input.ProblemID,
+		Operation:   "mechanism seed-fixture",
+		Status:      domain.RunStatusInitialized,
+		InputRef:    "fixture:" + filepath.Base(input.Path),
+		ToolName:    "newf",
+		ToolVersion: a.version,
+		StartedAt:   now,
+		CompletedAt: now,
+	})
+	if err != nil {
+		return SeedFixtureResponse{}, err
+	}
+
+	sum := sha256.Sum256(raw)
+	digest := hex.EncodeToString(sum[:])
+	logicalName := filepath.Base(input.Path)
+	admission, err := repoStore.CreateSourceSnapshot(ctx, store.SnapshotAdmission{
+		ProblemID:   input.ProblemID,
+		Kind:        domain.SourceKindLocalPath,
+		LogicalName: logicalName,
+		Origin:      "fixture://" + logicalName,
+		SHA256:      digest,
+		ByteLength:  int64(len(raw)),
+		MediaType:   "application/json",
+		ObjectPath:  filepath.Join("sha256", digest[:2], digest),
+		IngestRunID: ingestRun.ID,
+		ObservedAt:  now,
+	})
+	if err != nil {
+		return SeedFixtureResponse{}, err
+	}
+
+	normInput, err := buildFixtureNormalizationInput(fixture, MechanismFixtureSeedInput{
+		ProblemID:  input.ProblemID,
+		RunID:      ingestRun.ID,
+		SnapshotID: admission.Snapshot.ID,
+	}, now)
+	if err != nil {
+		return SeedFixtureResponse{}, err
+	}
+
+	result, err := repoStore.PersistNormalization(ctx, normInput)
+	if err != nil {
+		return SeedFixtureResponse{}, err
+	}
+
+	resp := SeedFixtureResponse{
+		OK:         true,
+		Command:    "mechanism seed-fixture",
+		Store:      dbPath,
+		ProblemID:  input.ProblemID,
+		RunID:      ingestRun.ID,
+		SnapshotID: admission.Snapshot.ID,
+		RevisionID: result.RevisionID,
+	}
+	for _, ref := range result.Approaches {
+		resp.ApproachIDs = append(resp.ApproachIDs, ref.ApproachID)
+		resp.MechanismIDs = append(resp.MechanismIDs, ref.MechanismID)
+	}
+	return resp, nil
 }
 
 func resolveFixture(input MechanismFixtureSeedInput) (MechanismFixture, error) {

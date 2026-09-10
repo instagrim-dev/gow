@@ -456,6 +456,61 @@ func TestCLIVocabularyListAndResolve(t *testing.T) {
 	}
 }
 
+func TestCLISeedFixtureAndSignatureCompare(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "workspace", "newf.db")
+	fixtureDir := filepath.Join(repoRoot(t), "testdata", "fixtures", "mechanism")
+
+	initResp := runCLIJSON(t, []string{"--db", dbPath, "--json", "init", "Erdős-Straus conjecture"})
+	problemID := initResp["problem_id"].(string)
+
+	seedA := runCLIJSON(t, []string{"--db", dbPath, "--json", "mechanism", "seed-fixture",
+		filepath.Join(fixtureDir, "case1_same_canonical_a.json"), "--problem", problemID})
+	seedB := runCLIJSON(t, []string{"--db", dbPath, "--json", "mechanism", "seed-fixture",
+		filepath.Join(fixtureDir, "case1_same_canonical_b.json"), "--problem", problemID})
+
+	mechA := seedA["mechanism_ids"].([]any)[0].(string)
+	mechB := seedB["mechanism_ids"].([]any)[0].(string)
+
+	// case1: differently worded, same canonical mechanism -> equal fingerprints,
+	// mechanism-near classification.
+	compare := runCLIJSON(t, []string{"--db", dbPath, "--json", "mechanism", "compare", mechA, mechB})
+	if compare["fingerprint_a"] != compare["fingerprint_b"] {
+		t.Fatalf("case1 fingerprints differ: %v vs %v", compare["fingerprint_a"], compare["fingerprint_b"])
+	}
+	cls := compare["comparison"].(map[string]any)["classification"]
+	if cls != "mechanism-near" && cls != "surface-distinct+mechanism-near" {
+		t.Fatalf("case1 classification = %v, want a mechanism-near variant", cls)
+	}
+
+	// signature is idempotent through the CLI.
+	sig1 := runCLIJSON(t, []string{"--db", dbPath, "--json", "mechanism", "signature", mechA})
+	sig2 := runCLIJSON(t, []string{"--db", dbPath, "--json", "mechanism", "signature", mechA})
+	if sig2["status"] != "existing" {
+		t.Fatalf("second signature status = %v, want existing", sig2["status"])
+	}
+	if sig1["signature"].(map[string]any)["fingerprint"] != sig2["signature"].(map[string]any)["fingerprint"] {
+		t.Fatal("idempotent signature produced different fingerprints via CLI")
+	}
+}
+
+func TestCLISeedFixtureRequiresProblem(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "workspace", "newf.db")
+	fixtureDir := filepath.Join(repoRoot(t), "testdata", "fixtures", "mechanism")
+	runCLIJSON(t, []string{"--db", dbPath, "--json", "init", "Erdős-Straus conjecture"})
+
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	code := execute(context.Background(), []string{"--db", dbPath, "--json", "mechanism", "seed-fixture",
+		filepath.Join(fixtureDir, "case1_same_canonical_a.json")}, stdout, stderr)
+	if code == 0 {
+		t.Fatal("seed-fixture without --problem succeeded, want failure")
+	}
+}
+
 func TestCLIVocabularyShowNotFound(t *testing.T) {
 	t.Parallel()
 

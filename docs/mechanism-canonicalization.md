@@ -84,6 +84,11 @@ newf vocabulary resolve "a brand new move" --field operator --novel
 class, and boundaries. Support/status/classifier-contract provenance is copied
 through unchanged.
 
+To get mechanism IDs offline without a provider, `newf mechanism seed-fixture
+<path> --problem <id>` provisions a run + synthetic source snapshot from a
+project-authored fixture and seeds the mechanism records via the existing
+normalization write path.
+
 The **fingerprint** is `SHA-256` over a canonical JSON body:
 
 ```text

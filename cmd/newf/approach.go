@@ -184,6 +184,35 @@ func newMechanismCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions)
 	compareCmd.Flags().BoolVar(&cmpNoWrite, "no-write", false, "Do not persist the comparison run")
 	cmd.AddCommand(compareCmd)
 
+	var seedProblem string
+	seedCmd := &cobra.Command{
+		Use:   "seed-fixture <fixture-path>",
+		Short: "Seed a deterministic mechanism fixture (offline stand-in for provider normalize)",
+		Long: "Provision a run and synthetic source snapshot for a problem, then seed the\n" +
+			"mechanism records from a project-authored fixture JSON. Fully offline and\n" +
+			"deterministic; intended for manual exploration of signature/compare.",
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			result, err := app.SeedMechanismFixtureForProblem(cmd.Context(), pipeline.SeedFixtureForProblemInput{
+				DBPath:     opts.dbPath,
+				ProblemID:  seedProblem,
+				Path:       args[0],
+				JSONOutput: opts.jsonOutput,
+			})
+			if err != nil {
+				return wrapCommandError("mechanism seed-fixture", err)
+			}
+			if opts.jsonOutput {
+				return writeJSON(stdout, result)
+			}
+			writeSeedFixtureHuman(stdout, result)
+			return nil
+		},
+	}
+	seedCmd.Flags().StringVar(&seedProblem, "problem", "", "Problem ID to seed the fixture under")
+	_ = seedCmd.MarkFlagRequired("problem")
+	cmd.AddCommand(seedCmd)
+
 	return cmd
 }
 
@@ -292,6 +321,21 @@ func writeSignatureHuman(stdout io.Writer, resp pipeline.SignatureResponse) {
 		}
 		_ = tw.Flush()
 	}
+}
+
+func writeSeedFixtureHuman(stdout io.Writer, resp pipeline.SeedFixtureResponse) {
+	_, _ = fmt.Fprintf(stdout, "Seeded fixture\n  problem:     %s\n  run:         %s\n  snapshot:    %s\n  norm_rev:    %s\n",
+		resp.ProblemID, resp.RunID, resp.SnapshotID, resp.RevisionID)
+	tw := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
+	_, _ = fmt.Fprintln(tw, "  APPROACH\tMECHANISM")
+	for i := range resp.MechanismIDs {
+		approach := ""
+		if i < len(resp.ApproachIDs) {
+			approach = resp.ApproachIDs[i]
+		}
+		_, _ = fmt.Fprintf(tw, "  %s\t%s\n", approach, resp.MechanismIDs[i])
+	}
+	_ = tw.Flush()
 }
 
 func writeCompareHuman(stdout io.Writer, resp pipeline.CompareResponse) {

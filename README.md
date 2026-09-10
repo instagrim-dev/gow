@@ -33,6 +33,7 @@ newf approach revisions <approach-id>
 newf mechanism show <mechanism-id>
 newf mechanism signature <mechanism-id>
 newf mechanism compare <mechanism-a> <mechanism-b>
+newf mechanism seed-fixture <fixture-path> --problem <problem-id>
 newf vocabulary list [--version <vocab-version>] [--field <field-kind>]
 newf vocabulary show <canonical-id>
 newf vocabulary resolve <candidate-label> --field <field-kind> [--vocab-version <v>] [--novel]
@@ -153,6 +154,11 @@ newf mechanism signature <mechanism-id> --json
 newf mechanism compare <mechanism-a> <mechanism-b> --json
 newf vocabulary resolve "works residue-by-residue" --field preserves
 ```
+
+For manual, offline exploration, `newf mechanism seed-fixture <path> --problem
+<id>` provisions a run + synthetic source snapshot from a project-authored
+fixture and seeds mechanism records, giving you real mechanism IDs to run
+`signature`/`compare` against without a provider.
 
 See [`docs/mechanism-canonicalization.md`](docs/mechanism-canonicalization.md)
 for the full contract.
