@@ -345,7 +345,7 @@ CREATE TABLE candidate_invariant (
 
 CREATE TABLE invariant_transition_counter (
   invariant_id TEXT PRIMARY KEY REFERENCES candidate_invariant(id),
-  next_transition_seq INTEGER NOT NULL CHECK (next_transition_seq >= 1)
+  last_transition_seq INTEGER NOT NULL DEFAULT 0 CHECK (last_transition_seq >= 0)
 );
 
 CREATE TABLE invariant_support_cluster (
@@ -393,7 +393,7 @@ BEFORE INSERT ON invariant_state_transition
 BEGIN
   SELECT CASE
     WHEN NEW.transition_seq <> COALESCE((
-      SELECT itc.next_transition_seq - 1
+      SELECT itc.last_transition_seq
       FROM invariant_transition_counter itc
       WHERE itc.invariant_id = NEW.invariant_id
     ), -1) THEN RAISE(ABORT, 'transition_seq must match the atomically allocated invariant counter')
@@ -520,6 +520,7 @@ CREATE TABLE holdout_leakage_check (
 );
 
 CREATE TABLE holdout_leakage_check_overlap (
+  id TEXT PRIMARY KEY,
   holdout_leakage_check_id TEXT NOT NULL REFERENCES holdout_leakage_check(id),
   overlapping_source_id TEXT REFERENCES source(id),
   overlapping_evidence_id TEXT REFERENCES evidence_record(id),
@@ -528,7 +529,8 @@ CREATE TABLE holdout_leakage_check_overlap (
     (overlap_kind = 'source' AND overlapping_source_id IS NOT NULL AND overlapping_evidence_id IS NULL) OR
     (overlap_kind = 'evidence' AND overlapping_source_id IS NULL AND overlapping_evidence_id IS NOT NULL)
   ),
-  PRIMARY KEY(holdout_leakage_check_id, overlap_kind, overlapping_source_id, overlapping_evidence_id)
+  UNIQUE(holdout_leakage_check_id, overlap_kind, overlapping_source_id),
+  UNIQUE(holdout_leakage_check_id, overlap_kind, overlapping_evidence_id)
 );
 
 CREATE TRIGGER holdout_leakage_check_overlap_insert_guard
@@ -613,6 +615,12 @@ CREATE TRIGGER evaluation_holdout_match_holdout_set_guard
 BEFORE INSERT ON evaluation_holdout_match
 BEGIN
   SELECT CASE
+    WHEN COALESCE((
+      SELECT er.mode
+      FROM evaluation e
+      JOIN evaluation_run er ON er.id = e.evaluation_run_id
+      WHERE e.id = NEW.evaluation_id
+    ), '') <> 'holdout' THEN RAISE(ABORT, 'evaluation_holdout_match rows require a holdout-mode evaluation_run')
     WHEN COALESCE(NEW.holdout_set_id, '') <> COALESCE((
       SELECT er.holdout_set_id
       FROM evaluation e
@@ -626,6 +634,12 @@ CREATE TRIGGER evaluation_holdout_match_holdout_set_guard_update
 BEFORE UPDATE ON evaluation_holdout_match
 BEGIN
   SELECT CASE
+    WHEN COALESCE((
+      SELECT er.mode
+      FROM evaluation e
+      JOIN evaluation_run er ON er.id = e.evaluation_run_id
+      WHERE e.id = NEW.evaluation_id
+    ), '') <> 'holdout' THEN RAISE(ABORT, 'evaluation_holdout_match rows require a holdout-mode evaluation_run')
     WHEN COALESCE(NEW.holdout_set_id, '') <> COALESCE((
       SELECT er.holdout_set_id
       FROM evaluation e
@@ -720,9 +734,10 @@ CREATE TABLE success_invariant_failure_invariant (
   rows when a leakage check fails, so audits can show exactly what violated the
   split.
 - `invariant_state_transition` inserts are validated by trigger, and repositories
-  allocate `transition_seq` from `invariant_transition_counter` with an atomic
-  `UPDATE ... RETURNING` step before inserting the transition row, so competing
-  writers cannot derive the same sequence number or rely on `MAX(...)+1`.
+  allocate `transition_seq` from `invariant_transition_counter` by atomically
+  incrementing `last_transition_seq` with `UPDATE ... RETURNING` before inserting
+  the transition row, so competing writers cannot derive the same sequence
+  number or rely on `MAX(...)+1`.
 
 ## Experiment comparison
 
