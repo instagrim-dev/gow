@@ -19,7 +19,8 @@ newf compress
 ## Global CLI contracts
 
 - `--db <path>`: SQLite path (default `.newf/newf.db`).
-- `--run-id <id>`: attach work to an existing run; otherwise latest open run for problem.
+- each command invocation creates a new `run` provenance record.
+- `--experiment-id <id>`: optional grouping key for related runs across commands.
 - `--json`: stable machine-readable output.
 - `--format table|json|yaml` (human defaults to table; `--json` wins).
 - `--quiet`: suppress narrative text, keep IDs/summaries.
@@ -150,11 +151,12 @@ Common machine envelope:
 
 - Purpose: evaluate frontier proposals and/or run historical holdout experiment.
 - Required input: proposals or `--experiment-id`.
-- Optional flags: `--mode proposal|holdout`, `--baseline undirected|semantic-summary`, `--cutoff`, `--holdout-source-set`, `--judge-provider`.
+- Optional flags: `--mode proposal|holdout`, `--baseline undirected|semantic-summary`, `--cutoff`, `--holdout-set-id`, `--judge-provider`.
 - Persists:
   - `evaluation_run`
   - `evaluation`
   - `evaluation_metric`
+  - `holdout_set` (when creating from flags/sources for holdout mode)
   - baseline comparison rows
 - Idempotency: new evaluation run per invocation.
 - Failure semantics: missing holdout partition, unevaluable proposals, judge disagreement (recorded as unresolved).

@@ -18,7 +18,7 @@ Each step is persisted under an `evaluation_run` with linked upstream revision I
 
 ## Holdout dataset contracts
 
-- `holdout_set` definition:
+- `holdout_set` persisted artifact (referenced by `--holdout-set-id`) with:
   - problem ID
   - cutoff
   - held-out source IDs

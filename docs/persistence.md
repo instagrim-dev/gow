@@ -104,7 +104,8 @@ CREATE TABLE approach (
 CREATE TABLE mechanism (
   id TEXT PRIMARY KEY,
   approach_id TEXT NOT NULL REFERENCES approach(id),
-  notes TEXT
+  notes TEXT,
+  UNIQUE(approach_id)
 );
 
 CREATE TABLE mechanism_representation (
@@ -165,6 +166,7 @@ CREATE TABLE cluster_revision (
   problem_id TEXT NOT NULL REFERENCES problem(id),
   normalization_revision_id TEXT NOT NULL REFERENCES normalization_revision(id),
   run_id TEXT NOT NULL REFERENCES run(id),
+  parent_cluster_revision_id TEXT REFERENCES cluster_revision(id),
   config_hash TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
@@ -189,6 +191,7 @@ CREATE TABLE invariant_revision (
   problem_id TEXT NOT NULL REFERENCES problem(id),
   cluster_revision_id TEXT NOT NULL REFERENCES cluster_revision(id),
   run_id TEXT NOT NULL REFERENCES run(id),
+  parent_invariant_revision_id TEXT REFERENCES invariant_revision(id),
   config_hash TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
@@ -225,11 +228,16 @@ CREATE TABLE invariant_challenge (
   created_at TEXT NOT NULL
 );
 
-CREATE TABLE invariant_challenge_evidence (
+CREATE TABLE invariant_challenge_source_evidence (
   challenge_id TEXT NOT NULL REFERENCES invariant_challenge(id),
-  evidence_id TEXT REFERENCES evidence_record(id),
-  synthetic_artifact_id TEXT,
-  PRIMARY KEY(challenge_id, evidence_id, synthetic_artifact_id)
+  evidence_id TEXT NOT NULL REFERENCES evidence_record(id),
+  PRIMARY KEY(challenge_id, evidence_id)
+);
+
+CREATE TABLE invariant_challenge_synthetic_artifact (
+  challenge_id TEXT NOT NULL REFERENCES invariant_challenge(id),
+  synthetic_artifact_id TEXT NOT NULL,
+  PRIMARY KEY(challenge_id, synthetic_artifact_id)
 );
 
 -- Frontier proposals
@@ -273,6 +281,7 @@ CREATE TABLE evaluation_run (
   id TEXT PRIMARY KEY,
   problem_id TEXT NOT NULL REFERENCES problem(id),
   run_id TEXT NOT NULL REFERENCES run(id),
+  holdout_set_id TEXT REFERENCES holdout_set(id),
   mode TEXT NOT NULL, -- proposal|holdout
   cutoff_time TEXT,
   baseline_type TEXT,
@@ -298,12 +307,29 @@ CREATE TABLE evaluation_metric (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE holdout_set (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problem(id),
+  name TEXT NOT NULL,
+  cutoff_time TEXT NOT NULL,
+  held_out_family_label TEXT,
+  leakage_check_status TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE holdout_set_source (
+  holdout_set_id TEXT NOT NULL REFERENCES holdout_set(id),
+  source_id TEXT NOT NULL REFERENCES source(id),
+  PRIMARY KEY(holdout_set_id, source_id)
+);
+
 -- Success invariants/compression
 CREATE TABLE success_invariant_revision (
   id TEXT PRIMARY KEY,
   problem_id TEXT NOT NULL REFERENCES problem(id),
   evaluation_run_id TEXT NOT NULL REFERENCES evaluation_run(id),
   run_id TEXT NOT NULL REFERENCES run(id),
+  parent_success_invariant_revision_id TEXT REFERENCES success_invariant_revision(id),
   created_at TEXT NOT NULL
 );
 
@@ -325,7 +351,7 @@ CREATE TABLE success_invariant (
 ## Re-normalization / re-clustering semantics
 
 - Never rewrite old derived rows.
-- Create new revision row with `parent_revision_id`.
+- Create new revision row with the relevant parent pointer (`parent_revision_id`, `parent_cluster_revision_id`, `parent_invariant_revision_id`, `parent_success_invariant_revision_id`).
 - All downstream commands must declare which upstream revision they read (explicit or “latest” resolution logged in `run_event`).
 - Enables A/B comparisons across revisions and providers.
 

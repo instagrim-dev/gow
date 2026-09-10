@@ -18,6 +18,7 @@ Source evidence is immutable and never overwritten. Model/provider interpretatio
 - **InvariantChallenge**: challenge operation and result against an invariant.
 - **FrontierProposal**: generated proposal targeting one or more invariants.
 - **Evaluation**: proposal/experiment judgment and metric components.
+- **EvaluationRun**: evaluation mode/budget/cutoff/baseline context for a batch of evaluations.
 - **SuccessInvariant**: recurring structure in partial-success/success boundary crossing.
 - **Run / provenance**: command execution, providers, prompts/schemas, config hashes.
 
@@ -191,9 +192,16 @@ type Evaluation struct {
     ID            ID
     EvaluationRunID ID
     FrontierProposalID *ID
-    Mode          string // proposal|holdout
     Verdict       string
     Confidence    string
+}
+
+type EvaluationRun struct {
+    ID         ID
+    ProblemID  ID
+    Mode       string // proposal|holdout
+    Baseline   string
+    CutoffTime *string
 }
 
 type SuccessInvariant struct {
