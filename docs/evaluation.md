@@ -14,7 +14,10 @@ v0 evaluates whether failure-space compression predicts productive frontier dire
 6. Generate frontier proposals against surviving invariants.
 7. Evaluate whether proposals recover held-out mechanism family or its structural break.
 
-Each stage is persisted in its own run/revision artifacts, and `evaluation_run` links the evaluation stage to the selected upstream revision IDs.
+Each stage is persisted in its own run/revision artifacts. `normalization_revision`
+stores the training snapshot/filter that was used, and `evaluation_run` links
+the evaluation stage to the selected upstream revision IDs plus the typed budget
+and judge configuration used to compare baselines.
 
 ## Holdout dataset contracts
 
@@ -23,8 +26,12 @@ Each stage is persisted in its own run/revision artifacts, and `evaluation_run` 
   - cutoff
   - held-out source IDs
   - held-out mechanism family label(s)
+- `normalization_revision` persists:
+  - the source filter / excluded holdout set used to build the training split
+  - a manifest hash for the selected training evidence
+  - per-evidence snapshot rows so leakage checks can compare exact contents, not just timestamps
 - No held-out source/evidence may appear in normalization/clustering revisions used for generation.
-- Leakage checks are recorded as evaluation preconditions.
+- `generate` and holdout-mode `evaluate` require a passed `holdout_leakage_check` for the selected `holdout_set` + `normalization_revision` pair before proposals are scored.
 
 ## Metrics
 
@@ -56,8 +63,9 @@ Compare identical budget envelopes:
 
 Machine (`--json`) includes:
 
-- evaluation run metadata (cutoff, holdout IDs, baseline type),
+- evaluation run metadata (cutoff, holdout IDs, baseline type, budget envelope, judge provider/config),
 - proposal-level verdicts and confidence,
+- typed holdout-match rows (source/family/structural-break targets and match verdicts),
 - metric rows with scales and comparators,
 - leakage/precondition status.
 

@@ -73,7 +73,11 @@ No invariant is also a valid result. It may mean:
 ## Failure atlas
 
 The primary dataset is not a list of papers or prompts. It is a normalized atlas
-of observed and generated approaches.
+of observed, evidence-derived approaches.
+
+Generated frontier attempts are tracked separately as synthetic artifacts and
+frontier proposals until independent source-backed evidence exists to ingest
+them into the atlas.
 
 Each approach should be represented independently of its surface prose:
 
@@ -215,6 +219,7 @@ observed failures
   -> orthogonal frontier generators
   -> synthetic attempts
   -> falsification
+  -> source-backed evidence ingest (when available)
   -> expanded failure atlas
   -> compression
   -> candidate invariant
