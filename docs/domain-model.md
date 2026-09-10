@@ -190,7 +190,7 @@ type CandidateInvariant struct {
 
 type InvariantChallenge struct {
     ID             ID
-    CandidateInvariantID ID
+    InvariantID    ID
     RunID          ID
     ChallengeType  string
     ResultState    InvariantState
@@ -200,6 +200,7 @@ type InvariantChallenge struct {
 
 type FrontierProposal struct {
     ID                ID
+    ProblemID         ID
     FrontierRunID     ID
     StructuralClaim   string
     NoveltyArgument   string

@@ -14,7 +14,7 @@ v0 evaluates whether failure-space compression predicts productive frontier dire
 6. Generate frontier proposals against surviving invariants.
 7. Evaluate whether proposals recover held-out mechanism family or its structural break.
 
-Each step is persisted under an `evaluation_run` with linked upstream revision IDs.
+Each stage is persisted in its own run/revision artifacts, and `evaluation_run` links the evaluation stage to the selected upstream revision IDs.
 
 ## Holdout dataset contracts
 
