@@ -387,7 +387,7 @@ IF-03: residue-local constructions dominate 5/7 failure families
 IF-07: finite covering arguments leave structurally related survivor classes
 
 > challenge IF-03 --all
-IF-03 weakened
+IF-03 weaken
 support: 4 independent families
 counterexample: family-6
 scope revised
@@ -495,14 +495,14 @@ Candidate invariants should have explicit state.
 proposed
   -> challenged
   -> surviving
-  -> weakened
+  -> weaken
   -> split
-  -> merged
+  -> merge
   -> falsified
   -> established
 ```
 
-Not every transition is linear. `split` and `merged` produce lineage into new
+Not every transition is linear. `split` and `merge` produce lineage into new
 candidate invariants.
 
 `established` requires independent evidence appropriate to the domain. Model

@@ -66,8 +66,8 @@ Each slice must ship a usable CLI behavior, persisted artifacts, and tests.
 - Commands: `newf challenge <invariant-id>`
 - Deliver:
   - challenge record types
-  - lifecycle transitions: challenged/surviving/weakened/split/merged/falsified/established
-  - lineage edges for split/merge
+  - lifecycle transitions: challenged/surviving/weaken/falsified, with `established` reachable from `surviving`
+  - lineage edges for split/merge cases
 - Tests:
   - valid/invalid transitions
   - `established` requires independent evidence class

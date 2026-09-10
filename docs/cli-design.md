@@ -51,10 +51,12 @@ Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statu
 - Optional flags: `--slug`, `--tags`, `--description`, `--assumption-set`, `--experiment-name`.
 - Persists:
   - `problem`
+  - `problem_tag` rows for `--tags`
   - `experiment` (created when `--experiment-name` is provided)
+  - `experiment_assumption` rows for `--assumption-set` values attached to the created/selected experiment
   - `run` (state `initialized`)
-- Idempotency: same explicit `--slug` returns existing problem unless `--new-problem`.
-- Failure semantics: invalid slug, DB unavailable, uniqueness conflict.
+- Idempotency: same explicit `--slug` returns existing problem unless `--new-problem`; experiment creation reuses the same `(problem_id, experiment_name)` shell and merges duplicate tag/assumption values idempotently.
+- Failure semantics: invalid slug, DB unavailable, uniqueness conflict, or `--assumption-set` without either `--experiment-name` on this command or `--experiment-id` via global flags.
 - Human output: created IDs, db path, next-command hints.
 - Depends on: none.
 - Downstream dependencies: all later commands require `problem_id`.
@@ -79,13 +81,15 @@ Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statu
 
 - Purpose: map evidence-derived approaches into typed mechanisms/outcomes; separate interpretation from source.
 - Required input: existing ingested evidence for problem.
-- Optional flags: `--source-filter`, `--provider`, `--revision-note`.
+- Optional flags: `--source-filter`, `--exclude-holdout-set-id`, `--provider`, `--revision-note`.
 - Persists:
   - `normalization_revision`
+  - `normalization_revision_evidence` snapshot rows + manifest hash for the exact training set
+  - `normalization_item` rows for per-evidence success/failure/skipped outcomes
   - `approach`, `mechanism`, `outcome`, `failure_boundary` (all linked to revision)
   - extraction provider call metadata
-- Idempotency: deterministic mode can reuse existing revision fingerprint; otherwise creates new revision.
-- Failure semantics: provider/schema validation failures stored as failed normalization items.
+- Idempotency: deterministic mode can reuse an existing `(source_filter_json, excluded_holdout_set_id, source_manifest_hash, config_hash)` fingerprint; otherwise creates new revision.
+- Failure semantics: provider/schema validation failures are stored as failed `normalization_item` rows linked to the specific evidence record.
 - Human output: revision ID, created/failed counts, axis coverage summary.
 - Depends on: `ingest`.
 - Downstream: `cluster`, `invariants`, `evaluate`.
@@ -125,12 +129,12 @@ Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statu
 
 - Purpose: adversarially test one candidate invariant and transition lifecycle state.
 - Required input: invariant ID.
-- Optional flags: `--mode known-counterexample|synthetic-counterexample|success-preserving|split|merge|bias-critique|all`, `--provider`, `--budget`.
+- Optional flags: `--mode known-counterexample|synthetic-counterexample|success-preserving|split|merge|bias-critique|all`, `--parent-invariant-id <id>` (repeatable for `--mode merge`), `--provider`, `--budget`.
 - Persists:
   - `invariant_challenge`
   - `invariant_state_transition` (with current state exposed through derived `invariant_current_state` view)
   - optional `invariant_lineage`
-  - optional child/sibling invariants for split/merge
+  - optional child/sibling invariants for split/merge lineage cases
 - Idempotency: always appends new challenge record; invariant state reflects latest accepted transition.
 - Failure semantics: unknown invariant, invalid transition, provider/evidence fetch failure.
 - Human output: challenge result, old/new state, cited evidence IDs.
@@ -141,13 +145,13 @@ Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statu
 
 - Purpose: produce frontier proposals explicitly violating surviving failure invariants.
 - Required input: target invariant ID, count.
-- Optional flags: `--cluster-rev`, `--provider`, `--max-cost`, `--novelty-threshold`.
+- Optional flags: `--cluster-rev`, `--holdout-set-id`, `--provider`, `--max-cost`, `--novelty-threshold`.
 - Persists:
   - `frontier_generation_run`
   - `frontier_proposal`
   - targeted invariant links + nearest cluster links
 - Idempotency: new run each invocation; duplicate proposal hashes are deduped globally per problem (reported as `duplicate_existing` with existing `proposal_id`), while new hashes create new proposals.
-- Failure semantics: unknown invariant ID, target invariant not in `surviving`, generation schema violation.
+- Failure semantics: unknown invariant ID, target invariant not in `surviving`, generation schema violation, or failed/missing holdout leakage check when `--holdout-set-id` is supplied.
 - Human output: ranked proposals with component scores (ordinal/component, not fake scalar precision).
 - Depends on: `challenge`/`invariants` output.
 - Downstream: `evaluate`, `compress`.
@@ -155,20 +159,27 @@ Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statu
 ### `newf evaluate`
 
 - Purpose: evaluate frontier proposals and/or run historical holdout experiment.
-- Required input: proposals or `--experiment-id`.
-- Optional flags: `--mode proposal|holdout`, `--baseline undirected|semantic-summary`, `--cutoff`, `--holdout-set-id`, `--holdout-source-id <src-id>` (repeatable), `--holdout-family-label <label>` (repeatable), `--judge-provider`.
+- Required input:
+  - proposal mode: `--proposal-id <prop-id>` (repeatable) or `--frontier-generation-run-id <run-id>`
+  - holdout mode: either `--holdout-set-id <set-id>` or raw holdout definition inputs (`--cutoff`, `--holdout-source-id`, `--holdout-family-label`), plus a holdout-filtered upstream chain (`--normalization-rev`, `--cluster-rev`, `--invariant-rev`, `--frontier-generation-run-id`) derived from the same excluded holdout set
+- Optional flags:
+  - shared: `--mode proposal|holdout`, `--baseline undirected|semantic-summary`, `--judge-provider`
+  - holdout-set creation (required only when `--holdout-set-id` is omitted in holdout mode): `--cutoff`, `--holdout-source-id <src-id>` (repeatable), `--holdout-family-label <label>` (repeatable)
+  - upstream revision selectors (required in holdout mode): `--normalization-rev`, `--cluster-rev`, `--invariant-rev`, `--frontier-generation-run-id`
 - Persists:
   - `evaluation_run`
   - `evaluation`
-  - `evaluation_metric`
+  - `evaluation_holdout_match` rows when scoring holdout-family/source recovery
+  - `evaluation_metric` (per-evaluation / per-proposal)
+  - `evaluation_run_metric` (run-level aggregates and baseline comparisons)
   - `holdout_set` (when creating from `--holdout-source-id`/`--holdout-family-label` inputs for holdout mode)
   - baseline comparison rows
 - Idempotency: new evaluation run per invocation.
-- Failure semantics: missing holdout partition, unevaluable proposals, judge disagreement (recorded as unresolved).
-- Human output: metric summary + per-proposal/per-experiment outcomes.
+- Failure semantics: missing holdout partition, holdout lineage mismatch (selected `holdout_set`, `normalization_revision`, `cluster_revision`, `invariant_revision`, `frontier_generation_run`, and leakage check must resolve to one holdout-filtered chain; mismatches are recorded as failed `run_event` rows), unevaluable proposals, judge disagreement (recorded in `evaluation.notes` and surfaced in run output rather than as a successful holdout match).
+- Human output: metric summary + per-proposal/per-experiment outcomes, selected proposal/generation scope, and leakage-check status.
 - Depends on:
   - proposal mode: `generate`
-  - holdout mode: `ingest` + `normalize` + `cluster` + `invariants` + `challenge` + `generate`
+  - holdout mode: `holdout_set` + `normalize --exclude-holdout-set-id` + `cluster` + `invariants` + `challenge` + `generate --holdout-set-id`, all referencing the same upstream filtered revision chain and a passed leakage check
 - Downstream: `compress`.
 
 ### `newf compress`
@@ -189,11 +200,12 @@ Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statu
 ## Invariant lifecycle state machine
 
 ```text
-proposed -> challenged -> surviving | weakened | split | merged | falsified | established
+proposed -> challenged -> surviving | weaken | falsified
+surviving -> challenged | weaken | falsified | established
 ```
 
 - `established` requires external independent evidence (e.g., theorem/proof-check or independently replicated experiment), never model consensus alone.
-- split/merge produce lineage edges so history remains queryable.
+- split/merge cases are recorded in `invariant_lineage` so history remains queryable without turning them into terminal invariant states.
 
 ## Human + machine UX expectations
 

@@ -51,10 +51,13 @@ Source evidence is immutable and never overwritten. Model/provider interpretatio
 
 ## Invariant lifecycle
 
-`proposed -> challenged -> surviving | weakened | split | merged | falsified | established`
+`proposed -> challenged -> surviving | weaken | falsified`
+
+`surviving -> challenged | weaken | falsified | established`
 
 - `split`: one parent invariant to many children invariants.
-- `merged`: many parent invariants to one child invariant.
+- `merge`: many parent invariants to one child invariant.
+- `split`/`merge` are lineage relations, not invariant lifecycle states.
 - `established`: requires independent external evidence class stronger than model output.
 
 ## Go type skeletons
@@ -77,9 +80,7 @@ const (
     InvariantProposed    InvariantState = "proposed"
     InvariantChallenged  InvariantState = "challenged"
     InvariantSurviving   InvariantState = "surviving"
-    InvariantWeakened    InvariantState = "weakened"
-    InvariantSplit       InvariantState = "split"
-    InvariantMerged      InvariantState = "merged"
+    InvariantWeaken      InvariantState = "weaken"
     InvariantFalsified   InvariantState = "falsified"
     InvariantEstablished InvariantState = "established"
 )
@@ -333,7 +334,7 @@ type SuccessCompressor interface {
 
 ## Mechanistic diversity vocabulary
 
-- Axis definitions are versioned (`mechanism_axis_vocabulary` + `vocabulary_version` refs).
+- Axis definitions are versioned (`mechanism_axis_vocabulary`, `mechanism_axis_definition`, and `mechanism_axis_allowed_value` tables + `vocabulary_version` refs).
 - v0 treats each axis as single-valued per mechanism per vocabulary version.
 - Historical normalized records keep original axis key/value IDs to preserve comparability over time.
 - New axes can be added without rewriting old mechanism rows.
