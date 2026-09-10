@@ -174,7 +174,7 @@ Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statu
   - `holdout_set` (when creating from `--holdout-source-id`/`--holdout-family-label` inputs for holdout mode)
   - baseline comparison rows
 - Idempotency: new evaluation run per invocation.
-- Failure semantics: missing holdout partition, unevaluable proposals, judge disagreement (recorded as unresolved).
+- Failure semantics: missing holdout partition, unevaluable proposals, judge disagreement (recorded in `evaluation.notes` and surfaced in run output rather than as a successful holdout match).
 - Human output: metric summary + per-proposal/per-experiment outcomes, selected proposal/generation scope, and leakage-check status.
 - Depends on:
   - proposal mode: `generate`
@@ -199,12 +199,12 @@ Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statu
 ## Invariant lifecycle state machine
 
 ```text
-proposed -> challenged -> surviving | weaken | split | merge | falsified
-surviving -> challenged | weaken | split | merge | falsified | established
+proposed -> challenged -> surviving | weaken | falsified
+surviving -> challenged | weaken | falsified | established
 ```
 
 - `established` requires external independent evidence (e.g., theorem/proof-check or independently replicated experiment), never model consensus alone.
-- split/merge cases produce lineage edges so history remains queryable.
+- split/merge cases are recorded in `invariant_lineage` so history remains queryable without turning them into terminal invariant states.
 
 ## Human + machine UX expectations
 
