@@ -256,12 +256,6 @@ CREATE TABLE invariant_challenge_source_evidence (
   PRIMARY KEY(challenge_id, evidence_id)
 );
 
-CREATE TABLE invariant_challenge_synthetic_artifact (
-  challenge_id TEXT NOT NULL REFERENCES invariant_challenge(id),
-  synthetic_artifact_id TEXT NOT NULL,
-  PRIMARY KEY(challenge_id, synthetic_artifact_id)
-);
-
 CREATE TABLE synthetic_artifact (
   id TEXT PRIMARY KEY,
   problem_id TEXT NOT NULL REFERENCES problem(id),
@@ -269,6 +263,12 @@ CREATE TABLE synthetic_artifact (
   artifact_type TEXT NOT NULL, -- synthetic_attempt|synthetic_counterexample
   content TEXT NOT NULL,
   created_at TEXT NOT NULL
+);
+
+CREATE TABLE invariant_challenge_synthetic_artifact (
+  challenge_id TEXT NOT NULL REFERENCES invariant_challenge(id),
+  synthetic_artifact_id TEXT NOT NULL REFERENCES synthetic_artifact(id),
+  PRIMARY KEY(challenge_id, synthetic_artifact_id)
 );
 
 -- Frontier proposals
@@ -329,6 +329,10 @@ CREATE TABLE evaluation_run (
   problem_id TEXT NOT NULL REFERENCES problem(id),
   run_id TEXT NOT NULL REFERENCES run(id),
   holdout_set_id TEXT REFERENCES holdout_set(id),
+  normalization_revision_id TEXT REFERENCES normalization_revision(id),
+  cluster_revision_id TEXT REFERENCES cluster_revision(id),
+  invariant_revision_id TEXT REFERENCES invariant_revision(id),
+  frontier_generation_run_id TEXT REFERENCES frontier_generation_run(id),
   mode TEXT NOT NULL, -- proposal|holdout
   cutoff_time TEXT,
   baseline_type TEXT,

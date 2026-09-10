@@ -194,7 +194,7 @@ type InvariantChallenge struct {
     RunID          ID
     ChallengeType  string
     ResultState    InvariantState
-    Summary        string
+    ResultSummary  string
     CreatedAt      string
 }
 
@@ -202,6 +202,7 @@ type FrontierProposal struct {
     ID                ID
     ProblemID         ID
     FrontierRunID     ID
+    ProposalHash      string
     StructuralClaim   string
     NoveltyArgument   string
     CheapestFalsificationPath string
@@ -223,6 +224,10 @@ type EvaluationRun struct {
     ProblemID  ID
     RunID      ID
     HoldoutSetID *ID
+    NormalizationRevisionID *ID
+    ClusterRevisionID       *ID
+    InvariantRevisionID     *ID
+    FrontierGenerationRunID *ID
     Mode       string // proposal|holdout
     Baseline   string
     CutoffTime *string
