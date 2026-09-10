@@ -28,6 +28,15 @@ func TestCanonicalSlugRejectsEmptyStatement(t *testing.T) {
 	}
 }
 
+func TestCanonicalSlugRejectsNonCanonicalExplicitSlug(t *testing.T) {
+	t.Parallel()
+
+	_, err := CanonicalSlug("My Slug", "Erdos-Straus conjecture")
+	if !errors.Is(err, ErrInvalidSlug) {
+		t.Fatalf("CanonicalSlug() error = %v, want %v", err, ErrInvalidSlug)
+	}
+}
+
 func TestNewProblemValidate(t *testing.T) {
 	t.Parallel()
 

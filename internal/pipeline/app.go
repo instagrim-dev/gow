@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -12,9 +13,21 @@ import (
 )
 
 type App struct {
-	version string
-	now     func() time.Time
-	getwd   func() (string, error)
+	version     string
+	now         func() time.Time
+	getwd       func() (string, error)
+	openStoreFn func(context.Context, string) (string, problemStore, error)
+}
+
+type problemStore interface {
+	Close() error
+	FindProblemBySlug(context.Context, string) (domain.Problem, bool, error)
+	NextProblemSlug(context.Context, string) (string, error)
+	CreateProblemWithRun(context.Context, domain.NewProblem, domain.NewRun) (domain.Problem, domain.Run, error)
+	CreateRun(context.Context, domain.NewRun) (domain.Run, error)
+	GetProblem(context.Context, string) (domain.Problem, error)
+	ListProblems(context.Context) ([]domain.Problem, error)
+	GetRun(context.Context, string) (domain.Run, error)
 }
 
 type InitProblemInput struct {
@@ -37,17 +50,19 @@ type ListInput struct {
 }
 
 func New(version string) *App {
-	return &App{
+	app := &App{
 		version: version,
 		now: func() time.Time {
 			return time.Now().UTC()
 		},
 		getwd: os.Getwd,
 	}
+	app.openStoreFn = app.defaultOpenStore
+	return app
 }
 
 func (a *App) InitProblem(ctx context.Context, input InitProblemInput) (InitResponse, error) {
-	dbPath, repoStore, err := a.openStore(ctx, input.DBPath)
+	dbPath, repoStore, err := a.openStoreFn(ctx, input.DBPath)
 	if err != nil {
 		return InitResponse{}, err
 	}
@@ -125,7 +140,7 @@ func (a *App) InitProblem(ctx context.Context, input InitProblemInput) (InitResp
 
 	persistedProblem, persistedRun, err := repoStore.CreateProblemWithRun(ctx, problem, run)
 	if err != nil {
-		if !input.ForceNew && store.IsUniqueSlugError(err) {
+		if !input.ForceNew && errors.Is(err, store.ErrDuplicateSlug) {
 			existing, found, findErr := repoStore.FindProblemBySlug(ctx, slug)
 			if findErr != nil {
 				return InitResponse{}, findErr
@@ -172,7 +187,7 @@ func (a *App) InitProblem(ctx context.Context, input InitProblemInput) (InitResp
 }
 
 func (a *App) ShowProblem(ctx context.Context, input LookupInput) (ProblemShowResponse, error) {
-	dbPath, repoStore, err := a.openStore(ctx, input.DBPath)
+	dbPath, repoStore, err := a.openStoreFn(ctx, input.DBPath)
 	if err != nil {
 		return ProblemShowResponse{}, err
 	}
@@ -192,7 +207,7 @@ func (a *App) ShowProblem(ctx context.Context, input LookupInput) (ProblemShowRe
 }
 
 func (a *App) ListProblems(ctx context.Context, input ListInput) (ProblemListResponse, error) {
-	dbPath, repoStore, err := a.openStore(ctx, input.DBPath)
+	dbPath, repoStore, err := a.openStoreFn(ctx, input.DBPath)
 	if err != nil {
 		return ProblemListResponse{}, err
 	}
@@ -217,7 +232,7 @@ func (a *App) ListProblems(ctx context.Context, input ListInput) (ProblemListRes
 }
 
 func (a *App) ShowRun(ctx context.Context, input LookupInput) (RunShowResponse, error) {
-	dbPath, repoStore, err := a.openStore(ctx, input.DBPath)
+	dbPath, repoStore, err := a.openStoreFn(ctx, input.DBPath)
 	if err != nil {
 		return RunShowResponse{}, err
 	}
@@ -236,7 +251,7 @@ func (a *App) ShowRun(ctx context.Context, input LookupInput) (RunShowResponse, 
 	}, nil
 }
 
-func (a *App) openStore(ctx context.Context, dbPath string) (string, *store.Store, error) {
+func (a *App) defaultOpenStore(ctx context.Context, dbPath string) (string, problemStore, error) {
 	cwd, err := a.getwd()
 	if err != nil {
 		return "", nil, err

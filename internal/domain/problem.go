@@ -66,11 +66,14 @@ func CanonicalSlug(explicitSlug, statement string) (string, error) {
 	}
 
 	if explicitSlug != "" {
-		normalized := NormalizeSlug(explicitSlug)
-		if normalized == "" {
+		trimmed := strings.TrimSpace(explicitSlug)
+		if trimmed == "" {
 			return "", ErrInvalidSlug
 		}
-		return normalized, nil
+		if NormalizeSlug(trimmed) != trimmed {
+			return "", fmt.Errorf("%w: %q", ErrInvalidSlug, explicitSlug)
+		}
+		return trimmed, nil
 	}
 
 	slug := NormalizeSlug(statement)

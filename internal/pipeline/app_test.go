@@ -1,0 +1,119 @@
+package pipeline
+
+import (
+	"context"
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/instagrim-dev/newf/internal/domain"
+	"github.com/instagrim-dev/newf/internal/store"
+)
+
+func TestInitProblemFallsBackToExistingProblemOnDuplicateSlug(t *testing.T) {
+	t.Parallel()
+
+	firstNow := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	secondNow := firstNow.Add(time.Second)
+	existingProblem := domain.Problem{
+		ID:             domain.NewProblemID(firstNow),
+		Slug:           "erdos-straus-conjecture",
+		Statement:      "Erdos-Straus conjecture",
+		Status:         domain.ProblemStatusActive,
+		CreatedAt:      firstNow,
+		CreatedByRunID: domain.NewRunID(firstNow),
+	}
+	fake := &fakeProblemStore{
+		existingProblem: existingProblem,
+	}
+
+	nowCalls := 0
+	app := &App{
+		version: "dev",
+		now: func() time.Time {
+			nowCalls++
+			if nowCalls == 1 {
+				return firstNow
+			}
+			return secondNow
+		},
+		getwd: func() (string, error) {
+			return "/workspace/repo", nil
+		},
+		openStoreFn: func(context.Context, string) (string, problemStore, error) {
+			return "/workspace/repo/.newf/newf.db", fake, nil
+		},
+	}
+
+	result, err := app.InitProblem(context.Background(), InitProblemInput{
+		DBPath:    "/workspace/repo/.newf/newf.db",
+		Statement: "Erdos-Straus conjecture",
+	})
+	if err != nil {
+		t.Fatalf("InitProblem() error = %v", err)
+	}
+
+	if result.Created {
+		t.Fatal("InitProblem() created = true, want false")
+	}
+	if result.ProblemID != existingProblem.ID {
+		t.Fatalf("InitProblem() problem_id = %q, want %q", result.ProblemID, existingProblem.ID)
+	}
+	if fake.createdRun == nil {
+		t.Fatal("fallback CreateRun() was not called")
+	}
+	if !fake.createdRun.StartedAt.Equal(secondNow) {
+		t.Fatalf("fallback run StartedAt = %s, want %s", fake.createdRun.StartedAt, secondNow)
+	}
+}
+
+type fakeProblemStore struct {
+	existingProblem domain.Problem
+	findCalls       int
+	createdRun      *domain.NewRun
+}
+
+func (f *fakeProblemStore) Close() error { return nil }
+
+func (f *fakeProblemStore) FindProblemBySlug(context.Context, string) (domain.Problem, bool, error) {
+	f.findCalls++
+	if f.findCalls == 1 {
+		return domain.Problem{}, false, nil
+	}
+	return f.existingProblem, true, nil
+}
+
+func (f *fakeProblemStore) NextProblemSlug(context.Context, string) (string, error) {
+	return "", errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) CreateProblemWithRun(context.Context, domain.NewProblem, domain.NewRun) (domain.Problem, domain.Run, error) {
+	return domain.Problem{}, domain.Run{}, store.ErrDuplicateSlug
+}
+
+func (f *fakeProblemStore) CreateRun(_ context.Context, run domain.NewRun) (domain.Run, error) {
+	f.createdRun = &run
+	return domain.Run{
+		ID:          run.ID,
+		ProblemID:   run.ProblemID,
+		Operation:   run.Operation,
+		Status:      run.Status,
+		InputRef:    run.InputRef,
+		ToolName:    run.ToolName,
+		ToolVersion: run.ToolVersion,
+		StartedAt:   run.StartedAt,
+		CompletedAt: run.CompletedAt,
+	}, nil
+}
+
+func (f *fakeProblemStore) GetProblem(context.Context, string) (domain.Problem, error) {
+	return domain.Problem{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListProblems(context.Context) ([]domain.Problem, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetRun(context.Context, string) (domain.Run, error) {
+	return domain.Run{}, errors.New("unexpected call")
+}

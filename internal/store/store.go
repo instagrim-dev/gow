@@ -16,9 +16,10 @@ import (
 )
 
 var (
-	ErrNotFound     = errors.New("record not found")
-	ErrMigration    = errors.New("migration failed")
-	ErrCorruptStore = errors.New("corrupt store")
+	ErrNotFound      = errors.New("record not found")
+	ErrDuplicateSlug = errors.New("duplicate problem slug")
+	ErrMigration     = errors.New("migration failed")
+	ErrCorruptStore  = errors.New("corrupt store")
 )
 
 type Option func(*Store)
@@ -57,10 +58,6 @@ func Open(path string, opts ...Option) (*Store, error) {
 	}
 
 	return store, nil
-}
-
-func IsUniqueSlugError(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed: problems.slug")
 }
 
 func (s *Store) Close() error {
@@ -144,17 +141,42 @@ WHERE slug = ?
 }
 
 func (s *Store) NextProblemSlug(ctx context.Context, base string) (string, error) {
-	slug := base
-	for i := 2; ; i++ {
-		_, found, err := s.FindProblemBySlug(ctx, slug)
-		if err != nil {
+	rows, err := s.db.QueryContext(ctx, `
+SELECT slug
+FROM problems
+WHERE slug = ? OR slug GLOB ?
+`, base, base+"-[0-9]*")
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	baseUsed := false
+	maxSuffix := 1
+	for rows.Next() {
+		var slug string
+		if err := rows.Scan(&slug); err != nil {
 			return "", err
 		}
-		if !found {
-			return slug, nil
+		if slug == base {
+			baseUsed = true
+			continue
 		}
-		slug = fmt.Sprintf("%s-%d", base, i)
+
+		var suffix int
+		if _, err := fmt.Sscanf(strings.TrimPrefix(slug, base+"-"), "%d", &suffix); err == nil && suffix > maxSuffix {
+			maxSuffix = suffix
+		}
 	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+
+	if !baseUsed {
+		return base, nil
+	}
+
+	return fmt.Sprintf("%s-%d", base, maxSuffix+1), nil
 }
 
 func (s *Store) CreateProblemWithRun(ctx context.Context, problem domain.NewProblem, run domain.NewRun) (domain.Problem, domain.Run, error) {
@@ -181,6 +203,9 @@ func (s *Store) CreateProblemWithRun(ctx context.Context, problem domain.NewProb
 INSERT INTO problems(id, slug, statement, status, created_at, created_by_run_id)
 VALUES(?, ?, ?, ?, ?, ?)
 `, problem.ID, problem.Slug, strings.TrimSpace(problem.Statement), problem.Status, formatTime(problem.CreatedAt), problem.CreatedByRunID); err != nil {
+		if isDuplicateSlugError(err) {
+			return domain.Problem{}, domain.Run{}, fmt.Errorf("%w: %v", ErrDuplicateSlug, err)
+		}
 		return domain.Problem{}, domain.Run{}, err
 	}
 
@@ -378,4 +403,8 @@ func formatTime(value time.Time) string {
 
 func parseTime(raw string) (time.Time, error) {
 	return time.Parse(time.RFC3339Nano, raw)
+}
+
+func isDuplicateSlugError(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed: problems.slug")
 }
