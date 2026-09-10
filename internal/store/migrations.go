@@ -2218,6 +2218,7 @@ CREATE TABLE IF NOT EXISTS success_invariant_revisions (
   cohort_hash TEXT NOT NULL,
   ineligible_unpersisted INTEGER NOT NULL DEFAULT 0,
   ambiguous_members INTEGER NOT NULL DEFAULT 0,
+  inadmissible_conditions INTEGER NOT NULL DEFAULT 0,
   revision INTEGER NOT NULL,
   invariant_count INTEGER NOT NULL,
   created_at TEXT NOT NULL,

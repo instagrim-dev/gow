@@ -94,6 +94,12 @@ type ViolationCheck struct {
 type Candidate struct {
 	ProposalHash string
 
+	// ProposedSignature is the proposed mechanism's full canonical signature,
+	// carried through so persistence can store its content (success compression
+	// must later evaluate condition predicates against successful proposals; a
+	// hash alone is not evaluable).
+	ProposedSignature canon.MechanismSignature
+
 	TargetInvariantIDs        []string
 	StructuralViolationClaim  string
 	NoveltyArgument           string
@@ -139,6 +145,7 @@ func EvaluateProposals(proposals []Proposal, families []Family, targets map[stri
 
 		out = append(out, Candidate{
 			ProposalHash:              hash,
+			ProposedSignature:         p.ProposedSignature,
 			TargetInvariantIDs:        dedupSortedStrings(p.TargetInvariantIDs),
 			StructuralViolationClaim:  p.StructuralViolationClaim,
 			NoveltyArgument:           p.NoveltyArgument,

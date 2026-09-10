@@ -69,6 +69,9 @@ newf evaluate <proposal-id> --problem <problem-id> | --problem <problem-id> [--a
 newf evaluation list --problem <problem-id>
 newf evaluation show <evaluation-run-id>
 newf evaluation failures --problem <problem-id>
+newf successes compress --problem <problem-id> [--min-support <n>]
+newf success-invariant list --problem <problem-id>
+newf success-invariant show [success-revision-id] [--problem <problem-id>]
 ```
 
 Build it with:

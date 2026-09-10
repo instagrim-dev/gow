@@ -38,6 +38,8 @@ const (
 	EvaluationRunIDPrefix         = "evr_"
 	EvaluationIDPrefix            = "evl_"
 	EvaluationMetricIDPrefix      = "evm_"
+	SuccessRevisionIDPrefix       = "svr_"
+	SuccessInvariantIDPrefix      = "sinv_"
 )
 
 var (
@@ -66,6 +68,8 @@ var (
 	ErrInvalidEvaluationRunID         = errors.New("invalid evaluation run id")
 	ErrInvalidEvaluationID            = errors.New("invalid evaluation id")
 	ErrInvalidEvaluationMetricID      = errors.New("invalid evaluation metric id")
+	ErrInvalidSuccessRevisionID       = errors.New("invalid success revision id")
+	ErrInvalidSuccessInvariantID      = errors.New("invalid success invariant id")
 
 	entropyMu sync.Mutex
 	entropy   = ulid.Monotonic(defaultEntropy(), 0)
@@ -241,6 +245,22 @@ func ValidateEvaluationID(id string) error {
 
 func ValidateEvaluationMetricID(id string) error {
 	return validateID(id, EvaluationMetricIDPrefix, ErrInvalidEvaluationMetricID)
+}
+
+func NewSuccessRevisionID(now time.Time) string {
+	return newID(SuccessRevisionIDPrefix, now)
+}
+
+func NewSuccessInvariantID(now time.Time) string {
+	return newID(SuccessInvariantIDPrefix, now)
+}
+
+func ValidateSuccessRevisionID(id string) error {
+	return validateID(id, SuccessRevisionIDPrefix, ErrInvalidSuccessRevisionID)
+}
+
+func ValidateSuccessInvariantID(id string) error {
+	return validateID(id, SuccessInvariantIDPrefix, ErrInvalidSuccessInvariantID)
 }
 
 func ValidateNormalizationRevisionID(id string) error {

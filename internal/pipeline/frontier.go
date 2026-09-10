@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
@@ -404,9 +405,16 @@ func frontierGenerationRecord(problemID, clusterRunID, runID string, count int, 
 		},
 	}
 	for i, c := range candidates {
+		sigJSON, canonFP := "", ""
+		if raw, err := json.Marshal(c.ProposedSignature); err == nil {
+			sigJSON = string(raw)
+			canonFP = canon.Fingerprint(c.ProposedSignature)
+		}
 		row := store.FrontierProposalRow{
 			ID:                        domain.NewFrontierProposalID(now),
 			ProposalHash:              c.ProposalHash,
+			CanonicalFingerprint:      canonFP,
+			SignatureJSON:             sigJSON,
 			StructuralViolationClaim:  c.StructuralViolationClaim,
 			NoveltyArgument:           c.NoveltyArgument,
 			CheapestFalsificationPath: c.CheapestFalsificationPath,

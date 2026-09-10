@@ -43,9 +43,14 @@ type FrontierNearestRow struct {
 
 // FrontierProposalRow is one persisted, ranked frontier proposal. The `result`
 // column is intentionally left NULL by this slice (M5.2 evaluation populates it).
+// CanonicalFingerprint/SignatureJSON are the proposed mechanism's canonical
+// content, persisted in the v17 sidecar (success compression must evaluate
+// condition predicates against successful proposals; a hash is not evaluable).
 type FrontierProposalRow struct {
 	ID                        string
 	ProposalHash              string
+	CanonicalFingerprint      string
+	SignatureJSON             string
 	StructuralViolationClaim  string
 	NoveltyArgument           string
 	CheapestFalsificationPath string
@@ -119,16 +124,29 @@ VALUES(?, ?, 'generate', ?, ?, ?, ?, ?, ?, ?, ?)
 
 	// Filter out proposals whose hash already exists for the problem (dedup
 	// across runs); the persisted proposal_count reflects only newly-written rows.
+	// A deduped proposal is still ENRICHED with its canonical content when the
+	// sidecar row is absent (pre-v17 proposals persisted only a hash): enrichment
+	// is by INSERT OR IGNORE into the sidecar keyed by the EXISTING proposal id —
+	// the immutable proposal row itself is never updated.
 	persisted := make([]FrontierProposalRow, 0, len(record.Proposals))
 	for _, p := range record.Proposals {
-		var exists bool
-		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM frontier_proposals WHERE problem_id = ? AND proposal_hash = ?)`, record.ProblemID, p.ProposalHash).Scan(&exists); err != nil {
+		var existingID string
+		err := tx.QueryRowContext(ctx, `SELECT id FROM frontier_proposals WHERE problem_id = ? AND proposal_hash = ?`, record.ProblemID, p.ProposalHash).Scan(&existingID)
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			persisted = append(persisted, p)
+		case err != nil:
 			return PersistFrontierGenerationResult{}, err
+		default:
+			if p.SignatureJSON != "" {
+				if _, ierr := tx.ExecContext(ctx, `
+INSERT OR IGNORE INTO frontier_proposal_signatures(proposal_id, canonical_fingerprint, signature_json, created_at)
+VALUES(?, ?, ?, ?)
+`, existingID, p.CanonicalFingerprint, p.SignatureJSON, record.CreatedAt); ierr != nil {
+					return PersistFrontierGenerationResult{}, ierr
+				}
+			}
 		}
-		if exists {
-			continue
-		}
-		persisted = append(persisted, p)
 	}
 	record.Proposals = persisted
 	record.ProposalCount = len(persisted)
@@ -146,6 +164,14 @@ INSERT INTO frontier_proposals(id, problem_id, frontier_generation_run_id, propo
 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
 `, p.ID, record.ProblemID, record.ID, p.ProposalHash, p.StructuralViolationClaim, p.NoveltyArgument, p.CheapestFalsificationPath, p.MechanisticDistance, p.ExpectedInformationGain, p.EvaluationCost, boolToInt(p.ViolatesAnyTarget), p.Rank, record.CreatedAt); err != nil {
 			return PersistFrontierGenerationResult{}, err
+		}
+		if p.SignatureJSON != "" {
+			if _, err := tx.ExecContext(ctx, `
+INSERT INTO frontier_proposal_signatures(proposal_id, canonical_fingerprint, signature_json, created_at)
+VALUES(?, ?, ?, ?)
+`, p.ID, p.CanonicalFingerprint, p.SignatureJSON, record.CreatedAt); err != nil {
+				return PersistFrontierGenerationResult{}, err
+			}
 		}
 		for _, t := range p.Targets {
 			if _, err := tx.ExecContext(ctx, `

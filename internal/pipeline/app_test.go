@@ -407,6 +407,26 @@ func (f *fakeProblemStore) LatestFrontierGeneration(context.Context, string) (st
 	return "", false, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) ListBreakCohortRows(context.Context, string) ([]store.BreakCohortRow, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistSuccessRevision(context.Context, store.SuccessRevisionRecord) (store.PersistSuccessRevisionResult, error) {
+	return store.PersistSuccessRevisionResult{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetSuccessRevision(context.Context, string) (store.SuccessRevisionRecord, error) {
+	return store.SuccessRevisionRecord{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListSuccessRevisions(context.Context, string) ([]store.SuccessRevisionRecord, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) LatestSuccessRevision(context.Context, string) (string, bool, error) {
+	return "", false, errors.New("unexpected call")
+}
+
 func (f *fakeProblemStore) PersistEvaluationRun(context.Context, store.EvaluationRunRecord) (store.EvaluationRunRecord, error) {
 	return store.EvaluationRunRecord{}, errors.New("unexpected call")
 }

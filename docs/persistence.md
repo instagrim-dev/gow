@@ -1113,6 +1113,33 @@ mechanism) to admit `'evaluate'`; `validateSchemaTables` asserts the five new
 tables and that the role CHECK admits `invariant`, `challenge`, `generate`, and
 `evaluate`. See [`evaluation.md`](evaluation.md).
 
+## Implemented success-compression schema (#16, migration `v17`)
+
+Migration `v17` ships the M6.1 layer in two parts. First, it closes a verified
+substrate gap: `frontier_proposal_signatures` persists each frontier proposal's
+canonical CONTENT (`signature_json` + `canonical_fingerprint`, immutable), not
+just its hash — success compression must evaluate condition predicates against
+successful proposals. Generation writes the sidecar in the same transaction as
+the proposal row; a deduped re-proposal is **enriched by INSERT** into the
+sidecar keyed by the existing proposal id (the immutable proposal row is never
+updated), and pre-v17 proposals without content are counted
+`ineligible_unpersisted` on compression revisions rather than silently dropped.
+
+Second, the immutable, revisioned success-invariant layer:
+`success_invariant_revisions` (idempotent on
+`(problem, cohort_hash, compressor_version, predicate_schema, min_support)`;
+carries the named visibility gaps `ineligible_unpersisted`,
+`ambiguous_members`, `inadmissible_conditions`), `success_invariants`
+(semantic predicate-fingerprint identity; `initial_state CHECK ('proposed')`;
+exact coverage/exclusion counts + derived ordinal bands + verification-strength
+composition columns), `success_invariant_predicates` (canonical AST),
+`success_invariant_broken_targets` (FK links to the code-verifiably broken
+`candidate_invariants`), and `success_invariant_cohort_evaluations`
+(per-member verdict + cohort role + verification strength). All immutable by
+trigger. The one non-additive step widens `provider_invocations.role` to admit
+`'success-compress'` via the established guarded in-place `writable_schema`
+CHECK edit. See [`success-compression.md`](success-compression.md).
+
 ## Immutable vs mutable/revisioned
 
 - Immutable: `source`, `evidence_record` (enforced with update/delete-rejecting

@@ -964,6 +964,9 @@ func validateSchemaTables(ctx context.Context, tx *sql.Tx) error {
 		"frontier_target_invariants", "frontier_nearest_clusters",
 		"evaluation_runs", "evaluations", "evaluation_metrics",
 		"evaluation_run_metrics", "evaluated_failures",
+		"frontier_proposal_signatures", "success_invariant_revisions",
+		"success_invariants", "success_invariant_predicates",
+		"success_invariant_broken_targets", "success_invariant_cohort_evaluations",
 	} {
 		row := tx.QueryRowContext(ctx, `
 SELECT EXISTS(
@@ -1003,7 +1006,7 @@ SELECT EXISTS(
 	// above while silently rejecting invariant-mining or challenge invocations.
 	// Assert the v11 ('invariant'), v13 ('challenge'), v14 ('generate'), and v15
 	// ('evaluate') role generalizations by reading the table DDL directly.
-	for _, role := range []string{"invariant", "challenge", "generate", "evaluate"} {
+	for _, role := range []string{"invariant", "challenge", "generate", "evaluate", "success-compress"} {
 		allows, err := providerRoleAllows(ctx, tx, role)
 		if err != nil {
 			return fmt.Errorf("%w: %v", ErrCorruptStore, err)

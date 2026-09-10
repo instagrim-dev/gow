@@ -486,6 +486,32 @@ state.
 
 ### M6.1 — Compress partial successes into success invariants
 
+**Status: delivered.** `newf successes compress --problem <id>` asks the
+symmetric question over the evaluated frontier: for each failure invariant P
+with a **code-verified** violating proposal, code selects the break cohort
+(progressors `partial_success`/`success` vs non-progressors
+`failure`/`partial_failure`; ambiguous verdicts counted, never coerced), the
+`SuccessCompressor` role proposes typed conditions `C`
+(`invariant-predicate/v1`, through the shared `AdmitCandidate` gate — an
+outcome-reading `C` is tautological over an outcome-partitioned cohort and is
+rejected; inadmissible conditions are skipped and counted), and code evaluates
+every `C` against every cohort member's persisted canonical signature.
+`ProgressCoverage` and `NonProgressorExclusion` are stored as exact counts with
+derived ordinal bands (full coverage with zero exclusion is visible
+boilerplate, not a finding); `distinct_mechanism_support` dedups by canonical
+fingerprint; every invariant retains the **verification-strength composition**
+of its supporting verdicts, so model-judged support is never presented as
+deterministic. Identity is the semantic predicate fingerprint; the same `C`
+confirmed against several broken targets is one invariant carrying every P
+link. Persisted as immutable revisions (schema `v17`, idempotent on a
+content-hashed cohort identity; a new evaluation yields the next revision),
+`proposed`-only, under the real run lifecycle, fully offline. v17 also closes
+the substrate gap that proposals' canonical content was never persisted
+(`frontier_proposal_signatures`, enrichment-by-INSERT on dedup). The
+`proposed` set with broken-target links + counts + strength composition is the
+typed read surface **M6.2 search-policy mutation** consumes. See
+[`docs/success-compression.md`](docs/success-compression.md).
+
 Goal:
 
 Ask the symmetric question:

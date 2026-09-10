@@ -17,16 +17,17 @@ import (
 )
 
 type App struct {
-	version          string
-	now              func() time.Time
-	getwd            func() (string, error)
-	stdin            io.Reader
-	openStoreFn      func(context.Context, string) (string, problemStore, error)
-	normalizers      map[string]provider.Normalizer
-	invariantMinerFn provider.InvariantMiner
-	challengerFn     provider.Challenger
-	generatorFn      provider.Generator
-	modelVerifierFn  provider.ModelVerifier
+	version             string
+	now                 func() time.Time
+	getwd               func() (string, error)
+	stdin               io.Reader
+	openStoreFn         func(context.Context, string) (string, problemStore, error)
+	normalizers         map[string]provider.Normalizer
+	invariantMinerFn    provider.InvariantMiner
+	challengerFn        provider.Challenger
+	successCompressorFn provider.SuccessCompressor
+	generatorFn         provider.Generator
+	modelVerifierFn     provider.ModelVerifier
 }
 
 type problemStore interface {
@@ -82,6 +83,11 @@ type problemStore interface {
 	GetFrontierGeneration(context.Context, string) (store.FrontierGenerationRecord, error)
 	ListFrontierGenerations(context.Context, string) ([]store.FrontierGenerationRecord, error)
 	LatestFrontierGeneration(context.Context, string) (string, bool, error)
+	ListBreakCohortRows(context.Context, string) ([]store.BreakCohortRow, error)
+	PersistSuccessRevision(context.Context, store.SuccessRevisionRecord) (store.PersistSuccessRevisionResult, error)
+	GetSuccessRevision(context.Context, string) (store.SuccessRevisionRecord, error)
+	ListSuccessRevisions(context.Context, string) ([]store.SuccessRevisionRecord, error)
+	LatestSuccessRevision(context.Context, string) (string, bool, error)
 	PersistEvaluationRun(context.Context, store.EvaluationRunRecord) (store.EvaluationRunRecord, error)
 	GetEvaluationRun(context.Context, string) (store.EvaluationRunRecord, error)
 	GetEvaluation(context.Context, string) (store.EvaluationRow, error)
