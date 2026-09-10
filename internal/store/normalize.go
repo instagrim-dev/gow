@@ -205,10 +205,28 @@ func persistApproachTx(ctx context.Context, tx *sql.Tx, problemID string, input 
 		return ApproachRef{}, err
 	}
 
+	// Derive approach-revision lineage here, inside the transaction, because
+	// the approach identity is only resolved above (get-or-create). The caller
+	// never knows the approach id in advance, so it cannot supply the prior
+	// revision link. An existing approach means this new revision supersedes
+	// its immediately prior revision; a freshly created approach starts a new
+	// chain. A caller-supplied SupersedesRevisionID (rare, e.g. explicit
+	// backfill) is honored when set.
+	supersedes := input.Revision.SupersedesRevisionID
+	if supersedes == nil && !createdApproach {
+		prior, found, priorErr := latestApproachRevisionIDTx(ctx, tx, approachID)
+		if priorErr != nil {
+			return ApproachRef{}, priorErr
+		}
+		if found {
+			supersedes = &prior
+		}
+	}
+
 	if _, err := tx.ExecContext(ctx, `
 INSERT INTO approach_revisions(id, approach_id, normalization_revision_id, label, description, supersedes_revision_id, created_at)
 VALUES(?, ?, ?, ?, ?, ?, ?)
-`, input.Revision.ID, approachID, input.Revision.NormalizationRevisionID, input.Revision.Label, input.Revision.Description, input.Revision.SupersedesRevisionID, formatTime(input.Revision.CreatedAt)); err != nil {
+`, input.Revision.ID, approachID, input.Revision.NormalizationRevisionID, input.Revision.Label, input.Revision.Description, supersedes, formatTime(input.Revision.CreatedAt)); err != nil {
 		return ApproachRef{}, err
 	}
 
@@ -220,6 +238,10 @@ VALUES(?, ?, ?, ?, ?, ?)
 	}
 
 	for ordinal, attr := range input.Attributes {
+		// Mechanism attributes are set-valued per (mechanism, kind): a repeated
+		// value carries no additional information, so a duplicate is
+		// intentionally ignored. This is distinct from source_supports below,
+		// where a conflicting row is a hard error (see schema validation).
 		if _, err := tx.ExecContext(ctx, `
 INSERT OR IGNORE INTO mechanism_attributes(mechanism_id, kind, value, ordinal)
 VALUES(?, ?, ?, ?)
@@ -245,8 +267,13 @@ VALUES(?, ?, ?, ?)
 	}
 
 	for _, support := range input.Support {
+		// Plain INSERT (not OR IGNORE): a second support row for the same
+		// (approach_revision, snapshot, field_path) is an epistemic conflict,
+		// not a benign duplicate. Schema validation rejects duplicate field
+		// paths upstream; this is defense in depth so a differing support_kind
+		// can never be silently dropped by the persistence layer.
 		if _, err := tx.ExecContext(ctx, `
-INSERT OR IGNORE INTO source_supports(approach_revision_id, snapshot_id, field_path, support_kind, locator, confidence)
+INSERT INTO source_supports(approach_revision_id, snapshot_id, field_path, support_kind, locator, confidence)
 VALUES(?, ?, ?, ?, ?, ?)
 `, input.Revision.ID, support.SnapshotID, support.FieldPath, string(support.SupportKind), support.Locator, support.Confidence); err != nil {
 			return ApproachRef{}, err
@@ -300,6 +327,27 @@ SELECT id FROM approaches WHERE problem_id = ? AND logical_identity = ?
 		return "", false, err
 	}
 	return approach.ID, true, nil
+}
+
+// latestApproachRevisionIDTx returns the id of the most recent approach
+// revision for an approach, scoped to the current transaction so a
+// re-normalization in flight links to the revision it is about to supersede.
+// Ordering matches listApproachRevisions (created_at DESC, id DESC).
+func latestApproachRevisionIDTx(ctx context.Context, tx *sql.Tx, approachID string) (string, bool, error) {
+	row := tx.QueryRowContext(ctx, `
+SELECT id FROM approach_revisions
+WHERE approach_id = ?
+ORDER BY created_at DESC, id DESC
+LIMIT 1
+`, approachID)
+	var id string
+	if err := row.Scan(&id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	return id, true, nil
 }
 
 func isDuplicateApproachIdentityError(err error) bool {

@@ -75,6 +75,22 @@ func TestResultValidateRejectsDuplicateIdentity(t *testing.T) {
 	}
 }
 
+func TestResultValidateRejectsDuplicateFieldPath(t *testing.T) {
+	t.Parallel()
+	approach := validApproach()
+	// A field carries exactly one provenance strength; two support entries for
+	// the same field_path (here explicit vs unsupported) would blur the
+	// epistemic boundary and must be rejected at the contract boundary.
+	approach.Support = []FieldSupport{
+		{FieldPath: "outcome.class", SupportKind: domain.SupportExplicit},
+		{FieldPath: "outcome.class", SupportKind: domain.SupportUnsupported},
+	}
+	result := Result{SchemaVersion: SchemaVersion, Approaches: []Approach{approach}}
+	if err := result.Validate(); !errors.Is(err, ErrSchemaViolation) {
+		t.Fatalf("Validate() error = %v, want schema violation for duplicate field_path", err)
+	}
+}
+
 func TestResultValidateSkippedRequiresReason(t *testing.T) {
 	t.Parallel()
 	result := Result{SchemaVersion: SchemaVersion, Skipped: true}

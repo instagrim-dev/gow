@@ -61,6 +61,13 @@ List-valued attributes stored per mechanism (namespaced so the vocabulary can
 grow without rewriting prior records): `representation`, `assumption`,
 `operator`, `preserves`, `breaks`, `auxiliary_object`.
 
+Mechanism attributes are **set-valued** per `(mechanism, kind)`: a repeated
+value carries no additional information and is intentionally deduplicated. Field
+provenance is the opposite — each normalized `field_path` carries **exactly one**
+support kind, so two support entries for the same field are rejected at the
+schema boundary rather than silently collapsed (this preserves the
+`explicit / inferred / unsupported` epistemic boundary).
+
 A merely different vocabulary or notation must not create mechanistic novelty:
 two approaches with different prose but the same axes/attributes are comparable
 by construction.
@@ -103,6 +110,11 @@ By default, an equivalent request (same snapshot + schema version + config hash)
 is **idempotent** and reports `duplicate_existing` with the existing revision
 ID. `--force` creates a new revision linked to the prior one via
 `supersedes_revision_id`, retaining its own run and provider provenance.
+Lineage is tracked at **both** levels: the `NormalizationRevision` supersedes
+the prior revision for the snapshot, and each `ApproachRevision` supersedes the
+prior revision of the **same logical approach** (derived at persistence time,
+when approach identity is resolved). `approach revisions <id>` surfaces this
+per-approach chain in its `supersedes` column.
 
 ## Unsupported content
 

@@ -185,6 +185,22 @@ func TestReNormalizationCreatesRevisionNotOverwrite(t *testing.T) {
 	if len(revisions) != 2 {
 		t.Fatalf("historical revisions = %d, want 2 (history preserved)", len(revisions))
 	}
+
+	// The approach-revision lineage must be derived at persistence time, not
+	// injected by the caller: the newest revision (index 0, newest-first) must
+	// supersede the immediately prior approach revision, and the original must
+	// begin a fresh chain. This asserts the production derivation path, not a
+	// hand-set fixture field.
+	newest, oldest := revisions[0], revisions[1]
+	if newest.SupersedesRevisionID == nil {
+		t.Fatal("newest approach revision must record supersedes lineage")
+	}
+	if *newest.SupersedesRevisionID != oldest.ID {
+		t.Fatalf("approach revision lineage = %q, want prior revision %q", *newest.SupersedesRevisionID, oldest.ID)
+	}
+	if oldest.SupersedesRevisionID != nil {
+		t.Fatalf("first approach revision must not supersede anything, got %q", *oldest.SupersedesRevisionID)
+	}
 }
 
 func TestPersistNormalizationDistinguishesSupportKinds(t *testing.T) {
@@ -247,6 +263,37 @@ func TestPersistNormalizationRollsBackOnInvalidApproach(t *testing.T) {
 	}
 	if _, err := repo.getNormalizationRevision(ctx, input.Revision.ID); err == nil {
 		t.Fatal("normalization revision persisted despite rollback")
+	}
+}
+
+func TestPersistNormalizationRejectsConflictingSupportKinds(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	repo := openTestStore(t)
+	defer repo.Close()
+
+	problemID, runID, snapshotID := seedSnapshotForNormalizeTests(t, ctx, repo)
+	now := time.Date(2026, 9, 10, 13, 0, 0, 0, time.UTC)
+	input := normalizationInput(t, problemID, runID, snapshotID, now, "erdos-straus/modular-residue-cover")
+	// Two support rows for the same field_path with differing epistemic
+	// strength must never silently collapse: the persistence layer rejects the
+	// conflict (defense in depth behind schema validation).
+	revID := input.Approaches[0].Revision.ID
+	input.Approaches[0].Support = []domain.SourceSupport{
+		{ApproachRevisionID: revID, SnapshotID: snapshotID, FieldPath: "outcome.class", SupportKind: domain.SupportExplicit},
+		{ApproachRevisionID: revID, SnapshotID: snapshotID, FieldPath: "outcome.class", SupportKind: domain.SupportUnsupported},
+	}
+
+	if _, err := repo.PersistNormalization(ctx, input); err == nil {
+		t.Fatal("PersistNormalization() accepted conflicting support kinds, want error")
+	}
+
+	items, err := repo.ListApproaches(ctx, problemID)
+	if err != nil {
+		t.Fatalf("ListApproaches() error = %v", err)
+	}
+	if len(items) != 0 {
+		t.Fatalf("expected rollback to leave no approaches, got %d", len(items))
 	}
 }
 

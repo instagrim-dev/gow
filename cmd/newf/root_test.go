@@ -294,8 +294,21 @@ func TestCLINormalizeLifecycle(t *testing.T) {
 	}
 
 	revisions := runCLIJSON(t, []string{"--db", dbPath, "--json", "approach", "revisions", approachID})
-	if len(revisions["revisions"].([]any)) != 2 {
-		t.Fatalf("approach revisions = %d, want 2 after forced rerun", len(revisions["revisions"].([]any)))
+	revList := revisions["revisions"].([]any)
+	if len(revList) != 2 {
+		t.Fatalf("approach revisions = %d, want 2 after forced rerun", len(revList))
+	}
+	// Lineage must be derived end-to-end: revisions are newest-first, so the
+	// newest revision must supersede the original, and the original must start
+	// the chain. This catches the whole pipeline->store->CLI path, not an
+	// injected fixture field.
+	newest := revList[0].(map[string]any)
+	oldest := revList[1].(map[string]any)
+	if newest["supersedes_revision_id"] != oldest["id"] {
+		t.Fatalf("newest revision supersedes = %v, want prior revision id %v", newest["supersedes_revision_id"], oldest["id"])
+	}
+	if s, ok := oldest["supersedes_revision_id"]; ok && s != nil && s != "" {
+		t.Fatalf("first revision must not supersede anything, got %v", s)
 	}
 
 	mechanism := runCLIJSON(t, []string{"--db", dbPath, "--json", "mechanism", "show", mechanismID})

@@ -173,5 +173,18 @@ func (a Approach) validate(index int) error {
 			return schemaErr("approach[%d].support[%d] invalid support_kind %q", index, j, support.SupportKind)
 		}
 	}
+	// A normalized field has exactly one provenance strength (explicit /
+	// inferred / unsupported). Two support entries for the same field_path
+	// would otherwise silently collapse at persistence and could blur the
+	// epistemic boundary the operator must never blur, so reject the conflict
+	// at the contract boundary rather than dropping one row.
+	seenFieldPath := make(map[string]struct{}, len(a.Support))
+	for j, support := range a.Support {
+		key := strings.TrimSpace(support.FieldPath)
+		if _, dup := seenFieldPath[key]; dup {
+			return schemaErr("approach[%d].support[%d] duplicate field_path %q", index, j, key)
+		}
+		seenFieldPath[key] = struct{}{}
+	}
 	return nil
 }
