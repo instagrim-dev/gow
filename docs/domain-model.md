@@ -22,6 +22,7 @@ Source evidence is immutable and never overwritten. Model/provider interpretatio
 - **EvaluationRun**: evaluation mode/budget/cutoff/baseline context for a batch of evaluations.
 - **SuccessInvariant**: recurring structure in partial-success/success boundary crossing.
 - **Run / provenance**: command execution, providers, prompts/schemas, config hashes.
+- **Experiment**: optional grouping entity for multi-command comparative runs.
 
 ## Ownership boundaries
 
@@ -33,6 +34,7 @@ Source evidence is immutable and never overwritten. Model/provider interpretatio
 ## Relationships (high level)
 
 - `Problem 1--* Source`
+- `Problem 1--* Experiment 1--* Run`
 - `Source 1--* EvidenceRecord (immutable)`
 - `NormalizationRevision 1--* Approach 1--1 Mechanism`
 - `Approach 1--1 Outcome`, `Outcome *--* FailureBoundary`
@@ -42,6 +44,7 @@ Source evidence is immutable and never overwritten. Model/provider interpretatio
 - `FrontierGenerationRun 1--* FrontierProposal`, `FrontierProposal *--* CandidateInvariant`
 - `EvaluationRun 1--* Evaluation`, `Evaluation -> FrontierProposal`
 - `SuccessInvariantRevision 1--* SuccessInvariant`, linked to `Evaluation` and possibly `CandidateInvariant`
+- `SuccessInvariant *--* FailureBoundary` and `SuccessInvariant *--* CandidateInvariant` via explicit link records
 - `Run 1--* RunEvent`, and each derived record points to originating run + provider call(s)
 
 ## Invariant lifecycle
@@ -85,6 +88,13 @@ type Problem struct {
     Statement   string
     Description string
     CreatedAt   string
+}
+
+type Experiment struct {
+    ID        ID
+    ProblemID ID
+    Name      string
+    CreatedAt string
 }
 
 type Source struct {
@@ -181,9 +191,11 @@ type CandidateInvariant struct {
 type InvariantChallenge struct {
     ID             ID
     CandidateInvariantID ID
+    RunID          ID
     ChallengeType  string
     ResultState    InvariantState
     Summary        string
+    CreatedAt      string
 }
 
 type FrontierProposal struct {
@@ -208,9 +220,12 @@ type Evaluation struct {
 type EvaluationRun struct {
     ID         ID
     ProblemID  ID
+    RunID      ID
+    HoldoutSetID *ID
     Mode       string // proposal|holdout
     Baseline   string
     CutoffTime *string
+    CreatedAt  string
 }
 
 type SuccessInvariant struct {
@@ -221,9 +236,22 @@ type SuccessInvariant struct {
     ConfidenceOrdinal      string
 }
 
+type SuccessInvariantBoundaryLink struct {
+    SuccessInvariantID ID
+    BoundaryID         ID
+    Relation           string // crossed|depends_on
+}
+
+type SuccessInvariantFailureInvariantLink struct {
+    SuccessInvariantID   ID
+    CandidateInvariantID ID
+    Relation             string // breaks|refines|coexists_with
+}
+
 type Run struct {
     ID         ID
     ProblemID  ID
+    ExperimentID *ID
     Command    string
     Status     string
 }

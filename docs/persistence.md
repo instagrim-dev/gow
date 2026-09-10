@@ -25,9 +25,17 @@ CREATE TABLE problem (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE experiment (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problem(id),
+  name TEXT,
+  created_at TEXT NOT NULL
+);
+
 CREATE TABLE run (
   id TEXT PRIMARY KEY,
   problem_id TEXT NOT NULL REFERENCES problem(id),
+  experiment_id TEXT REFERENCES experiment(id),
   command TEXT NOT NULL,
   status TEXT NOT NULL, -- initialized|running|completed|failed
   config_hash TEXT,
@@ -212,20 +220,6 @@ CREATE TABLE candidate_invariant (
   confidence_ordinal TEXT
 );
 
-CREATE TABLE success_invariant_boundary (
-  success_invariant_id TEXT NOT NULL REFERENCES success_invariant(id),
-  boundary_id TEXT NOT NULL REFERENCES failure_boundary(id),
-  relation TEXT NOT NULL, -- crossed|depends_on
-  PRIMARY KEY(success_invariant_id, boundary_id, relation)
-);
-
-CREATE TABLE success_invariant_failure_invariant (
-  success_invariant_id TEXT NOT NULL REFERENCES success_invariant(id),
-  candidate_invariant_id TEXT NOT NULL REFERENCES candidate_invariant(id),
-  relation TEXT NOT NULL, -- breaks|refines|coexists_with
-  PRIMARY KEY(success_invariant_id, candidate_invariant_id, relation)
-);
-
 CREATE TABLE invariant_support_cluster (
   invariant_id TEXT NOT NULL REFERENCES candidate_invariant(id),
   cluster_id TEXT NOT NULL REFERENCES mechanism_cluster(id),
@@ -313,6 +307,22 @@ CREATE TABLE frontier_nearest_cluster (
   PRIMARY KEY(proposal_id, cluster_id)
 );
 
+CREATE TABLE holdout_set (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problem(id),
+  name TEXT NOT NULL,
+  cutoff_time TEXT NOT NULL,
+  held_out_family_label TEXT,
+  leakage_check_status TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE holdout_set_source (
+  holdout_set_id TEXT NOT NULL REFERENCES holdout_set(id),
+  source_id TEXT NOT NULL REFERENCES source(id),
+  PRIMARY KEY(holdout_set_id, source_id)
+);
+
 -- Evaluation and baselines
 CREATE TABLE evaluation_run (
   id TEXT PRIMARY KEY,
@@ -344,22 +354,6 @@ CREATE TABLE evaluation_metric (
   created_at TEXT NOT NULL
 );
 
-CREATE TABLE holdout_set (
-  id TEXT PRIMARY KEY,
-  problem_id TEXT NOT NULL REFERENCES problem(id),
-  name TEXT NOT NULL,
-  cutoff_time TEXT NOT NULL,
-  held_out_family_label TEXT,
-  leakage_check_status TEXT NOT NULL,
-  created_at TEXT NOT NULL
-);
-
-CREATE TABLE holdout_set_source (
-  holdout_set_id TEXT NOT NULL REFERENCES holdout_set(id),
-  source_id TEXT NOT NULL REFERENCES source(id),
-  PRIMARY KEY(holdout_set_id, source_id)
-);
-
 -- Success invariants/compression
 CREATE TABLE success_invariant_revision (
   id TEXT PRIMARY KEY,
@@ -376,6 +370,20 @@ CREATE TABLE success_invariant (
   statement TEXT NOT NULL,
   boundary_crossing TEXT NOT NULL,
   confidence_ordinal TEXT
+);
+
+CREATE TABLE success_invariant_boundary (
+  success_invariant_id TEXT NOT NULL REFERENCES success_invariant(id),
+  boundary_id TEXT NOT NULL REFERENCES failure_boundary(id),
+  relation TEXT NOT NULL, -- crossed|depends_on
+  PRIMARY KEY(success_invariant_id, boundary_id, relation)
+);
+
+CREATE TABLE success_invariant_failure_invariant (
+  success_invariant_id TEXT NOT NULL REFERENCES success_invariant(id),
+  candidate_invariant_id TEXT NOT NULL REFERENCES candidate_invariant(id),
+  relation TEXT NOT NULL, -- breaks|refines|coexists_with
+  PRIMARY KEY(success_invariant_id, candidate_invariant_id, relation)
 );
 ```
 

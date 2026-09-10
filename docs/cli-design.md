@@ -20,7 +20,7 @@ newf compress
 
 - `--db <path>`: SQLite path (default `.newf/newf.db`).
 - each command invocation creates a new `run` provenance record.
-- `--experiment-id <id>`: optional grouping key for related runs across commands.
+- `--experiment-id <id>`: optional link to an existing experiment for cross-command grouping.
 - `--json`: stable machine-readable output.
 - `--format table|json|yaml` (human defaults to table; `--json` wins).
 - `--quiet`: suppress narrative text, keep IDs/summaries.
@@ -46,9 +46,10 @@ Common machine envelope:
 
 - Purpose: create problem, workspace metadata, and first run shell.
 - Required input: problem statement string (or `--problem-file`).
-- Optional flags: `--slug`, `--tags`, `--description`, `--assumption-set`.
+- Optional flags: `--slug`, `--tags`, `--description`, `--assumption-set`, `--experiment-name`.
 - Persists:
   - `problem`
+  - `experiment` (created when `--experiment-name` is provided)
   - `run` (state `initialized`)
 - Idempotency: same explicit `--slug` returns existing problem unless `--new-problem`.
 - Failure semantics: invalid slug, DB unavailable, uniqueness conflict.
