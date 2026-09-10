@@ -193,7 +193,7 @@ type InvariantChallenge struct {
     InvariantID    ID
     RunID          ID
     ChallengeType  string
-    PreviousState  InvariantState
+    PreviousState  *InvariantState
     ResultState    InvariantState
     ResultSummary  string
     CreatedAt      string

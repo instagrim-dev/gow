@@ -126,7 +126,7 @@ Common machine envelope:
 - Optional flags: `--mode known-counterexample|synthetic-counterexample|success-preserving|split|merge|bias-critique|all`, `--provider`, `--budget`.
 - Persists:
   - `invariant_challenge`
-  - `invariant_state_transition` + derived `invariant_current_state`
+  - `invariant_state_transition` (with current state exposed through derived `invariant_current_state` view)
   - optional `invariant_lineage`
   - optional child/sibling invariants for split/merge
 - Idempotency: always appends new challenge record; invariant state reflects latest accepted transition.

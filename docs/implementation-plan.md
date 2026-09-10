@@ -55,6 +55,7 @@ Each slice must ship a usable CLI behavior, persisted artifacts, and tests.
 - Commands: `newf invariants`
 - Deliver:
   - candidate invariant creation (`proposed`)
+  - explicit transition to `challenged` when challenge workflow begins
   - support-cluster links
 - Tests:
   - minimum support-cluster enforcement
@@ -65,7 +66,7 @@ Each slice must ship a usable CLI behavior, persisted artifacts, and tests.
 - Commands: `newf challenge <invariant-id>`
 - Deliver:
   - challenge record types
-  - lifecycle transitions: surviving/weakened/split/merged/falsified/established
+  - lifecycle transitions: challenged/surviving/weakened/split/merged/falsified/established
   - lineage edges for split/merge
 - Tests:
   - valid/invalid transitions
