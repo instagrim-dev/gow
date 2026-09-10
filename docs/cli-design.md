@@ -60,11 +60,12 @@ Common machine envelope:
 
 - Purpose: register immutable source metadata and immutable evidence units.
 - Required input: one or more source locators (file path, URL, DOI/ref key).
-- Optional flags: `--kind literature|human|generated|experiment`, `--title`, `--authors`, `--published-at`, `--cutoff-tag`, `--allow-duplicates`.
+- Optional flags: `--kind literature|human|experiment`, `--title`, `--authors`, `--published-at`, `--cutoff-tag`, `--allow-duplicates`.
 - Persists:
   - `source`
   - `evidence_record` (immutable raw claims/snippets/results)
   - `run_event` provenance
+- Notes: synthetic/generated attempts are persisted as `synthetic_artifact` via challenge/generation/evaluation flows, not as source evidence.
 - Idempotency: content hash + canonical source ref dedupe by default.
 - Failure semantics: unreadable source, unsupported scheme, parse failure (partial ingest allowed; failures become artifacts).
 - Human output: ingested count, duplicate count, failed inputs with reasons.

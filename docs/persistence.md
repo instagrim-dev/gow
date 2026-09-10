@@ -61,7 +61,7 @@ CREATE TABLE run_event (
 CREATE TABLE source (
   id TEXT PRIMARY KEY,
   problem_id TEXT NOT NULL REFERENCES problem(id),
-  kind TEXT NOT NULL,
+  kind TEXT NOT NULL, -- literature|human|experiment
   canonical_ref TEXT NOT NULL,
   content_hash TEXT NOT NULL,
   title TEXT,
@@ -178,6 +178,13 @@ CREATE TABLE mechanism_cluster (
   rationale TEXT
 );
 
+CREATE TABLE cluster_evidence (
+  cluster_id TEXT NOT NULL REFERENCES mechanism_cluster(id),
+  evidence_id TEXT NOT NULL REFERENCES evidence_record(id),
+  relation TEXT NOT NULL, -- representative|boundary|counterexample
+  PRIMARY KEY(cluster_id, evidence_id, relation)
+);
+
 CREATE TABLE cluster_membership (
   cluster_id TEXT NOT NULL REFERENCES mechanism_cluster(id),
   approach_id TEXT NOT NULL REFERENCES approach(id),
@@ -205,10 +212,31 @@ CREATE TABLE candidate_invariant (
   confidence_ordinal TEXT
 );
 
+CREATE TABLE success_invariant_boundary (
+  success_invariant_id TEXT NOT NULL REFERENCES success_invariant(id),
+  boundary_id TEXT NOT NULL REFERENCES failure_boundary(id),
+  relation TEXT NOT NULL, -- crossed|depends_on
+  PRIMARY KEY(success_invariant_id, boundary_id, relation)
+);
+
+CREATE TABLE success_invariant_failure_invariant (
+  success_invariant_id TEXT NOT NULL REFERENCES success_invariant(id),
+  candidate_invariant_id TEXT NOT NULL REFERENCES candidate_invariant(id),
+  relation TEXT NOT NULL, -- breaks|refines|coexists_with
+  PRIMARY KEY(success_invariant_id, candidate_invariant_id, relation)
+);
+
 CREATE TABLE invariant_support_cluster (
   invariant_id TEXT NOT NULL REFERENCES candidate_invariant(id),
   cluster_id TEXT NOT NULL REFERENCES mechanism_cluster(id),
   PRIMARY KEY(invariant_id, cluster_id)
+);
+
+CREATE TABLE invariant_support_evidence (
+  invariant_id TEXT NOT NULL REFERENCES candidate_invariant(id),
+  evidence_id TEXT NOT NULL REFERENCES evidence_record(id),
+  relation TEXT NOT NULL, -- supports|challenges
+  PRIMARY KEY(invariant_id, evidence_id, relation)
 );
 
 CREATE TABLE invariant_lineage (
@@ -238,6 +266,15 @@ CREATE TABLE invariant_challenge_synthetic_artifact (
   challenge_id TEXT NOT NULL REFERENCES invariant_challenge(id),
   synthetic_artifact_id TEXT NOT NULL,
   PRIMARY KEY(challenge_id, synthetic_artifact_id)
+);
+
+CREATE TABLE synthetic_artifact (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problem(id),
+  run_id TEXT NOT NULL REFERENCES run(id),
+  artifact_type TEXT NOT NULL, -- synthetic_attempt|synthetic_counterexample
+  content TEXT NOT NULL,
+  created_at TEXT NOT NULL
 );
 
 -- Frontier proposals

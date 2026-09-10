@@ -80,7 +80,7 @@ Each approach should be represented independently of its surface prose:
 ```yaml
 approach:
   id: approach-017
-  source_kind: literature # literature | generated | human | experiment
+  source_kind: literature # literature | human | experiment
   source_ref: optional-stable-reference
 
 mechanism:

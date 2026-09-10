@@ -9,6 +9,7 @@ Source evidence is immutable and never overwritten. Model/provider interpretatio
 - **Problem**: research target and scope.
 - **Source**: bibliographic or dataset reference.
 - **Evidence**: immutable extracted/quoted factual unit from a source.
+- **SyntheticArtifact**: generated attempt/counterexample artifact, never source evidence.
 - **Approach**: normalized attempt descriptor tied to a normalization revision.
 - **Mechanism**: typed mechanism representation for an approach.
 - **Outcome**: failure / partial failure / partial success / success for an approach.
@@ -89,7 +90,7 @@ type Problem struct {
 type Source struct {
     ID          ID
     ProblemID   ID
-    Kind        string // literature|human|generated|experiment
+    Kind        string // literature|human|experiment
     CanonicalRef string
     ContentHash string
     Metadata    SourceMetadata
@@ -105,6 +106,14 @@ type EvidenceRecord struct {
     Strength    string
     CreatedAt   string
     Immutable   bool
+}
+
+type SyntheticArtifact struct {
+    ID          ID
+    ProblemID   ID
+    RunID       ID
+    ArtifactType string // synthetic_attempt|synthetic_counterexample
+    Content     string
 }
 
 type NormalizationRevision struct {
@@ -262,10 +271,6 @@ type SuccessCompressor interface {
 
 ## Provenance guarantees
 
-- Every derived record references:
-  - originating run
-  - provider role + provider name/version
-  - prompt/schema hash
-  - parent revision (if applicable)
-  - input evidence/record IDs used
-- Promotion from generated claim to evidence requires explicit new `EvidenceRecord` with independent source and provenance.
+- Every derived revision references originating run + provider metadata + config/prompt/schema hashes.
+- Derived records are attributed through their containing revision/run; key hypothesis records can also carry direct evidence links (e.g., invariant support links, cluster evidence links).
+- Promotion from generated artifacts to evidence is disallowed; independent external source-backed evidence must be ingested as a new `EvidenceRecord`.
