@@ -335,6 +335,61 @@ problem/workspace persistence
 
 The typed toolbox described in `docs/toolbox-dsl.md` is the semantic target. CLI commands should expose those semantics incrementally.
 
+## Abstraction safety
+
+Abstraction and re-representation are high-leverage model-native operations, but they must not silently change the problem being solved.
+
+The governing rule is:
+
+> An abstraction earns search authority only when it improves compression or transfer while preserving predictive discrimination over the source problem.
+
+Every non-trivial abstraction must record:
+
+- the source artifact(s);
+- the mapping into the new representation or explanatory level;
+- properties claimed to be preserved;
+- information known to be lost;
+- assumptions or structure introduced by the abstraction;
+- whether claimed correspondence is equivalence, one-way implication, analogy, or unknown;
+- a grounding plan back into concrete source-domain cases;
+- verification status and counterexamples.
+
+Do not allow `abstract` to be a one-way escape into nicer prose. Pair it with `ground`:
+
+```text
+abstract   Concrete -> Abstraction
+ground     Abstraction -> ConcretePrediction[]
+```
+
+The required validation loop is:
+
+```text
+source cases
+-> abstract
+-> derive prediction
+-> ground
+-> test against original or held-out cases
+-> retain | weaken | split | falsify
+```
+
+Reject or weaken abstractions that:
+
+- cannot state what they preserve;
+- erase distinctions that separate known successes from failures;
+- import unrecorded assumptions from another ontology or discipline;
+- cannot produce concrete predictions;
+- fail round-trip grounding;
+- reduce predictive discrimination;
+- remain too vague to operationalize.
+
+Compression alone is not success. If two mechanism families become indistinguishable only because the abstraction erased the variable that determines outcome, the abstraction is defective.
+
+Cross-domain `transfer` must likewise operate on structural relations rather than labels, record imported assumptions, and ground the transferred relation into target-domain predictions before it can affect search policy.
+
+Candidate invariants should be challenged above and below the abstraction level where they were inferred. An invariant that survives controlled abstraction changes is stronger than one that exists only in one vocabulary.
+
+See `docs/abstraction-safety.md` for the full contract.
+
 ## Definition of good agent work
 
 A good contribution makes the research state more explicit, typed, testable, reproducible, and falsifiable.
