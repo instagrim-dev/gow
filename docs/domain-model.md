@@ -185,7 +185,6 @@ type CandidateInvariant struct {
     Statement         string
     AbstractionLevel  string
     InitialState      InvariantState
-    CurrentState      InvariantState
     ConfidenceOrdinal string
 }
 
@@ -207,6 +206,12 @@ type InvariantStateTransition struct {
     FromState   InvariantState
     ToState     InvariantState
     CreatedAt   string
+}
+
+type InvariantCurrentState struct {
+    InvariantID ID
+    State       InvariantState
+    AsOf        string
 }
 
 type FrontierProposal struct {
@@ -312,6 +317,7 @@ type SuccessCompressor interface {
 ## Mechanistic diversity vocabulary
 
 - Axis definitions are versioned (`mechanism_axis_vocabulary` + `vocabulary_version` refs).
+- v0 treats each axis as single-valued per mechanism (`axis_key -> one value_key`).
 - Historical normalized records keep original axis key/value IDs to preserve comparability over time.
 - New axes can be added without rewriting old mechanism rows.
 

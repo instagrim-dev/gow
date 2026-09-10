@@ -79,6 +79,7 @@ Each slice must ship a usable CLI behavior, persisted artifacts, and tests.
   - invariant targeting + nearest cluster linkage
 - Tests:
   - proposals must target surviving invariants only
+  - proposals targeting non-surviving states are rejected
   - duplicate structural proposal handling
 
 ## Slice 8 — evaluate and record outcomes

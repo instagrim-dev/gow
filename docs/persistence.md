@@ -145,7 +145,7 @@ CREATE TABLE mechanism_axis_value (
   axis_key TEXT NOT NULL,
   value_key TEXT NOT NULL,
   vocabulary_version TEXT NOT NULL,
-  PRIMARY KEY(mechanism_id, axis_key)
+  PRIMARY KEY(mechanism_id, axis_key) -- v0 enforces one value per axis per mechanism
 );
 
 CREATE TABLE outcome (
