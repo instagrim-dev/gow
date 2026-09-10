@@ -184,7 +184,7 @@ CREATE TABLE cluster_revision (
 CREATE TABLE mechanism_cluster (
   id TEXT PRIMARY KEY,
   cluster_revision_id TEXT NOT NULL REFERENCES cluster_revision(id),
-  label TEXT,
+  label TEXT NOT NULL,
   rationale TEXT,
   UNIQUE(cluster_revision_id, label)
 );
@@ -256,10 +256,12 @@ CREATE TABLE invariant_state_transition (
   id TEXT PRIMARY KEY,
   invariant_id TEXT NOT NULL REFERENCES candidate_invariant(id),
   challenge_id TEXT NOT NULL REFERENCES invariant_challenge(id),
+  transition_seq INTEGER NOT NULL,
   from_state TEXT NOT NULL,
   to_state TEXT NOT NULL,
   created_at TEXT NOT NULL,
-  UNIQUE(invariant_id, created_at)
+  UNIQUE(challenge_id),
+  UNIQUE(invariant_id, transition_seq)
 );
 
 CREATE VIEW invariant_current_state AS
@@ -270,7 +272,7 @@ WITH ranked AS (
     t.created_at,
     ROW_NUMBER() OVER (
       PARTITION BY t.invariant_id
-      ORDER BY t.created_at DESC
+      ORDER BY t.transition_seq DESC
     ) AS rn
   FROM invariant_state_transition t
 ),

@@ -105,7 +105,11 @@ type Source struct {
     Kind        string // literature|human|experiment
     CanonicalRef string
     ContentHash string
-    Metadata    SourceMetadata
+    Title       string
+    PublishedAt *string
+    MetadataJSON string
+    CreatedAt   string
+    Metadata    SourceMetadata // parsed application view of metadata_json
 }
 
 type SourceMetadata struct {
@@ -210,6 +214,7 @@ type InvariantStateTransition struct {
     ID          ID
     InvariantID ID
     ChallengeID ID
+    TransitionSeq int64
     FromState   InvariantState
     ToState     InvariantState
     CreatedAt   string
@@ -284,6 +289,9 @@ type Run struct {
     ExperimentID *ID
     Command    string
     Status     string
+    ConfigHash string
+    StartedAt  string
+    CompletedAt *string
 }
 ```
 
