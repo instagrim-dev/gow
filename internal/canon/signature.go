@@ -177,6 +177,23 @@ func BuildSignature(input MechanismInput, vocab *Vocabulary) MechanismSignature 
 		Breaks:           []FieldClaim{},
 		AuxiliaryObjects: []FieldClaim{},
 		Boundaries:       []Boundary{},
+		// Every set field starts `unobserved`: the current extractor records the
+		// attributes it FOUND but never asserts a field was exhaustively covered,
+		// so we must not let a missing value read as a verified negative (F3/F-A).
+		// This is a deliberate default, not a nil-map accident — evaluation treats
+		// `unobserved` absence as unknown, never violates. When an extractor can
+		// honestly declare a field complete, it will populate this map (and, at
+		// that point, a persisted completeness column); until then production
+		// signatures are uniformly `unobserved` and the `complete` path is
+		// exercised only by tests that supply fully-specified synthetic fields.
+		SetFieldCompleteness: map[domain.FieldKind]domain.FieldCompleteness{
+			domain.FieldRepresentation:  domain.CompletenessUnobserved,
+			domain.FieldOperator:        domain.CompletenessUnobserved,
+			domain.FieldAssumption:      domain.CompletenessUnobserved,
+			domain.FieldPreserves:       domain.CompletenessUnobserved,
+			domain.FieldBreaks:          domain.CompletenessUnobserved,
+			domain.FieldAuxiliaryObject: domain.CompletenessUnobserved,
+		},
 	}
 
 	for _, claim := range input.Claims {

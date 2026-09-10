@@ -160,6 +160,53 @@ func TestEvaluateAbsentValueRespectsFieldCompleteness(t *testing.T) {
 	}
 }
 
+// F-A production-ingest regression: a signature built by the REAL constructor
+// (canon.BuildSignature, the production origin) must default every set field to
+// `unobserved`, so a contains on an absent value is an epistemic gap (unknown),
+// NOT a verified negative (violates). This proves the completeness gate's
+// production behavior at the ingest boundary rather than via a fixture that
+// injects completeness — the extractor cannot yet declare a field complete, so
+// absence must never read as negative evidence. The `complete->violates` branch
+// stays reachable only for fully-specified synthetic signatures until an
+// extractor honestly populates completeness.
+func TestBuildSignatureDefaultsUnobservedSoAbsenceIsUnknown(t *testing.T) {
+	// baseInput resolves preserves "residue locality" -> residue_locality; query
+	// a DIFFERENT resolved preserves term that the built signature does not carry.
+	const absentPreserves = "domain.number_theory.property.residue_class_locality"
+	sig := canon.BuildSignature(canonBaseInput(), canon.MechanismV1())
+
+	if sig.FieldCompleteness(domain.FieldPreserves) != domain.CompletenessUnobserved {
+		t.Fatalf("production BuildSignature must default preserves completeness to unobserved, got %s",
+			sig.FieldCompleteness(domain.FieldPreserves))
+	}
+	contains := Predicate{Schema: PredicateSchemaV1, Root: predContains(FieldPreserves, absentPreserves)}
+	notContains := Predicate{Schema: PredicateSchemaV1, Root: Node{Op: OpNot, Children: []Node{predContains(FieldPreserves, absentPreserves)}}}
+	if got := Evaluate(contains, sig); got != VerdictUnknown {
+		t.Fatalf("contains(absent) on production-built signature = %s, want unknown (F-A)", got)
+	}
+	if got := Evaluate(notContains, sig); got != VerdictUnknown {
+		t.Fatalf("not(contains(absent)) on production-built signature = %s, want unknown (F-A)", got)
+	}
+}
+
+// canonBaseInput mirrors a minimal production mechanism input (two resolved
+// set claims), routed through the real vocabulary by BuildSignature.
+func canonBaseInput() canon.MechanismInput {
+	return canon.MechanismInput{
+		MechanismID: "mech_fa",
+		Posture: canon.Posture{
+			Locality:     domain.LocalityLocal,
+			Construction: domain.ConstructionConstructive,
+			Uncertainty:  domain.UncertaintyDeterministic,
+		},
+		OutcomeClass: domain.OutcomeFailure,
+		Claims: []canon.MechanismClaimInput{
+			{FieldKind: domain.FieldOperator, SurfaceLabel: "modular decomposition", Status: domain.ClaimExplicit},
+			{FieldKind: domain.FieldPreserves, SurfaceLabel: "residue locality", Status: domain.ClaimExplicit},
+		},
+	}
+}
+
 // unknown propagates through not: negating an unanswerable read does not make
 // it answerable.
 func TestEvaluateNotPreservesUnknown(t *testing.T) {
@@ -186,6 +233,24 @@ func TestEvaluateBoundaryRelationDecisive(t *testing.T) {
 	}
 	if got := Evaluate(wrongRel, sig); got != VerdictViolates {
 		t.Fatalf("Evaluate(wrong relation) = %s, want violates", got)
+	}
+}
+
+// A queried boundary id entirely absent from the resolved boundary set is an
+// epistemic gap, not a verified negative: absence yields unknown (never
+// violates), and its negation is likewise unknown. This is the F3 discipline on
+// the boundary axis (F-B) — an unrecorded boundary must not become negative
+// evidence. Contrast with TestEvaluateBoundaryRelationDecisive, where the id IS
+// present under a different relation and violates is the correct verdict.
+func TestEvaluateBoundaryAbsentIsUnknownNotViolates(t *testing.T) {
+	sig := predBaseSignature() // base records only predIDBound
+	absent := Predicate{Schema: PredicateSchemaV1, Root: Node{Op: OpBoundary, CanonicalID: "core.boundary.small_prime_case"}}
+	notAbsent := Predicate{Schema: PredicateSchemaV1, Root: Node{Op: OpNot, Children: []Node{{Op: OpBoundary, CanonicalID: "core.boundary.small_prime_case"}}}}
+	if got := Evaluate(absent, sig); got != VerdictUnknown {
+		t.Fatalf("Evaluate(absent boundary) = %s, want unknown (F-B: absence is not evidence)", got)
+	}
+	if got := Evaluate(notAbsent, sig); got != VerdictUnknown {
+		t.Fatalf("Evaluate(not(absent boundary)) = %s, want unknown (F-B)", got)
 	}
 }
 

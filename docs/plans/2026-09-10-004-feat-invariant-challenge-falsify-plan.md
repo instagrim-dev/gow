@@ -17,6 +17,31 @@ created: 2026-09-10
 plan_type: feat
 ---
 
+<!-- CROSS-SLICE NOTE (from M4.2 F-A/F-B hardening, commit follows 9be3f16) -->
+> **M4.2 semantic change affecting challenge scoring — read before landing M4.3.**
+> The M4.2 hardening changed the deterministic predicate evaluator
+> (`internal/invariant/predicate.go`, `Evaluate`) so that **an absent value is no
+> longer a verified negative unless the field is exhaustively extracted**:
+> - `contains(X)` on an absent value now returns **`unknown`** (not `violates`)
+>   unless the set field's completeness is `complete`. In production today every
+>   set field is `unobserved` (no extractor declares completeness yet), so a
+>   `contains`-based predicate never yields `violates` from mere absence.
+> - `boundary(X)` on a boundary id **entirely absent** from the resolved set now
+>   returns **`unknown`** (not `violates`). A boundary id present under a
+>   *different resolved relation* still returns `violates`.
+>
+> **Impact on M4.3:** a challenge campaign that counts `known_counterexample` /
+> `synthetic_counterexample` or success-contrast from `contains`/`boundary`
+> absence will observe **fewer counterexamples** than under the pre-hardening
+> `violates`-on-absent behavior. Verify challenge scoring and any
+> `contrast successes` / falsification thresholds against the current three-valued
+> semantics (satisfies / violates / **unknown**) before landing, so a challenge
+> does not read an epistemic gap as a falsification. See
+> `TestEvaluateBoundaryAbsentIsUnknownNotViolates` and
+> `TestBuildSignatureDefaultsUnobservedSoAbsenceIsUnknown` in
+> `internal/invariant/predicate_test.go` for the locked behavior.
+
+
 # feat: Challenge and falsify candidate failure invariants
 
 ## Summary

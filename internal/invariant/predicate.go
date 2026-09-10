@@ -386,10 +386,12 @@ func ParsePredicate(raw string) (Predicate, error) {
 // Evaluate applies the predicate to one canonical mechanism signature and
 // returns satisfies/violates/unknown. It distinguishes field-unresolved (any
 // non-resolved claim in a read field -> unknown) from value-absent, and among
-// value-absent it further distinguishes verified absence (the field was
+// value-absent it further distinguishes verified absence (a set field that was
 // exhaustively extracted -> violates) from an unrecorded field (completeness
 // unobserved/partial -> unknown), so a missing annotation never masquerades as
-// negative evidence (F3).
+// negative evidence (F3). Boundaries carry no completeness signal yet, so an
+// unmatched boundary is always unknown, never violates (F-B): the same "absence
+// is not evidence" rule, applied consistently across contains and boundary.
 func Evaluate(p Predicate, sig canon.MechanismSignature) Verdict {
 	return evalNode(Canonicalize(p).Root, sig)
 }
@@ -417,19 +419,42 @@ func evalNode(n Node, sig canon.MechanismSignature) Verdict {
 		return VerdictViolates
 	case OpBoundary:
 		unresolved := false
+		idPresent := false
 		for _, b := range sig.Boundaries {
 			if b.State != domain.ResolutionResolved {
 				unresolved = true
 				continue
 			}
-			if string(b.CanonicalID) == n.CanonicalID && (n.Relation == "" || b.Relation == n.Relation) {
-				return VerdictSatisfies
+			if string(b.CanonicalID) == n.CanonicalID {
+				// The queried boundary IS present and resolved. If the relation
+				// also matches (or none was required) it satisfies; otherwise the
+				// mechanism has this boundary under a DIFFERENT resolved relation,
+				// which is a verified negative on the relation (handled below).
+				if n.Relation == "" || b.Relation == n.Relation {
+					return VerdictSatisfies
+				}
+				idPresent = true
 			}
+		}
+		if idPresent {
+			// Boundary id present and resolved, but under a different relation than
+			// queried: a verified relation mismatch, not an epistemic gap.
+			return VerdictViolates
 		}
 		if unresolved {
 			return VerdictUnknown
 		}
-		return VerdictViolates
+		// The queried boundary id is entirely absent from the resolved boundary
+		// set. Absence is NOT a verified negative here: the signature records the
+		// boundaries that were extracted, never an assertion that they are
+		// exhaustive, so a missing boundary is an epistemic gap, not evidence the
+		// mechanism lacks it. Returning unknown (never violates) keeps a negated
+		// boundary predicate from accruing support from unrecorded boundaries —
+		// the same F3 discipline applied to contains, on the boundary axis (F-B).
+		// A present-but-different relation still violates (above); only true
+		// absence is unknown. If a boundary-completeness signal is added later,
+		// a `complete` boundary set may return violates for absence too.
+		return VerdictUnknown
 	case OpIn, OpEquals:
 		value, known := enumAxisValue(n.Field, sig)
 		if !known {
