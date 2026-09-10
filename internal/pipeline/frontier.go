@@ -396,6 +396,31 @@ func (a *App) ShowFrontier(ctx context.Context, input FrontierShowInput) (Fronti
 		}
 		id = latest
 	}
+	// A PROPOSAL id resolves to its containing generation, filtered to that
+	// proposal (E3: proposals are the loop's atom — evaluate, experiments, and
+	// policy all trade in fpr_ ids, so the read surface must accept them).
+	if domain.ValidateFrontierProposalID(id) == nil {
+		genID, found, gerr := repoStore.FindGenerationForProposal(ctx, id)
+		if gerr != nil {
+			return FrontierShowResponse{}, gerr
+		}
+		if !found {
+			return FrontierShowResponse{}, fmt.Errorf("%w: frontier proposal %s", store.ErrNotFound, id)
+		}
+		rec, err := repoStore.GetFrontierGeneration(ctx, genID)
+		if err != nil {
+			return FrontierShowResponse{}, err
+		}
+		view := frontierGenerationView(rec)
+		filtered := view.Proposals[:0:0]
+		for _, p := range view.Proposals {
+			if p.ID == id {
+				filtered = append(filtered, p)
+			}
+		}
+		view.Proposals = filtered
+		return FrontierShowResponse{OK: true, Command: "frontier show", Store: dbPath, Generation: view}, nil
+	}
 	rec, err := repoStore.GetFrontierGeneration(ctx, id)
 	if err != nil {
 		return FrontierShowResponse{}, err

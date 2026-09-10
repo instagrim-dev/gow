@@ -89,7 +89,7 @@ func newFrontierCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) 
 	var showProblem string
 	showCmd := &cobra.Command{
 		Use:   "show [frontier-generation-id]",
-		Short: "Show a frontier generation (latest for --problem when id omitted)",
+		Short: "Show a frontier generation, or one proposal by fpr_ id (latest generation for --problem when id omitted)",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var id string

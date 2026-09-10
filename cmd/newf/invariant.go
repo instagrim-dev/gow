@@ -17,7 +17,14 @@ func newInvariantsCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions
 		Use:   "invariants",
 		Short: "Mine candidate failure invariants from a materialized failure space",
 	}
+	cmd.AddCommand(newInvariantMineCommand(stdout, app, opts))
+	return cmd
+}
 
+// newInvariantMineCommand is registered under BOTH `invariants` and
+// `invariant` (E7: one noun to remember; `invariant mine` and
+// `invariants mine` are the same verb).
+func newInvariantMineCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cobra.Command {
 	var (
 		mineProblem      string
 		mineFailureSpace string
@@ -56,16 +63,16 @@ func newInvariantsCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions
 	mineCmd.Flags().StringVar(&mineProblem, "problem", "", "Problem ID")
 	mineCmd.Flags().StringVar(&mineFailureSpace, "failure-space", "", "Failure space ID (default: latest for the problem)")
 	mineCmd.Flags().IntVar(&mineMinSupport, "min-support", 0, "Distinct-family support threshold for `recurring` (default 2)")
-	cmd.AddCommand(mineCmd)
-	return cmd
+	return mineCmd
 }
 
 // newInvariantCommand hosts read verbs: `newf invariant list|show`.
 func newInvariantCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "invariant",
-		Short: "Inspect mined candidate invariants",
+		Short: "Inspect mined candidate invariants (and mine: alias of `invariants mine`)",
 	}
+	cmd.AddCommand(newInvariantMineCommand(stdout, app, opts))
 
 	var (
 		listProblem string

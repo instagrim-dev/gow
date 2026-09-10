@@ -80,14 +80,14 @@ func TestArmAssessmentIdentityIsOrderSensitive(t *testing.T) {
 	// Reviewer's scenario: one target, two proposals, budget of one comparison.
 	// Run 1: A (rank 0) does not recover; B (rank 1) recovers but is unassessed.
 	run1 := []string{
-		armAssessmentIdentityPart("b3", 0, "hashA", "decisive_no"),
-		armAssessmentIdentityPart("b3", 1, "hashB", "unassessed"),
+		armAssessmentIdentityPart("b3", 0, "hashA", "content1", "decisive_no"),
+		armAssessmentIdentityPart("b3", 1, "hashB", "content1", "unassessed"),
 	}
 	// Run 2: the SAME artifacts reranked — B (rank 0) recovers; A (rank 1)
 	// unassessed. Different assessment outcome => must be a different identity.
 	run2 := []string{
-		armAssessmentIdentityPart("b3", 0, "hashB", "recovered"),
-		armAssessmentIdentityPart("b3", 1, "hashA", "unassessed"),
+		armAssessmentIdentityPart("b3", 0, "hashB", "content1", "recovered"),
+		armAssessmentIdentityPart("b3", 1, "hashA", "content1", "unassessed"),
 	}
 	if strings.Join(run1, "\n") == strings.Join(run2, "\n") {
 		t.Fatal("reordering that changes the assessment must not collide in identity (finding 1)")
@@ -95,8 +95,8 @@ func TestArmAssessmentIdentityIsOrderSensitive(t *testing.T) {
 
 	// Exact replay: identical order and assessments => identical manifest.
 	replay := []string{
-		armAssessmentIdentityPart("b3", 0, "hashA", "decisive_no"),
-		armAssessmentIdentityPart("b3", 1, "hashB", "unassessed"),
+		armAssessmentIdentityPart("b3", 0, "hashA", "content1", "decisive_no"),
+		armAssessmentIdentityPart("b3", 1, "hashB", "content1", "unassessed"),
 	}
 	if strings.Join(run1, "\n") != strings.Join(replay, "\n") {
 		t.Fatal("exact replay must produce an identical identity manifest (idempotency)")

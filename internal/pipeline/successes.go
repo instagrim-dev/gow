@@ -149,7 +149,11 @@ func buildBreakCohorts(rows []store.BreakCohortRow) (builtCohorts, error) {
 	var targetOrder []string
 	var hashLines []string
 	for _, r := range rows {
-		hashLines = append(hashLines, r.TargetInvariantID+"|"+r.ProposalID+"|"+r.EvaluationID+"|"+r.Result+"|"+r.Strength)
+		// The identity line includes the CONTENT hash (F1): a revised
+		// interpretation of the same mechanism (completeness/unresolved-claim
+		// changes are fingerprint-invisible) changes what every condition C
+		// evaluates against, so it must produce the next cohort revision.
+		hashLines = append(hashLines, r.TargetInvariantID+"|"+r.ProposalID+"|"+r.EvaluationID+"|"+r.Result+"|"+r.Strength+"|"+r.ContentHash)
 		if r.SignatureJSON == "" {
 			out.IneligibleUnpersisted++
 			continue

@@ -25,31 +25,52 @@ type BreakCohortRow struct {
 	Strength          string // that evaluation's verification_strength
 	SignatureJSON     string
 	Fingerprint       string
+	ContentHash       string // exact signature content revision consumed (F1)
 }
 
 // ListBreakCohortRows returns every code-verified break (violated=1) whose
-// proposal has been evaluated, joined with the persisted canonical content and
-// a SINGLE evaluation record's verdict + strength + id. The evaluation selected
-// is the earliest for the proposal (the one that set the immutable
-// frontier_proposals.result), so verdict and strength are always a coherent pair
-// from one evaluation — never the first verdict spliced onto a later
-// evaluation's strength (H1).
+// proposal has been evaluated, joined with the persisted canonical content.
+// ListBreakCohortRows selects, per proposal, the evaluation that CURRENT
+// research guidance should trust, under selection-policy/v1: the evaluation
+// with the STRONGEST verification class wins; ties break to the LATEST
+// (an accepted reassessment supersedes an earlier equal-strength result).
+// This mirrors the verification hierarchy — a later model-judged "success"
+// can never displace a deterministic "failure", while a deterministic
+// reassessment always displaces an earlier model judgment or blocked result.
+// The earliest-result view remains available in the append-only evaluations
+// ledger for historical analysis; it is no longer the source of guidance.
+// Verdict, strength, and evaluation id are taken from that ONE record (H1).
 func (s *Store) ListBreakCohortRows(ctx context.Context, problemID string) ([]BreakCohortRow, error) {
 	if err := domain.ValidateProblemID(problemID); err != nil {
 		return nil, err
 	}
 	rows, err := s.db.QueryContext(ctx, `
-WITH first_eval AS (
+WITH selected_eval AS (
   SELECT e.proposal_id, e.id AS evaluation_id, e.verdict, e.verification_strength,
-         ROW_NUMBER() OVER (PARTITION BY e.proposal_id ORDER BY e.created_at ASC, e.id ASC) AS rn
+         ROW_NUMBER() OVER (
+           PARTITION BY e.proposal_id
+           ORDER BY CASE e.verification_strength
+                      WHEN 'deterministic' THEN 0
+                      WHEN 'reproducible' THEN 1
+                      WHEN 'independent-evidence' THEN 2
+                      WHEN 'independent-critic' THEN 3
+                      ELSE 4
+                    END ASC,
+                    e.created_at DESC, e.id DESC
+         ) AS rn
   FROM evaluations e
 )
 SELECT t.invariant_id, p.id, fe.evaluation_id, fe.verdict, COALESCE(fe.verification_strength, ''),
-       COALESCE(fps.signature_json, ''), COALESCE(fps.canonical_fingerprint, '')
+       COALESCE(fps.signature_json, ''), COALESCE(fps.canonical_fingerprint, ''), COALESCE(fps.content_hash, '')
 FROM frontier_target_invariants t
 JOIN frontier_proposals p ON p.id = t.proposal_id
-JOIN first_eval fe ON fe.proposal_id = p.id AND fe.rn = 1
-LEFT JOIN frontier_proposal_signatures fps ON fps.proposal_id = p.id
+JOIN selected_eval fe ON fe.proposal_id = p.id AND fe.rn = 1
+LEFT JOIN (
+  SELECT r.proposal_id, r.signature_json, r.canonical_fingerprint, r.content_hash
+  FROM frontier_proposal_signature_revisions r
+  JOIN (SELECT proposal_id, MAX(revision) AS mr FROM frontier_proposal_signature_revisions GROUP BY proposal_id) lr
+    ON lr.proposal_id = r.proposal_id AND lr.mr = r.revision
+) fps ON fps.proposal_id = p.id
 WHERE p.problem_id = ? AND t.violated = 1
 ORDER BY t.invariant_id, p.id
 `, problemID)
@@ -60,7 +81,7 @@ ORDER BY t.invariant_id, p.id
 	var out []BreakCohortRow
 	for rows.Next() {
 		var r BreakCohortRow
-		if err := rows.Scan(&r.TargetInvariantID, &r.ProposalID, &r.EvaluationID, &r.Result, &r.Strength, &r.SignatureJSON, &r.Fingerprint); err != nil {
+		if err := rows.Scan(&r.TargetInvariantID, &r.ProposalID, &r.EvaluationID, &r.Result, &r.Strength, &r.SignatureJSON, &r.Fingerprint, &r.ContentHash); err != nil {
 			return nil, err
 		}
 		out = append(out, r)

@@ -1198,6 +1198,35 @@ pre-M7 caller, since a NULL check id never matches), and widens
 `provider_invocations.role` for the future baseline roles `'summarize-next'`
 and `'brainstorm'`. See [`experiment.md`](experiment.md).
 
+## Signature content revisions (migration `v23`)
+
+The mechanism fingerprint deliberately excludes extraction completeness and
+unresolved claims — correct for mechanism IDENTITY, but those fields change
+predicate evaluation (an unobserved field evaluates `unknown`; an exhaustively
+complete one can evaluate `violates`). Because proposal dedup keys on that
+fingerprint, a revised interpretation used to dedup onto the old proposal and
+the single-row v17 sidecar (`INSERT OR IGNORE`) silently dropped the revised
+bytes. `v23` separates the three identities:
+
+- **mechanism identity** — the canonical fingerprint (unchanged; comparison
+  and dedup still key on it);
+- **evidence revision** — `frontier_proposal_signature_revisions`: immutable,
+  append-only content revisions per `(proposal, sha256(signature_json))`,
+  backfilled from the v17 sidecar as revision 1; readers (experiment
+  rehydration, success cohorts) consume the LATEST revision;
+- **selected evaluation** — `evaluations.signature_content_hash` and
+  `experiment_arm_proposals.signature_content_hash` reference the exact
+  content revision a verdict/assessment consumed, and both the experiment
+  identity manifest and the success cohort hash include the content hash, so
+  revised evidence is a NEW experiment / compression revision, never a silent
+  recomputation.
+
+Success compression additionally selects its per-proposal evaluation under
+`selection-policy/v1` (strongest verification class wins; ties to the latest),
+so an accepted deterministic reassessment displaces an earlier model judgment
+while a later model-judged "success" can never displace a deterministic
+"failure". The earliest-result view stays in the append-only ledger.
+
 ## Immutable vs mutable/revisioned
 
 - Immutable: `source`, `evidence_record` (enforced with update/delete-rejecting

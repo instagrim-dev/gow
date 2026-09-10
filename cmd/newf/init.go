@@ -45,6 +45,7 @@ func newInitCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cob
 				result.Store,
 				result.Problem,
 			)
+			_, _ = fmt.Fprintf(stdout, "  next:    newf ingest <corpus-dir> --recursive --problem %s\n", result.ProblemID)
 			return nil
 		},
 	}

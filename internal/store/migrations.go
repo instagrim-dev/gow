@@ -2,12 +2,14 @@ package store
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"strings"
 )
 
-const currentSchemaVersion = 22
+const currentSchemaVersion = 23
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -883,6 +885,24 @@ END;
 		// inconclusive rather than being coerced to no_recovery. Additive +
 		// guarded; idempotent on fresh v22.
 		apply: migrateV22ExperimentMeasurementContract,
+	},
+	{
+		version: 23,
+		// Evidence-revision separation (review F1). The mechanism FINGERPRINT
+		// deliberately excludes extraction completeness and unresolved claims —
+		// correct for mechanism identity/comparison, but those fields change
+		// predicate evaluation (unobserved field => unknown; exhaustively
+		// complete => violates). Proposal dedup keys on that fingerprint, and
+		// the v17 sidecar is single-row INSERT OR IGNORE, so a REVISED
+		// interpretation with identical resolved content was silently dropped.
+		// v23 adds frontier_proposal_signature_revisions: an immutable,
+		// append-only CONTENT revision per (proposal, sha256(signature_json)),
+		// backfilled from the v17 sidecar as revision 1. Readers consume the
+		// LATEST revision; verdicts and experiment arm assessments reference
+		// the exact content hash they evaluated (new guarded columns on
+		// evaluations + experiment_arm_proposals). The v17 sidecar remains as
+		// the frozen first-observed content.
+		apply: migrateV23SignatureContentRevisions,
 	},
 }
 
@@ -2843,6 +2863,86 @@ func migrateV22ExperimentMeasurementContract(ctx context.Context, tx *sql.Tx) er
 	}
 	for _, c := range cols {
 		has, err := columnExists(ctx, tx, "experiment_arms", c.column)
+		if err != nil {
+			return err
+		}
+		if has {
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, c.ddl); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// signatureRevisionsSQL is the v23 DDL: append-only signature content
+// revisions with immutability triggers.
+const signatureRevisionsSQL = `
+CREATE TABLE IF NOT EXISTS frontier_proposal_signature_revisions (
+  proposal_id TEXT NOT NULL REFERENCES frontier_proposals(id),
+  revision INTEGER NOT NULL,
+  content_hash TEXT NOT NULL,
+  canonical_fingerprint TEXT NOT NULL,
+  signature_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY(proposal_id, revision),
+  UNIQUE(proposal_id, content_hash)
+);
+
+CREATE TRIGGER IF NOT EXISTS fps_revisions_immutable_update
+BEFORE UPDATE ON frontier_proposal_signature_revisions
+BEGIN
+  SELECT RAISE(ABORT, 'signature content revisions are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS fps_revisions_immutable_delete
+BEFORE DELETE ON frontier_proposal_signature_revisions
+BEGIN
+  SELECT RAISE(ABORT, 'signature content revisions are immutable');
+END;
+`
+
+// migrateV23SignatureContentRevisions creates the revisions table, backfills
+// revision 1 from the v17 sidecar (content hash computed over the persisted
+// JSON bytes), and adds the content-hash reference columns.
+func migrateV23SignatureContentRevisions(ctx context.Context, tx *sql.Tx) error {
+	if _, err := tx.ExecContext(ctx, signatureRevisionsSQL); err != nil {
+		return err
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT proposal_id, canonical_fingerprint, signature_json, created_at FROM frontier_proposal_signatures`)
+	if err != nil {
+		return err
+	}
+	type sidecar struct{ id, fp, js, at string }
+	var backfill []sidecar
+	for rows.Next() {
+		var sc sidecar
+		if err := rows.Scan(&sc.id, &sc.fp, &sc.js, &sc.at); err != nil {
+			rows.Close()
+			return err
+		}
+		backfill = append(backfill, sc)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	rows.Close()
+	for _, sc := range backfill {
+		sum := sha256.Sum256([]byte(sc.js))
+		if _, err := tx.ExecContext(ctx, `
+INSERT OR IGNORE INTO frontier_proposal_signature_revisions(proposal_id, revision, content_hash, canonical_fingerprint, signature_json, created_at)
+VALUES(?, 1, ?, ?, ?, ?)
+`, sc.id, hex.EncodeToString(sum[:]), sc.fp, sc.js, sc.at); err != nil {
+			return err
+		}
+	}
+	cols := []struct{ table, column, ddl string }{
+		{"evaluations", "signature_content_hash", "ALTER TABLE evaluations ADD COLUMN signature_content_hash TEXT NOT NULL DEFAULT ''"},
+		{"experiment_arm_proposals", "signature_content_hash", "ALTER TABLE experiment_arm_proposals ADD COLUMN signature_content_hash TEXT NOT NULL DEFAULT ''"},
+	}
+	for _, c := range cols {
+		has, err := columnExists(ctx, tx, c.table, c.column)
 		if err != nil {
 			return err
 		}

@@ -130,11 +130,7 @@ func TestListBreakCohortRowsSelectsOneEvaluationRecord(t *testing.T) {
 	proposalID := res.Record.Proposals[0].ID
 
 	// Persist canonical content so the proposal is cohort-eligible.
-	if _, err := st.db.ExecContext(ctx, `
-INSERT INTO frontier_proposal_signatures(proposal_id, signature_json, canonical_fingerprint, created_at)
-VALUES(?, ?, ?, ?)`, proposalID, `{"schema_version":"mechanism/v1"}`, "cfp-1", formatTime(time.Now().UTC())); err != nil {
-		t.Fatalf("insert signature: %v", err)
-	}
+	insertTestSignatureContent(t, st, proposalID, `{"schema_version":"mechanism/v1"}`, "cfp-1")
 
 	// E1: the earliest evaluation. partial_success / single-model-judgment. This
 	// sets the sticky frontier_proposals.result via PersistEvaluationRun.
@@ -171,11 +167,12 @@ VALUES(?, ?, ?, 'failure', 'deterministic-check', 'deterministic', 'high', 'd', 
 		t.Fatalf("want 1 cohort row, got %d", len(rows))
 	}
 	r := rows[0]
-	// The triple must be coherent and come from E1 (the earliest / result-setting
-	// evaluation): partial_success / single-model-judgment / e1. NEVER the
-	// impossible partial_success + deterministic.
-	if r.Result != "partial_success" || r.Strength != "single-model-judgment" || r.EvaluationID != e1ID {
-		t.Fatalf("cohort row must be a coherent E1 triple; got result=%q strength=%q eval=%q (want partial_success/single-model-judgment/%s)", r.Result, r.Strength, r.EvaluationID, e1ID)
+	// selection-policy/v1: the DETERMINISTIC re-evaluation (E2) displaces the
+	// earlier model judgment — a refuted success cannot remain active support.
+	// The triple must still be coherent from ONE record (H1): NEVER the first
+	// verdict spliced onto a later evaluation's strength.
+	if r.Result != "failure" || r.Strength != "deterministic" || r.EvaluationID != e2ID {
+		t.Fatalf("cohort row must be the coherent SELECTED triple; got result=%q strength=%q eval=%q (want failure/deterministic/%s)", r.Result, r.Strength, r.EvaluationID, e2ID)
 	}
 }
 
@@ -188,5 +185,54 @@ INSERT INTO success_invariants(id, success_revision_id, predicate_fingerprint, s
 VALUES('sinv_x','svr_x','fp','s','m','surviving',0,0,0,0,'low','low',0,0)`)
 	if err == nil || !strings.Contains(err.Error(), "CHECK") {
 		t.Fatalf("expected CHECK rejection of non-proposed state, got %v", err)
+	}
+}
+
+// F2 probe #1: verification_blocked followed by an equal-strength successful
+// reassessment. selection-policy/v1 ties break to the LATEST, so the accepted
+// reassessment is selected — a blocked first attempt is not pinned forever.
+func TestListBreakCohortRowsLatestWinsAtEqualStrength(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+
+	rec := sampleFrontier(t, st)
+	res, err := st.PersistFrontierGeneration(ctx, rec)
+	if err != nil {
+		t.Fatalf("persist frontier: %v", err)
+	}
+	problemID := res.Record.ProblemID
+	proposalID := res.Record.Proposals[0].ID
+	insertTestSignatureContent(t, st, proposalID, `{"schema_version":"mechanism/v1"}`, "cfp-1")
+
+	now := time.Now().UTC()
+	blockedID := domain.NewEvaluationID(now)
+	run := EvaluationRunRecord{
+		ID:          domain.NewEvaluationRunID(now),
+		ProblemID:   problemID,
+		RunID:       res.Record.RunID,
+		Mode:        "proposal",
+		CreatedAt:   formatTime(now.Add(-time.Hour)),
+		Evaluations: []EvaluationRow{{ID: blockedID, ProposalID: proposalID, Verdict: "verification_blocked", VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment", ConfidenceOrdinal: "low", ToolName: "m", ToolVersion: "v1"}},
+	}
+	if _, err := st.PersistEvaluationRun(ctx, run); err != nil {
+		t.Fatalf("persist blocked: %v", err)
+	}
+	successID := domain.NewEvaluationID(now.Add(time.Second))
+	if _, err := st.db.ExecContext(ctx, `
+INSERT INTO evaluations(id, evaluation_run_id, proposal_id, verdict, verifier_kind, verification_strength, confidence_ordinal, tool_name, tool_version, created_at)
+VALUES(?, ?, ?, 'partial_success', 'model-judgment', 'single-model-judgment', 'medium', 'm', 'v1', ?)`,
+		successID, run.ID, proposalID, formatTime(now)); err != nil {
+		t.Fatalf("insert reassessment: %v", err)
+	}
+
+	rows, err := st.ListBreakCohortRows(ctx, problemID)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("want 1 row, got %d", len(rows))
+	}
+	if rows[0].EvaluationID != successID || rows[0].Result != "partial_success" {
+		t.Fatalf("latest equal-strength reassessment must be selected; got %+v", rows[0])
 	}
 }

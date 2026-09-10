@@ -42,6 +42,42 @@ Common machine envelope:
 
 Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statuses such as `duplicate_existing` and include the existing artifact ID.
 
+## Implemented `--json` shapes (authoritative survey)
+
+The envelope above was the original sketch; the implemented commands share
+these **actual** conventions. Machine-readable output is stable once exposed —
+this table documents the shapes as shipped; do not rename keys to "clean up"
+the survey.
+
+Every response carries `ok`, `command`, `store`. The entity payload key varies
+by command (historical drift, now frozen):
+
+| command | entity key | notes |
+|---|---|---|
+| `problem list` | `problems` | |
+| `source list` | `sources` | |
+| `approach list` | `approaches` | |
+| `mechanism list` | `mechanisms` | |
+| `invariant list` | `revisions` (by problem) / `invariants` (by `--state`) | |
+| `invariants mine` | `revision` (with nested `candidates`) | |
+| `invariant state` | `invariant` + `challenges` | lifecycle state is `invariant.state` |
+| `frontier list` / `show` | `generations` / `generation` (nested `proposals`) | `show` accepts `fgr_` or `fpr_` ids |
+| `evaluate` | `run` | one evaluation run |
+| `evaluation list` | `runs` | |
+| `cluster list` / `show` | `cluster_runs` / `cluster_run` | |
+| `policy list` / `show` | `revisions` / `revision` | |
+| `experiment list` / `show` | `experiments` / `experiment` | |
+
+Conventions for NEW surfaces (not retrofitted onto frozen shapes):
+
+- entity key = the plural of the command noun (`mechanisms`, not `items`);
+- array-typed fields serialize as `[]`, never `null` (initialize slices);
+- error envelope: `{"ok":false,"command":"<failing command path>","error":{"code","message"}}`
+  where `code` ∈ `usage_error` (operator mistake — do not retry unchanged),
+  `invalid_input`, `not_found`, `no_eligible_snapshots`, `unknown_provider`,
+  `schema_validation_failed`, `provider_unavailable`, `corrupt_store`,
+  `migration_failed`, `internal_error`.
+
 ## Command contracts
 
 ### `newf init <problem>`

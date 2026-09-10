@@ -83,7 +83,11 @@ promoted. M6.2 can weight policy by strength; this slice only reports honestly.
   targets.
 - Each cohort member's outcome carries the provenance of the **single evaluation**
   it came from (`evaluation_id`) — verdict, strength, and id are taken **together**
-  from one evaluation record (the earliest, which set the sticky proposal result),
+  from ONE evaluation record selected under `selection-policy/v1` — the STRONGEST
+  verification class wins, ties break to the latest, so an accepted deterministic
+  reassessment displaces an earlier model judgment or blocked result while a later
+  model-judged "success" can never displace a deterministic "failure" (the
+  earliest-result view stays in the append-only ledger for historical analysis),
   so a re-evaluation can never splice the first verdict onto a later evaluation's
   strength (H1).
 - Revisions are immutable and idempotent on

@@ -51,3 +51,21 @@ func TestResolveDBPathUsesEnv(t *testing.T) {
 		t.Fatalf("ResolveDBPath() = %q, want %q", got, want)
 	}
 }
+
+// E1 regression: a flag-shaped --db value (the empty-shell-var footgun where
+// cobra consumes the NEXT flag as the path) is rejected at the choke point.
+func TestResolveDBPathRejectsFlagShapedValues(t *testing.T) {
+	if _, err := ResolveDBPath("/wd", "--json", nil); err == nil {
+		t.Fatal("flag-shaped --db value must be rejected")
+	}
+	if _, err := ResolveDBPath("/wd", "-x", nil); err == nil {
+		t.Fatal("dash-prefixed --db value must be rejected")
+	}
+	if _, err := ResolveDBPath("/wd", "", func(string) string { return "--json" }); err == nil {
+		t.Fatal("flag-shaped NEWF_DB value must be rejected")
+	}
+	// Real relative and absolute paths still resolve.
+	if _, err := ResolveDBPath("/wd", "sub/newf.db", nil); err != nil {
+		t.Fatalf("relative path rejected: %v", err)
+	}
+}

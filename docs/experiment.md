@@ -81,7 +81,10 @@ assessments roll up as `recovered` / `decisive_no` / `unknown` / `unassessed`
 counts, and the experiment conclusion respects them: `no_recovery` requires
 EVERY membership proposal decisively assessed; unknown-only or budget-starved
 populations conclude `inconclusive`, never a coerced negative. Metrics are
-exact counts + derived ordinal bands (`held_out_family_recovery`,
+exact counts + derived ordinal bands. `held_out_family_recovery` encodes
+OBSERVED recovery detections; when either compared arm is inconclusive
+(unknown-only or budget-unassessed), `compare` reports the metric direction as
+`incomparable` rather than treating 0 observed hits as a demonstrated negative (`held_out_family_recovery`,
 `decisive_assessments`, `mechanistic_diversity`, `normalized_redundancy`;
 verdict-dependent metrics land with M5.2 evaluation volume).
 

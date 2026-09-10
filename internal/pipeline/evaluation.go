@@ -2,6 +2,8 @@ package pipeline
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"sort"
 	"time"
@@ -134,7 +136,8 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 		return EvaluateResponse{}, err
 	}
 
-	verifiers := a.verifiers()
+	model := a.modelVerifier()
+	verifiers := a.verifiers(model)
 	now := a.now()
 	run, err := repoStore.CreateRun(ctx, domain.NewRun{
 		ID:          domain.NewRunID(now),
@@ -195,7 +198,7 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 			Notes:                decision.Notes,
 		}
 		if decision.Kind == verify.KindModelJudgment {
-			row.Invocation = a.evaluationInvocation(run.ID, now)
+			row.Invocation = a.evaluationInvocation(model, run.ID, now)
 		} else {
 			row.ToolName = "newf-" + string(decision.Kind)
 			row.ToolVersion = provider.VerifierVersion
@@ -220,28 +223,37 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 	}, nil
 }
 
+// modelVerifier resolves the model-tier verifier ONCE per evaluation pass.
+// Routing and provenance retention must share the SAME instance: constructing
+// a second fixture for invocation recording returns empty LastPayloads() and
+// silently discards the executed request/response (F3).
+func (a *App) modelVerifier() provider.ModelVerifier {
+	if a.modelVerifierFn != nil {
+		return a.modelVerifierFn
+	}
+	// A conservative default model tier: it abstains (unknown) rather than
+	// manufacturing a verdict, so a bare deployment never launders judgment.
+	return provider.NewFixtureModelVerifier(verify.VerdictUnknown, "low")
+}
+
 // verifiers returns the routing verifier set: the two deterministic tiers plus
 // the model tier last. The model tier is a fixture in CI; a live adapter would
 // replace modelVerifierFn.
-func (a *App) verifiers() []verify.Verifier {
-	model := a.modelVerifierFn
-	if model == nil {
-		// A conservative default model tier: it abstains (unknown) rather than
-		// manufacturing a verdict, so a bare deployment never launders judgment.
-		model = provider.NewFixtureModelVerifier(verify.VerdictUnknown, "low")
-	}
+func (a *App) verifiers(model provider.ModelVerifier) []verify.Verifier {
 	return []verify.Verifier{verify.DeterministicCheck{}, verify.CounterexampleSearch{}, model}
 }
 
 // evaluationInvocation builds the model-tier provider invocation for provenance
-// retention, pulling the last payloads recorded by the fixture verifier.
-func (a *App) evaluationInvocation(runID string, now time.Time) *store.EvaluationProviderInvocation {
-	model := a.modelVerifierFn
-	if model == nil {
-		model = provider.NewFixtureModelVerifier(verify.VerdictUnknown, "low")
-	}
+// retention, pulling the payloads recorded by the EXECUTED verifier instance
+// and hashing the retained request for replay/audit.
+func (a *App) evaluationInvocation(model provider.ModelVerifier, runID string, now time.Time) *store.EvaluationProviderInvocation {
 	meta := model.Metadata()
 	req, resp := model.LastPayloads()
+	reqHash := ""
+	if req != "" {
+		sum := sha256.Sum256([]byte(req))
+		reqHash = hex.EncodeToString(sum[:])
+	}
 	return &store.EvaluationProviderInvocation{
 		ID:              domain.NewProviderInvocationID(now),
 		RunID:           runID,
@@ -249,7 +261,7 @@ func (a *App) evaluationInvocation(runID string, now time.Time) *store.Evaluatio
 		ProviderVersion: meta.ProviderVersion,
 		ModelName:       meta.ModelName,
 		SchemaVersion:   meta.SchemaVersion,
-		RequestHash:     "",
+		RequestHash:     reqHash,
 		RequestPayload:  req,
 		ResponsePayload: resp,
 		CreatedAt:       now.Format(timeLayout),

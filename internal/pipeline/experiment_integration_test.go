@@ -421,9 +421,17 @@ func TestIntegrationExperimentBaselineArmsAndCompare(t *testing.T) {
 	}
 	for _, d := range cmp.Comparison.Metrics {
 		switch d.Direction {
-		case "higher", "lower", "same":
+		case "higher", "lower", "same", "incomparable":
 		default:
 			t.Fatalf("metric %s has invalid direction %q", d.Metric, d.Direction)
+		}
+		// F4: the recovery metric encodes OBSERVED detections; with an
+		// inconclusive arm in the pair its direction must be incomparable —
+		// 0 observed hits is not a demonstrated negative.
+		if d.Metric == "held_out_family_recovery" &&
+			(cmp.Comparison.BaselineRecoveryStatus == "inconclusive" || cmp.Comparison.TreatmentRecoveryStatus == "inconclusive") &&
+			d.Direction != "incomparable" {
+			t.Fatalf("recovery metric direction = %q with an inconclusive arm, want incomparable", d.Direction)
 		}
 	}
 

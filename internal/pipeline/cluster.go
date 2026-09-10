@@ -28,6 +28,7 @@ type ClusterBuildInput struct {
 type ClusterShowInput struct {
 	DBPath       string
 	ClusterRunID string
+	ProblemID    string // when set and ClusterRunID empty: the latest run
 	JSONOutput   bool
 }
 
@@ -145,7 +146,18 @@ func (a *App) ShowClustering(ctx context.Context, input ClusterShowInput) (Clust
 	}
 	defer repoStore.Close()
 
-	rec, err := repoStore.GetClusterRun(ctx, input.ClusterRunID)
+	id := input.ClusterRunID
+	if id == "" {
+		latest, found, lerr := repoStore.LatestClusterRun(ctx, input.ProblemID)
+		if lerr != nil {
+			return ClusterShowResponse{}, lerr
+		}
+		if !found {
+			return ClusterShowResponse{}, fmt.Errorf("no cluster run for problem %s; run `cluster build` first", input.ProblemID)
+		}
+		id = latest
+	}
+	rec, err := repoStore.GetClusterRun(ctx, id)
 	if err != nil {
 		return ClusterShowResponse{}, err
 	}

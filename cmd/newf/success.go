@@ -17,7 +17,13 @@ func newSuccessesCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions)
 		Use:   "successes",
 		Short: "Compress evaluated partial successes into typed success invariants",
 	}
+	cmd.AddCommand(newSuccessCompressCommand(stdout, app, opts))
+	return cmd
+}
 
+// newSuccessCompressCommand is registered under BOTH `successes` and
+// `success-invariant` (E7: one noun to remember).
+func newSuccessCompressCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cobra.Command {
 	var (
 		problemID  string
 		minSupport int
@@ -55,16 +61,16 @@ func newSuccessesCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions)
 	}
 	compressCmd.Flags().StringVar(&problemID, "problem", "", "Problem ID")
 	compressCmd.Flags().IntVar(&minSupport, "min-support", 0, "Distinct-mechanism support threshold provenance (default 1)")
-	cmd.AddCommand(compressCmd)
-	return cmd
+	return compressCmd
 }
 
 // newSuccessInvariantCommand hosts read verbs: `newf success-invariant list|show`.
 func newSuccessInvariantCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "success-invariant",
-		Short: "Inspect compressed success invariants",
+		Short: "Inspect compressed success invariants (and compress: alias of `successes compress`)",
 	}
+	cmd.AddCommand(newSuccessCompressCommand(stdout, app, opts))
 
 	var listProblem string
 	listCmd := &cobra.Command{

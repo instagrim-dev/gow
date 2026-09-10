@@ -423,10 +423,14 @@ func (a *App) DefineExperiment(ctx context.Context, input ExperimentDefineInput)
 // proposal_hash, assessment) in order. proposal_hash (not proposal_id) is the
 // dedup-stable content pointer so the token is invariant across idempotent
 // replays; member_rank + assessment make a consequential reordering a distinct
-// identity. Callers append these in arm-iteration then rank order and must NOT
-// sort the resulting slice.
-func armAssessmentIdentityPart(arm string, memberRank int, proposalHash, assessment string) string {
-	return strings.Join([]string{arm, fmt.Sprint(memberRank), proposalHash, assessment}, "|")
+// identity. The CONTENT hash is included because the proposal hash keys on the
+// mechanism fingerprint, which deliberately excludes evaluation-relevant
+// fields (completeness, unresolved claims) — a revised interpretation is a
+// different experiment input and must be a different identity (F1). Callers
+// append these in arm-iteration then rank order and must NOT sort the
+// resulting slice.
+func armAssessmentIdentityPart(arm string, memberRank int, proposalHash, contentHash, assessment string) string {
+	return strings.Join([]string{arm, fmt.Sprint(memberRank), proposalHash, contentHash, assessment}, "|")
 }
 
 func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore, dbPath string, hs store.HoldoutSetRecord, check store.LeakageCheckRecord, runID string, arms []string, proposalBudget, evaluationBudget int, now time.Time) (ExperimentView, bool, error) {
@@ -508,9 +512,10 @@ func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore,
 		// generation physically wrote the shared row first.
 		for _, pa := range assessment.Proposals {
 			row.Members = append(row.Members, store.ExperimentArmProposalRow{
-				ProposalID: pa.ProposalID,
-				MemberRank: pa.Rank,
-				Assessment: string(pa.Assessment),
+				ProposalID:  pa.ProposalID,
+				MemberRank:  pa.Rank,
+				Assessment:  string(pa.Assessment),
+				ContentHash: pa.ContentHash,
 			})
 			// Ordered identity manifest (finding 1): under a finite evaluation
 			// budget the assessment is order-consequential, so identity must
@@ -520,7 +525,7 @@ func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore,
 			// distinct experiment identity while an exact replay (same order, same
 			// assessments) still collides for idempotency. Appended in arm-iteration
 			// then rank order; deliberately NOT sorted below.
-			identityParts = append(identityParts, armAssessmentIdentityPart(arm, pa.Rank, pa.ProposalHash, string(pa.Assessment)))
+			identityParts = append(identityParts, armAssessmentIdentityPart(arm, pa.Rank, pa.ProposalHash, pa.ContentHash, string(pa.Assessment)))
 		}
 		armRows = append(armRows, row)
 
@@ -683,7 +688,7 @@ func loadProposalContentByID(ctx context.Context, repoStore problemStore, ids []
 		if err := json.Unmarshal([]byte(r.SignatureJSON), &sig); err != nil {
 			return nil, fmt.Errorf("proposal %s: corrupt persisted signature: %w", r.ProposalID, err)
 		}
-		out[r.ProposalID] = experiment.ProposalContent{ProposalID: r.ProposalID, Signature: sig}
+		out[r.ProposalID] = experiment.ProposalContent{ProposalID: r.ProposalID, ContentHash: r.ContentHash, Signature: sig}
 	}
 	return out, nil
 }
@@ -720,6 +725,9 @@ func classificationStronger(x, y canon.Classification) bool {
 // experimentView assembles the mode-stamped view (leakage check included).
 func (a *App) experimentView(ctx context.Context, repoStore problemStore, rec store.ExperimentRecord) (ExperimentView, error) {
 	view := ExperimentView{
+		Arms:                []ExperimentArmView{},
+		Metrics:             []ExperimentMetricView{},
+		Targets:             []ExperimentTargetView{},
 		ID:                  rec.ID,
 		ProblemID:           rec.ProblemID,
 		HoldoutSetID:        rec.HoldoutSetID,
@@ -931,6 +939,17 @@ func (a *App) CompareExperiment(ctx context.Context, input ExperimentCompareInpu
 		}
 	}
 	sort.Strings(metricNames)
+
+	// F4: the recovery metric encodes OBSERVED detections (0/1), where 0
+	// ambiguously covers both a completed negative assessment and missing
+	// knowledge. Its comparison direction must therefore respect the assessment
+	// gate: when either arm's recovery status is inconclusive (unknown-only or
+	// budget-unassessed proposals), the metric rows still report exact counts
+	// but the DIRECTION is `incomparable` — a consumer reading only metrics
+	// keeps the qualification the prose carries.
+	baseStatus := armRecoveryStatus(baseline)
+	treatStatus := armRecoveryStatus(treatment)
+
 	var deltas []ArmMetricDelta
 	for _, name := range metricNames {
 		bm := metricByKey[metricKey{baselineArm, name}]
@@ -944,7 +963,11 @@ func (a *App) CompareExperiment(ctx context.Context, input ExperimentCompareInpu
 			TreatmentDenom:     tm.Denominator,
 			TreatmentOrdinal:   tm.Ordinal,
 		}
-		d.Direction = metricDirection(d)
+		if name == "held_out_family_recovery" && (baseStatus == "inconclusive" || treatStatus == "inconclusive") {
+			d.Direction = "incomparable"
+		} else {
+			d.Direction = metricDirection(d)
+		}
 		deltas = append(deltas, d)
 	}
 
@@ -953,8 +976,6 @@ func (a *App) CompareExperiment(ctx context.Context, input ExperimentCompareInpu
 	// an empty own-generation set) is INCONCLUSIVE and must never be coerced into
 	// the negative side of the delta — the same gate the run-level conclusion
 	// uses (DecisiveCount == ProposalCount).
-	baseStatus := armRecoveryStatus(baseline)
-	treatStatus := armRecoveryStatus(treatment)
 	recoveryDelta := recoveryDeltaFrom(baseStatus, treatStatus)
 
 	cmp := ExperimentCompareView{

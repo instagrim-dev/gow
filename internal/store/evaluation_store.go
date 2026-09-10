@@ -138,9 +138,11 @@ VALUES(?, ?, 'evaluate', ?, ?, ?, ?, ?, ?, ?, ?)
 			providerInvocationID = sql.NullString{String: inv.ID, Valid: true}
 		}
 		if _, err := tx.ExecContext(ctx, `
-INSERT INTO evaluations(id, evaluation_run_id, proposal_id, verdict, verifier_kind, verification_strength, confidence_ordinal, tool_name, tool_version, provider_invocation_id, notes, created_at)
-VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`, e.ID, record.ID, nullIfEmpty(e.ProposalID), e.Verdict, e.VerifierKind, e.VerificationStrength, nullIfEmpty(e.ConfidenceOrdinal), nullIfEmpty(e.ToolName), nullIfEmpty(e.ToolVersion), providerInvocationID, nullIfEmpty(e.Notes), record.CreatedAt); err != nil {
+INSERT INTO evaluations(id, evaluation_run_id, proposal_id, verdict, verifier_kind, verification_strength, confidence_ordinal, tool_name, tool_version, provider_invocation_id, notes, created_at, signature_content_hash)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+       COALESCE((SELECT r.content_hash FROM frontier_proposal_signature_revisions r
+                 WHERE r.proposal_id = ? ORDER BY r.revision DESC LIMIT 1), ''))
+`, e.ID, record.ID, nullIfEmpty(e.ProposalID), e.Verdict, e.VerifierKind, e.VerificationStrength, nullIfEmpty(e.ConfidenceOrdinal), nullIfEmpty(e.ToolName), nullIfEmpty(e.ToolVersion), providerInvocationID, nullIfEmpty(e.Notes), record.CreatedAt, e.ProposalID); err != nil {
 			return EvaluationRunRecord{}, err
 		}
 		for _, m := range e.Metrics {

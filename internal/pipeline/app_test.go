@@ -503,6 +503,14 @@ func (f *fakeProblemStore) ListTargetSignaturesForHoldout(context.Context, strin
 	return nil, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) ListMechanismsForProblem(context.Context, string) ([]store.MechanismListItem, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) FindGenerationForProposal(context.Context, string) (string, bool, error) {
+	return "", false, errors.New("unexpected call")
+}
+
 func (f *fakeProblemStore) PersistExperiment(context.Context, store.ExperimentRecord) (store.PersistExperimentResult, error) {
 	return store.PersistExperimentResult{}, errors.New("unexpected call")
 }

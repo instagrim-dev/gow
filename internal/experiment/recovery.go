@@ -28,7 +28,11 @@ type ProposalContent struct {
 	ProposalID   string
 	ProposalHash string
 	Rank         int
-	Signature    canon.MechanismSignature
+	// ContentHash identifies the signature content revision assessed (F1):
+	// evaluation-relevant fields revise content without changing the
+	// mechanism fingerprint, so assessments must reference the exact bytes.
+	ContentHash string
+	Signature   canon.MechanismSignature
 }
 
 // RecoveryFact is the code-computed classification of one proposal against the
@@ -114,6 +118,7 @@ const (
 type ProposalAssessment struct {
 	ProposalID     string
 	ProposalHash   string
+	ContentHash    string // exact signature content revision assessed (F1)
 	Rank           int
 	Assessment     Assessment
 	Nearest        canon.Classification
@@ -161,7 +166,7 @@ func AssessProposals(proposals []ProposalContent, targets []canon.MechanismSigna
 
 	out := ArmAssessment{FirstRecoveryRank: -1, NearestClassification: canon.ClassUnknown}
 	for _, p := range ordered {
-		pa := ProposalAssessment{ProposalID: p.ProposalID, ProposalHash: p.ProposalHash, Rank: p.Rank, Nearest: canon.ClassUnknown, Assessment: AssessmentUnassessed}
+		pa := ProposalAssessment{ProposalID: p.ProposalID, ProposalHash: p.ProposalHash, ContentHash: p.ContentHash, Rank: p.Rank, Nearest: canon.ClassUnknown, Assessment: AssessmentUnassessed}
 		sawUnknown := false
 		completed := true
 		for _, target := range targets {

@@ -118,15 +118,63 @@ func newMechanismCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions)
 		},
 	})
 
+	var listProblem string
+	listCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List a problem's mechanisms with approach identity and signature counts",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if listProblem == "" {
+				return wrapCommandError("mechanism list", errors.New("--problem is required"))
+			}
+			result, err := app.ListMechanisms(cmd.Context(), pipeline.MechanismListInput{
+				DBPath:     opts.dbPath,
+				ProblemID:  listProblem,
+				JSONOutput: opts.jsonOutput,
+			})
+			if err != nil {
+				return wrapCommandError("mechanism list", err)
+			}
+			if opts.jsonOutput {
+				return writeJSON(stdout, result)
+			}
+			writeMechanismListHuman(stdout, result)
+			return nil
+		},
+	}
+	listCmd.Flags().StringVar(&listProblem, "problem", "", "Problem ID")
+	cmd.AddCommand(listCmd)
+
 	var (
-		sigVocab  string
-		sigSchema string
+		sigVocab   string
+		sigSchema  string
+		sigProblem string
 	)
 	signatureCmd := &cobra.Command{
-		Use:   "signature <mechanism-id>",
-		Short: "Compute the canonical mechanism signature and fingerprint",
-		Args:  cobra.ExactArgs(1),
+		Use:   "signature [mechanism-id]",
+		Short: "Compute the canonical mechanism signature and fingerprint (--problem signs every mechanism)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				if sigProblem == "" {
+					return wrapCommandError("mechanism signature", errors.New("a mechanism-id or --problem is required"))
+				}
+				result, err := app.SignatureAllMechanisms(cmd.Context(), pipeline.SignatureBatchInput{
+					DBPath:        opts.dbPath,
+					ProblemID:     sigProblem,
+					VocabVersion:  sigVocab,
+					SchemaVersion: sigSchema,
+					JSONOutput:    opts.jsonOutput,
+				})
+				if err != nil {
+					return wrapCommandError("mechanism signature", err)
+				}
+				if opts.jsonOutput {
+					return writeJSON(stdout, result)
+				}
+				writeSignatureBatchHuman(stdout, result)
+				return nil
+			}
 			result, err := app.SignatureMechanism(cmd.Context(), pipeline.SignatureInput{
 				DBPath:        opts.dbPath,
 				MechanismID:   args[0],
@@ -146,6 +194,7 @@ func newMechanismCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions)
 	}
 	signatureCmd.Flags().StringVar(&sigVocab, "vocab-version", "", "Canonical vocabulary version (default mechanism/v1)")
 	signatureCmd.Flags().StringVar(&sigSchema, "schema-version", "", "Signature schema version (default mechanism/v1)")
+	signatureCmd.Flags().StringVar(&sigProblem, "problem", "", "Sign EVERY mechanism of this problem (batch, same idempotent path)")
 	cmd.AddCommand(signatureCmd)
 
 	var (
@@ -427,4 +476,34 @@ func fallback(value, def string) string {
 		return def
 	}
 	return value
+}
+
+func writeMechanismListHuman(stdout io.Writer, resp pipeline.MechanismListResponse) {
+	if len(resp.Mechanisms) == 0 {
+		_, _ = fmt.Fprintln(stdout, "no mechanisms; run `newf normalize --problem <id> --all` first")
+		return
+	}
+	tw := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
+	_, _ = fmt.Fprintln(tw, "MECHANISM\tLABEL\tOUTCOME\tSIGNATURES\tAPPROACH")
+	for _, m := range resp.Mechanisms {
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%d\t%s\n", m.MechanismID, m.Label, m.OutcomeClass, m.SignatureCount, m.ApproachID)
+	}
+	_ = tw.Flush()
+}
+
+func writeSignatureBatchHuman(stdout io.Writer, resp pipeline.SignatureBatchResponse) {
+	if len(resp.Signatures) == 0 {
+		_, _ = fmt.Fprintln(stdout, "no mechanisms to sign; run `newf normalize --problem <id> --all` first")
+		return
+	}
+	tw := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
+	_, _ = fmt.Fprintln(tw, "MECHANISM\tSIGNATURE\tSTATUS\tFINGERPRINT")
+	for _, s := range resp.Signatures {
+		fp := s.Fingerprint
+		if len(fp) > 16 {
+			fp = fp[:16] + "…"
+		}
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", s.MechanismID, s.SignatureID, s.Status, fp)
+	}
+	_ = tw.Flush()
 }

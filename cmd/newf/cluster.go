@@ -58,14 +58,23 @@ func newClusterCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *
 	buildCmd.Flags().StringVar(&buildProfile, "profile", "", "Comparison profile version (default mechanism/v1)")
 	cmd.AddCommand(buildCmd)
 
-	cmd.AddCommand(&cobra.Command{
-		Use:   "show <cluster-run-id>",
-		Short: "Show a persisted cluster run",
-		Args:  cobra.ExactArgs(1),
+	var showClusterProblem string
+	showClusterCmd := &cobra.Command{
+		Use:   "show [cluster-run-id]",
+		Short: "Show a cluster run (latest for --problem when id omitted)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var id string
+			if len(args) == 1 {
+				id = args[0]
+			}
+			if id == "" && showClusterProblem == "" {
+				return wrapCommandError("cluster show", errors.New("a cluster-run id or --problem is required"))
+			}
 			result, err := app.ShowClustering(cmd.Context(), pipeline.ClusterShowInput{
 				DBPath:       opts.dbPath,
-				ClusterRunID: args[0],
+				ClusterRunID: id,
+				ProblemID:    showClusterProblem,
 				JSONOutput:   opts.jsonOutput,
 			})
 			if err != nil {
@@ -77,7 +86,9 @@ func newClusterCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *
 			writeClusterRunHuman(stdout, result.ClusterRun, false)
 			return nil
 		},
-	})
+	}
+	showClusterCmd.Flags().StringVar(&showClusterProblem, "problem", "", "Problem ID (shows the latest cluster run)")
+	cmd.AddCommand(showClusterCmd)
 
 	var listProblem string
 	listCmd := &cobra.Command{
@@ -155,10 +166,13 @@ func newFailureSpaceCommand(stdout io.Writer, app *pipeline.App, opts *rootOptio
 		showID      string
 	)
 	showCmd := &cobra.Command{
-		Use:   "show",
-		Short: "Show a failure space (latest for a problem, or by id)",
-		Args:  cobra.NoArgs,
+		Use:   "show [failure-space-id]",
+		Short: "Show a failure space (latest for --problem when id omitted)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 1 {
+				showID = args[0]
+			}
 			result, err := app.ShowFailureSpace(cmd.Context(), pipeline.FailureSpaceShowInput{
 				DBPath:         opts.dbPath,
 				FailureSpaceID: showID,
@@ -184,10 +198,13 @@ func newFailureSpaceCommand(stdout io.Writer, app *pipeline.App, opts *rootOptio
 		covID      string
 	)
 	coverageCmd := &cobra.Command{
-		Use:   "coverage",
-		Short: "Report coverage / under-sampled axes for a failure space",
-		Args:  cobra.NoArgs,
+		Use:   "coverage [failure-space-id]",
+		Short: "Report coverage / under-sampled axes for a failure space (latest for --problem when id omitted)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 1 {
+				covID = args[0]
+			}
 			result, err := app.CoverageFailureSpace(cmd.Context(), pipeline.FailureSpaceCoverageInput{
 				DBPath:         opts.dbPath,
 				FailureSpaceID: covID,

@@ -272,3 +272,59 @@ func TestVerificationContextDropsStaleTarget(t *testing.T) {
 		t.Fatal("a live target must be retained")
 	}
 }
+
+// F3 regression: the DEFAULT pipeline (no injected model verifier) must retain
+// the executed model-tier request/response payloads and a request hash on the
+// persisted provider invocation. Routing and provenance retention share ONE
+// verifier instance; a second construction would return empty payloads.
+func TestIntegrationEvaluateDefaultVerifierRetainsPayloads(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = dataDrivenMiner{}
+	app.challengerFn = biasOnlyChallenger{}
+	app.modelVerifierFn = nil // the seam under test: bare deployment default
+
+	problemID, invID, _ := mineOneCandidate(t, ctx, app, dbPath)
+	if _, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID}); err != nil {
+		t.Fatalf("challenge: %v", err)
+	}
+	gen, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("frontier generate: %v", err)
+	}
+	res, err := app.Evaluate(ctx, EvaluateInput{DBPath: dbPath, ProblemID: problemID, ProposalID: gen.Generation.Proposals[0].ID})
+	if err != nil {
+		t.Fatalf("evaluate: %v", err)
+	}
+	ev := res.Run.Evaluations[0]
+	if ev.VerifierKind != "model-judgment" {
+		t.Skipf("deterministic tier decided (%s); model tier not exercised on this corpus", ev.VerifierKind)
+	}
+
+	repo := openTestStore(t, ctx, dbPath)
+	defer repo.Close()
+	var invocationID string
+	full, err := repo.GetEvaluationRun(ctx, res.Run.ID)
+	if err != nil {
+		t.Fatalf("load run: %v", err)
+	}
+	for _, e := range full.Evaluations {
+		if e.ProviderInvocationID != "" {
+			invocationID = e.ProviderInvocationID
+		}
+	}
+	if invocationID == "" {
+		t.Fatal("model-tier evaluation persisted no provider invocation")
+	}
+	inv, err := repo.GetProviderInvocation(ctx, invocationID)
+	if err != nil {
+		t.Fatalf("load invocation: %v", err)
+	}
+	if inv.RequestPayload == "" || inv.ResponsePayload == "" {
+		t.Fatalf("executed payloads lost: request=%q response=%q", inv.RequestPayload, inv.ResponsePayload)
+	}
+	if inv.RequestHash == "" {
+		t.Fatal("request hash must be stored for replay/audit")
+	}
+}

@@ -481,6 +481,50 @@ func (s *Store) GetApproachDetail(ctx context.Context, approachID string) (Appro
 	return s.approachDetailForRevision(ctx, approach, revisions[0], len(revisions))
 }
 
+// MechanismListItem is one mechanism summary row for problem-level discovery
+// (E2: the provenance chain must be walkable without raw SQL).
+type MechanismListItem struct {
+	MechanismID        string
+	ApproachID         string
+	ApproachRevisionID string
+	Label              string
+	LogicalIdentity    string
+	OutcomeClass       string
+	SignatureCount     int
+}
+
+// ListMechanismsForProblem returns every persisted mechanism for a problem
+// (via approach-revision provenance) with its owning approach identity and
+// how many canonical signatures have been computed for it.
+func (s *Store) ListMechanismsForProblem(ctx context.Context, problemID string) ([]MechanismListItem, error) {
+	if err := domain.ValidateProblemID(problemID); err != nil {
+		return nil, err
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT m.id, a.id, ar.id, ar.label, a.logical_identity, COALESCE(o.class, 'unknown'),
+       (SELECT COUNT(*) FROM mechanism_signatures ms WHERE ms.mechanism_id = m.id)
+FROM mechanisms m
+JOIN approach_revisions ar ON ar.id = m.approach_revision_id
+JOIN approaches a ON a.id = ar.approach_id
+LEFT JOIN outcomes o ON o.approach_revision_id = ar.id
+WHERE a.problem_id = ?
+ORDER BY m.id
+`, problemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []MechanismListItem
+	for rows.Next() {
+		var item MechanismListItem
+		if err := rows.Scan(&item.MechanismID, &item.ApproachID, &item.ApproachRevisionID, &item.Label, &item.LogicalIdentity, &item.OutcomeClass, &item.SignatureCount); err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
 // GetMechanismDetail loads the approach detail owning a mechanism.
 func (s *Store) GetMechanismDetail(ctx context.Context, mechanismID string) (ApproachDetail, error) {
 	if err := domain.ValidateMechanismID(mechanismID); err != nil {
@@ -796,4 +840,10 @@ ORDER BY field_path ASC
 		supports = append(supports, support)
 	}
 	return supports, rows.Err()
+}
+
+// GetProviderInvocation exposes one recorded provider invocation for audit
+// (retained request/response payloads + request hash).
+func (s *Store) GetProviderInvocation(ctx context.Context, id string) (domain.ProviderInvocation, error) {
+	return s.getProviderInvocation(ctx, id)
 }

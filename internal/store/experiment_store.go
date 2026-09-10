@@ -292,6 +292,9 @@ type ExperimentArmProposalRow struct {
 	ProposalID string
 	MemberRank int
 	Assessment string // recovered|decisive_no|unknown|unassessed
+	// ContentHash is the exact signature content revision this assessment
+	// consumed (F1): a revised interpretation is a different assessment input.
+	ContentHash string
 }
 
 // ExperimentTargetRow is one frozen-manifest member persisted on the
@@ -388,9 +391,9 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		}
 		for _, m := range arm.Members {
 			if _, err := tx.ExecContext(ctx, `
-INSERT INTO experiment_arm_proposals(experiment_id, arm, proposal_id, member_rank, assessment)
-VALUES(?, ?, ?, ?, ?)
-`, rec.ID, arm.Arm, m.ProposalID, m.MemberRank, m.Assessment); err != nil {
+INSERT INTO experiment_arm_proposals(experiment_id, arm, proposal_id, member_rank, assessment, signature_content_hash)
+VALUES(?, ?, ?, ?, ?, ?)
+`, rec.ID, arm.Arm, m.ProposalID, m.MemberRank, m.Assessment, m.ContentHash); err != nil {
 				return PersistExperimentResult{}, err
 			}
 		}
@@ -454,7 +457,7 @@ FROM experiment_arms WHERE experiment_id = ? ORDER BY arm
 	}
 	for i := range rec.Arms {
 		memberRows, err := s.db.QueryContext(ctx, `
-SELECT proposal_id, member_rank, assessment FROM experiment_arm_proposals
+SELECT proposal_id, member_rank, assessment, COALESCE(signature_content_hash, '') FROM experiment_arm_proposals
 WHERE experiment_id = ? AND arm = ? ORDER BY member_rank
 `, id, rec.Arms[i].Arm)
 		if err != nil {
@@ -462,7 +465,7 @@ WHERE experiment_id = ? AND arm = ? ORDER BY member_rank
 		}
 		for memberRows.Next() {
 			var m ExperimentArmProposalRow
-			if err := memberRows.Scan(&m.ProposalID, &m.MemberRank, &m.Assessment); err != nil {
+			if err := memberRows.Scan(&m.ProposalID, &m.MemberRank, &m.Assessment, &m.ContentHash); err != nil {
 				memberRows.Close()
 				return ExperimentRecord{}, err
 			}
@@ -549,6 +552,10 @@ type ProposalContentRow struct {
 	ProposalID    string
 	Rank          int
 	SignatureJSON string
+	// ContentHash identifies the exact signature content revision read (F1):
+	// evaluation-relevant fields (completeness, unresolved claims) revise
+	// content without changing the mechanism fingerprint.
+	ContentHash string
 }
 
 // ListProposalContents returns the proposals of one generation with their
@@ -556,9 +563,14 @@ type ProposalContentRow struct {
 // are returned with empty JSON so callers can COUNT them as ineligible.
 func (s *Store) ListProposalContents(ctx context.Context, generationRunID string) ([]ProposalContentRow, error) {
 	rows, err := s.db.QueryContext(ctx, `
-SELECT p.id, p.rank_ordinal, COALESCE(fps.signature_json, '')
+SELECT p.id, p.rank_ordinal, COALESCE(fps.signature_json, ''), COALESCE(fps.content_hash, '')
 FROM frontier_proposals p
-LEFT JOIN frontier_proposal_signatures fps ON fps.proposal_id = p.id
+LEFT JOIN (
+  SELECT r.proposal_id, r.signature_json, r.canonical_fingerprint, r.content_hash
+  FROM frontier_proposal_signature_revisions r
+  JOIN (SELECT proposal_id, MAX(revision) AS mr FROM frontier_proposal_signature_revisions GROUP BY proposal_id) lr
+    ON lr.proposal_id = r.proposal_id AND lr.mr = r.revision
+) fps ON fps.proposal_id = p.id
 WHERE p.frontier_generation_run_id = ?
 ORDER BY p.rank_ordinal
 `, generationRunID)
@@ -569,7 +581,7 @@ ORDER BY p.rank_ordinal
 	var out []ProposalContentRow
 	for rows.Next() {
 		var r ProposalContentRow
-		if err := rows.Scan(&r.ProposalID, &r.Rank, &r.SignatureJSON); err != nil {
+		if err := rows.Scan(&r.ProposalID, &r.Rank, &r.SignatureJSON, &r.ContentHash); err != nil {
 			return nil, err
 		}
 		out = append(out, r)
@@ -586,9 +598,14 @@ func (s *Store) ListProposalContentsForProblem(ctx context.Context, problemID st
 		return nil, err
 	}
 	rows, err := s.db.QueryContext(ctx, `
-SELECT p.id, p.rank_ordinal, COALESCE(fps.signature_json, '')
+SELECT p.id, p.rank_ordinal, COALESCE(fps.signature_json, ''), COALESCE(fps.content_hash, '')
 FROM frontier_proposals p
-LEFT JOIN frontier_proposal_signatures fps ON fps.proposal_id = p.id
+LEFT JOIN (
+  SELECT r.proposal_id, r.signature_json, r.canonical_fingerprint, r.content_hash
+  FROM frontier_proposal_signature_revisions r
+  JOIN (SELECT proposal_id, MAX(revision) AS mr FROM frontier_proposal_signature_revisions GROUP BY proposal_id) lr
+    ON lr.proposal_id = r.proposal_id AND lr.mr = r.revision
+) fps ON fps.proposal_id = p.id
 WHERE p.problem_id = ?
 ORDER BY p.created_at, p.rank_ordinal, p.id
 `, problemID)
@@ -599,7 +616,7 @@ ORDER BY p.created_at, p.rank_ordinal, p.id
 	var out []ProposalContentRow
 	for rows.Next() {
 		var r ProposalContentRow
-		if err := rows.Scan(&r.ProposalID, &r.Rank, &r.SignatureJSON); err != nil {
+		if err := rows.Scan(&r.ProposalID, &r.Rank, &r.SignatureJSON, &r.ContentHash); err != nil {
 			return nil, err
 		}
 		out = append(out, r)
@@ -634,9 +651,14 @@ func (s *Store) ListProposalContentsByIDs(ctx context.Context, ids []string) ([]
 			args = append(args, id)
 		}
 		rows, err := s.db.QueryContext(ctx, `
-SELECT p.id, p.rank_ordinal, COALESCE(fps.signature_json, '')
+SELECT p.id, p.rank_ordinal, COALESCE(fps.signature_json, ''), COALESCE(fps.content_hash, '')
 FROM frontier_proposals p
-LEFT JOIN frontier_proposal_signatures fps ON fps.proposal_id = p.id
+LEFT JOIN (
+  SELECT r.proposal_id, r.signature_json, r.canonical_fingerprint, r.content_hash
+  FROM frontier_proposal_signature_revisions r
+  JOIN (SELECT proposal_id, MAX(revision) AS mr FROM frontier_proposal_signature_revisions GROUP BY proposal_id) lr
+    ON lr.proposal_id = r.proposal_id AND lr.mr = r.revision
+) fps ON fps.proposal_id = p.id
 WHERE p.id IN (`+placeholders+`)
 `, args...)
 		if err != nil {
@@ -644,7 +666,7 @@ WHERE p.id IN (`+placeholders+`)
 		}
 		for rows.Next() {
 			var r ProposalContentRow
-			if err := rows.Scan(&r.ProposalID, &r.Rank, &r.SignatureJSON); err != nil {
+			if err := rows.Scan(&r.ProposalID, &r.Rank, &r.SignatureJSON, &r.ContentHash); err != nil {
 				rows.Close()
 				return nil, err
 			}

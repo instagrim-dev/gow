@@ -2,7 +2,9 @@ package store
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -169,6 +171,14 @@ VALUES(?, ?, ?, ?)
 `, existingID, p.CanonicalFingerprint, p.SignatureJSON, record.CreatedAt); ierr != nil {
 					return PersistFrontierGenerationResult{}, ierr
 				}
+				// F1: the mechanism fingerprint (and thus the proposal hash)
+				// deliberately excludes completeness/unresolved claims, so a
+				// REVISED interpretation can dedup onto this proposal while
+				// carrying evaluation-relevant changes. Append a content
+				// revision so the revised evidence is never silently dropped.
+				if ierr := insertSignatureRevision(ctx, tx, existingID, p.CanonicalFingerprint, p.SignatureJSON, record.CreatedAt); ierr != nil {
+					return PersistFrontierGenerationResult{}, ierr
+				}
 			}
 		}
 	}
@@ -194,6 +204,9 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
 INSERT INTO frontier_proposal_signatures(proposal_id, canonical_fingerprint, signature_json, created_at)
 VALUES(?, ?, ?, ?)
 `, p.ID, p.CanonicalFingerprint, p.SignatureJSON, record.CreatedAt); err != nil {
+				return PersistFrontierGenerationResult{}, err
+			}
+			if err := insertSignatureRevision(ctx, tx, p.ID, p.CanonicalFingerprint, p.SignatureJSON, record.CreatedAt); err != nil {
 				return PersistFrontierGenerationResult{}, err
 			}
 		}
@@ -435,4 +448,45 @@ FROM t GROUP BY key HAVING n >= ? ORDER BY key
 		keys = append(keys, key)
 	}
 	return keys, rows.Err()
+}
+
+// FindGenerationForProposal resolves a proposal id to its containing
+// generation run (E3: the proposal-level read surface).
+func (s *Store) FindGenerationForProposal(ctx context.Context, proposalID string) (string, bool, error) {
+	if err := domain.ValidateFrontierProposalID(proposalID); err != nil {
+		return "", false, err
+	}
+	var genID string
+	err := s.db.QueryRowContext(ctx, `SELECT frontier_generation_run_id FROM frontier_proposals WHERE id = ?`, proposalID).Scan(&genID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return genID, true, nil
+}
+
+// insertSignatureRevision appends an immutable content revision for a
+// proposal's signature JSON, keyed on sha256 of the persisted bytes. Identical
+// content is a no-op; changed content (e.g. revised extraction completeness or
+// unresolved claims — evaluation-relevant but fingerprint-invisible) gets the
+// next revision number.
+func insertSignatureRevision(ctx context.Context, tx *sql.Tx, proposalID, fingerprint, signatureJSON, createdAt string) error {
+	sum := sha256.Sum256([]byte(signatureJSON))
+	contentHash := hex.EncodeToString(sum[:])
+	var exists int
+	err := tx.QueryRowContext(ctx, `SELECT 1 FROM frontier_proposal_signature_revisions WHERE proposal_id = ? AND content_hash = ?`, proposalID, contentHash).Scan(&exists)
+	if err == nil {
+		return nil // identical content already revisioned
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, `
+INSERT INTO frontier_proposal_signature_revisions(proposal_id, revision, content_hash, canonical_fingerprint, signature_json, created_at)
+SELECT ?, COALESCE(MAX(revision), 0) + 1, ?, ?, ?, ?
+FROM frontier_proposal_signature_revisions WHERE proposal_id = ?
+`, proposalID, contentHash, fingerprint, signatureJSON, createdAt, proposalID)
+	return err
 }

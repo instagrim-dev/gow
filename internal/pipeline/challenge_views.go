@@ -170,7 +170,7 @@ func (a *App) ShowInvariantState(ctx context.Context, input InvariantStateInput)
 	if err != nil {
 		return InvariantStateResponse{}, err
 	}
-	resp := InvariantStateResponse{OK: true, Command: "invariant state", Store: dbPath, Invariant: invariantStateView(state)}
+	resp := InvariantStateResponse{OK: true, Command: "invariant state", Store: dbPath, Invariant: invariantStateView(state), Challenges: []ChallengeView{}}
 	for _, ch := range history {
 		resp.Challenges = append(resp.Challenges, challengeView(ch))
 	}
@@ -191,7 +191,7 @@ func (a *App) ListInvariantStates(ctx context.Context, input InvariantStatesInpu
 	if err != nil {
 		return InvariantStatesResponse{}, err
 	}
-	resp := InvariantStatesResponse{OK: true, Command: "invariant list", Store: dbPath, State: input.State}
+	resp := InvariantStatesResponse{OK: true, Command: "invariant list", Store: dbPath, State: input.State, Invariants: []InvariantStateView{}}
 	for _, r := range rows {
 		resp.Invariants = append(resp.Invariants, invariantStateView(r))
 	}

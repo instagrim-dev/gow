@@ -2,6 +2,9 @@ package store
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"strings"
 	"testing"
 	"time"
 
@@ -104,11 +107,7 @@ func TestListProposalContentsByIDsBatchesPastParameterLimit(t *testing.T) {
 		t.Fatalf("persist: %v", err)
 	}
 	realID := res.Record.Proposals[0].ID
-	if _, err := st.db.ExecContext(ctx, `
-INSERT INTO frontier_proposal_signatures(proposal_id, signature_json, canonical_fingerprint, created_at)
-VALUES(?, ?, ?, ?)`, realID, `{"schema_version":"mechanism/v1"}`, "cfp-batch", formatTime(time.Now().UTC())); err != nil {
-		t.Fatalf("insert signature: %v", err)
-	}
+	insertTestSignatureContent(t, st, realID, `{"schema_version":"mechanism/v1"}`, "cfp-batch")
 
 	ids := []string{realID}
 	for i := 0; i < 2500; i++ { // well past both the 900 batch size and the 999 ceiling
@@ -311,5 +310,89 @@ func TestRedundantAttackKeysMatchesRedundancyKeyFormat(t *testing.T) {
 	}
 	if len(soloKeys) != 0 {
 		t.Fatalf("a single attack must not be redundant, got %v", soloKeys)
+	}
+}
+
+// F1 regression: the mechanism fingerprint (and thus the proposal hash)
+// excludes evaluation-relevant fields, so a REVISED interpretation dedups onto
+// the existing proposal row. The revised content must NOT be silently dropped:
+// both interpretations are preserved as immutable content revisions, readers
+// consume the LATEST revision, and the content hash distinguishes them.
+func TestDedupPreservesRevisedSignatureContent(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+
+	first := sampleFrontier(t, st)
+	first.Proposals[0].SignatureJSON = `{"schema_version":"mechanism/v1","completeness":"unobserved"}`
+	first.Proposals[0].CanonicalFingerprint = "cfp-same"
+	res1, err := st.PersistFrontierGeneration(ctx, first)
+	if err != nil {
+		t.Fatalf("persist first: %v", err)
+	}
+	proposalID := res1.Record.Proposals[0].ID
+
+	// Same proposal hash (fingerprint-identical), REVISED evaluation-relevant
+	// content: extraction completeness changed unobserved -> complete.
+	second := sampleFrontierReusingProblem(t, st, first)
+	second.Proposals[0].SignatureJSON = `{"schema_version":"mechanism/v1","completeness":"complete"}`
+	second.Proposals[0].CanonicalFingerprint = "cfp-same"
+	if _, err := st.PersistFrontierGeneration(ctx, second); err != nil {
+		t.Fatalf("persist revised: %v", err)
+	}
+
+	// Both interpretations preserved as immutable revisions.
+	var count int
+	if err := st.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM frontier_proposal_signature_revisions WHERE proposal_id = ?`, proposalID).Scan(&count); err != nil {
+		t.Fatalf("count revisions: %v", err)
+	}
+	if count != 2 {
+		t.Fatalf("want 2 content revisions (original + revised), got %d", count)
+	}
+
+	// Readers consume the LATEST revision (the revised interpretation).
+	rows, err := st.ListProposalContentsByIDs(ctx, []string{proposalID})
+	if err != nil {
+		t.Fatalf("read contents: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("want 1 content row, got %d", len(rows))
+	}
+	if !strings.Contains(rows[0].SignatureJSON, `"completeness":"complete"`) {
+		t.Fatalf("reader must see the REVISED interpretation, got %s", rows[0].SignatureJSON)
+	}
+	if rows[0].ContentHash == "" {
+		t.Fatal("content hash must identify the revision consumed")
+	}
+
+	// Idempotent replay of identical content adds NO new revision.
+	if _, err := st.PersistFrontierGeneration(ctx, sampleFrontierReusingProblem(t, st, second)); err != nil {
+		t.Fatalf("replay: %v", err)
+	}
+	if err := st.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM frontier_proposal_signature_revisions WHERE proposal_id = ?`, proposalID).Scan(&count); err != nil {
+		t.Fatalf("recount: %v", err)
+	}
+	if count != 2 {
+		t.Fatalf("identical replay must not mint a revision; got %d", count)
+	}
+}
+
+// insertTestSignatureContent writes a proposal's canonical content the way the
+// real persist path does post-v23: legacy first-observed sidecar + content
+// revision (readers consume the latest revision).
+func insertTestSignatureContent(t *testing.T, st *Store, proposalID, signatureJSON, fingerprint string) {
+	t.Helper()
+	ctx := context.Background()
+	at := formatTime(time.Now().UTC())
+	if _, err := st.db.ExecContext(ctx, `
+INSERT OR IGNORE INTO frontier_proposal_signatures(proposal_id, signature_json, canonical_fingerprint, created_at)
+VALUES(?, ?, ?, ?)`, proposalID, signatureJSON, fingerprint, at); err != nil {
+		t.Fatalf("insert sidecar: %v", err)
+	}
+	sum := sha256.Sum256([]byte(signatureJSON))
+	if _, err := st.db.ExecContext(ctx, `
+INSERT OR IGNORE INTO frontier_proposal_signature_revisions(proposal_id, revision, content_hash, canonical_fingerprint, signature_json, created_at)
+SELECT ?, COALESCE(MAX(revision), 0) + 1, ?, ?, ?, ? FROM frontier_proposal_signature_revisions WHERE proposal_id = ?`,
+		proposalID, hex.EncodeToString(sum[:]), fingerprint, signatureJSON, at, proposalID); err != nil {
+		t.Fatalf("insert revision: %v", err)
 	}
 }
