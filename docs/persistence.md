@@ -499,12 +499,14 @@ CREATE TABLE holdout_leakage_check (
   holdout_set_id TEXT NOT NULL REFERENCES holdout_set(id),
   normalization_revision_id TEXT NOT NULL REFERENCES normalization_revision(id),
   checked_scope TEXT NOT NULL CHECK (checked_scope IN ('training_sources', 'training_evidence')),
-  failure_basis TEXT NOT NULL CHECK (failure_basis IN ('no_overlap', 'source_overlap', 'evidence_overlap')),
-  status TEXT NOT NULL CHECK (status IN ('passed', 'failed')),
+  failure_basis TEXT NOT NULL CHECK (failure_basis IN ('pending', 'no_overlap', 'source_overlap', 'evidence_overlap')),
+  overlap_count INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL CHECK (status IN ('pending', 'passed', 'failed')),
   checked_at TEXT NOT NULL,
   CHECK (
-    (status = 'passed' AND failure_basis = 'no_overlap') OR
-    (status = 'failed' AND failure_basis IN ('source_overlap', 'evidence_overlap'))
+    (status = 'pending' AND failure_basis = 'pending') OR
+    (status = 'passed' AND failure_basis = 'no_overlap' AND overlap_count = 0) OR
+    (status = 'failed' AND failure_basis IN ('source_overlap', 'evidence_overlap') AND overlap_count > 0)
   ),
   UNIQUE(holdout_set_id, normalization_revision_id, checked_scope)
 );
@@ -520,6 +522,34 @@ CREATE TABLE holdout_leakage_check_overlap (
   ),
   PRIMARY KEY(holdout_leakage_check_id, overlap_kind, overlapping_source_id, overlapping_evidence_id)
 );
+
+CREATE TRIGGER holdout_leakage_check_overlap_insert_guard
+BEFORE INSERT ON holdout_leakage_check_overlap
+BEGIN
+  SELECT CASE
+    WHEN (
+      SELECT status
+      FROM holdout_leakage_check
+      WHERE id = NEW.holdout_leakage_check_id
+    ) = 'passed' THEN RAISE(ABORT, 'passed leakage checks cannot record overlaps')
+  END;
+END;
+
+CREATE TRIGGER holdout_leakage_check_overlap_after_insert
+AFTER INSERT ON holdout_leakage_check_overlap
+BEGIN
+  UPDATE holdout_leakage_check
+  SET overlap_count = overlap_count + 1
+  WHERE id = NEW.holdout_leakage_check_id;
+END;
+
+CREATE TRIGGER holdout_leakage_check_overlap_after_delete
+AFTER DELETE ON holdout_leakage_check_overlap
+BEGIN
+  UPDATE holdout_leakage_check
+  SET overlap_count = overlap_count - 1
+  WHERE id = OLD.holdout_leakage_check_id;
+END;
 
 -- Evaluation and baselines
 CREATE TABLE evaluation_run (
@@ -574,6 +604,19 @@ CREATE TABLE evaluation_holdout_match (
   FOREIGN KEY (holdout_set_id, holdout_family_label)
     REFERENCES holdout_set_family_label(holdout_set_id, family_label)
 );
+
+CREATE TRIGGER evaluation_holdout_match_holdout_set_guard
+BEFORE INSERT ON evaluation_holdout_match
+BEGIN
+  SELECT CASE
+    WHEN COALESCE(NEW.holdout_set_id, '') <> COALESCE((
+      SELECT er.holdout_set_id
+      FROM evaluation e
+      JOIN evaluation_run er ON er.id = e.evaluation_run_id
+      WHERE e.id = NEW.evaluation_id
+    ), '') THEN RAISE(ABORT, 'evaluation_holdout_match holdout_set_id must match parent evaluation_run')
+  END;
+END;
 
 CREATE TABLE evaluation_metric (
   id TEXT PRIMARY KEY,
@@ -650,6 +693,9 @@ CREATE TABLE success_invariant_failure_invariant (
 - `holdout_leakage_check` records the pass/fail result for a
   `holdout_set`/`normalization_revision` pair; generation and holdout evaluation
   reference that row rather than relying on narrative notes.
+- Leakage checks are written as `pending`, overlap detail rows are added if
+  needed, and the parent row is finalized to `passed`/`failed` only when the
+  typed overlap constraints are satisfied.
 - `holdout_leakage_check_overlap` stores the concrete overlapping source/evidence
   rows when a leakage check fails, so audits can show exactly what violated the
   split.
