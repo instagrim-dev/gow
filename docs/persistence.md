@@ -498,9 +498,23 @@ CREATE TABLE holdout_leakage_check (
   id TEXT PRIMARY KEY,
   holdout_set_id TEXT NOT NULL REFERENCES holdout_set(id),
   normalization_revision_id TEXT NOT NULL REFERENCES normalization_revision(id),
+  checked_scope TEXT NOT NULL CHECK (checked_scope IN ('training_sources', 'training_evidence')),
+  failure_basis TEXT NOT NULL CHECK (failure_basis IN ('no_overlap', 'source_overlap', 'evidence_overlap')),
   status TEXT NOT NULL CHECK (status IN ('passed', 'failed')),
   checked_at TEXT NOT NULL,
   UNIQUE(holdout_set_id, normalization_revision_id)
+);
+
+CREATE TABLE holdout_leakage_check_overlap (
+  holdout_leakage_check_id TEXT NOT NULL REFERENCES holdout_leakage_check(id),
+  overlapping_source_id TEXT REFERENCES source(id),
+  overlapping_evidence_id TEXT REFERENCES evidence_record(id),
+  overlap_kind TEXT NOT NULL CHECK (overlap_kind IN ('source', 'evidence')),
+  CHECK (
+    (overlap_kind = 'source' AND overlapping_source_id IS NOT NULL AND overlapping_evidence_id IS NULL) OR
+    (overlap_kind = 'evidence' AND overlapping_source_id IS NULL AND overlapping_evidence_id IS NOT NULL)
+  ),
+  PRIMARY KEY(holdout_leakage_check_id, overlap_kind, overlapping_source_id, overlapping_evidence_id)
 );
 
 -- Evaluation and baselines
@@ -544,7 +558,10 @@ CREATE TABLE evaluation_holdout_match (
   match_kind TEXT NOT NULL CHECK (match_kind IN ('source_recovery', 'family_recovery', 'structural_break')),
   match_verdict TEXT NOT NULL CHECK (match_verdict IN ('exact', 'equivalent', 'miss')),
   notes TEXT,
-  CHECK (holdout_source_id IS NOT NULL OR holdout_family_label IS NOT NULL)
+  CHECK (
+    (holdout_source_id IS NOT NULL AND holdout_family_label IS NULL) OR
+    (holdout_source_id IS NULL AND holdout_family_label IS NOT NULL)
+  )
 );
 
 CREATE TABLE evaluation_metric (
@@ -599,8 +616,8 @@ CREATE TABLE success_invariant_failure_invariant (
 
 ## Immutable vs mutable/revisioned
 
-- Immutable: `source`, `evidence_record` (enforced with `CHECK` constraints plus
-  update/delete-rejecting triggers).
+- Immutable: `source`, `evidence_record` (enforced with update/delete-rejecting
+  triggers; `CHECK` constraints on enum-like fields are separate validity rules).
 - Revisioned append-only views: normalization, clustering, invariant mining, success compression.
 - Mutable-by-transition (not overwrite): invariant state via appended `invariant_state_transition` (+ `invariant_current_state` view) and optional lineage rows.
 
@@ -622,6 +639,9 @@ CREATE TABLE success_invariant_failure_invariant (
 - `holdout_leakage_check` records the pass/fail result for a
   `holdout_set`/`normalization_revision` pair; generation and holdout evaluation
   reference that row rather than relying on narrative notes.
+- `holdout_leakage_check_overlap` stores the concrete overlapping source/evidence
+  rows when a leakage check fails, so audits can show exactly what violated the
+  split.
 - `invariant_state_transition` inserts are validated by trigger, and repositories
   allocate `transition_seq` with `INSERT ... SELECT COALESCE(MAX(...)+1, 1)` in
   the same `BEGIN IMMEDIATE` transaction so competing writers cannot create
