@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/instagrim-dev/newf/internal/canon"
+	"github.com/instagrim-dev/newf/internal/domain"
 	"github.com/instagrim-dev/newf/internal/invariant"
 	"github.com/instagrim-dev/newf/internal/provider"
+	"github.com/instagrim-dev/newf/internal/store"
 )
 
 // biasOnlyChallenger proposes only a bias-critique, so a candidate whose
@@ -93,6 +95,52 @@ func mineOneCandidate(t *testing.T, ctx context.Context, app *App, dbPath string
 	return problemID, mined.Revision.Candidates[0].ID, snapshotID
 }
 
+// inconclusiveOnlyChallenger proposes a single synthetic-counterexample with NO
+// construction supplied. That attack is inadmissible: it evaluates no eligible
+// population and reaches no definite negative. It exercises the F2 gate.
+type inconclusiveOnlyChallenger struct{}
+
+func (inconclusiveOnlyChallenger) Challenge(_ context.Context, req provider.ChallengeRequest) (provider.ChallengeResponse, error) {
+	return provider.ChallengeResponse{
+		Proposals: []provider.ChallengeProposal{{
+			Type:           invariant.ChallengeSyntheticCounterexample,
+			Rationale:      "claims a construction but supplies none",
+			ClaimedVerdict: "violates",
+			// Synthetic intentionally nil: no construction to evaluate.
+		}},
+		Metadata:        provider.Metadata{ProviderName: "fixture", ProviderVersion: "test", ModelName: "inconclusive-only", SchemaVersion: invariant.PredicateSchemaV1},
+		RequestPayload:  "req",
+		ResponsePayload: "resp",
+	}, nil
+}
+
+// TestIntegrationInconclusiveCampaignDoesNotEarnSurviving is the F2 regression:
+// a campaign made up entirely of inadmissible/inconclusive attempts (here, a
+// lone synthetic-counterexample with no construction) must NOT transition the
+// invariant to `surviving`. Survival is earned by a completed applicable
+// negative search, never granted by fallback. The invariant opens the campaign
+// (-> challenged) and stops there.
+func TestIntegrationInconclusiveCampaignDoesNotEarnSurviving(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = dataDrivenMiner{}
+	app.challengerFn = inconclusiveOnlyChallenger{}
+
+	_, invID, _ := mineOneCandidate(t, ctx, app, dbPath)
+
+	resp, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID})
+	if err != nil {
+		t.Fatalf("challenge: %v", err)
+	}
+	if got := resp.Reports[0].StateAfter; got == "surviving" {
+		t.Fatalf("an all-inconclusive campaign must NOT earn surviving (F2), got %q", got)
+	}
+	if got := resp.Reports[0].StateAfter; got != "challenged" {
+		t.Fatalf("an all-inconclusive campaign should stop at challenged, got %q", got)
+	}
+}
+
 // TestIntegrationChallengeCampaign runs the deriving challenger against a mined
 // candidate and asserts: the run completes, every executed challenge is
 // persisted with its verified result, the first challenge opens the campaign
@@ -117,8 +165,8 @@ func TestIntegrationChallengeCampaign(t *testing.T) {
 	if report.StateBefore != "proposed" {
 		t.Fatalf("state before = %q, want proposed", report.StateBefore)
 	}
-	if report.StateAfter == "proposed" || report.StateAfter == "established" {
-		t.Fatalf("state after = %q: a campaign must move past proposed and can never reach established", report.StateAfter)
+	if report.StateAfter == "proposed" || report.StateAfter == "operator_attested" {
+		t.Fatalf("state after = %q: a campaign must move past proposed and can never reach operator_attested", report.StateAfter)
 	}
 	if len(report.Challenges) < 3 {
 		t.Fatalf("expected >=3 executed challenges, got %d", len(report.Challenges))
@@ -187,7 +235,15 @@ func TestIntegrationEstablishedIsCodeGated(t *testing.T) {
 		t.Fatalf("expected independent-evidence refusal, got %v", err)
 	}
 
-	// Surviving + a real persisted snapshot -> established.
+	// Evidence from ANOTHER problem is refused: `operator_attested` must not be
+	// mintable from any bytes anywhere in the store.
+	otherSnap := seedOtherProblemSnapshot(t, ctx, dbPath, now.Add(time.Hour))
+	_, err = app.EstablishInvariant(ctx, EstablishInput{DBPath: dbPath, InvariantID: invID, SnapshotID: otherSnap, Locator: "sec. 1"})
+	if err == nil || !strings.Contains(err.Error(), "belongs to problem") {
+		t.Fatalf("expected cross-problem evidence refusal, got %v", err)
+	}
+
+	// Surviving + a real persisted snapshot -> operator_attested.
 	est, err := app.EstablishInvariant(ctx, EstablishInput{
 		DBPath: dbPath, InvariantID: invID,
 		SnapshotID: snapshotID, Locator: "sec. 3, theorem 2", Note: "independent proof",
@@ -195,18 +251,107 @@ func TestIntegrationEstablishedIsCodeGated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("establish: %v", err)
 	}
-	if est.Invariant.State != "established" {
-		t.Fatalf("state = %q, want established", est.Invariant.State)
+	if est.Invariant.State != "operator_attested" {
+		t.Fatalf("state = %q, want operator_attested", est.Invariant.State)
 	}
 
-	// The frontier read surface exposes it under --state established.
-	list, err := app.ListInvariantStates(ctx, InvariantStatesInput{DBPath: dbPath, ProblemID: problemID, State: "established"})
+	// The read surface exposes it under --state operator_attested.
+	list, err := app.ListInvariantStates(ctx, InvariantStatesInput{DBPath: dbPath, ProblemID: problemID, State: "operator_attested"})
 	if err != nil {
 		t.Fatalf("list established: %v", err)
 	}
 	if len(list.Invariants) != 1 || list.Invariants[0].InvariantID != invID {
 		t.Fatalf("expected the established candidate on the read surface, got %+v", list.Invariants)
 	}
+
+	// D1 (frontier read surface): an operator_attested invariant remains a legal
+	// frontier target — attestation strengthens the invariant's evidence and must
+	// never REMOVE it from search-policy influence.
+	gen, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("frontier generate: %v", err)
+	}
+	targeted := false
+	for _, p := range gen.Generation.Proposals {
+		for _, tgt := range p.Targets {
+			if tgt.InvariantID == invID {
+				targeted = true
+			}
+		}
+	}
+	if !targeted {
+		t.Fatalf("operator_attested invariant %s must remain a frontier target; proposals: %+v", invID, gen.Generation.Proposals)
+	}
+}
+
+// TestIntegrationAttestationIsNotVerification is the F1 regression: an operator
+// attestation must NOT masquerade as machine-confirmed evidence. A valid,
+// same-problem snapshot whose bytes are UNRELATED to the invariant, paired with
+// an INVENTED locator, still transitions only to `operator_attested` — never to
+// a status named `established` (which no longer exists) — and the recorded
+// challenge is labeled an operator attestation, not a verification of the claim.
+// The system does not inspect snapshot content or validate the locator; the
+// honest status name is the whole point.
+func TestIntegrationAttestationIsNotVerification(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = dataDrivenMiner{}
+	app.challengerFn = biasOnlyChallenger{}
+
+	_, invID, snapshotID := mineOneCandidate(t, ctx, app, dbPath)
+	if _, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID}); err != nil {
+		t.Fatalf("challenge: %v", err)
+	}
+
+	// Unrelated text + an invented locator: the strongest honest status is
+	// operator_attested, explicitly NOT a machine-verified `established`.
+	est, err := app.EstablishInvariant(ctx, EstablishInput{
+		DBPath: dbPath, InvariantID: invID,
+		SnapshotID: snapshotID, Locator: "appendix Z, line 999 (invented)",
+		Note: "operator attests without machine verification",
+	})
+	if err != nil {
+		t.Fatalf("attest: %v", err)
+	}
+	if est.Invariant.State == "established" {
+		t.Fatal("F1: no status may be named `established` (attestation is not verification)")
+	}
+	if est.Invariant.State != "operator_attested" {
+		t.Fatalf("state = %q, want operator_attested", est.Invariant.State)
+	}
+}
+
+// seedOtherProblemSnapshot creates a SECOND problem with its own snapshot, for
+// asserting that establish-evidence is problem-scoped.
+func seedOtherProblemSnapshot(t *testing.T, ctx context.Context, dbPath string, now time.Time) string {
+	t.Helper()
+	repo := openTestStore(t, ctx, dbPath)
+	defer repo.Close()
+
+	runID := domain.NewRunID(now)
+	problemID := domain.NewProblemID(now)
+	problem, run, err := repo.CreateProblemWithRun(ctx, domain.NewProblem{
+		ID: problemID, Slug: "other-problem", Statement: "Other problem",
+		Status: domain.ProblemStatusActive, CreatedAt: now, CreatedByRunID: runID,
+	}, domain.NewRun{
+		ID: runID, ProblemID: problemID, Operation: "init", Status: domain.RunStatusInitialized,
+		InputRef: "problem_slug:other-problem", ToolName: "newf", ToolVersion: "test",
+		StartedAt: now, CompletedAt: now,
+	})
+	if err != nil {
+		t.Fatalf("seed other problem: %v", err)
+	}
+	admission, err := repo.CreateSourceSnapshot(ctx, store.SnapshotAdmission{
+		ProblemID: problem.ID, Kind: domain.SourceKindLocalPath,
+		LogicalName: "other.md", Origin: "/tmp/other.md", SHA256: "cafebabe",
+		ByteLength: 8, MediaType: "text/markdown", ObjectPath: "sha256/ca/cafebabe",
+		IngestRunID: run.ID, ObservedAt: now,
+	})
+	if err != nil {
+		t.Fatalf("seed other snapshot: %v", err)
+	}
+	return admission.Snapshot.ID
 }
 
 // TestIntegrationChallengeAllIsDeterministic runs --all twice on identical
@@ -242,5 +387,54 @@ func TestIntegrationChallengeAllIsDeterministic(t *testing.T) {
 		if a[i] != b[i] {
 			t.Fatalf("campaign not deterministic at %d: %q vs %q", i, a[i], b[i])
 		}
+	}
+}
+
+// TestDerivationMinerVersionIdentity is the F5 regression for derivation
+// identity: the derived-revision reuse key is (problem, failure_space,
+// miner_version, predicate_schema, min_support), so miner_version MUST fold the
+// parent set and canonical child fingerprints — otherwise two DIFFERENT parents
+// (or child sets) splitting under the same failure space + threshold collide on
+// the key and the second silently reuses the first's children. This proves the
+// version is (a) stable for identical inputs, and DISTINCT for (b) a different
+// parent set and (c) a different child set.
+func TestDerivationMinerVersionIdentity(t *testing.T) {
+	child := func(id string) invariant.Predicate {
+		return invariant.Predicate{Schema: invariant.PredicateSchemaV1, Root: invariant.Node{Op: invariant.OpContains, Field: invariant.FieldPreserves, CanonicalID: id}}
+	}
+	base := derivationMinerVersion(invariant.ChallengeSplit,
+		[]string{"fp_parentA"},
+		[]invariant.Predicate{child("core.operator.a"), child("core.operator.b")})
+
+	// (a) identical inputs (order-insensitive) -> identical identity.
+	same := derivationMinerVersion(invariant.ChallengeSplit,
+		[]string{"fp_parentA"},
+		[]invariant.Predicate{child("core.operator.b"), child("core.operator.a")})
+	if base != same {
+		t.Fatalf("identical derivation inputs must share identity: %q vs %q", base, same)
+	}
+
+	// (b) different parent set -> different identity (the collision the review names).
+	otherParent := derivationMinerVersion(invariant.ChallengeSplit,
+		[]string{"fp_parentB"},
+		[]invariant.Predicate{child("core.operator.a"), child("core.operator.b")})
+	if base == otherParent {
+		t.Fatalf("distinct parents must not collide on derivation identity (F5): %q", base)
+	}
+
+	// (c) different child set -> different identity.
+	otherChildren := derivationMinerVersion(invariant.ChallengeSplit,
+		[]string{"fp_parentA"},
+		[]invariant.Predicate{child("core.operator.a"), child("core.operator.c")})
+	if base == otherChildren {
+		t.Fatalf("distinct child sets must not collide on derivation identity (F5): %q", base)
+	}
+
+	// (d) relation participates in identity too.
+	asMerge := derivationMinerVersion(invariant.ChallengeMerge,
+		[]string{"fp_parentA"},
+		[]invariant.Predicate{child("core.operator.a"), child("core.operator.b")})
+	if base == asMerge {
+		t.Fatalf("relation must participate in derivation identity: %q", base)
 	}
 }

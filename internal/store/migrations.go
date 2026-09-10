@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 15
+const currentSchemaVersion = 16
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -780,6 +780,22 @@ END;
 		// provider_invocations.role to admit 'evaluate' via the same guarded in-place
 		// writable_schema CHECK edit v11/v13/v14 used. Introspective + idempotent.
 		apply: migrateV15Evaluation,
+	},
+	{
+		version: 16,
+		// F1 epistemic honesty: rename the invariant lifecycle terminal state
+		// `established` to `operator_attested`. The prior name asserted a
+		// machine-confirmed, independently-verified claim, but the establish path
+		// only records an operator-supplied snapshot + locator string — it does
+		// not inspect the snapshot content, validate the locator, establish
+		// independence, or check a proof against the predicate. Renaming keeps the
+		// useful operator-attestation provenance while removing the false
+		// "verified" claim (AGENTS.md: ModelJudgment != Verification; no silent
+		// status promotion). Rebuilds the transition-validating trigger and the
+		// invariant_state_transitions.to_state CHECK, and rewrites any existing
+		// `established` transition rows to `operator_attested`. Introspective +
+		// idempotent: a fresh v16 database already uses the new name.
+		apply: migrateV16RenameEstablishedToOperatorAttested,
 	},
 }
 
@@ -1987,6 +2003,92 @@ func migrateV15Evaluation(ctx context.Context, tx *sql.Tx) error {
 			"role IN ('normalize','invariant','challenge','generate','evaluate')"); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// migrateV16RenameEstablishedToOperatorAttested renames the terminal invariant
+// lifecycle state `established` to `operator_attested` (F1). It rewrites the
+// transition-table to_state CHECK, the transition-validating trigger's legality
+// rule, and any existing `established` transition rows. Every step is guarded so
+// a fresh v16 database (which never created an `established` row and whose v13
+// DDL still spells the CHECK/trigger with `established`) is migrated exactly
+// once and re-running is a no-op.
+func migrateV16RenameEstablishedToOperatorAttested(ctx context.Context, tx *sql.Tx) error {
+	// 1) to_state CHECK on invariant_state_transitions: 'established' -> 'operator_attested'.
+	var ddl string
+	if err := tx.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type='table' AND name='invariant_state_transitions'`).Scan(&ddl); err != nil {
+		return err
+	}
+	if strings.Contains(ddl, "'established'") {
+		if err := editTableCheckInPlace(ctx, tx, "invariant_state_transitions",
+			"'weaken', 'falsified', 'established'",
+			"'weaken', 'falsified', 'operator_attested'"); err != nil {
+			return err
+		}
+	}
+
+	// 2) Rebuild the transition-validating trigger with the renamed target. The
+	//    trigger body is immutable-by-convention (not by trigger), so DROP + CREATE
+	//    is the supported reshape. Recreated verbatim except the surviving ->
+	//    operator_attested legality edge.
+	if _, err := tx.ExecContext(ctx, `DROP TRIGGER IF EXISTS invariant_state_transitions_validate_insert`); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `
+CREATE TRIGGER invariant_state_transitions_validate_insert
+BEFORE INSERT ON invariant_state_transitions
+BEGIN
+  SELECT CASE
+    WHEN COALESCE((
+      SELECT itc.last_transition_seq
+      FROM invariant_transition_counters itc
+      WHERE itc.invariant_id = NEW.invariant_id
+    ), 0) = 0 THEN RAISE(ABORT, 'transition_seq requires a prior counter allocation')
+    WHEN NEW.transition_seq <> (
+      SELECT itc.last_transition_seq
+      FROM invariant_transition_counters itc
+      WHERE itc.invariant_id = NEW.invariant_id
+    ) THEN RAISE(ABORT, 'transition_seq must match the atomically allocated invariant counter')
+    WHEN NEW.from_state <> COALESCE((
+      SELECT t.to_state
+      FROM invariant_state_transitions t
+      WHERE t.invariant_id = NEW.invariant_id
+      ORDER BY t.transition_seq DESC
+      LIMIT 1
+    ), (
+      SELECT ci.initial_state
+      FROM candidate_invariants ci
+      WHERE ci.id = NEW.invariant_id
+    )) THEN RAISE(ABORT, 'from_state must match current invariant state')
+    WHEN NOT (
+      (NEW.from_state = 'proposed' AND NEW.to_state = 'challenged') OR
+      (NEW.from_state = 'challenged' AND NEW.to_state IN ('surviving', 'weaken', 'falsified')) OR
+      (NEW.from_state = 'surviving' AND NEW.to_state IN ('challenged', 'weaken', 'falsified', 'operator_attested')) OR
+      (NEW.from_state = 'weaken' AND NEW.to_state IN ('challenged', 'surviving', 'falsified'))
+    ) THEN RAISE(ABORT, 'invalid invariant state transition')
+  END;
+END;`); err != nil {
+		return err
+	}
+
+	// 3) Rewrite any existing 'established' transition rows. The immutability
+	//    update trigger blocks UPDATE, so drop it for the rewrite and recreate it.
+	//    A fresh DB has zero such rows (no establishment has run) and this is a
+	//    harmless no-op UPDATE.
+	if _, err := tx.ExecContext(ctx, `DROP TRIGGER IF EXISTS invariant_state_transitions_immutable_update`); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE invariant_state_transitions SET to_state = 'operator_attested' WHERE to_state = 'established'`); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `
+CREATE TRIGGER invariant_state_transitions_immutable_update
+BEFORE UPDATE ON invariant_state_transitions
+BEGIN
+  SELECT RAISE(ABORT, 'invariant state transitions are immutable');
+END;`); err != nil {
+		return err
 	}
 	return nil
 }

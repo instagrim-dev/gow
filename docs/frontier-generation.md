@@ -18,11 +18,19 @@ distance, whether the claimed violation actually holds, and the ranking.
 
 ## What may be targeted
 
-Only invariants whose **current lifecycle state is `surviving`** are legal
-targets. `proposed` (unchallenged), `weaken`, `falsified`, and `established`
-invariants are excluded. Surviving state is read from the
-`invariant_current_state` view (M4.3); there is no state column to trust — state
-lives only in the transition ledger.
+Invariants whose **current lifecycle state is `surviving` or
+`operator_attested`** are legal targets. `operator_attested` is a surviving
+invariant carrying *additional* independent operator-supplied evidence — the
+strongest conserved failure structure the system knows, and therefore the
+highest-expected-information break target (AGENTS.md: prefer proposals that
+improve `invariant_violation + expected_information_gain`). Attesting an
+invariant must never *remove* it from search-policy influence: strengthening
+knowledge cannot reduce search directedness.
+
+`proposed` (unchallenged), `weaken`, and `falsified` invariants are excluded —
+only challenged invariants influence search policy (EPIC M4.3 exit condition).
+State is read from the `invariant_current_state` view (M4.3); there is no state
+column to trust — state lives only in the transition ledger.
 
 If a problem has no surviving invariant, generation is a legitimate empty
 outcome (the run still completes and persists an empty, provenance-bearing

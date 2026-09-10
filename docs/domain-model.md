@@ -53,12 +53,12 @@ Source evidence is immutable and never overwritten. Model/provider interpretatio
 
 `proposed -> challenged -> surviving | weaken | falsified`
 
-`surviving -> challenged | weaken | falsified | established`
+`surviving -> challenged | weaken | falsified | operator_attested`
 
 - `split`: one parent invariant to many children invariants.
 - `merge`: many parent invariants to one child invariant.
 - `split`/`merge` are lineage relations, not invariant lifecycle states.
-- `established`: requires independent external evidence class stronger than model output.
+- `operator_attested` (formerly `established`): an operator has attached independent external evidence (a same-problem snapshot + locator). It records an ATTESTATION of that evidence, not a machine verification of the claim against the predicate, so it must not be read as machine-confirmed. A claim-specific verification contract that would justify a stronger status is future work.
 
 ## Go type skeletons
 
@@ -82,7 +82,11 @@ const (
     InvariantSurviving   InvariantState = "surviving"
     InvariantWeaken      InvariantState = "weaken"
     InvariantFalsified   InvariantState = "falsified"
-    InvariantEstablished InvariantState = "established"
+    // operator_attested (formerly `established`): an operator has attached
+    // independent evidence (a same-problem snapshot + locator). It records an
+    // ATTESTATION, not a machine verification — the claim is not checked against
+    // the predicate — so it must not read as machine-confirmed evidence (F1).
+    InvariantOperatorAttested InvariantState = "operator_attested"
 )
 
 type Problem struct {

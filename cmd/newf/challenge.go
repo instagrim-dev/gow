@@ -24,8 +24,9 @@ func newChallengeCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions)
 			"--problem --all). The challenger proposes attacks; code verifies each one\n" +
 			"deterministically against persisted signatures. A confirmed counterexample\n" +
 			"falsifies; confirmed success-preservation, bias critique, split, or merge\n" +
-			"weakens; a campaign whose attacks all fail confirmation leaves the invariant\n" +
-			"surviving. Unconfirmed claims are recorded inert. `established` is not\n" +
+			"weakens; a campaign with at least one completed applicable attack that does\n" +
+			"not land leaves the invariant surviving (an all-inconclusive campaign does\n" +
+			"not). Unconfirmed claims are recorded inert. `operator_attested` is not\n" +
 			"reachable here (see `invariant establish`).",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -82,8 +83,9 @@ func newInvariantStateCommand(stdout io.Writer, app *pipeline.App, opts *rootOpt
 	}
 }
 
-// newInvariantEstablishCommand is the code-gated surviving->established path:
-// it demands independent, non-model evidence (a persisted snapshot + locator).
+// newInvariantEstablishCommand is the code-gated surviving->operator_attested
+// path: it demands independent, non-model evidence (a persisted snapshot +
+// locator). It records an OPERATOR ATTESTATION, not a machine verification.
 func newInvariantEstablishCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cobra.Command {
 	var (
 		snapshotID string
@@ -92,11 +94,14 @@ func newInvariantEstablishCommand(stdout io.Writer, app *pipeline.App, opts *roo
 	)
 	cmd := &cobra.Command{
 		Use:   "establish <invariant-id>",
-		Short: "Promote a surviving invariant to established with independent evidence",
-		Long: "Record an operator-supplied, independent verification (a persisted source\n" +
-			"snapshot + locator) and transition a SURVIVING invariant to ESTABLISHED.\n" +
-			"Model judgment alone can never reach established; this command refuses\n" +
-			"without snapshot evidence and refuses any state other than surviving.",
+		Short: "Attest a surviving invariant with operator-supplied independent evidence",
+		Long: "Record an operator-supplied, independent attestation (a persisted source\n" +
+			"snapshot + locator) and transition a SURVIVING invariant to\n" +
+			"OPERATOR_ATTESTED. This records provenance for an operator's assertion; it\n" +
+			"does NOT machine-verify the claim against the predicate, so it is an\n" +
+			"attestation, not confirmation. Model judgment alone can never reach it;\n" +
+			"this command refuses without snapshot evidence and refuses any state other\n" +
+			"than surviving.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			result, err := app.EstablishInvariant(cmd.Context(), pipeline.EstablishInput{
@@ -113,13 +118,13 @@ func newInvariantEstablishCommand(stdout io.Writer, app *pipeline.App, opts *roo
 			if opts.jsonOutput {
 				return writeJSON(stdout, result)
 			}
-			fmt.Fprintf(stdout, "invariant %s established (as of %s)\n", result.Invariant.InvariantID, result.Invariant.AsOf)
+			fmt.Fprintf(stdout, "invariant %s operator_attested (as of %s)\n", result.Invariant.InvariantID, result.Invariant.AsOf)
 			return nil
 		},
 	}
 	cmd.Flags().StringVar(&snapshotID, "snapshot", "", "Source snapshot ID carrying the independent evidence (required)")
 	cmd.Flags().StringVar(&locator, "locator", "", "Locator into the snapshot bytes (required)")
-	cmd.Flags().StringVar(&note, "note", "", "Optional note describing the verification")
+	cmd.Flags().StringVar(&note, "note", "", "Optional note describing the attestation")
 	return cmd
 }
 

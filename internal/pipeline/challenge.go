@@ -2,8 +2,12 @@ package pipeline
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/instagrim-dev/newf/internal/canon"
@@ -107,6 +111,10 @@ func (a *App) challengeOne(ctx context.Context, repoStore problemStore, invarian
 	if err != nil {
 		return InvariantChallengeReport{}, err
 	}
+	vocab, err := a.loadVocabulary(ctx, repoStore, clusterRun.VocabularyVersion)
+	if err != nil {
+		return InvariantChallengeReport{}, err
+	}
 
 	req := provider.ChallengeRequest{
 		ProblemID:            revision.ProblemID,
@@ -144,7 +152,7 @@ func (a *App) challengeOne(ctx context.Context, repoStore problemStore, invarian
 		return InvariantChallengeReport{}, err
 	}
 
-	campaign, err := a.buildCampaign(ctx, repoStore, revision, invariantID, run.ID, pred, families, provResp, now)
+	campaign, err := a.buildCampaign(ctx, repoStore, revision, invariantID, run.ID, pred, families, vocab, provResp, now)
 	if err != nil {
 		a.failRun(ctx, repoStore, run.ID, err)
 		return InvariantChallengeReport{}, err
@@ -176,11 +184,15 @@ func (a *App) challengeOne(ctx context.Context, repoStore problemStore, invarian
 // buildCampaign verifies every proposal in order and assembles the persistable
 // campaign: challenge rows + evidence + synthetic artifacts + lineage, plus the
 // state transitions the CODE-verified outcomes drive. Verdict severity:
-// a confirmed counterexample (known or synthetic) falsifies; a confirmed
-// success-preserving / bias-critique / split / merge weakens; a campaign whose
-// every attack failed confirmation leaves the invariant `surviving` — the
-// attacks were made and did not land.
-func (a *App) buildCampaign(ctx context.Context, repoStore problemStore, revision store.InvariantRevisionRecord, invariantID, runID string, pred invariant.Predicate, families []invariant.Family, provResp provider.ChallengeResponse, now time.Time) (store.ChallengeCampaignRecord, error) {
+// a confirmed counterexample (known) falsifies; a confirmed synthetic /
+// success-preserving / bias-critique / split / merge weakens. Survival is
+// EARNED, not defaulted (F2): the invariant transitions to `surviving` only when
+// at least one COMPLETED APPLICABLE attack ran a real determination over an
+// eligible population and did not land. A campaign made up entirely of
+// inadmissible/inconclusive attempts (e.g. a lone synthetic with no
+// construction) drives NO closing transition — the invariant stays in its prior
+// state, because no negative search actually completed.
+func (a *App) buildCampaign(ctx context.Context, repoStore problemStore, revision store.InvariantRevisionRecord, invariantID, runID string, pred invariant.Predicate, families []invariant.Family, vocab *canon.Vocabulary, provResp provider.ChallengeResponse, now time.Time) (store.ChallengeCampaignRecord, error) {
 	campaign := store.ChallengeCampaignRecord{
 		ProblemID:   revision.ProblemID,
 		RunID:       runID,
@@ -200,12 +212,16 @@ func (a *App) buildCampaign(ctx context.Context, repoStore problemStore, revisio
 	}
 
 	falsifyAt, weakenAt := -1, -1
+	completedApplicable := 0
 	for i, proposal := range provResp.Proposals {
-		ch, verdictClass, err := a.verifyProposal(ctx, repoStore, revision, invariantID, runID, pred, families, proposal, now, i)
+		ch, verdictClass, applicable, err := a.verifyProposal(ctx, repoStore, revision, invariantID, runID, pred, families, vocab, proposal, now, i)
 		if err != nil {
 			return store.ChallengeCampaignRecord{}, err
 		}
 		campaign.Challenges = append(campaign.Challenges, ch)
+		if applicable {
+			completedApplicable++
+		}
 		if verdictClass == verdictFalsify && falsifyAt < 0 {
 			falsifyAt = i
 		}
@@ -219,15 +235,23 @@ func (a *App) buildCampaign(ctx context.Context, repoStore problemStore, revisio
 
 	// Transition plan: the first challenge opens the campaign
 	// (proposed|surviving|weaken -> challenged); the decisive challenge closes it.
+	// A decisive falsify/weaken always closes. Otherwise survival is granted ONLY
+	// when a completed applicable check actually ran (F2); a campaign of only
+	// inadmissible/inconclusive attempts opens the campaign as `challenged` and
+	// stops there — no unearned `surviving`.
 	campaign.Challenges[0].Transitions = append(campaign.Challenges[0].Transitions, "challenged")
 	switch {
 	case falsifyAt >= 0:
 		campaign.Challenges[falsifyAt].Transitions = append(campaign.Challenges[falsifyAt].Transitions, "falsified")
 	case weakenAt >= 0:
 		campaign.Challenges[weakenAt].Transitions = append(campaign.Challenges[weakenAt].Transitions, "weaken")
-	default:
+	case completedApplicable > 0:
 		last := len(campaign.Challenges) - 1
 		campaign.Challenges[last].Transitions = append(campaign.Challenges[last].Transitions, "surviving")
+	default:
+		// No completed applicable negative search: the invariant is neither
+		// falsified, weakened, nor legitimately survived. It remains `challenged`
+		// (attacked but undecided) rather than earning `surviving` by fallback.
 	}
 	return campaign, nil
 }
@@ -257,8 +281,17 @@ func mapEvidence(ev []invariant.ChallengeEvidence) []store.ChallengeEvidenceRow 
 }
 
 // syntheticSignature rehydrates a provider-authored construction into a
-// signature whose named set fields are exhaustively extracted, so absence in it
-// is a verified negative and Evaluate can genuinely return `violates`.
+// signature. Its set fields are `unobserved`, NOT `complete`: a synthetic is a
+// PROPOSED construction, not a demonstrated one, and the provider never proves
+// it exhaustively enumerated the construction's structure. Marking the fields
+// `complete` (the prior behavior) made an empty/omitted description read as a
+// verified negative, so `contains(preserves, X)` on a description that merely
+// left X out evaluated to `violates` and weakened the invariant — proving only
+// that the DESCRIPTION can omit X, not that an admissible failed approach
+// without X exists (F3). With `unobserved` completeness, absence evaluates to
+// `unknown` (inert); a synthetic can only confirm a violation through a value
+// that is actually PRESENT and contradicts the predicate (e.g. a present
+// operator/preserves id the predicate negates, or a mismatched enum axis).
 func syntheticSignature(s provider.SyntheticSignature) canon.MechanismSignature {
 	sig := canon.MechanismSignature{
 		SchemaVersion:     canon.SchemaMechanismV1,
@@ -267,8 +300,8 @@ func syntheticSignature(s provider.SyntheticSignature) canon.MechanismSignature 
 		Preserves:         []canon.FieldClaim{},
 		Operators:         []canon.FieldClaim{},
 		SetFieldCompleteness: map[domain.FieldKind]domain.FieldCompleteness{
-			domain.FieldPreserves: domain.CompletenessComplete,
-			domain.FieldOperator:  domain.CompletenessComplete,
+			domain.FieldPreserves: domain.CompletenessUnobserved,
+			domain.FieldOperator:  domain.CompletenessUnobserved,
 		},
 	}
 	for _, id := range s.Preserves {
@@ -294,12 +327,43 @@ func mustJSONString(v any) string {
 	return string(raw)
 }
 
+// associationKindForCandidate resolves the candidate's stored association status
+// into the invariant.AssociationKind that governs the F3 refutation condition
+// for a known counterexample (a recurring/universal claim is falsified by one
+// counterexample; a contrast/association claim is not). An unrecognized or
+// missing status is treated as `unknown` (a lone counterexample is
+// inconclusive), never silently upgraded to the stronger refutation.
+func associationKindForCandidate(revision store.InvariantRevisionRecord, invariantID string) invariant.AssociationKind {
+	for _, c := range revision.Candidates {
+		if c.ID == invariantID {
+			switch invariant.AssociationKind(c.AssociationStatus) {
+			case invariant.AssociationRecurring:
+				return invariant.AssociationRecurring
+			case invariant.AssociationContrastObserved:
+				return invariant.AssociationContrastObserved
+			}
+			return invariant.AssociationUnknown
+		}
+	}
+	return invariant.AssociationUnknown
+}
+
 // verifyProposal runs the deterministic verifier for one proposed attack and
 // assembles its persistable record. The provider's claimed verdict is recorded
 // but NEVER trusted: confirmation comes only from code over persisted (or, for
 // synthetic constructions, code-evaluated) signatures. An unconfirmed challenge
 // carries no evidence links and drives no transition (KTD-3).
-func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revision store.InvariantRevisionRecord, invariantID, runID string, pred invariant.Predicate, families []invariant.Family, proposal provider.ChallengeProposal, now time.Time, ordinal int) (store.ChallengeRecord, verdictClass, error) {
+//
+// It returns, in addition to the verdict class, whether the check was a
+// COMPLETED APPLICABLE attack (F2): an attack that ran its determination over an
+// eligible population and reached a definite outcome (confirmed, or a genuine
+// negative — e.g. "no known member violates", "support holds under
+// recomputation"). An INADMISSIBLE/INCONCLUSIVE attempt (a synthetic with no
+// construction, a merge naming no partners or child, a provider over-claiming
+// independent verification, an empty/unobserved synthetic) is NOT a completed
+// negative search: it returns applicable=false so it cannot, by itself, earn
+// the invariant `surviving`.
+func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revision store.InvariantRevisionRecord, invariantID, runID string, pred invariant.Predicate, families []invariant.Family, vocab *canon.Vocabulary, proposal provider.ChallengeProposal, now time.Time, ordinal int) (store.ChallengeRecord, verdictClass, bool, error) {
 	ch := store.ChallengeRecord{
 		ID:             domain.NewInvariantChallengeID(now),
 		InvariantID:    invariantID,
@@ -308,27 +372,32 @@ func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revisi
 		CreatedAt:      now.Format(timeLayout),
 	}
 	if !proposal.Type.Valid() {
-		return store.ChallengeRecord{}, verdictInert, fmt.Errorf("unknown challenge type %q", proposal.Type)
+		return store.ChallengeRecord{}, verdictInert, false, fmt.Errorf("unknown challenge type %q", proposal.Type)
 	}
 	if proposal.Type == invariant.ChallengeIndependentVerification {
-		// The path toward `established` is operator-only (KTD-2); a provider
-		// proposing it is over-claiming and the claim is inert by construction.
+		// The path toward attestation is operator-only (KTD-2); a provider
+		// proposing it is over-claiming and the claim is inert AND inadmissible
+		// (it is not a failure-search attack at all).
 		ch.ResultSummary = "unconfirmed"
 		ch.Detail = "independent verification cannot be provider-claimed; use `invariant establish` with snapshot evidence"
-		return ch, verdictInert, nil
+		return ch, verdictInert, false, nil
 	}
 
 	var result invariant.ChallengeResult
 	class := verdictInert
+	// applicable defaults true: most attacks run a real determination. Branches
+	// that bail before evaluating an eligible population set it false.
+	applicable := true
 	switch proposal.Type {
 	case invariant.ChallengeKnownCounterexample:
-		result = invariant.VerifyKnownCounterexample(pred, families)
+		result = invariant.VerifyKnownCounterexample(pred, families, associationKindForCandidate(revision, invariantID))
 		if result.Confirmed {
 			class = verdictFalsify
 		}
 	case invariant.ChallengeSyntheticCounterexample:
 		if proposal.Synthetic == nil {
 			result = invariant.ChallengeResult{Confirmed: false, Detail: "no synthetic construction supplied"}
+			applicable = false // no construction to evaluate: inadmissible, not a completed negative search
 			break
 		}
 		synth := syntheticSignature(*proposal.Synthetic)
@@ -344,6 +413,12 @@ func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revisi
 				Content:      mustJSONString(proposal.Synthetic),
 				CreatedAt:    now.Format(timeLayout),
 			}}
+		} else {
+			// The construction evaluated to unknown/satisfies (an unobserved or
+			// omitted field is a proposal, not a demonstrated counterexample, F3):
+			// this proves nothing negative about the invariant, so it does not
+			// count as a completed applicable check toward survival.
+			applicable = false
 		}
 	case invariant.ChallengeSuccessPreserving:
 		result = invariant.VerifySuccessPreserving(pred, families)
@@ -356,35 +431,41 @@ func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revisi
 			class = verdictWeaken
 		}
 	case invariant.ChallengeSplit:
-		result = invariant.VerifySplit(pred, proposal.Children, families)
+		result = invariant.VerifySplit(pred, proposal.Children, families, vocab)
 		if result.Confirmed {
 			class = verdictWeaken
-			lineage, err := a.persistDerivedChildren(ctx, repoStore, revision, invariantID, runID, "challenge-split/v1", "split", proposal.Children, families, now)
+			derived, err := a.buildDerivedChildren(revision, invariantID, runID, invariant.ChallengeSplit, proposal.Children, families, now)
 			if err != nil {
-				return store.ChallengeRecord{}, verdictInert, err
+				return store.ChallengeRecord{}, verdictInert, false, err
 			}
-			ch.Lineage = lineage
+			ch.Derived = derived
 		}
 	case invariant.ChallengeMerge:
 		parents := []invariant.Predicate{pred}
 		matched, err := a.mergeParents(revision, proposal.MergeParentFingerprints)
 		if err != nil {
 			result = invariant.ChallengeResult{Confirmed: false, Detail: err.Error()}
+			applicable = false // could not assemble the parent set: inadmissible
 			break
 		}
 		parents = append(parents, matched...)
 		if proposal.MergeChild == nil {
 			result = invariant.ChallengeResult{Confirmed: false, Detail: "no merged child predicate supplied"}
+			applicable = false
 			break
 		}
-		result = invariant.VerifyMerge(parents, *proposal.MergeChild, families)
+		result = invariant.VerifyMerge(parents, *proposal.MergeChild, families, vocab)
 		if result.Confirmed {
 			class = verdictWeaken
-			lineage, err := a.persistDerivedChildren(ctx, repoStore, revision, invariantID, runID, "challenge-merge/v1", "merge", []invariant.Predicate{*proposal.MergeChild}, families, now)
+			// extraParents = the matched merge partners only; the acting invariant
+			// (pred / invariantID) is contributed by buildDerivedChildren via its
+			// stored fingerprint, so passing `parents` (which prepends pred) would
+			// double-count it.
+			derived, err := a.buildDerivedChildren(revision, invariantID, runID, invariant.ChallengeMerge, []invariant.Predicate{*proposal.MergeChild}, families, now, matched...)
 			if err != nil {
-				return store.ChallengeRecord{}, verdictInert, err
+				return store.ChallengeRecord{}, verdictInert, false, err
 			}
-			ch.Lineage = lineage
+			ch.Derived = derived
 		}
 	}
 
@@ -402,7 +483,7 @@ func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revisi
 		class = verdictInert
 	}
 	_ = ordinal
-	return ch, class, nil
+	return ch, class, applicable, nil
 }
 
 // mergeParents resolves merge-partner fingerprints against the candidate's own
@@ -430,13 +511,24 @@ func (a *App) mergeParents(revision store.InvariantRevisionRecord, fingerprints 
 	return out, nil
 }
 
-// persistDerivedChildren persists the confirmed split/merge children as REAL
-// candidate invariants — a new revision produced by the challenge pass (miner
-// version challenge-split/v1 / challenge-merge/v1), with support recomputed by
-// the same engine mining uses — and returns the lineage rows binding parent to
-// children. Grounding was already verified; children enter `proposed` and must
-// survive their own challenges (no inherited authority).
-func (a *App) persistDerivedChildren(ctx context.Context, repoStore problemStore, revision store.InvariantRevisionRecord, parentID, runID, minerVersion, relation string, children []invariant.Predicate, families []invariant.Family, now time.Time) ([]store.LineageRow, error) {
+// buildDerivedChildren assembles the confirmed split/merge children as an
+// UNPERSISTED mining revision with support recomputed by the same engine mining
+// uses. It performs NO store writes: the store persists it inside the campaign
+// transaction (with lineage minted there from the actual persisted child ids),
+// so a failing campaign leaves no orphaned derived candidates. Grounding was
+// already verified; children enter `proposed` and must survive their own
+// challenges (no inherited authority).
+//
+// Derivation identity (F5): the reuse key that dedupes revisions is
+// (problem, failure_space, miner_version, predicate_schema, min_support). A
+// FIXED miner_version like "challenge-split/v1" therefore collides across
+// DIFFERENT parents and DIFFERENT child sets under the same failure space and
+// threshold — the second parent's split would silently reuse the first parent's
+// children and mislink lineage. We fold the relation, the full PARENT set, and
+// the canonical CHILD predicate fingerprints into miner_version so each distinct
+// (relation, parents, children) derivation has its own identity and never
+// aliases another's children.
+func (a *App) buildDerivedChildren(revision store.InvariantRevisionRecord, parentID, runID string, relation invariant.ChallengeType, children []invariant.Predicate, families []invariant.Family, now time.Time, extraParents ...invariant.Predicate) (*store.DerivedChildren, error) {
 	proposals := make([]invariant.Proposal, 0, len(children))
 	for i, child := range children {
 		proposals = append(proposals, invariant.Proposal{
@@ -446,6 +538,15 @@ func (a *App) persistDerivedChildren(ctx context.Context, repoStore problemStore
 		})
 	}
 	cands := invariant.EvaluateCandidates(proposals, families, revision.MinSupport)
+
+	// Parent set for identity: the acting invariant's stored fingerprint plus any
+	// additional merge-parent predicates. Sorted so ordering never changes identity.
+	parentFPs := []string{candidateFingerprint(revision, parentID)}
+	for _, p := range extraParents {
+		parentFPs = append(parentFPs, invariant.Fingerprint(p))
+	}
+	minerVersion := derivationMinerVersion(relation, parentFPs, children)
+
 	resp := provider.MiningResponse{
 		Metadata: provider.Metadata{
 			ProviderName:    provider.FixtureProviderName,
@@ -461,17 +562,35 @@ func (a *App) persistDerivedChildren(ctx context.Context, repoStore problemStore
 	if err != nil {
 		return nil, err
 	}
-	result, err := repoStore.PersistInvariantRevision(ctx, record)
-	if err != nil {
-		return nil, err
+	return &store.DerivedChildren{Relation: string(relation), Revision: record}, nil
+}
+
+// candidateFingerprint returns a revision candidate's stored predicate
+// fingerprint (empty if the id is not a candidate of the revision — the merge
+// path validates membership separately). It is the parent identity contribution
+// for derived-revision keying (F5).
+func candidateFingerprint(revision store.InvariantRevisionRecord, invariantID string) string {
+	for _, c := range revision.Candidates {
+		if c.ID == invariantID {
+			return c.PredicateFingerprint
+		}
 	}
-	lineage := make([]store.LineageRow, 0, len(result.Record.Candidates))
-	for _, c := range result.Record.Candidates {
-		lineage = append(lineage, store.LineageRow{
-			ParentInvariantID: parentID,
-			ChildInvariantID:  c.ID,
-			Relation:          relation,
-		})
+	return invariantID // fall back to the id so identity is still parent-specific
+}
+
+// derivationMinerVersion produces a stable, collision-resistant miner_version
+// for a derived revision by hashing the relation, the sorted PARENT fingerprint
+// set, and the sorted canonical CHILD predicate fingerprints. This is what makes
+// two different parents (or two different child sets) under one failure space +
+// threshold distinct derivation identities rather than reuse-key aliases (F5).
+func derivationMinerVersion(relation invariant.ChallengeType, parentFingerprints []string, children []invariant.Predicate) string {
+	ps := append([]string(nil), parentFingerprints...)
+	sort.Strings(ps)
+	cs := make([]string, 0, len(children))
+	for _, c := range children {
+		cs = append(cs, invariant.Fingerprint(c))
 	}
-	return lineage, nil
+	sort.Strings(cs)
+	sum := sha256.Sum256([]byte(string(relation) + "\nparents:" + strings.Join(ps, ",") + "\nchildren:" + strings.Join(cs, ",")))
+	return fmt.Sprintf("challenge-%s/v1+%s", relation, hex.EncodeToString(sum[:8]))
 }

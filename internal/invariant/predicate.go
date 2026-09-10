@@ -183,6 +183,35 @@ func ValidateReferences(p Predicate, vocab *canon.Vocabulary) error {
 	return validateReferences(p.Root, vocab)
 }
 
+// AdmitCandidate is the SINGLE candidate-admission gate shared by every path
+// that introduces a failure-mechanism candidate invariant: initial mining and
+// every derived child (split / merge / weaken). It composes the checks that
+// must hold at every entry point (F4):
+//
+//	ValidateForMining   — grammar/shape PLUS no outcome-axis read (a predicate
+//	                      such as `outcome in [failure, partial_failure]` earns
+//	                      perfect failure coverage and success contrast BY
+//	                      DEFINITION, identifying no mechanism — the exact target
+//	                      leakage the mining fix excludes)
+//	ValidateReferences  — every canonical id resolves in the pinned vocabulary
+//
+// Before this gate existed, split/merge verifiers called only the general
+// Validate(), which intentionally permits outcome reads for diagnostic
+// consumers, so a merge child of `outcome in [failure, partial_failure]` could
+// be admitted and reintroduce the leakage. Routing every derivation through
+// AdmitCandidate closes that hole by construction.
+func AdmitCandidate(p Predicate, vocab *canon.Vocabulary) error {
+	if err := ValidateForMining(p); err != nil {
+		return err
+	}
+	return ValidateReferences(p, vocab)
+}
+
+// AdmitCandidate is the method form for callers holding a Predicate.
+func (p Predicate) AdmitCandidate(vocab *canon.Vocabulary) error {
+	return AdmitCandidate(p, vocab)
+}
+
 func validateReferences(n Node, vocab *canon.Vocabulary) error {
 	switch n.Op {
 	case OpContains:

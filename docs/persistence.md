@@ -447,7 +447,7 @@ CREATE TABLE invariant_state_transition (
   challenge_id TEXT NOT NULL REFERENCES invariant_challenge(id),
   transition_seq INTEGER NOT NULL,
   from_state TEXT NOT NULL CHECK (from_state IN ('proposed', 'challenged', 'surviving', 'weaken')),
-  to_state TEXT NOT NULL CHECK (to_state IN ('proposed', 'challenged', 'surviving', 'weaken', 'falsified', 'established')),
+  to_state TEXT NOT NULL CHECK (to_state IN ('proposed', 'challenged', 'surviving', 'weaken', 'falsified', 'operator_attested')),
   created_at TEXT NOT NULL,
   UNIQUE(invariant_id, transition_seq)
 );
@@ -480,7 +480,7 @@ BEGIN
     WHEN NOT (
       (NEW.from_state = 'proposed' AND NEW.to_state = 'challenged') OR
       (NEW.from_state = 'challenged' AND NEW.to_state IN ('surviving', 'weaken', 'falsified')) OR
-      (NEW.from_state = 'surviving' AND NEW.to_state IN ('challenged', 'weaken', 'falsified', 'established')) OR
+      (NEW.from_state = 'surviving' AND NEW.to_state IN ('challenged', 'weaken', 'falsified', 'operator_attested')) OR
       (NEW.from_state = 'weaken' AND NEW.to_state IN ('challenged', 'surviving', 'falsified'))
     ) THEN RAISE(ABORT, 'invalid invariant state transition')
   END;
@@ -1019,9 +1019,12 @@ shipped):
 guarded, idempotent, FK-safe) to admit `'challenge'`. `validateSchemaTables`
 asserts the new tables and that the role CHECK admits both `invariant` and
 `challenge`. A challenge campaign is persisted in one transaction: an illegal
-transition aborts the whole campaign, leaving no partial rows. `established`
-is code-gated in the pipeline (operator-supplied snapshot evidence required);
-the trigger permits it structurally from `surviving` only. See
+transition aborts the whole campaign, leaving no partial rows — including
+confirmed split/merge children, which are persisted INSIDE the campaign
+transaction with lineage minted from the actual persisted child ids
+(idempotent on re-challenge). `operator_attested` is code-gated in the
+pipeline (operator-supplied, problem-scoped snapshot evidence required); the
+trigger permits it structurally from `surviving` only. See
 [`invariant-challenge.md`](invariant-challenge.md).
 
 ## Implemented frontier schema (#14, migration `v14`)

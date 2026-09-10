@@ -122,9 +122,26 @@ func (s *Store) PersistInvariantRevision(ctx context.Context, record InvariantRe
 	}
 	defer tx.Rollback()
 
+	record, err = writeInvariantRevisionTx(ctx, tx, record)
+	if err != nil {
+		return PersistInvariantRevisionResult{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return PersistInvariantRevisionResult{}, err
+	}
+	return PersistInvariantRevisionResult{Record: record, Created: true}, nil
+}
+
+// writeInvariantRevisionTx writes a mining revision inside an existing
+// transaction (numbering + invocation + revision + candidates). It is shared
+// by PersistInvariantRevision and the challenge layer, which persists confirmed
+// split/merge children INSIDE the campaign transaction so a failing campaign
+// leaves no orphaned derived candidates.
+func writeInvariantRevisionTx(ctx context.Context, tx *sql.Tx, record InvariantRevisionRecord) (InvariantRevisionRecord, error) {
 	var maxRev sql.NullInt64
 	if err := tx.QueryRowContext(ctx, `SELECT MAX(revision) FROM invariant_revisions WHERE problem_id = ?`, record.ProblemID).Scan(&maxRev); err != nil {
-		return PersistInvariantRevisionResult{}, err
+		return InvariantRevisionRecord{}, err
 	}
 	record.Revision = int(maxRev.Int64) + 1
 
@@ -133,14 +150,14 @@ func (s *Store) PersistInvariantRevision(ctx context.Context, record InvariantRe
 INSERT INTO provider_invocations(id, run_id, role, provider_name, provider_version, model_name, schema_version, request_hash, request_payload, response_payload, created_at)
 VALUES(?, ?, 'invariant', ?, ?, ?, ?, ?, ?, ?, ?)
 `, inv.ID, inv.RunID, inv.ProviderName, inv.ProviderVersion, inv.ModelName, inv.SchemaVersion, inv.RequestHash, inv.RequestPayload, inv.ResponsePayload, inv.CreatedAt); err != nil {
-		return PersistInvariantRevisionResult{}, err
+		return InvariantRevisionRecord{}, err
 	}
 
 	if _, err := tx.ExecContext(ctx, `
 INSERT INTO invariant_revisions(id, problem_id, failure_space_id, cluster_run_id, run_id, provider_invocation_id, miner_version, predicate_schema, min_support, revision, candidate_count, created_at)
 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `, record.ID, record.ProblemID, record.FailureSpaceID, record.ClusterRunID, record.RunID, inv.ID, record.MinerVersion, record.PredicateSchema, record.MinSupport, record.Revision, record.CandidateCount, record.CreatedAt); err != nil {
-		return PersistInvariantRevisionResult{}, err
+		return InvariantRevisionRecord{}, err
 	}
 
 	for _, c := range record.Candidates {
@@ -148,32 +165,28 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 INSERT INTO candidate_invariants(id, invariant_revision_id, predicate_fingerprint, statement, abstraction_level, association_status, obstruction_is_model_hypothesis, distinct_family_support, failure_coverage_num, failure_coverage_den, contrast_violating_num, contrast_eligible_den, support_explicit_count, support_inferred_count, support_other_count, confidence_ordinal, ordinal)
 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `, c.ID, record.ID, c.PredicateFingerprint, c.Statement, c.AbstractionLevel, c.AssociationStatus, boolToInt(c.ObstructionIsModelHypothesis), c.DistinctFamilySupport, c.FailureCoverageNum, c.FailureCoverageDen, c.ContrastViolatingNum, c.ContrastEligibleDen, c.SupportExplicitCount, c.SupportInferredCount, c.SupportOtherCount, c.ConfidenceOrdinal, c.Ordinal); err != nil {
-			return PersistInvariantRevisionResult{}, err
+			return InvariantRevisionRecord{}, err
 		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO invariant_predicates(invariant_id, predicate_json) VALUES(?, ?)`, c.ID, c.PredicateJSON); err != nil {
-			return PersistInvariantRevisionResult{}, err
+			return InvariantRevisionRecord{}, err
 		}
 		for _, fe := range c.FamilyEvaluations {
 			if _, err := tx.ExecContext(ctx, `
 INSERT INTO invariant_family_evaluations(invariant_id, cluster_id, outcome_class, role, verdict, explicit_count, inferred_count, other_count)
 VALUES(?, ?, ?, ?, ?, ?, ?, ?)
 `, c.ID, fe.ClusterID, fe.OutcomeClass, fe.Role, fe.Verdict, fe.ExplicitCount, fe.InferredCount, fe.OtherCount); err != nil {
-				return PersistInvariantRevisionResult{}, err
+				return InvariantRevisionRecord{}, err
 			}
 		}
 		for _, ce := range c.Counterexamples {
 			if _, err := tx.ExecContext(ctx, `
 INSERT INTO invariant_counterexamples(invariant_id, cluster_id, reason) VALUES(?, ?, ?)
 `, c.ID, ce.ClusterID, ce.Reason); err != nil {
-				return PersistInvariantRevisionResult{}, err
+				return InvariantRevisionRecord{}, err
 			}
 		}
 	}
-
-	if err := tx.Commit(); err != nil {
-		return PersistInvariantRevisionResult{}, err
-	}
-	return PersistInvariantRevisionResult{Record: record, Created: true}, nil
+	return record, nil
 }
 
 func (s *Store) findInvariantRevision(ctx context.Context, record InvariantRevisionRecord) (string, bool, error) {

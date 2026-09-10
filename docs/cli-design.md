@@ -201,10 +201,10 @@ Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statu
 
 ```text
 proposed -> challenged -> surviving | weaken | falsified
-surviving -> challenged | weaken | falsified | established
+surviving -> challenged | weaken | falsified | operator_attested
 ```
 
-- `established` requires external independent evidence (e.g., theorem/proof-check or independently replicated experiment), never model consensus alone.
+- `operator_attested` (formerly `established`) records that an operator attached external independent evidence (e.g., theorem/proof-check or independently replicated experiment); it is an operator attestation of that evidence, never machine verification of the claim and never model consensus.
 - split/merge cases are recorded in `invariant_lineage` so history remains queryable without turning them into terminal invariant states.
 
 ## Human + machine UX expectations

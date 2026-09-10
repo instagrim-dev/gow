@@ -36,7 +36,7 @@ type InvariantStatesInput struct {
 	JSONOutput bool
 }
 
-// EstablishInput is the code-gated surviving->established transition (KTD-2):
+// EstablishInput is the code-gated surviving->operator_attested transition (KTD-2):
 // it requires INDEPENDENT, non-model evidence — a persisted source snapshot +
 // locator — and is never produced by a provider.
 type EstablishInput struct {
@@ -178,7 +178,8 @@ func (a *App) ShowInvariantState(ctx context.Context, input InvariantStateInput)
 }
 
 // ListInvariantStates lists candidates + current states, optionally filtered.
-// Filtered to surviving/established this is the M5.1 frontier read surface.
+// Filtered to surviving/operator_attested this is the M5.1 frontier read
+// surface (see docs/frontier-generation.md).
 func (a *App) ListInvariantStates(ctx context.Context, input InvariantStatesInput) (InvariantStatesResponse, error) {
 	dbPath, repoStore, err := a.openStoreFn(ctx, input.DBPath)
 	if err != nil {
@@ -197,12 +198,22 @@ func (a *App) ListInvariantStates(ctx context.Context, input InvariantStatesInpu
 	return resp, nil
 }
 
-// EstablishInvariant performs the code-gated surviving->established transition
-// (KTD-2). The gate is epistemic, not structural: the DB trigger permits the
-// transition, but this service refuses it without independent, non-model
-// evidence — a persisted source snapshot (+ locator) recorded as
-// independent_source evidence on an independent-verification challenge. No
-// provider path can reach this; model agreement tops out at `surviving`.
+// EstablishInvariant performs the code-gated surviving->operator_attested
+// transition (KTD-2). The gate is epistemic, not structural: the DB trigger
+// permits the transition, but this service refuses it without independent,
+// non-model evidence — a persisted, same-problem source snapshot (+ locator)
+// recorded as independent_source evidence on an independent-verification
+// challenge. No provider path can reach this; model agreement tops out at
+// `surviving`.
+//
+// It records an OPERATOR ATTESTATION, not a machine verification (F1): the
+// service does not inspect the snapshot content, validate the locator, prove
+// independence, or check a proof against the predicate. The resulting status is
+// therefore `operator_attested` — useful provenance that must NOT masquerade as
+// machine-confirmed evidence. A claim-specific verification contract (a
+// deterministic/formal check that actually validates the claim) is future work;
+// until it exists, this is the strongest status the system honestly offers, and
+// it is explicitly an attestation.
 func (a *App) EstablishInvariant(ctx context.Context, input EstablishInput) (EstablishResponse, error) {
 	dbPath, repoStore, err := a.openStoreFn(ctx, input.DBPath)
 	if err != nil {
@@ -215,14 +226,10 @@ func (a *App) EstablishInvariant(ctx context.Context, input EstablishInput) (Est
 		return EstablishResponse{}, err
 	}
 	if state.State != "surviving" {
-		return EstablishResponse{}, fmt.Errorf("invariant %s is %q; only a surviving invariant can be established", input.InvariantID, state.State)
+		return EstablishResponse{}, fmt.Errorf("invariant %s is %q; only a surviving invariant can be attested", input.InvariantID, state.State)
 	}
 	if input.SnapshotID == "" || input.Locator == "" {
 		return EstablishResponse{}, fmt.Errorf("establishing requires independent evidence: --snapshot and --locator are mandatory (model judgment alone reaches at most surviving)")
-	}
-	snapshot, err := repoStore.GetSourceSnapshot(ctx, input.SnapshotID)
-	if err != nil {
-		return EstablishResponse{}, fmt.Errorf("independent evidence snapshot: %w", err)
 	}
 
 	revID, err := repoStore.FindInvariantRevisionForCandidate(ctx, input.InvariantID)
@@ -232,6 +239,22 @@ func (a *App) EstablishInvariant(ctx context.Context, input EstablishInput) (Est
 	revision, err := repoStore.GetInvariantRevision(ctx, revID)
 	if err != nil {
 		return EstablishResponse{}, err
+	}
+
+	snapshot, err := repoStore.GetSourceSnapshot(ctx, input.SnapshotID)
+	if err != nil {
+		return EstablishResponse{}, fmt.Errorf("independent evidence snapshot: %w", err)
+	}
+	// Evidence must belong to the invariant's problem: `operator_attested` is the
+	// strongest epistemic status in the system, and "any bytes anywhere in the
+	// store" is not a gate. Cross-problem evidence requires ingesting the source
+	// under this problem first, which records the provenance intentionally.
+	source, err := repoStore.GetSource(ctx, snapshot.SourceID)
+	if err != nil {
+		return EstablishResponse{}, fmt.Errorf("independent evidence source: %w", err)
+	}
+	if source.ProblemID != revision.ProblemID {
+		return EstablishResponse{}, fmt.Errorf("independent evidence snapshot %s belongs to problem %s, not %s; ingest the source under this problem to record its provenance", snapshot.ID, source.ProblemID, revision.ProblemID)
 	}
 
 	now := a.now()
@@ -250,7 +273,7 @@ func (a *App) EstablishInvariant(ctx context.Context, input EstablishInput) (Est
 		return EstablishResponse{}, err
 	}
 
-	detail := "operator-supplied independent verification"
+	detail := "operator-attested independent evidence (not machine-verified)"
 	if input.Note != "" {
 		detail = input.Note
 	}
@@ -262,16 +285,22 @@ func (a *App) EstablishInvariant(ctx context.Context, input EstablishInput) (Est
 			ID:            domain.NewProviderInvocationID(now),
 			RunID:         run.ID,
 			ProviderName:  "operator",
-			ModelName:     "independent-verification",
+			ModelName:     "operator-attestation",
 			SchemaVersion: invariant.PredicateSchemaV1,
 			RequestHash:   "independent:" + snapshot.ID,
 			CreatedAt:     now.Format(timeLayout),
 		},
 		Challenges: []store.ChallengeRecord{{
-			ID:             domain.NewInvariantChallengeID(now),
-			InvariantID:    input.InvariantID,
-			ChallengeType:  string(invariant.ChallengeIndependentVerification),
-			ClaimedVerdict: "supports",
+			ID:            domain.NewInvariantChallengeID(now),
+			InvariantID:   input.InvariantID,
+			ChallengeType: string(invariant.ChallengeIndependentVerification),
+			// The operator ATTESTS support; the system records the attestation and
+			// its evidence handle. It does NOT itself verify the claim against the
+			// predicate, so the resulting lifecycle state is `operator_attested`, not
+			// a machine-confirmed `established` (F1: ModelJudgment/OperatorJudgment
+			// != Verification). `confirmed` here means "the attestation was recorded",
+			// scoped by the operator_attested target below.
+			ClaimedVerdict: "operator-attests-support",
 			ResultSummary:  "confirmed",
 			Detail:         detail,
 			CreatedAt:      now.Format(timeLayout),
@@ -281,7 +310,7 @@ func (a *App) EstablishInvariant(ctx context.Context, input EstablishInput) (Est
 				Detail:     input.Locator,
 				Ordinal:    0,
 			}},
-			Transitions: []string{"established"},
+			Transitions: []string{"operator_attested"},
 		}},
 	}
 	if err := repoStore.PersistChallengeCampaign(ctx, campaign); err != nil {

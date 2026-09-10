@@ -278,14 +278,12 @@ func (a *App) MineInvariants(ctx context.Context, input InvariantMineInput) (Inv
 	}
 
 	// Every proposal is validated and re-evaluated by code; an invalid predicate
-	// fails the run rather than being silently stored.
+	// fails the run rather than being silently stored. AdmitCandidate is the
+	// shared gate (ValidateForMining + ValidateReferences) applied identically to
+	// mined and derived (split/merge/weaken) candidates (F4).
 	proposals := make([]invariant.Proposal, 0, len(resp.Proposals))
 	for _, p := range resp.Proposals {
-		if verr := p.Predicate.ValidateForMining(); verr != nil {
-			a.failRun(ctx, repoStore, run.ID, verr)
-			return InvariantMineResponse{}, verr
-		}
-		if verr := invariant.ValidateReferences(p.Predicate, vocab); verr != nil {
+		if verr := invariant.AdmitCandidate(p.Predicate, vocab); verr != nil {
 			a.failRun(ctx, repoStore, run.ID, verr)
 			return InvariantMineResponse{}, verr
 		}

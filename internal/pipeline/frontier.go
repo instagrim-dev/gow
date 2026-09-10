@@ -14,10 +14,17 @@ import (
 	"github.com/instagrim-dev/newf/internal/store"
 )
 
-// survivingState is the only invariant lifecycle state a frontier proposal may
-// target (AGENTS.md frontier discipline: generate against SURVIVING failure
-// invariants, not proposed/weakened/falsified ones).
-const survivingState = "surviving"
+// targetableStates are the invariant lifecycle states a frontier proposal may
+// target: challenge-survivors and operator-attested invariants (which are
+// surviving invariants carrying ADDITIONAL independent evidence — the
+// strongest conserved failure structure and therefore the highest-information
+// break target; AGENTS.md: expected information gain from violating an
+// invariant scales with its evidence strength). proposed (unchallenged),
+// weaken, and falsified stay excluded: only challenged invariants influence
+// search policy (EPIC M4.3 exit condition). Attesting an invariant must never
+// REMOVE it from search-policy influence — strengthening knowledge cannot
+// reduce search directedness.
+var targetableStates = []string{"surviving", "operator_attested"}
 
 // FrontierGenerateInput requests a generation pass for a problem. Count <= 0
 // defaults to defaultFrontierCount.
@@ -171,9 +178,13 @@ func (a *App) GenerateFrontier(ctx context.Context, input FrontierGenerateInput)
 // invariant whose predicate cannot be resolved/parsed is skipped with no
 // silent promotion.
 func (a *App) survivingInvariants(ctx context.Context, repoStore problemStore, problemID string) ([]frontier.SurvivingInvariant, error) {
-	states, err := repoStore.ListInvariantStates(ctx, problemID, survivingState)
-	if err != nil {
-		return nil, err
+	var states []store.InvariantStateRow
+	for _, targetable := range targetableStates {
+		rows, err := repoStore.ListInvariantStates(ctx, problemID, targetable)
+		if err != nil {
+			return nil, err
+		}
+		states = append(states, rows...)
 	}
 	out := make([]frontier.SurvivingInvariant, 0, len(states))
 	for _, s := range states {

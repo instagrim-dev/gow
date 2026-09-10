@@ -5,13 +5,14 @@
 influence search. Every attack is a durable, typed challenge that produces
 **evidence and an explicit state transition — never critic prose**. After this
 slice, only challenged invariants can influence search policy: the M5.1
-frontier reads exclusively `surviving` / `established` candidates.
+frontier reads `surviving` and `operator_attested` candidates — the
+challenged, unfalsified structure (see `frontier-generation.md`).
 
 ## The lifecycle (state lives only in transitions)
 
 ```text
 proposed -> challenged -> {surviving | weaken | falsified}
-surviving -> {challenged | weaken | falsified | established}
+surviving -> {challenged | weaken | falsified | operator_attested}
 weaken    -> {challenged | surviving | falsified}
 falsified : terminal
 ```
@@ -34,35 +35,47 @@ strengthened nor weakened by a claim code cannot confirm.
 
 | Type | Confirmed when (code-verified) | Lifecycle force |
 |---|---|---|
-| `known-counterexample` | a failure-side member in the atlas evaluates to `violates` (ambiguity is not a counterexample) | **falsified** |
-| `synthetic-counterexample` | a provider-constructed approach (rehydrated with exhaustively-complete fields) evaluates to `violates`; persisted as a `synthetic_artifacts` row | **weaken** — constructibility shows the invariant is not conserved by necessity; only an observed, in-atlas counterexample falsifies the empirical regularity |
+| `known-counterexample` | a failure-side member in the atlas evaluates to `violates` (ambiguity is not a counterexample) **and** the candidate is a `recurring` universal-regularity claim; a `contrast_observed` (association) claim is not refuted by an isolated counterexample and an `unknown`-kind claim is inconclusive (F3) | **falsified** (recurring only) |
+| `synthetic-counterexample` | a provider-constructed approach evaluates to `violates`. The construction is a PROPOSAL: its set fields are `unobserved`, so an omitted/empty description reads as `unknown` (inert), never a verified negative — it confirms only via a value actually PRESENT that contradicts the predicate (F3) | **weaken** — constructibility shows the invariant is not conserved by necessity; only an observed, in-atlas counterexample falsifies the empirical regularity |
 | `success-preserving` | a success/partial-success family's eligible members all satisfy the predicate (it does not discriminate outcome) | **weaken** |
 | `bias-critique` | the deterministically **recomputed** distinct-family support falls below the mining threshold; the recount is the evidence (KTD-6) and is retained for audit even when unconfirmed | **weaken** |
-| `split` | ≥2 valid child predicates, each distinct from the parent, grounding to **nonempty, pairwise-disjoint** supporting failure families (abstraction safety: ground or reject) | **weaken** + children persisted |
-| `merge` | one child predicate covering the **union** of the parents' support whose contrast violations are **not lower than any parent's** (a merge that erases the outcome-separating axis is rejected) | **weaken** + child persisted |
-| `independent-verification` | never provider-claimable; see the `established` gate below | surviving → **established** |
+| `split` | ≥2 **admissible** child predicates (shared failure-mechanism + pinned-vocabulary gate), each distinct from the parent, each a **refinement** (grounding only to families the parent supports), grounding to **nonempty, pairwise-disjoint** supporting failure families (abstraction safety: ground or reject) | **weaken** + children persisted |
+| `merge` | one **admissible** child predicate (same shared gate — this rejects an `outcome in [...]` child that would cover every failure family by definition) covering the **union** of the parents' support whose contrast violations are **not lower than any parent's** (a merge that erases the outcome-separating axis is rejected) | **weaken** + child persisted |
+| `independent-verification` | never provider-claimable; see the `operator_attested` gate below | surviving → **operator_attested** |
 
-A campaign whose every attack failed confirmation leaves the invariant
-**surviving** — the attacks were made and did not land. That is the only way to
-earn `surviving`; it cannot be requested.
+Survival is **earned, not defaulted** (F2): a campaign transitions the invariant
+to **surviving** only when at least one **completed applicable** attack ran a
+real determination over an eligible population and did not land. A campaign made
+up entirely of inadmissible/inconclusive attempts (e.g. a lone synthetic with no
+construction) opens the campaign (`-> challenged`) and stops there — it does
+**not** earn `surviving`. Survival cannot be requested.
 
 Confirmed split/merge children are persisted as **real candidate invariants**
-in a new revision (miner version `challenge-split/v1` / `challenge-merge/v1`)
-with support recomputed by the same engine mining uses, linked to the parent
-through `invariant_lineage`. Children enter `proposed` and must survive their
-own challenges — no inherited authority.
+in a new revision whose derivation identity (the `miner_version` reuse key)
+**folds the relation, the parent invariant set, and the canonical child
+predicate fingerprints** (F5), so two different parents (or child sets) splitting
+under the same failure space + threshold never collide on the reuse key. Support
+is recomputed by the same engine mining uses; children are linked to the parent
+through `invariant_lineage`, are written in the **same campaign transaction**
+(no orphaned children on a later failure), enter `proposed`, and must survive
+their own challenges — no inherited authority.
 
-## The `established` gate (KTD-2)
+## The `operator_attested` gate (KTD-2)
 
-The DB trigger permits `surviving → established` structurally; the pipeline
+The DB trigger permits `surviving → operator_attested` structurally; the pipeline
 gates it **epistemically**. `newf invariant establish <id> --snapshot <snap>
 --locator <loc>` refuses:
 
 - any state other than `surviving`;
 - any request without a persisted source snapshot + locator (independent,
-  non-model evidence, recorded as `independent_source` challenge evidence).
+  non-model evidence, recorded as `independent_source` challenge evidence);
+- any snapshot that does not belong to the invariant's problem (evidence is
+  problem-scoped; ingest the source under this problem first).
 
-No provider path reaches `established`: a challenger proposing
+The state records a provenance-bearing OPERATOR ATTESTATION, not machine
+confirmation — hence `operator_attested`, never "established".
+
+No provider path reaches `operator_attested`: a challenger proposing
 `independent-verification` is recorded inert. Model agreement — however
 enthusiastic — tops out at `surviving`.
 
@@ -114,8 +127,8 @@ newf invariant list --problem <id> --state surviving
 newf invariant establish <invariant-id> --snapshot <snap-id> --locator <loc> [--note ...]
 ```
 
-All support `--json`. `invariant list --state surviving|established` is the
-frontier read surface for M5.1.
+All support `--json`. `invariant list --state surviving|operator_attested` is the
+frontier read surface for M5.1 (both states are legal targets).
 
 ## Boundaries
 
@@ -125,5 +138,5 @@ frontier read surface for M5.1.
 - `internal/store/challenge_store.go` + migration v13 — atomic campaign
   persistence, ledger, read surfaces.
 - `internal/pipeline/challenge*.go` — campaign orchestration, verdict policy,
-  the `established` gate, run lifecycle.
+  the `operator_attested` gate, run lifecycle.
 - `cmd/newf/challenge.go` — thin CLI wiring.

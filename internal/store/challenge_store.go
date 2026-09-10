@@ -33,12 +33,22 @@ type SyntheticArtifactRow struct {
 type LineageRow struct {
 	ParentInvariantID string
 	ChildInvariantID  string
-	Relation          string // split|merge|weaken
+	Relation          string // split|merge
+}
+
+// DerivedChildren carries the confirmed split/merge children of a challenge as
+// a full (unpersisted) mining revision. It is persisted INSIDE the campaign
+// transaction — never before it — so a failing campaign leaves no orphaned
+// derived candidates, and lineage rows are minted in the same transaction from
+// the ACTUAL persisted child ids (the existing ones on an idempotent replay).
+type DerivedChildren struct {
+	Relation string // split|merge
+	Revision InvariantRevisionRecord
 }
 
 // ChallengeRecord is one attack on a candidate invariant plus everything it
-// produced: evidence, synthetic artifacts, lineage, and the state transitions
-// it drives (empty for an inert/unconfirmed challenge, KTD-3).
+// produced: evidence, synthetic artifacts, derived children, and the state
+// transitions it drives (empty for an inert/unconfirmed challenge, KTD-3).
 type ChallengeRecord struct {
 	ID             string // chl_
 	InvariantID    string // inv_
@@ -49,16 +59,24 @@ type ChallengeRecord struct {
 	CreatedAt      string
 	Evidence       []ChallengeEvidenceRow
 	Synthetic      []SyntheticArtifactRow
-	Lineage        []LineageRow
+	Derived        *DerivedChildren
 	// Transitions are the to_states this challenge drives, applied in order;
 	// from_state is read from the ledger at insert time and validated by the
 	// blueprint trigger.
 	Transitions []string
+	// Lineage is read-side only (populated by ListChallengesForInvariant); on
+	// write, lineage is derived in-transaction from Derived.
+	Lineage []LineageRow
 }
 
 // ChallengeCampaignRecord is one challenge pass over a single invariant: one
 // provider invocation (role='challenge') plus the ordered challenges it
-// proposed and their verified outcomes.
+// proposed and their verified outcomes. Any split/merge child revisions a
+// challenge produces travel on that challenge's Derived field and are written
+// in the SAME transaction as the challenges, evidence, lineage, and transitions
+// so a campaign is atomic INCLUDING child creation (F5) — a later invalid
+// proposal or persistence failure can never leave committed children orphaned
+// from their challenge and lineage.
 type ChallengeCampaignRecord struct {
 	ProblemID   string
 	RunID       string
@@ -139,10 +157,8 @@ INSERT INTO invariant_challenge_synthetic_artifacts(challenge_id, synthetic_arti
 				return err
 			}
 		}
-		for _, ln := range ch.Lineage {
-			if _, err := tx.ExecContext(ctx, `
-INSERT INTO invariant_lineage(parent_invariant_id, child_invariant_id, relation) VALUES(?, ?, ?)
-`, ln.ParentInvariantID, ln.ChildInvariantID, ln.Relation); err != nil {
+		if ch.Derived != nil {
+			if err := persistDerivedChildrenTx(ctx, tx, campaign.InvariantID, ch.Derived); err != nil {
 				return err
 			}
 		}
@@ -154,6 +170,62 @@ INSERT INTO invariant_lineage(parent_invariant_id, child_invariant_id, relation)
 	}
 
 	return tx.Commit()
+}
+
+// persistDerivedChildrenTx persists a challenge's confirmed split/merge
+// children inside the campaign transaction and mints their lineage rows from
+// the ACTUAL persisted child ids. It is idempotent end to end: an existing
+// derived revision (same identity tuple — the re-challenge case) is reused
+// rather than re-inserted, and lineage uses INSERT OR IGNORE (the primary key
+// is the full row, so ignoring a duplicate loses nothing). Without this a
+// re-challenge of a split-weakened invariant would abort forever on the
+// duplicate lineage key.
+func persistDerivedChildrenTx(ctx context.Context, tx *sql.Tx, parentInvariantID string, derived *DerivedChildren) error {
+	rec := derived.Revision
+	var existingID string
+	err := tx.QueryRowContext(ctx, `
+SELECT id FROM invariant_revisions
+WHERE problem_id = ? AND failure_space_id = ? AND miner_version = ? AND predicate_schema = ? AND min_support = ?
+`, rec.ProblemID, rec.FailureSpaceID, rec.MinerVersion, rec.PredicateSchema, rec.MinSupport).Scan(&existingID)
+	var childIDs []string
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		written, werr := writeInvariantRevisionTx(ctx, tx, rec)
+		if werr != nil {
+			return werr
+		}
+		for _, c := range written.Candidates {
+			childIDs = append(childIDs, c.ID)
+		}
+	case err != nil:
+		return err
+	default:
+		rows, qerr := tx.QueryContext(ctx, `SELECT id FROM candidate_invariants WHERE invariant_revision_id = ? ORDER BY ordinal`, existingID)
+		if qerr != nil {
+			return qerr
+		}
+		for rows.Next() {
+			var id string
+			if serr := rows.Scan(&id); serr != nil {
+				rows.Close()
+				return serr
+			}
+			childIDs = append(childIDs, id)
+		}
+		if rerr := rows.Err(); rerr != nil {
+			rows.Close()
+			return rerr
+		}
+		rows.Close()
+	}
+	for _, childID := range childIDs {
+		if _, err := tx.ExecContext(ctx, `
+INSERT OR IGNORE INTO invariant_lineage(parent_invariant_id, child_invariant_id, relation) VALUES(?, ?, ?)
+`, parentInvariantID, childID, derived.Relation); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // applyTransitionTx allocates the next transition_seq atomically and inserts

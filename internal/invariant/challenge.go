@@ -71,10 +71,33 @@ func unconfirmed(reason string) ChallengeResult {
 	return ChallengeResult{Confirmed: false, Detail: reason}
 }
 
+// AssociationKind is the coarse claim class a candidate asserts, mirroring the
+// engine's code-visible AssociationStatus. Its refutation condition differs
+// (F3): a `recurring` candidate claims a universal regularity over the failure
+// cohort and is falsified by ONE known in-atlas counterexample; a
+// `contrast_observed` candidate claims only that the predicate DISCRIMINATES
+// outcomes (an association), which a single failure-side violation does not
+// refute — it needs the discrimination itself to collapse. An `unknown`
+// candidate makes no confirmed regularity claim, so a single counterexample is
+// treated as inconclusive, not a falsification.
+type AssociationKind string
+
+const (
+	AssociationRecurring        AssociationKind = "recurring"
+	AssociationContrastObserved AssociationKind = "contrast_observed"
+	AssociationUnknown          AssociationKind = "unknown"
+)
+
 // VerifyKnownCounterexample confirms the claim that a KNOWN failed approach in
 // the atlas violates the predicate: some failure-side member evaluates to
-// `violates` (not `unknown` — ambiguity is not a counterexample).
-func VerifyKnownCounterexample(pred Predicate, families []Family) ChallengeResult {
+// `violates` (not `unknown` — ambiguity is not a counterexample). The refutation
+// consequence depends on the candidate's association kind (F3): a single known
+// violation FALSIFIES a `recurring` (universal-regularity) claim, but only a
+// `contrast_observed` (association/discrimination) claim survives such a
+// violation — for it, isolated failure-side violations are recorded as evidence
+// but do not by themselves refute the association. An `unknown`-kind candidate
+// makes no confirmed regularity claim, so a lone counterexample is inconclusive.
+func VerifyKnownCounterexample(pred Predicate, families []Family, kind AssociationKind) ChallengeResult {
 	var ev []ChallengeEvidence
 	for _, fam := range families {
 		for _, m := range fam.Members {
@@ -101,17 +124,32 @@ func VerifyKnownCounterexample(pred Predicate, families []Family) ChallengeResul
 		}
 		return ev[i].SignatureID < ev[j].SignatureID
 	})
+	// A known counterexample falsifies ONLY a universal-regularity (recurring)
+	// claim. A contrast/association claim is not refuted by isolated failure-side
+	// violations (its claim is about discrimination, not universality); the
+	// violation is retained as audit evidence but the result is inconclusive.
+	if kind != AssociationRecurring {
+		r := unconfirmed(fmt.Sprintf("%d failure-side violation(s) recorded, but a %q claim is not refuted by isolated counterexamples (it asserts discrimination, not a universal regularity)", len(ev), kind))
+		r.Evidence = ev
+		return r
+	}
 	return ChallengeResult{Confirmed: true, Evidence: ev,
-		Detail: fmt.Sprintf("%d known counterexample member(s)", len(ev))}
+		Detail: fmt.Sprintf("%d known counterexample member(s) refute the universal claim", len(ev))}
 }
 
 // VerifySyntheticCounterexample confirms a CONSTRUCTED failed approach violates
-// the predicate. The synthetic signature is provider-authored; confirmation is
-// code-owned: Evaluate must return `violates` (an `unknown` construction proves
-// nothing). The caller persists the artifact and links it.
+// the predicate. The synthetic signature is provider-authored and its claims are
+// UNSUPPORTED; confirmation is code-owned and requires Evaluate to return
+// `violates`. Crucially, a synthetic construction is a PROPOSAL, not a
+// demonstrated construction: its set fields are `unobserved` (see
+// syntheticSignature), so `contains(field, X)` on a description that merely
+// omits X evaluates to `unknown`, not `violates` — omitting X from a
+// description does not prove an admissible failed approach WITHOUT X exists
+// (F3). A synthetic therefore weakens only when the queried structure is
+// explicitly, exhaustively supplied AND the construction genuinely violates.
 func VerifySyntheticCounterexample(pred Predicate, synthetic canon.MechanismSignature) ChallengeResult {
 	if Evaluate(pred, synthetic) != VerdictViolates {
-		return unconfirmed("synthetic construction does not violate the predicate")
+		return unconfirmed("synthetic construction does not violate the predicate (an omitted or unobserved field is a proposal, not a demonstrated counterexample)")
 	}
 	return ChallengeResult{Confirmed: true, Detail: "synthetic construction violates the predicate"}
 }
@@ -168,21 +206,26 @@ func VerifyBiasCritique(pred Predicate, families []Family, minSupport int) Chall
 }
 
 // VerifySplit confirms that the parent predicate is two-or-more invariants
-// masquerading as one: every proposed child must be valid, semantically
-// distinct from the parent, and grounded in a NONEMPTY, PAIRWISE-DISJOINT set
-// of supporting failure families (docs/abstraction-safety.md: a split that
-// cannot ground each child into distinct concrete cases is rejected).
-func VerifySplit(parent Predicate, children []Predicate, families []Family) ChallengeResult {
+// masquerading as one: every proposed child must be ADMISSIBLE (the shared
+// failure-mechanism + pinned-vocabulary gate, F4), semantically distinct from
+// the parent, an actual REFINEMENT of the parent (every family a child grounds
+// to must also be a parent-supporting family — disjoint support alone does not
+// prove the children partition the PARENT), and grounded in a NONEMPTY,
+// PAIRWISE-DISJOINT set of supporting failure families
+// (docs/abstraction-safety.md: a split that cannot ground each child into
+// distinct concrete cases is rejected).
+func VerifySplit(parent Predicate, children []Predicate, families []Family, vocab *canon.Vocabulary) ChallengeResult {
 	if len(children) < 2 {
 		return unconfirmed("a split requires >=2 child predicates")
 	}
 	parentFP := Fingerprint(parent)
+	parentSupport := supportingFamilies(parent, families)
 	seen := map[string]struct{}{}
 	supports := make([]map[string]struct{}, 0, len(children))
 	var ev []ChallengeEvidence
 	for i, child := range children {
-		if err := Validate(child); err != nil {
-			return unconfirmed(fmt.Sprintf("child %d predicate invalid: %v", i, err))
+		if err := AdmitCandidate(child, vocab); err != nil {
+			return unconfirmed(fmt.Sprintf("child %d not admissible: %v", i, err))
 		}
 		fp := Fingerprint(child)
 		if fp == parentFP {
@@ -195,6 +238,15 @@ func VerifySplit(parent Predicate, children []Predicate, families []Family) Chal
 		sup := supportingFamilies(child, families)
 		if len(sup) == 0 {
 			return unconfirmed(fmt.Sprintf("child %d grounds to no supporting failure family", i))
+		}
+		// Refinement: a split partitions the PARENT's support, so every family a
+		// child grounds to must be a family the parent also supports. A child
+		// grounding to a family outside the parent's support is a new invariant,
+		// not a refinement of this one (docs/abstraction-safety.md).
+		for fam := range sup {
+			if _, ok := parentSupport[fam]; !ok {
+				return unconfirmed(fmt.Sprintf("child %d grounds to family %s outside the parent's support (not a refinement)", i, fam))
+			}
 		}
 		supports = append(supports, sup)
 	}
@@ -221,23 +273,26 @@ func VerifySplit(parent Predicate, children []Predicate, families []Family) Chal
 }
 
 // VerifyMerge confirms that several parent predicates merge into one child at
-// a higher abstraction WITHOUT losing predictive discrimination: the child's
-// supporting-family set must cover the union of the parents', and the child's
-// contrast violations must be at least each parent's (a merge that erases the
-// axis separating outcomes is rejected).
-func VerifyMerge(parents []Predicate, child Predicate, families []Family) ChallengeResult {
+// a higher abstraction WITHOUT losing predictive discrimination: the child must
+// be ADMISSIBLE (the shared failure-mechanism + pinned-vocabulary gate — this
+// is what rejects a merged child of `outcome in [failure, partial_failure]`
+// that would otherwise cover every failure family and violate every success
+// case by definition, F4), its supporting-family set must cover the union of
+// the parents', and its contrast violations must be at least each parent's (a
+// merge that erases the axis separating outcomes is rejected).
+func VerifyMerge(parents []Predicate, child Predicate, families []Family, vocab *canon.Vocabulary) ChallengeResult {
 	if len(parents) < 2 {
 		return unconfirmed("a merge requires >=2 parent predicates")
 	}
-	if err := Validate(child); err != nil {
-		return unconfirmed(fmt.Sprintf("child predicate invalid: %v", err))
+	if err := AdmitCandidate(child, vocab); err != nil {
+		return unconfirmed(fmt.Sprintf("child not admissible: %v", err))
 	}
 	childSupport := supportingFamilies(child, families)
 	childContrast := contrastViolations(child, families)
 	union := map[string]struct{}{}
 	for i, p := range parents {
-		if err := Validate(p); err != nil {
-			return unconfirmed(fmt.Sprintf("parent %d predicate invalid: %v", i, err))
+		if err := AdmitCandidate(p, vocab); err != nil {
+			return unconfirmed(fmt.Sprintf("parent %d not admissible: %v", i, err))
 		}
 		for fam := range supportingFamilies(p, families) {
 			union[fam] = struct{}{}

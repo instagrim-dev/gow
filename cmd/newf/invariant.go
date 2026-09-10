@@ -80,7 +80,7 @@ func newInvariantCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions)
 				return wrapCommandError("invariant list", errors.New("--problem is required"))
 			}
 			// --state switches to the per-candidate lifecycle surface (M4.3);
-			// filtered to surviving/established it is the M5.1 frontier read.
+			// filtered to surviving/operator_attested it is the M5.1 frontier read.
 			if listState != "" {
 				result, err := app.ListInvariantStates(cmd.Context(), pipeline.InvariantStatesInput{
 					DBPath:     opts.dbPath,
@@ -113,7 +113,7 @@ func newInvariantCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions)
 		},
 	}
 	listCmd.Flags().StringVar(&listProblem, "problem", "", "Problem ID")
-	listCmd.Flags().StringVar(&listState, "state", "", "Filter candidates by lifecycle state (proposed|challenged|surviving|weaken|falsified|established)")
+	listCmd.Flags().StringVar(&listState, "state", "", "Filter candidates by lifecycle state (proposed|challenged|surviving|weaken|falsified|operator_attested)")
 	cmd.AddCommand(listCmd)
 	cmd.AddCommand(newInvariantStateCommand(stdout, app, opts))
 	cmd.AddCommand(newInvariantEstablishCommand(stdout, app, opts))

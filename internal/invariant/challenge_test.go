@@ -19,6 +19,29 @@ func chPredicate(id string) Predicate {
 	return Predicate{Schema: PredicateSchemaV1, Root: Node{Op: OpContains, Field: FieldPreserves, CanonicalID: id}}
 }
 
+// chVocab builds the pinned test vocabulary the split/merge admissibility gate
+// checks against. Every canonical id these challenge tests reference is
+// registered as a preserves-field term so the tests exercise grounding /
+// discrimination logic rather than failing the vocabulary gate. Grounding
+// (whether any family PRESERVES an id) is orthogonal to admissibility (whether
+// the id is IN the pinned vocabulary): `unused_everywhere` is admissible but
+// ungrounded on purpose.
+func chVocab(t *testing.T) *canon.Vocabulary {
+	t.Helper()
+	defs := []canon.TermDef{
+		{CanonicalID: chIDResidue, FieldKind: domain.FieldPreserves},
+		{CanonicalID: chIDSieve, FieldKind: domain.FieldPreserves},
+		{CanonicalID: chIDGlobal, FieldKind: domain.FieldPreserves},
+		{CanonicalID: chIDBounds, FieldKind: domain.FieldPreserves},
+		{CanonicalID: "core.operator.unused_everywhere", FieldKind: domain.FieldPreserves},
+	}
+	vocab, err := canon.BuildVocabulary("mechanism/v1", defs)
+	if err != nil {
+		t.Fatalf("build test vocab: %v", err)
+	}
+	return vocab
+}
+
 // chSignature builds a resolved signature whose preserves set carries the given
 // canonical ids, with the given outcome. The preserves field is marked
 // exhaustively extracted so absence is a verified negative (violates), matching
@@ -68,7 +91,7 @@ func chAtlas() []Family {
 func TestVerifyKnownCounterexample(t *testing.T) {
 	families := chAtlas()
 	// mcl_f3 violates preserves(residue) -> confirmed, evidence names it.
-	res := VerifyKnownCounterexample(chPredicate(chIDResidue), families)
+	res := VerifyKnownCounterexample(chPredicate(chIDResidue), families, AssociationRecurring)
 	if !res.Confirmed {
 		t.Fatalf("expected confirmed, got %+v", res)
 	}
@@ -79,7 +102,7 @@ func TestVerifyKnownCounterexample(t *testing.T) {
 	all := Predicate{Schema: PredicateSchemaV1, Root: Node{Op: OpAny, Children: []Node{
 		chPredicate(chIDResidue).Root, chPredicate(chIDSieve).Root,
 	}}}
-	if res := VerifyKnownCounterexample(all, families); res.Confirmed {
+	if res := VerifyKnownCounterexample(all, families, AssociationRecurring); res.Confirmed {
 		t.Fatalf("expected unconfirmed, got %+v", res)
 	}
 }
@@ -90,7 +113,7 @@ func TestVerifyKnownCounterexampleUnknownIsNotACounterexample(t *testing.T) {
 		FieldKind: domain.FieldPreserves, State: domain.ResolutionAmbiguous, Status: domain.ClaimAmbiguous,
 	})
 	families := []Family{chFamily("mcl_amb", domain.OutcomeFailure, sig)}
-	if res := VerifyKnownCounterexample(chPredicate(chIDResidue), families); res.Confirmed {
+	if res := VerifyKnownCounterexample(chPredicate(chIDResidue), families, AssociationRecurring); res.Confirmed {
 		t.Fatalf("ambiguous member must not be a counterexample: %+v", res)
 	}
 }
@@ -103,6 +126,82 @@ func TestVerifySyntheticCounterexample(t *testing.T) {
 	satisfying := chSignature("", domain.OutcomeFailure, chIDResidue)
 	if res := VerifySyntheticCounterexample(chPredicate(chIDResidue), satisfying); res.Confirmed {
 		t.Fatalf("expected unconfirmed, got %+v", res)
+	}
+}
+
+// TestVerifySyntheticEmptyDescriptionIsProposalNotCounterexample is the F3
+// regression: an EMPTY (unobserved) synthetic description must NOT confirm a
+// contains-based counterexample. Marking the field unobserved (as the real
+// pipeline syntheticSignature now does) means absence evaluates to `unknown`,
+// so `contains(preserves, residue)` on an empty synthetic is inert — proving
+// only that a DESCRIPTION can omit residue, not that an admissible failed
+// approach without it exists.
+func TestVerifySyntheticEmptyDescriptionIsProposalNotCounterexample(t *testing.T) {
+	empty := canon.MechanismSignature{
+		SchemaVersion:     canon.SchemaMechanismV1,
+		VocabularyVersion: "mechanism/v1",
+		OutcomeClass:      domain.OutcomeFailure,
+		Preserves:         []canon.FieldClaim{},
+		// unobserved: absence is an epistemic gap, not a verified negative (F3).
+		SetFieldCompleteness: map[domain.FieldKind]domain.FieldCompleteness{
+			domain.FieldPreserves: domain.CompletenessUnobserved,
+		},
+	}
+	if res := VerifySyntheticCounterexample(chPredicate(chIDResidue), empty); res.Confirmed {
+		t.Fatalf("empty/unobserved synthetic must not confirm a counterexample (F3): %+v", res)
+	}
+}
+
+// TestVerifyKnownCounterexampleRefutationDependsOnClaimKind is the F3 regression
+// for claim-kind-scoped refutation: the SAME failure-side violation falsifies a
+// `recurring` (universal-regularity) candidate but leaves a `contrast_observed`
+// (association/discrimination) candidate unconfirmed — a lone counterexample
+// does not refute an association claim.
+func TestVerifyKnownCounterexampleRefutationDependsOnClaimKind(t *testing.T) {
+	families := chAtlas() // mcl_f3 violates preserves(residue)
+	if res := VerifyKnownCounterexample(chPredicate(chIDResidue), families, AssociationRecurring); !res.Confirmed {
+		t.Fatalf("recurring claim must be falsified by a known counterexample: %+v", res)
+	}
+	res := VerifyKnownCounterexample(chPredicate(chIDResidue), families, AssociationContrastObserved)
+	if res.Confirmed {
+		t.Fatalf("contrast_observed claim must NOT be falsified by an isolated counterexample (F3): %+v", res)
+	}
+	if len(res.Evidence) == 0 {
+		t.Fatalf("the violation should still be recorded as audit evidence: %+v", res)
+	}
+}
+
+// TestVerifyMergeRejectsOutcomeReadingChild is the F4 regression: a merged child
+// that reads the outcome axis (e.g. outcome in [failure, partial_failure]) earns
+// coverage/contrast by definition and identifies no mechanism. The shared
+// AdmitCandidate gate inside VerifyMerge must reject it, closing the target leak
+// the mining fix excludes.
+func TestVerifyMergeRejectsOutcomeReadingChild(t *testing.T) {
+	families := chAtlas()
+	parents := []Predicate{chPredicate(chIDResidue), chPredicate(chIDBounds)}
+	outcomeChild := Predicate{Schema: PredicateSchemaV1, Root: Node{
+		Op: OpIn, Field: FieldOutcome, Values: []string{string(domain.OutcomeFailure), string(domain.OutcomePartialFailure)},
+	}}
+	res := VerifyMerge(parents, outcomeChild, families, chVocab(t))
+	if res.Confirmed || !strings.Contains(res.Detail, "not admissible") {
+		t.Fatalf("outcome-reading merge child must be rejected as inadmissible (F4): %+v", res)
+	}
+}
+
+// TestVerifySplitRejectsChildOutsideParentSupport is the F4/refinement
+// regression: a split child that grounds to a failure family the PARENT does
+// not support is a new invariant, not a refinement of the parent, and must be
+// rejected even when the children are pairwise-disjoint and distinct.
+func TestVerifySplitRejectsChildOutsideParentSupport(t *testing.T) {
+	// Parent = any(residue, global), supported by {f1, f2}. Children residue
+	// {f1,f2} and bounds {f3} are disjoint and both distinct from the parent, but
+	// bounds grounds to f3, a failure family the parent does NOT support.
+	parent := Predicate{Schema: PredicateSchemaV1, Root: Node{Op: OpAny, Children: []Node{
+		chPredicate(chIDResidue).Root, chPredicate(chIDGlobal).Root,
+	}}}
+	res := VerifySplit(parent, []Predicate{chPredicate(chIDResidue), chPredicate(chIDBounds)}, chAtlas(), chVocab(t))
+	if res.Confirmed || !strings.Contains(res.Detail, "not a refinement") {
+		t.Fatalf("split child outside parent support must be rejected as non-refinement (F4): %+v", res)
 	}
 }
 
@@ -147,7 +246,7 @@ func TestVerifySplitGroundedDisjoint(t *testing.T) {
 	parent := Predicate{Schema: PredicateSchemaV1, Root: Node{Op: OpAny, Children: []Node{
 		chPredicate(chIDResidue).Root, chPredicate(chIDSieve).Root,
 	}}}
-	res := VerifySplit(parent, []Predicate{chPredicate(chIDResidue), chPredicate(chIDSieve)}, chAtlas())
+	res := VerifySplit(parent, []Predicate{chPredicate(chIDResidue), chPredicate(chIDSieve)}, chAtlas(), chVocab(t))
 	if !res.Confirmed {
 		t.Fatalf("expected confirmed split, got %+v", res)
 	}
@@ -161,19 +260,24 @@ func TestVerifySplitRejectsOverlapAndUngrounded(t *testing.T) {
 	overlapParent := Predicate{Schema: PredicateSchemaV1, Root: Node{Op: OpAny, Children: []Node{
 		chPredicate(chIDResidue).Root, chPredicate(chIDGlobal).Root,
 	}}}
-	res := VerifySplit(overlapParent, []Predicate{chPredicate(chIDResidue), chPredicate(chIDGlobal)}, chAtlas())
+	res := VerifySplit(overlapParent, []Predicate{chPredicate(chIDResidue), chPredicate(chIDGlobal)}, chAtlas(), chVocab(t))
 	if res.Confirmed || !strings.Contains(res.Detail, "not disjoint") {
 		t.Fatalf("expected overlap rejection, got %+v", res)
 	}
-	parent := chPredicate(chIDResidue)
-	// Ungrounded child: nothing preserves an unused id.
+	// Ungrounded child: nothing preserves an unused id. The parent must be the
+	// composite any(residue, sieve) so the grounded sibling (sieve -> f3) stays
+	// INSIDE the parent's support and the ungrounded branch is what fires.
+	compositeParent := Predicate{Schema: PredicateSchemaV1, Root: Node{Op: OpAny, Children: []Node{
+		chPredicate(chIDResidue).Root, chPredicate(chIDSieve).Root,
+	}}}
 	unused := chPredicate("core.operator.unused_everywhere")
-	res = VerifySplit(parent, []Predicate{chPredicate(chIDSieve), unused}, chAtlas())
+	res = VerifySplit(compositeParent, []Predicate{chPredicate(chIDSieve), unused}, chAtlas(), chVocab(t))
 	if res.Confirmed || !strings.Contains(res.Detail, "grounds to no supporting") {
 		t.Fatalf("expected ungrounded rejection, got %+v", res)
 	}
 	// A child identical to the parent is not a split.
-	res = VerifySplit(parent, []Predicate{parent, chPredicate(chIDSieve)}, chAtlas())
+	parent := chPredicate(chIDResidue)
+	res = VerifySplit(parent, []Predicate{parent, chPredicate(chIDSieve)}, chAtlas(), chVocab(t))
 	if res.Confirmed || !strings.Contains(res.Detail, "identical to the parent") {
 		t.Fatalf("expected identity rejection, got %+v", res)
 	}
@@ -187,7 +291,7 @@ func TestVerifyMergePreservesDiscrimination(t *testing.T) {
 	child := Predicate{Schema: PredicateSchemaV1, Root: Node{Op: OpAny, Children: []Node{
 		chPredicate(chIDResidue).Root, chPredicate(chIDSieve).Root,
 	}}}
-	res := VerifyMerge(parents, child, families)
+	res := VerifyMerge(parents, child, families, chVocab(t))
 	if res.Confirmed || !strings.Contains(res.Detail, "loses discrimination") {
 		t.Fatalf("expected discrimination-loss rejection, got %+v", res)
 	}
@@ -198,7 +302,7 @@ func TestVerifyMergePreservesDiscrimination(t *testing.T) {
 	child2 := Predicate{Schema: PredicateSchemaV1, Root: Node{Op: OpAny, Children: []Node{
 		chPredicate(chIDResidue).Root, chPredicate(chIDBounds).Root,
 	}}}
-	res = VerifyMerge(parents2, child2, families)
+	res = VerifyMerge(parents2, child2, families, chVocab(t))
 	if !res.Confirmed {
 		t.Fatalf("expected confirmed merge, got %+v", res)
 	}
@@ -212,7 +316,7 @@ func TestVerifyMergeRejectsCoverageGap(t *testing.T) {
 	// Parents residue {f1,f2} and bounds {f3} both have zero contrast, so the
 	// discrimination gate passes; child = residue alone cannot cover bounds'
 	// supporter mcl_f3 -> coverage rejection.
-	res := VerifyMerge([]Predicate{chPredicate(chIDResidue), chPredicate(chIDBounds)}, chPredicate(chIDResidue), families)
+	res := VerifyMerge([]Predicate{chPredicate(chIDResidue), chPredicate(chIDBounds)}, chPredicate(chIDResidue), families, chVocab(t))
 	if res.Confirmed || !strings.Contains(res.Detail, "does not cover") {
 		t.Fatalf("expected coverage rejection, got %+v", res)
 	}

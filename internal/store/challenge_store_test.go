@@ -216,3 +216,126 @@ func TestListInvariantStatesFiltersByState(t *testing.T) {
 		t.Fatalf("expected no falsified candidates, got %+v", falsified)
 	}
 }
+
+// sampleDerivedChildren builds the derived split-children revision a confirmed
+// split challenge carries, keyed to the parent's substrate. Fresh ids each call
+// (mimicking the pipeline rebuilding the record on every campaign); the store's
+// identity-tuple lookup must reuse the existing revision on replay.
+func sampleDerivedChildren(rec InvariantRevisionRecord) *DerivedChildren {
+	now := time.Now().UTC()
+	return &DerivedChildren{
+		Relation: "split",
+		Revision: InvariantRevisionRecord{
+			ID:              domain.NewInvariantRevisionID(now),
+			ProblemID:       rec.ProblemID,
+			FailureSpaceID:  rec.FailureSpaceID,
+			ClusterRunID:    rec.ClusterRunID,
+			RunID:           rec.RunID,
+			MinerVersion:    "challenge-split/v1",
+			PredicateSchema: "invariant-predicate/v1",
+			MinSupport:      rec.MinSupport,
+			CandidateCount:  1,
+			CreatedAt:       formatTime(now),
+			Invocation: InvariantProviderInvocation{
+				ID: domain.NewProviderInvocationID(now), RunID: rec.RunID,
+				ProviderName: "fixture", SchemaVersion: "invariant-predicate/v1",
+				RequestHash: "derived-rh", CreatedAt: formatTime(now),
+			},
+			Candidates: []CandidateInvariantRow{{
+				ID:                   domain.NewCandidateInvariantID(now),
+				PredicateFingerprint: "child-fp-1",
+				PredicateJSON:        `{"schema":"invariant-predicate/v1"}`,
+				Statement:            "split child 0",
+				AbstractionLevel:     "mechanism",
+				AssociationStatus:    "unknown",
+				Ordinal:              0,
+			}},
+		},
+	}
+}
+
+// TestReChallengeAfterSplitWeakenIsNotBricked regresses the duplicate-lineage
+// abort: a second campaign on a split-weakened invariant re-confirms the same
+// split (fresh record ids, same identity tuple). The store must reuse the
+// existing derived revision and ignore the duplicate lineage rows instead of
+// aborting the whole campaign forever.
+func TestReChallengeAfterSplitWeakenIsNotBricked(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+	rec := sampleRevision(t, st)
+	res, err := st.PersistInvariantRevision(ctx, rec)
+	if err != nil {
+		t.Fatalf("persist revision: %v", err)
+	}
+	invID := res.Record.Candidates[0].ID
+
+	first := challengeRow(t, "split", "confirmed", "challenged", "weaken")
+	first.Derived = sampleDerivedChildren(rec)
+	if err := st.PersistChallengeCampaign(ctx, sampleCampaign(rec.ProblemID, rec.RunID, invID, first)); err != nil {
+		t.Fatalf("first campaign: %v", err)
+	}
+
+	// Re-challenge: weaken -> challenged -> weaken, same split re-confirmed.
+	second := challengeRow(t, "split", "confirmed", "challenged", "weaken")
+	second.Derived = sampleDerivedChildren(rec) // fresh ids, same identity tuple
+	if err := st.PersistChallengeCampaign(ctx, sampleCampaign(rec.ProblemID, rec.RunID, invID, second)); err != nil {
+		t.Fatalf("re-challenge must not abort on duplicate lineage: %v", err)
+	}
+
+	// Exactly one derived revision and one lineage row survive both campaigns.
+	var revCount, lineageCount int
+	if err := st.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM invariant_revisions WHERE miner_version = 'challenge-split/v1'`).Scan(&revCount); err != nil {
+		t.Fatalf("count revisions: %v", err)
+	}
+	if revCount != 1 {
+		t.Fatalf("derived revision must be reused on replay, got %d", revCount)
+	}
+	if err := st.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM invariant_lineage WHERE parent_invariant_id = ?`, invID).Scan(&lineageCount); err != nil {
+		t.Fatalf("count lineage: %v", err)
+	}
+	if lineageCount != 1 {
+		t.Fatalf("lineage must not duplicate on replay, got %d", lineageCount)
+	}
+	state, err := st.GetInvariantState(ctx, invID)
+	if err != nil {
+		t.Fatalf("get state: %v", err)
+	}
+	if state.State != "weaken" {
+		t.Fatalf("state = %q, want weaken", state.State)
+	}
+}
+
+// TestAbortedCampaignPersistsNoDerivedChildren regresses the atomicity escape:
+// derived children ride INSIDE the campaign transaction, so a campaign that
+// aborts (illegal transition) must leave no derived revision, no candidates,
+// and no lineage — not orphaned provenance-dangling rows.
+func TestAbortedCampaignPersistsNoDerivedChildren(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+	rec := sampleRevision(t, st)
+	res, err := st.PersistInvariantRevision(ctx, rec)
+	if err != nil {
+		t.Fatalf("persist revision: %v", err)
+	}
+	invID := res.Record.Candidates[0].ID
+
+	bad := challengeRow(t, "split", "confirmed", "surviving") // illegal from proposed
+	bad.Derived = sampleDerivedChildren(rec)
+	if err := st.PersistChallengeCampaign(ctx, sampleCampaign(rec.ProblemID, rec.RunID, invID, bad)); err == nil {
+		t.Fatal("expected illegal-transition abort")
+	}
+
+	var revCount, lineageCount int
+	if err := st.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM invariant_revisions WHERE miner_version = 'challenge-split/v1'`).Scan(&revCount); err != nil {
+		t.Fatalf("count revisions: %v", err)
+	}
+	if revCount != 0 {
+		t.Fatalf("aborted campaign must persist no derived revision, got %d", revCount)
+	}
+	if err := st.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM invariant_lineage WHERE parent_invariant_id = ?`, invID).Scan(&lineageCount); err != nil {
+		t.Fatalf("count lineage: %v", err)
+	}
+	if lineageCount != 0 {
+		t.Fatalf("aborted campaign must persist no lineage, got %d", lineageCount)
+	}
+}
