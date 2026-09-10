@@ -26,6 +26,7 @@ type App struct {
 	invariantMinerFn provider.InvariantMiner
 	challengerFn     provider.Challenger
 	generatorFn      provider.Generator
+	modelVerifierFn  provider.ModelVerifier
 }
 
 type problemStore interface {
@@ -81,6 +82,11 @@ type problemStore interface {
 	GetFrontierGeneration(context.Context, string) (store.FrontierGenerationRecord, error)
 	ListFrontierGenerations(context.Context, string) ([]store.FrontierGenerationRecord, error)
 	LatestFrontierGeneration(context.Context, string) (string, bool, error)
+	PersistEvaluationRun(context.Context, store.EvaluationRunRecord) (store.EvaluationRunRecord, error)
+	GetEvaluationRun(context.Context, string) (store.EvaluationRunRecord, error)
+	GetEvaluation(context.Context, string) (store.EvaluationRow, error)
+	ListEvaluations(context.Context, string) ([]store.EvaluationRunRecord, error)
+	ListEvaluatedFailures(context.Context, string) ([]store.EvaluatedFailureRow, error)
 }
 
 type InitProblemInput struct {

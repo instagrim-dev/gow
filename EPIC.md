@@ -453,6 +453,37 @@ Exit condition:
 
 - evaluations are durable evidence-bearing artifacts and failed proposals can re-enter the atlas.
 
+**Status: delivered.** `newf evaluate <proposal-id> --problem <id>` (or
+`--problem <id>` to evaluate every un-evaluated proposal in the latest
+generation) routes each frontier proposal through a cheap-first,
+strongest-decisive verifier hierarchy (`internal/verify`): a
+`deterministic-check` tier that reuses the M4.2 predicate evaluator over the
+per-target violation verdicts M5.1 already persisted, a `counterexample-search`
+tier that scans the nearest known failure families for a refuter, and a
+last-resort `model-judgment` tier (a deterministic `FixtureVerifier` in CI,
+role `'evaluate'`). The router orders verifiers by hierarchy strength before
+cost, so a deterministic failure can never be overridden by a confident model
+"success" (R3) — the central strength-laundering guard. Every `evaluation`
+records both a `verifier_kind` and a `verification_strength` (v15, KTD-1): a
+verdict and its epistemic strength are inseparable, the structural expression
+of `ModelJudgment != Verification`. The verdict is drawn from exactly the EPIC
+vocabulary and CHECK-enforced. Each evaluation populates its proposal's
+`result` in the SAME transaction (R5); a `failure`/`partial_failure` writes an
+`evaluated_failures` marker so the mechanism can re-enter the atlas on the next
+`cluster build` (R6) — a queryable flag surfaced by `newf evaluation failures`,
+not an auto-rerun. Model-tier evaluations record a `provider_invocations` row
+(role `'evaluate'`) with retained payloads; deterministic tiers record tool
+identity and no provider row. Runs use `running → completed/failed`;
+re-evaluation is a new append-only `evaluation_run`; all rows are immutable by
+trigger. Holdout mode (`mode='holdout'`) is refused at the service boundary and
+by a gate trigger (deferred to M7); the nullable holdout columns are retained
+so M7 needs no schema retrofit. `newf evaluation list/show` and `--json` expose
+the strength-stamped verdicts. See `docs/evaluation.md`. This slice deliberately
+does NOT compress the partial-successes it finds (M6.1) or mutate search policy
+(M6.2); it records proposal outcomes only, and never changes any invariant's
+state.
+
+
 ### M6.1 — Compress partial successes into success invariants
 
 Goal:

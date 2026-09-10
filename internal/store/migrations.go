@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 14
+const currentSchemaVersion = 15
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -763,6 +763,23 @@ END;
 		// (FK-safe by construction). Introspective + idempotent: a fresh v14
 		// database already has the target shape and every step is a no-op.
 		apply: migrateV14FrontierGeneration,
+	},
+	{
+		version: 15,
+		// M5.2 evaluation + verifier routing (#15). Additive evaluation_runs,
+		// evaluations (+ verifier_kind + verification_strength, KTD-1), the
+		// evaluation_metrics / evaluation_run_metrics metric-scale triads, and an
+		// evaluated_failures re-entry marker (R6/KTD-5). Transcribed from
+		// docs/persistence.md 670-853 (names pluralized to the shipped convention),
+		// mode='proposal' only: the holdout-only tables (holdout_set*,
+		// evaluation_holdout_match) and baseline arms are deferred to M7, so this
+		// migration ships the nullable holdout columns plus a holdout-REFUSAL gate
+		// trigger (a verbatim copy of the blueprint gate is impossible without the
+		// M7 holdout_leakage_check/holdout_set tables it queries; M7 replaces the
+		// refusal trigger with the full gate when it adds those tables). Also widens
+		// provider_invocations.role to admit 'evaluate' via the same guarded in-place
+		// writable_schema CHECK edit v11/v13/v14 used. Introspective + idempotent.
+		apply: migrateV15Evaluation,
 	},
 }
 
@@ -1773,6 +1790,201 @@ func migrateV14FrontierGeneration(ctx context.Context, tx *sql.Tx) error {
 		if err := editTableCheckInPlace(ctx, tx, "provider_invocations",
 			"role IN ('normalize','invariant','challenge')",
 			"role IN ('normalize','invariant','challenge','generate')"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// evaluationTablesSQL is the additive DDL for the M5.2 evaluation layer. Every
+// table is immutable by trigger and append-only. The KTD-1 columns
+// verifier_kind + verification_strength make the verification hierarchy
+// structural (a model verdict can never be stored as if deterministic). Holdout
+// mode is present in the CHECK vocabulary and its nullable columns are retained
+// (M7-ready), but a holdout-REFUSAL gate trigger aborts any holdout-mode row:
+// the blueprint's full gate queries holdout_leakage_check/holdout_set, which do
+// not exist until M7, so a verbatim copy cannot be created now. M7 replaces this
+// refusal trigger with the full gate when it lands those tables.
+const evaluationTablesSQL = `
+CREATE TABLE IF NOT EXISTS evaluation_runs (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  frontier_generation_run_id TEXT REFERENCES frontier_generation_runs(id),
+  invariant_revision_id TEXT REFERENCES invariant_revisions(id),
+  cluster_run_id TEXT REFERENCES cluster_runs(id),
+  normalization_revision_id TEXT REFERENCES normalization_revisions(id),
+  -- holdout hooks retained for M7 (nullable; holdout mode refused by gate below):
+  holdout_set_id TEXT,
+  holdout_leakage_check_id TEXT,
+  mode TEXT NOT NULL CHECK (mode IN ('proposal','holdout')),
+  cutoff_time TEXT,
+  baseline_type TEXT CHECK (baseline_type IN ('undirected','semantic-summary')),
+  proposal_budget_count INTEGER,
+  evaluation_budget_count INTEGER,
+  routing_policy TEXT NOT NULL DEFAULT 'cheap-first' CHECK (routing_policy = 'cheap-first'),
+  evaluation_count INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+-- Holdout-REFUSAL gate (M5.2): holdout mode is deferred to M7. Until the holdout
+-- machinery (holdout_set*, holdout_leakage_check) ships, any holdout-mode row is
+-- rejected here so no half-populated holdout path can exist. M7 replaces this
+-- with the blueprint's full leakage-checking gate.
+CREATE TRIGGER IF NOT EXISTS evaluation_runs_holdout_gate_insert
+BEFORE INSERT ON evaluation_runs
+BEGIN
+  SELECT CASE WHEN NEW.mode = 'holdout'
+    THEN RAISE(ABORT, 'holdout mode is deferred to M7; only mode=proposal is supported')
+  END;
+END;
+CREATE TRIGGER IF NOT EXISTS evaluation_runs_holdout_gate_update
+BEFORE UPDATE ON evaluation_runs
+BEGIN
+  SELECT CASE WHEN NEW.mode = 'holdout'
+    THEN RAISE(ABORT, 'holdout mode is deferred to M7; only mode=proposal is supported')
+  END;
+END;
+
+CREATE TABLE IF NOT EXISTS evaluations (
+  id TEXT PRIMARY KEY,
+  evaluation_run_id TEXT NOT NULL REFERENCES evaluation_runs(id),
+  proposal_id TEXT REFERENCES frontier_proposals(id),
+  verdict TEXT NOT NULL CHECK (verdict IN ('failure','partial_failure','partial_success','success','unknown','verification_blocked')),
+  verifier_kind TEXT NOT NULL CHECK (verifier_kind IN ('deterministic-check','counterexample-search','reproducible-computation','independent-evidence','independent-critic','model-judgment')),
+  verification_strength TEXT NOT NULL CHECK (verification_strength IN ('deterministic','reproducible','independent-evidence','independent-critic','single-model-judgment')),
+  confidence_ordinal TEXT,
+  tool_name TEXT,
+  tool_version TEXT,
+  provider_invocation_id TEXT REFERENCES provider_invocations(id),
+  notes TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS evaluation_metrics (
+  id TEXT PRIMARY KEY,
+  evaluation_id TEXT NOT NULL REFERENCES evaluations(id),
+  metric_name TEXT NOT NULL,
+  metric_scale TEXT NOT NULL CHECK (metric_scale IN ('numeric','ordinal','categorical')),
+  numeric_value REAL,
+  ordinal_value TEXT,
+  ordinal_scale_key TEXT,
+  ordinal_scale_version TEXT,
+  categorical_value TEXT,
+  comparator TEXT,
+  created_at TEXT NOT NULL,
+  CHECK (
+    (metric_scale = 'numeric' AND numeric_value IS NOT NULL AND ordinal_value IS NULL AND ordinal_scale_key IS NULL AND ordinal_scale_version IS NULL AND categorical_value IS NULL) OR
+    (metric_scale = 'ordinal' AND numeric_value IS NULL AND ordinal_value IS NOT NULL AND ordinal_scale_key IS NOT NULL AND ordinal_scale_version IS NOT NULL AND categorical_value IS NULL) OR
+    (metric_scale = 'categorical' AND numeric_value IS NULL AND ordinal_value IS NULL AND ordinal_scale_key IS NULL AND ordinal_scale_version IS NULL AND categorical_value IS NOT NULL)
+  )
+);
+
+CREATE TABLE IF NOT EXISTS evaluation_run_metrics (
+  id TEXT PRIMARY KEY,
+  evaluation_run_id TEXT NOT NULL REFERENCES evaluation_runs(id),
+  metric_name TEXT NOT NULL,
+  metric_scale TEXT NOT NULL CHECK (metric_scale IN ('numeric','ordinal','categorical')),
+  numeric_value REAL,
+  ordinal_value TEXT,
+  ordinal_scale_key TEXT,
+  ordinal_scale_version TEXT,
+  categorical_value TEXT,
+  comparator TEXT,
+  created_at TEXT NOT NULL,
+  CHECK (
+    (metric_scale = 'numeric' AND numeric_value IS NOT NULL AND ordinal_value IS NULL AND ordinal_scale_key IS NULL AND ordinal_scale_version IS NULL AND categorical_value IS NULL) OR
+    (metric_scale = 'ordinal' AND numeric_value IS NULL AND ordinal_value IS NOT NULL AND ordinal_scale_key IS NOT NULL AND ordinal_scale_version IS NOT NULL AND categorical_value IS NULL) OR
+    (metric_scale = 'categorical' AND numeric_value IS NULL AND ordinal_value IS NULL AND ordinal_scale_key IS NULL AND ordinal_scale_version IS NULL AND categorical_value IS NOT NULL)
+  )
+);
+
+-- Failure-atlas re-entry marker (R6/KTD-5): a failure/partial_failure evaluation
+-- records the proposal as a newly-evaluated failure so a later cluster build can
+-- include it. It is a persisted, queryable flag, not an auto-rerun.
+CREATE TABLE IF NOT EXISTS evaluated_failures (
+  proposal_id TEXT PRIMARY KEY REFERENCES frontier_proposals(id),
+  evaluation_id TEXT NOT NULL REFERENCES evaluations(id),
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  verdict TEXT NOT NULL CHECK (verdict IN ('failure','partial_failure')),
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_evaluations_run ON evaluations(evaluation_run_id);
+CREATE INDEX IF NOT EXISTS idx_evaluation_runs_problem ON evaluation_runs(problem_id);
+CREATE INDEX IF NOT EXISTS idx_evaluated_failures_problem ON evaluated_failures(problem_id);
+
+CREATE TRIGGER IF NOT EXISTS evaluation_runs_immutable_update
+BEFORE UPDATE ON evaluation_runs
+BEGIN
+  SELECT RAISE(ABORT, 'evaluation runs are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS evaluation_runs_immutable_delete
+BEFORE DELETE ON evaluation_runs
+BEGIN
+  SELECT RAISE(ABORT, 'evaluation runs are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS evaluations_immutable_update
+BEFORE UPDATE ON evaluations
+BEGIN
+  SELECT RAISE(ABORT, 'evaluations are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS evaluations_immutable_delete
+BEFORE DELETE ON evaluations
+BEGIN
+  SELECT RAISE(ABORT, 'evaluations are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS evaluation_metrics_immutable_update
+BEFORE UPDATE ON evaluation_metrics
+BEGIN
+  SELECT RAISE(ABORT, 'evaluation metrics are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS evaluation_metrics_immutable_delete
+BEFORE DELETE ON evaluation_metrics
+BEGIN
+  SELECT RAISE(ABORT, 'evaluation metrics are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS evaluation_run_metrics_immutable_update
+BEFORE UPDATE ON evaluation_run_metrics
+BEGIN
+  SELECT RAISE(ABORT, 'evaluation run metrics are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS evaluation_run_metrics_immutable_delete
+BEFORE DELETE ON evaluation_run_metrics
+BEGIN
+  SELECT RAISE(ABORT, 'evaluation run metrics are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS evaluated_failures_immutable_update
+BEFORE UPDATE ON evaluated_failures
+BEGIN
+  SELECT RAISE(ABORT, 'evaluated failures are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS evaluated_failures_immutable_delete
+BEFORE DELETE ON evaluated_failures
+BEGIN
+  SELECT RAISE(ABORT, 'evaluated failures are immutable');
+END;
+`
+
+// migrateV15Evaluation creates the M5.2 evaluation tables and widens the
+// provider_invocations.role CHECK to admit 'evaluate'. Both steps are guarded
+// and idempotent.
+func migrateV15Evaluation(ctx context.Context, tx *sql.Tx) error {
+	if _, err := tx.ExecContext(ctx, evaluationTablesSQL); err != nil {
+		return err
+	}
+	allows, err := providerRoleAllows(ctx, tx, "evaluate")
+	if err != nil {
+		return err
+	}
+	if !allows {
+		if err := editTableCheckInPlace(ctx, tx, "provider_invocations",
+			"role IN ('normalize','invariant','challenge','generate')",
+			"role IN ('normalize','invariant','challenge','generate','evaluate')"); err != nil {
 			return err
 		}
 	}

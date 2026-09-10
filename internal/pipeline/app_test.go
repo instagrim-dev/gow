@@ -406,3 +406,23 @@ func (f *fakeProblemStore) ListFrontierGenerations(context.Context, string) ([]s
 func (f *fakeProblemStore) LatestFrontierGeneration(context.Context, string) (string, bool, error) {
 	return "", false, errors.New("unexpected call")
 }
+
+func (f *fakeProblemStore) PersistEvaluationRun(context.Context, store.EvaluationRunRecord) (store.EvaluationRunRecord, error) {
+	return store.EvaluationRunRecord{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetEvaluationRun(context.Context, string) (store.EvaluationRunRecord, error) {
+	return store.EvaluationRunRecord{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetEvaluation(context.Context, string) (store.EvaluationRow, error) {
+	return store.EvaluationRow{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListEvaluations(context.Context, string) ([]store.EvaluationRunRecord, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListEvaluatedFailures(context.Context, string) ([]store.EvaluatedFailureRow, error) {
+	return nil, errors.New("unexpected call")
+}

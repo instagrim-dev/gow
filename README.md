@@ -65,6 +65,10 @@ newf challenge <invariant-id> | --problem <problem-id> --all
 newf frontier generate --problem <problem-id> [--count <n>]
 newf frontier list --problem <problem-id>
 newf frontier show [frontier-generation-id] [--problem <problem-id>]
+newf evaluate <proposal-id> --problem <problem-id> | --problem <problem-id> [--all]
+newf evaluation list --problem <problem-id>
+newf evaluation show <evaluation-run-id>
+newf evaluation failures --problem <problem-id>
 ```
 
 Build it with:
@@ -497,11 +501,12 @@ The first falsifiable claim is:
 The shipped surface above already covers `init` → `ingest` → `normalize` →
 `mechanism signature`/`compare` → `cluster` → `failure-space` → `invariants
 mine`/`invariant list`/`invariant show` → `challenge` → `frontier
-generate`/`frontier list`/`frontier show`. The remaining loop stages are
-**planned, not yet shipped**:
+generate`/`frontier list`/`frontier show` → `evaluate`/`evaluation
+list`/`evaluation show`/`evaluation failures` (verifier routing with recorded
+verification strength, see [`docs/evaluation.md`](docs/evaluation.md)). The
+remaining loop stages are **planned, not yet shipped**:
 
 ```text
-newf evaluate                                     # planned: verifier routing + historical-holdout scoring
 newf compress                                     # planned: success-invariant compression
 ```
 

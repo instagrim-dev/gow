@@ -219,6 +219,30 @@ func ValidateFrontierProposalID(id string) error {
 	return validateID(id, FrontierProposalIDPrefix, ErrInvalidFrontierProposalID)
 }
 
+func NewEvaluationRunID(now time.Time) string {
+	return newID(EvaluationRunIDPrefix, now)
+}
+
+func NewEvaluationID(now time.Time) string {
+	return newID(EvaluationIDPrefix, now)
+}
+
+func NewEvaluationMetricID(now time.Time) string {
+	return newID(EvaluationMetricIDPrefix, now)
+}
+
+func ValidateEvaluationRunID(id string) error {
+	return validateID(id, EvaluationRunIDPrefix, ErrInvalidEvaluationRunID)
+}
+
+func ValidateEvaluationID(id string) error {
+	return validateID(id, EvaluationIDPrefix, ErrInvalidEvaluationID)
+}
+
+func ValidateEvaluationMetricID(id string) error {
+	return validateID(id, EvaluationMetricIDPrefix, ErrInvalidEvaluationMetricID)
+}
+
 func ValidateNormalizationRevisionID(id string) error {
 	return validateID(id, NormalizationRevisionIDPrefix, ErrInvalidNormalizationRevisionID)
 }

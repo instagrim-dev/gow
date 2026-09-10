@@ -1,5 +1,114 @@
 # Evaluation design (`newf` v0)
 
+## Implemented: verifier routing (#15, M5.2, `mode='proposal'`)
+
+M5.2 ships the toolbox `evaluate` operator for the `proposal` mode: it takes the
+frontier proposals M5.1 produced (whose `result` is NULL) and routes each to the
+**strongest verifier that can actually decide it**, recording a durable
+`Evaluation` whose **verification strength is explicit**. The M7 holdout
+experiment described further below is deferred; this section documents what
+ships now.
+
+### The one load-bearing idea
+
+An outcome is worth exactly as much as the mechanism that produced it, and that
+strength is **stored, not implied** (`AGENTS.md` verification hierarchy;
+`ModelJudgment != Verification`). Every `evaluation` carries two columns beyond
+the verdict:
+
+- `verifier_kind` — *what ran*: `deterministic-check`, `counterexample-search`,
+  `reproducible-computation`, `independent-evidence`, `independent-critic`, or
+  `model-judgment`.
+- `verification_strength` — *its position in the hierarchy*: `deterministic` >
+  `reproducible` > `independent-evidence` > `independent-critic` >
+  `single-model-judgment`.
+
+A `success` from a deterministic check and a `success` from a single model share
+a verdict string but **can never share a strength**. Storing an evaluation
+without a strength is rejected by CHECK.
+
+### The verifier hierarchy (`internal/verify`, pure)
+
+Three tiers ship in v0 (the middle three `verifier_kind` values are in the CHECK
+vocabulary so strengths are stable, but their real adapters are deferred behind
+the same interface):
+
+1. **`deterministic-check`** (strongest, cheapest) — reuses the M4.2 predicate
+   evaluator over the per-target violation verdicts M5.1 already computed and
+   persisted. It decides only the code-certain negative: if the proposed
+   mechanism still *satisfies* a targeted invariant, the claimed break did not
+   happen → deterministic `failure`. A confirmed break is left non-decisive here
+   (necessary but not sufficient for success), deferring the positive verdict to
+   the next tier.
+2. **`counterexample-search`** (reproducible) — a bounded, deterministic scan of
+   the nearest known failure families for a *refuter*: a family that still
+   satisfies a target the proposal claims to break (evidence the break is not
+   structural) → `failure` / `counterexample-search`. A confirmed break with no
+   refuter → `partial_success`.
+3. **`model-judgment`** (weakest, last resort) — a provider `Verifier` (a
+   deterministic `FixtureVerifier` in CI, role `'evaluate'`). Consulted only when
+   no stronger tier decides, and always stamped `single-model-judgment`.
+
+### Cheap-first, strongest-decisive routing
+
+`Route` orders verifiers by **hierarchy strength before cost**, then runs them
+until one returns a *decisive* verdict (not `unknown`/`verification_blocked`).
+Ordering by strength first is the anti-laundering guard: a confident model
+`success` can never preempt a deterministic check that is also able to decide,
+even if the model tier declares a cheaper cost. If nothing decides, the stored
+verdict is `verification_blocked` stamped with the weakest tier tried — an honest
+"we could not verify", never a guess.
+
+### Verdict vocabulary
+
+Exactly the EPIC.md M5.2 set, CHECK-enforced:
+`failure | partial_failure | partial_success | success | unknown |
+verification_blocked`.
+
+### Failure re-enters the atlas
+
+A `failure`/`partial_failure` evaluation writes an `evaluated_failures` marker so
+the proposal's mechanism is eligible for the next `cluster build`
+(`FailureSpace(t+1) ⊇ FailureSpace(t) + newly_evaluated_failures`). This is a
+persisted, queryable flag surfaced by `newf evaluation failures` — not an
+auto-rerun; re-clustering stays an explicit operator/policy decision.
+
+### Persistence, provenance, lifecycle
+
+- The proposal's `result` is populated in the **same transaction** as the
+  evaluation (they can never diverge).
+- Model-tier evaluations record a `provider_invocations` row (role `'evaluate'`)
+  with retained request/response payloads; deterministic tiers record
+  `tool_name`/`tool_version` and no provider row.
+- Runs use `running → completed/failed`; re-evaluation is a new append-only
+  `evaluation_run`; all evaluation rows are immutable by trigger.
+- `mode='holdout'` is refused at the service boundary AND by a gate trigger
+  (deferred to M7); the nullable holdout columns are retained so M7 needs no
+  schema retrofit.
+
+### CLI
+
+```text
+newf evaluate <proposal-id> --problem <id>   # route one proposal
+newf evaluate --problem <id>                 # every un-evaluated proposal in the latest generation
+newf evaluation list --problem <id>
+newf evaluation show <evaluation-run-id>
+newf evaluation failures --problem <id>      # proposals eligible for atlas re-entry
+```
+
+All commands emit stable `--json`. Human output leads with verdict AND strength,
+e.g. `partial_success  [counterexample-search / reproducible]`, so a reader never
+sees an outcome without its epistemic strength.
+
+### Deliberately out of scope here
+
+Compressing partial successes into success invariants (M6.1), mutating search
+policy (M6.2), the holdout experiment and baseline arms (M7), and real external
+verifier adapters. Evaluating a proposal does **not** change any invariant's
+state.
+
+---
+
 ## Primary benchmark: historical holdout prediction
 
 v0 evaluates whether failure-space compression predicts productive frontier directions better than baselines, not whether it “solves” open problems.

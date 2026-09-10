@@ -1061,6 +1061,54 @@ asserts the four new tables and that the role CHECK admits `invariant`,
 Nothing in this slice writes `frontier_proposals.result`; populating it (and
 failure-atlas re-entry) is M5.2. See [`frontier-generation.md`](frontier-generation.md).
 
+## Implemented evaluation schema (#15, migration `v15`)
+
+Migration `v15` ships the **`mode='proposal'` subset** of the `evaluation_run`
+/ `evaluation` / `evaluation_metric` / `evaluation_run_metric` blueprint above
+(names pluralized to the shipped convention), **plus two columns the blueprint
+does not carry** — `verifier_kind` and `verification_strength` (KTD-1) — which
+make the verification hierarchy structural rather than implied:
+
+- **`evaluation_runs`** — one immutable row per evaluation pass: problem/run
+  links, optional `frontier_generation_run_id` / `invariant_revision_id` /
+  `cluster_run_id` / `normalization_revision_id`, `mode` (`proposal`|`holdout`),
+  `routing_policy` (CHECK-pinned to `'cheap-first'` in v0), a persisted
+  `evaluation_count`, and the **nullable** holdout hooks (`holdout_set_id`,
+  `holdout_leakage_check_id`) retained for M7.
+- **`evaluations`** — one row per routed proposal: the `verdict` (CHECK-enforced
+  to exactly `failure | partial_failure | partial_success | success | unknown |
+  verification_blocked`), the **`verifier_kind`** (what ran) and
+  **`verification_strength`** (its position in the hierarchy), a
+  `confidence_ordinal`, and EITHER deterministic `tool_name`/`tool_version` OR a
+  `provider_invocation_id` (model tier, role `'evaluate'`) — never fabricated
+  precision.
+- **`evaluation_metrics` / `evaluation_run_metrics`** — the blueprint's
+  `metric_scale` (`numeric`|`ordinal`|`categorical`) exclusivity triad, copied
+  verbatim, for typed metrics with no invented float score.
+- **`evaluated_failures`** — the R6/KTD-5 re-entry marker: a
+  `failure`/`partial_failure` evaluation records its proposal as eligible for
+  the next clustering pass. A persisted, queryable flag, not an auto-rerun.
+
+`frontier_proposals.result` is populated in the SAME transaction as the
+evaluation (R5), using the one-time `NULL → verdict` allowance the v14 proposal
+trigger already grants. Every new table is immutable by trigger (raw
+UPDATE/DELETE aborts); re-evaluation is a new append-only `evaluation_run`.
+
+**Holdout reconciliation.** The blueprint's `evaluation_run_holdout_gate_*`
+triggers query `holdout_leakage_check` / `holdout_set`, tables that do not exist
+until M7 — a verbatim copy cannot be created now. `v15` therefore ships a
+holdout-**refusal** gate trigger that aborts any `mode='holdout'` row, and the
+`Evaluate` service independently refuses holdout with a deferred-to-M7 error.
+The holdout-only tables (`evaluation_holdout_match`, `holdout_set*`) and the
+baseline arms are NOT created here; a reviewer can confirm no holdout machinery
+leaked by their absence. M7 replaces the refusal trigger with the full
+leakage-checking gate when it lands those tables.
+
+`v15` widens `provider_invocations.role` in place (same guarded `writable_schema`
+mechanism) to admit `'evaluate'`; `validateSchemaTables` asserts the five new
+tables and that the role CHECK admits `invariant`, `challenge`, `generate`, and
+`evaluate`. See [`evaluation.md`](evaluation.md).
+
 ## Immutable vs mutable/revisioned
 
 - Immutable: `source`, `evidence_record` (enforced with update/delete-rejecting

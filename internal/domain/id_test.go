@@ -90,6 +90,20 @@ func TestGeneratedIDsValidate(t *testing.T) {
 	if err := ValidateFrontierProposalID(frontierProposalID); err != nil {
 		t.Fatalf("ValidateFrontierProposalID() error = %v", err)
 	}
+
+	evaluationRunID := NewEvaluationRunID(now)
+	evaluationID := NewEvaluationID(now)
+	evaluationMetricID := NewEvaluationMetricID(now)
+
+	if err := ValidateEvaluationRunID(evaluationRunID); err != nil {
+		t.Fatalf("ValidateEvaluationRunID() error = %v", err)
+	}
+	if err := ValidateEvaluationID(evaluationID); err != nil {
+		t.Fatalf("ValidateEvaluationID() error = %v", err)
+	}
+	if err := ValidateEvaluationMetricID(evaluationMetricID); err != nil {
+		t.Fatalf("ValidateEvaluationMetricID() error = %v", err)
+	}
 }
 
 func TestValidateRejectsCrossClassIDs(t *testing.T) {
@@ -135,5 +149,13 @@ func TestValidateRejectsCrossClassIDs(t *testing.T) {
 	}
 	if err := ValidateFrontierGenerationRunID(clusterRunID); err == nil {
 		t.Fatal("ValidateFrontierGenerationRunID() succeeded for cluster run ID")
+	}
+
+	evaluationRunID := NewEvaluationRunID(time.Now().UTC())
+	if err := ValidateEvaluationID(evaluationRunID); err == nil {
+		t.Fatal("ValidateEvaluationID() succeeded for evaluation run ID")
+	}
+	if err := ValidateEvaluationRunID(clusterRunID); err == nil {
+		t.Fatal("ValidateEvaluationRunID() succeeded for cluster run ID")
 	}
 }

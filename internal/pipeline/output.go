@@ -761,3 +761,84 @@ type FrontierShowResponse struct {
 	Store      string                 `json:"store"`
 	Generation FrontierGenerationView `json:"generation"`
 }
+
+// EvaluationMetricView is one typed metric on an evaluation (no fake precision:
+// the scale is explicit and the value is rendered from the scale-appropriate
+// column).
+type EvaluationMetricView struct {
+	Name  string `json:"name"`
+	Scale string `json:"scale"`
+	Value string `json:"value,omitempty"`
+}
+
+// EvaluationView is one persisted evaluation. It ALWAYS carries the verifier
+// kind and verification strength alongside the verdict, so a reader can never
+// see an outcome without its epistemic strength (R1).
+type EvaluationView struct {
+	ID                   string                 `json:"id"`
+	ProposalID           string                 `json:"proposal_id"`
+	Verdict              string                 `json:"verdict"`
+	VerifierKind         string                 `json:"verifier_kind"`
+	VerificationStrength string                 `json:"verification_strength"`
+	ConfidenceOrdinal    string                 `json:"confidence_ordinal,omitempty"`
+	ToolName             string                 `json:"tool_name,omitempty"`
+	ToolVersion          string                 `json:"tool_version,omitempty"`
+	ProviderInvocationID string                 `json:"provider_invocation_id,omitempty"`
+	Notes                string                 `json:"notes,omitempty"`
+	Metrics              []EvaluationMetricView `json:"metrics,omitempty"`
+}
+
+// EvaluationRunView is one evaluation pass with its evaluations.
+type EvaluationRunView struct {
+	ID                      string           `json:"id"`
+	ProblemID               string           `json:"problem_id"`
+	RunID                   string           `json:"run_id"`
+	FrontierGenerationRunID string           `json:"frontier_generation_run_id,omitempty"`
+	ClusterRunID            string           `json:"cluster_run_id,omitempty"`
+	Mode                    string           `json:"mode"`
+	RoutingPolicy           string           `json:"routing_policy"`
+	EvaluationCount         int              `json:"evaluation_count"`
+	CreatedAt               string           `json:"created_at"`
+	Evaluations             []EvaluationView `json:"evaluations"`
+}
+
+// EvaluateResponse is returned by `newf evaluate`.
+type EvaluateResponse struct {
+	OK      bool              `json:"ok"`
+	Command string            `json:"command"`
+	Store   string            `json:"store"`
+	Run     EvaluationRunView `json:"run"`
+}
+
+// EvaluationListResponse is returned by `newf evaluation list`.
+type EvaluationListResponse struct {
+	OK      bool                `json:"ok"`
+	Command string              `json:"command"`
+	Store   string              `json:"store"`
+	Runs    []EvaluationRunView `json:"runs"`
+}
+
+// EvaluationShowResponse is returned by `newf evaluation show`.
+type EvaluationShowResponse struct {
+	OK      bool              `json:"ok"`
+	Command string            `json:"command"`
+	Store   string            `json:"store"`
+	Run     EvaluationRunView `json:"run"`
+}
+
+// EvaluatedFailureView is one re-entered failure marker (R6): a proposal whose
+// failing evaluation made its mechanism eligible for the next clustering pass.
+type EvaluatedFailureView struct {
+	ProposalID   string `json:"proposal_id"`
+	EvaluationID string `json:"evaluation_id"`
+	Verdict      string `json:"verdict"`
+	CreatedAt    string `json:"created_at"`
+}
+
+// EvaluatedFailureListResponse is returned by `newf evaluation failures`.
+type EvaluatedFailureListResponse struct {
+	OK       bool                   `json:"ok"`
+	Command  string                 `json:"command"`
+	Store    string                 `json:"store"`
+	Failures []EvaluatedFailureView `json:"failures"`
+}

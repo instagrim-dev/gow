@@ -67,6 +67,8 @@ func newRootCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cob
 	cmd.AddCommand(newInvariantCommand(stdout, app, opts))
 	cmd.AddCommand(newChallengeCommand(stdout, app, opts))
 	cmd.AddCommand(newFrontierCommand(stdout, app, opts))
+	cmd.AddCommand(newEvaluateCommand(stdout, app, opts))
+	cmd.AddCommand(newEvaluationCommand(stdout, app, opts))
 
 	return cmd
 }
