@@ -11,6 +11,50 @@ The goal is not to make an LLM grind harder on one linear solution path. The
 model's comparative advantage is used as a **failure compressor and frontier
 generator**.
 
+## Current executable slice
+
+The repository now ships the first provenance-heavy local CLI slice:
+
+```text
+newf init <problem>
+newf problem list
+newf problem show <problem-id>
+newf run show <run-id>
+```
+
+Build it with:
+
+```bash
+go build ./cmd/newf
+```
+
+By default the CLI stores state in:
+
+```text
+.newf/newf.db
+```
+
+Override the database location with `--db <path>` or `NEWF_DB=<path>`.
+
+### Example
+
+```bash
+newf init "Erdős-Straus conjecture"
+newf problem list
+newf problem show <problem-id>
+newf run show <run-id>
+```
+
+Use `--json` for stable machine-readable output:
+
+```bash
+newf --json init "Erdős-Straus conjecture"
+```
+
+Repeated `init` calls reuse the existing problem for the same canonical slug by
+default and create a new provenance `run` each time. Pass `--new-problem` to
+force a distinct problem when the slug would otherwise match an existing one.
+
 ## Core loop
 
 ```text
