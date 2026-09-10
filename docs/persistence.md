@@ -502,6 +502,10 @@ CREATE TABLE holdout_leakage_check (
   failure_basis TEXT NOT NULL CHECK (failure_basis IN ('no_overlap', 'source_overlap', 'evidence_overlap')),
   status TEXT NOT NULL CHECK (status IN ('passed', 'failed')),
   checked_at TEXT NOT NULL,
+  CHECK (
+    (status = 'passed' AND failure_basis = 'no_overlap') OR
+    (status = 'failed' AND failure_basis IN ('source_overlap', 'evidence_overlap'))
+  ),
   UNIQUE(holdout_set_id, normalization_revision_id)
 );
 
@@ -528,9 +532,9 @@ CREATE TABLE evaluation_run (
   invariant_revision_id TEXT REFERENCES invariant_revision(id),
   frontier_generation_run_id TEXT REFERENCES frontier_generation_run(id),
   holdout_leakage_check_id TEXT REFERENCES holdout_leakage_check(id),
-  mode TEXT NOT NULL, -- proposal|holdout
+  mode TEXT NOT NULL CHECK (mode IN ('proposal', 'holdout')),
   cutoff_time TEXT,
-  baseline_type TEXT,
+  baseline_type TEXT CHECK (baseline_type IN ('undirected', 'semantic-summary')),
   proposal_budget_count INTEGER,
   evaluation_budget_count INTEGER,
   judge_provider_name TEXT,

@@ -67,7 +67,7 @@ Each slice must ship a usable CLI behavior, persisted artifacts, and tests.
 - Deliver:
   - challenge record types
   - lifecycle transitions: challenged/surviving/weakened/split/merged/falsified/established
-  - lineage edges for split/merge
+  - lineage edges for split/merged cases
 - Tests:
   - valid/invalid transitions
   - `established` requires independent evidence class
