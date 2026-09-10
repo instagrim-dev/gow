@@ -139,7 +139,6 @@ CREATE TABLE holdout_set (
   problem_id TEXT NOT NULL REFERENCES problem(id),
   name TEXT NOT NULL,
   cutoff_time TEXT NOT NULL,
-  leakage_check_status TEXT NOT NULL CHECK (leakage_check_status IN ('pending', 'passed', 'failed')),
   created_at TEXT NOT NULL
 );
 
@@ -148,6 +147,38 @@ CREATE TABLE holdout_set_source (
   source_id TEXT NOT NULL REFERENCES source(id),
   PRIMARY KEY(holdout_set_id, source_id)
 );
+
+CREATE TRIGGER holdout_set_source_problem_guard_insert
+BEFORE INSERT ON holdout_set_source
+BEGIN
+  SELECT CASE
+    WHEN (
+      SELECT hs.problem_id
+      FROM holdout_set hs
+      WHERE hs.id = NEW.holdout_set_id
+    ) <> (
+      SELECT s.problem_id
+      FROM source s
+      WHERE s.id = NEW.source_id
+    ) THEN RAISE(ABORT, 'holdout_set_source problem_id mismatch')
+  END;
+END;
+
+CREATE TRIGGER holdout_set_source_problem_guard_update
+BEFORE UPDATE ON holdout_set_source
+BEGIN
+  SELECT CASE
+    WHEN (
+      SELECT hs.problem_id
+      FROM holdout_set hs
+      WHERE hs.id = NEW.holdout_set_id
+    ) <> (
+      SELECT s.problem_id
+      FROM source s
+      WHERE s.id = NEW.source_id
+    ) THEN RAISE(ABORT, 'holdout_set_source problem_id mismatch')
+  END;
+END;
 
 CREATE TABLE holdout_set_family_label (
   holdout_set_id TEXT NOT NULL REFERENCES holdout_set(id),
@@ -524,6 +555,48 @@ CREATE TABLE holdout_leakage_check (
   UNIQUE(holdout_set_id, normalization_revision_id, checked_scope)
 );
 
+CREATE TRIGGER holdout_leakage_check_lineage_guard_insert
+BEFORE INSERT ON holdout_leakage_check
+BEGIN
+  SELECT CASE
+    WHEN (
+      SELECT hs.problem_id
+      FROM holdout_set hs
+      WHERE hs.id = NEW.holdout_set_id
+    ) <> (
+      SELECT nr.problem_id
+      FROM normalization_revision nr
+      WHERE nr.id = NEW.normalization_revision_id
+    ) THEN RAISE(ABORT, 'holdout_leakage_check problem_id mismatch')
+    WHEN COALESCE((
+      SELECT nr.excluded_holdout_set_id
+      FROM normalization_revision nr
+      WHERE nr.id = NEW.normalization_revision_id
+    ), '') <> NEW.holdout_set_id THEN RAISE(ABORT, 'normalization_revision must exclude the same holdout_set')
+  END;
+END;
+
+CREATE TRIGGER holdout_leakage_check_lineage_guard_update
+BEFORE UPDATE ON holdout_leakage_check
+BEGIN
+  SELECT CASE
+    WHEN (
+      SELECT hs.problem_id
+      FROM holdout_set hs
+      WHERE hs.id = NEW.holdout_set_id
+    ) <> (
+      SELECT nr.problem_id
+      FROM normalization_revision nr
+      WHERE nr.id = NEW.normalization_revision_id
+    ) THEN RAISE(ABORT, 'holdout_leakage_check problem_id mismatch')
+    WHEN COALESCE((
+      SELECT nr.excluded_holdout_set_id
+      FROM normalization_revision nr
+      WHERE nr.id = NEW.normalization_revision_id
+    ), '') <> NEW.holdout_set_id THEN RAISE(ABORT, 'normalization_revision must exclude the same holdout_set')
+  END;
+END;
+
 CREATE TABLE holdout_leakage_check_overlap (
   id TEXT PRIMARY KEY,
   holdout_leakage_check_id TEXT NOT NULL REFERENCES holdout_leakage_check(id),
@@ -584,6 +657,60 @@ CREATE TABLE evaluation_run (
   judge_config_hash TEXT,
   created_at TEXT NOT NULL
 );
+
+CREATE TRIGGER evaluation_run_holdout_gate_insert
+BEFORE INSERT ON evaluation_run
+BEGIN
+  SELECT CASE
+    WHEN NEW.mode = 'holdout' AND (
+      NEW.holdout_set_id IS NULL OR
+      NEW.normalization_revision_id IS NULL OR
+      NEW.holdout_leakage_check_id IS NULL
+    ) THEN RAISE(ABORT, 'holdout mode requires holdout_set_id, normalization_revision_id, and holdout_leakage_check_id')
+    WHEN NEW.mode = 'holdout' AND COALESCE((
+      SELECT hlc.holdout_set_id
+      FROM holdout_leakage_check hlc
+      WHERE hlc.id = NEW.holdout_leakage_check_id
+    ), '') <> COALESCE(NEW.holdout_set_id, '') THEN RAISE(ABORT, 'evaluation_run holdout_set_id must match holdout_leakage_check')
+    WHEN NEW.mode = 'holdout' AND COALESCE((
+      SELECT hlc.normalization_revision_id
+      FROM holdout_leakage_check hlc
+      WHERE hlc.id = NEW.holdout_leakage_check_id
+    ), '') <> COALESCE(NEW.normalization_revision_id, '') THEN RAISE(ABORT, 'evaluation_run normalization_revision_id must match holdout_leakage_check')
+    WHEN NEW.mode = 'holdout' AND (
+      SELECT hlc.status
+      FROM holdout_leakage_check hlc
+      WHERE hlc.id = NEW.holdout_leakage_check_id
+    ) <> 'passed' THEN RAISE(ABORT, 'holdout mode requires a passed holdout_leakage_check')
+  END;
+END;
+
+CREATE TRIGGER evaluation_run_holdout_gate_update
+BEFORE UPDATE ON evaluation_run
+BEGIN
+  SELECT CASE
+    WHEN NEW.mode = 'holdout' AND (
+      NEW.holdout_set_id IS NULL OR
+      NEW.normalization_revision_id IS NULL OR
+      NEW.holdout_leakage_check_id IS NULL
+    ) THEN RAISE(ABORT, 'holdout mode requires holdout_set_id, normalization_revision_id, and holdout_leakage_check_id')
+    WHEN NEW.mode = 'holdout' AND COALESCE((
+      SELECT hlc.holdout_set_id
+      FROM holdout_leakage_check hlc
+      WHERE hlc.id = NEW.holdout_leakage_check_id
+    ), '') <> COALESCE(NEW.holdout_set_id, '') THEN RAISE(ABORT, 'evaluation_run holdout_set_id must match holdout_leakage_check')
+    WHEN NEW.mode = 'holdout' AND COALESCE((
+      SELECT hlc.normalization_revision_id
+      FROM holdout_leakage_check hlc
+      WHERE hlc.id = NEW.holdout_leakage_check_id
+    ), '') <> COALESCE(NEW.normalization_revision_id, '') THEN RAISE(ABORT, 'evaluation_run normalization_revision_id must match holdout_leakage_check')
+    WHEN NEW.mode = 'holdout' AND (
+      SELECT hlc.status
+      FROM holdout_leakage_check hlc
+      WHERE hlc.id = NEW.holdout_leakage_check_id
+    ) <> 'passed' THEN RAISE(ABORT, 'holdout mode requires a passed holdout_leakage_check')
+  END;
+END;
 
 CREATE TABLE evaluation (
   id TEXT PRIMARY KEY,

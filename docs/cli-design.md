@@ -56,7 +56,7 @@ Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statu
   - `experiment_assumption` rows for `--assumption-set` values attached to the created/selected experiment
   - `run` (state `initialized`)
 - Idempotency: same explicit `--slug` returns existing problem unless `--new-problem`; experiment creation reuses the same `(problem_id, experiment_name)` shell and merges duplicate tag/assumption values idempotently.
-- Failure semantics: invalid slug, DB unavailable, uniqueness conflict.
+- Failure semantics: invalid slug, DB unavailable, uniqueness conflict, or `--assumption-set` without either `--experiment-name` on this command or `--experiment-id` via global flags.
 - Human output: created IDs, db path, next-command hints.
 - Depends on: none.
 - Downstream dependencies: all later commands require `problem_id`.
@@ -175,7 +175,7 @@ Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statu
   - `holdout_set` (when creating from `--holdout-source-id`/`--holdout-family-label` inputs for holdout mode)
   - baseline comparison rows
 - Idempotency: new evaluation run per invocation.
-- Failure semantics: missing holdout partition, unevaluable proposals, judge disagreement (recorded in `evaluation.notes` and surfaced in run output rather than as a successful holdout match).
+- Failure semantics: missing holdout partition, holdout lineage mismatch (selected `holdout_set`, `normalization_revision`, `cluster_revision`, `invariant_revision`, `frontier_generation_run`, and leakage check must resolve to one holdout-filtered chain; mismatches are recorded as failed `run_event` rows), unevaluable proposals, judge disagreement (recorded in `evaluation.notes` and surfaced in run output rather than as a successful holdout match).
 - Human output: metric summary + per-proposal/per-experiment outcomes, selected proposal/generation scope, and leakage-check status.
 - Depends on:
   - proposal mode: `generate`
