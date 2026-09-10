@@ -339,7 +339,7 @@ CREATE TABLE candidate_invariant (
   invariant_revision_id TEXT NOT NULL REFERENCES invariant_revision(id),
   statement TEXT NOT NULL,
   abstraction_level TEXT NOT NULL,
-  initial_state TEXT NOT NULL CHECK (initial_state IN ('proposed', 'challenged', 'surviving', 'weakened', 'split', 'merged', 'falsified', 'established')), -- normally proposed
+  initial_state TEXT NOT NULL DEFAULT 'proposed' CHECK (initial_state = 'proposed'),
   confidence_ordinal TEXT
 );
 
@@ -377,7 +377,7 @@ CREATE TABLE invariant_state_transition (
   invariant_id TEXT NOT NULL REFERENCES candidate_invariant(id),
   challenge_id TEXT NOT NULL REFERENCES invariant_challenge(id),
   transition_seq INTEGER NOT NULL,
-  from_state TEXT NOT NULL CHECK (from_state IN ('proposed', 'challenged', 'surviving', 'weakened', 'split', 'merged', 'falsified', 'established')),
+  from_state TEXT NOT NULL CHECK (from_state IN ('proposed', 'challenged', 'surviving', 'weakened')),
   to_state TEXT NOT NULL CHECK (to_state IN ('proposed', 'challenged', 'surviving', 'weakened', 'split', 'merged', 'falsified', 'established')),
   created_at TEXT NOT NULL,
   UNIQUE(invariant_id, transition_seq)
@@ -562,7 +562,11 @@ CREATE TABLE evaluation_holdout_match (
     (match_kind = 'source_recovery' AND holdout_source_id IS NOT NULL AND holdout_family_label IS NULL) OR
     (match_kind = 'family_recovery' AND holdout_source_id IS NULL AND holdout_family_label IS NOT NULL) OR
     (match_kind = 'structural_break' AND holdout_source_id IS NULL AND holdout_family_label IS NOT NULL)
-  )
+  ),
+  FOREIGN KEY (holdout_set_id, holdout_source_id)
+    REFERENCES holdout_set_source(holdout_set_id, source_id),
+  FOREIGN KEY (holdout_set_id, holdout_family_label)
+    REFERENCES holdout_set_family_label(holdout_set_id, family_label)
 );
 
 CREATE TABLE evaluation_metric (
