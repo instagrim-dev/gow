@@ -11,6 +11,7 @@
 
 - Stable textual IDs with prefixes (e.g., `prob_`, `src_`, `evd_`, `inv_`, `prop_`).
 - ULID/UUIDv7 recommended for time-sort + uniqueness.
+- Timestamps are stored at RFC3339Nano precision for deterministic event ordering.
 - Unique constraints on natural dedupe keys where applicable.
 
 ## Core schema (typed relational first)
@@ -245,8 +246,6 @@ CREATE TABLE invariant_challenge (
   invariant_id TEXT NOT NULL REFERENCES candidate_invariant(id),
   run_id TEXT NOT NULL REFERENCES run(id),
   challenge_type TEXT NOT NULL,
-  previous_state TEXT,
-  result_state TEXT NOT NULL,
   result_summary TEXT,
   created_at TEXT NOT NULL
 );
@@ -257,7 +256,8 @@ CREATE TABLE invariant_state_transition (
   challenge_id TEXT NOT NULL REFERENCES invariant_challenge(id),
   from_state TEXT NOT NULL,
   to_state TEXT NOT NULL,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  UNIQUE(invariant_id, created_at)
 );
 
 CREATE VIEW invariant_current_state AS
@@ -266,10 +266,9 @@ WITH ranked AS (
     t.invariant_id,
     t.to_state,
     t.created_at,
-    t.id,
     ROW_NUMBER() OVER (
       PARTITION BY t.invariant_id
-      ORDER BY t.created_at DESC, t.id DESC
+      ORDER BY t.created_at DESC
     ) AS rn
   FROM invariant_state_transition t
 ),

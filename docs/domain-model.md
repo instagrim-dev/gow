@@ -4,6 +4,7 @@
 
 Source evidence is immutable and never overwritten. Model/provider interpretation is stored in separate revisioned records linked by provenance. Generated claims cannot be promoted to source evidence without an explicit independent evidence record.
 `ingest` therefore accepts only independent source-backed material; generated artifacts are stored separately as `SyntheticArtifact`.
+`CanonicalRef` is normalized by source kind (URL: normalized URL without tracking params; file: repo-relative normalized path; literature: DOI/arXiv/citation key).
 
 ## Core entities
 
@@ -107,6 +108,13 @@ type Source struct {
     Metadata    SourceMetadata
 }
 
+type SourceMetadata struct {
+    Title       string
+    Authors     []string
+    PublishedAt *string
+    Locator     string
+}
+
 type EvidenceRecord struct {
     ID          ID
     ProblemID   ID
@@ -193,8 +201,7 @@ type InvariantChallenge struct {
     InvariantID    ID
     RunID          ID
     ChallengeType  string
-    PreviousState  *InvariantState
-    ResultState    InvariantState
+    StateTransitionID ID
     ResultSummary  string
     CreatedAt      string
 }

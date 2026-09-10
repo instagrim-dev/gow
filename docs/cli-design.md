@@ -34,11 +34,13 @@ Common machine envelope:
   "command": "normalize",
   "problem_id": "prob_...",
   "run_id": "run_...",
-  "artifacts": [{"type": "normalization_revision", "id": "normrev_..."}],
+  "artifacts": [{"type": "normalization_revision", "id": "normrev_...", "status": "created"}],
   "warnings": [],
   "errors": []
 }
 ```
+
+Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statuses such as `duplicate_existing` and include the existing artifact ID.
 
 ## Command contracts
 
