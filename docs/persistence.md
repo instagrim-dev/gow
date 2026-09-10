@@ -410,7 +410,7 @@ BEGIN
     )) THEN RAISE(ABORT, 'from_state must match current invariant state')
     WHEN NOT (
       (NEW.from_state = 'proposed' AND NEW.to_state = 'challenged') OR
-      (NEW.from_state = 'challenged' AND NEW.to_state IN ('surviving', 'weaken', 'split', 'merge', 'falsified')) OR
+      (NEW.from_state = 'challenged' AND NEW.to_state IN ('surviving', 'weaken', 'split', 'merge', 'falsified', 'established')) OR
       (NEW.from_state = 'surviving' AND NEW.to_state IN ('challenged', 'weaken', 'split', 'merge', 'falsified', 'established')) OR
       (NEW.from_state = 'weaken' AND NEW.to_state IN ('challenged', 'surviving', 'split', 'merge', 'falsified'))
     ) THEN RAISE(ABORT, 'invalid invariant state transition')
