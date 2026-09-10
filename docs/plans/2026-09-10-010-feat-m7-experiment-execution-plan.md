@@ -384,3 +384,96 @@ EPIC M7 v0 is delivered.
   recovery is one deterministic rule across arms; budgets and stopping
   conditions are persisted; experiments have no side effects on the research
   state they measure.
+
+---
+
+## Resolved decisions (post-delivery remediation, 2026-09-10)
+
+These cement the decision surface surfaced by the two-leak remediation (arm
+isolation + inconclusive compare) and the DEEP topology pass over it. Source
+topology: `deep-decision-topology/v1` (thread artifact). All code changes below
+are live in the working tree with `gofmt`/`build`/`vet`/`test ./...` green.
+
+**D1 — Arm-isolation identity key.**
+Grounding: KTD-6 requires idempotent identity; a finite evaluation budget makes
+per-arm assessment order-consequential.
+Options: A cement on physical `proposal_id`; B cement on dedup-stable
+`(arm, proposal_hash)` set; C cement on the ORDERED per-arm manifest
+`arm|rank|proposal_hash|assessment`.
+Strategic reframe considered: supersede — a concurrent writer's ordered manifest
+(C) strictly subsumes B (still hash-based, still replay-stable) and additionally
+encodes the order a finite budget makes meaningful.
+Cemented decision: **C** — experiment identity is the unsorted, per-arm,
+rank-ordered manifest of `(arm, rank, proposal_hash, assessment)`.
+Implications: in scope — identity + membership key on the arm's own derivation
+(hash), not physical row ownership; out of scope — physical-row identity.
+Acceptance check: a replay with the same per-arm order + assessments collides
+(idempotent); a reorder that flips an assessment under a finite budget yields a
+distinct identity. (`TestIntegrationExperiment*` idempotency assertions pass.)
+
+**D2 — Physical vs content-derivation isolation.**
+Grounding: two arms sharing a train problem legitimately re-derive the same
+mechanism; `frontier_proposals` dedups on `(problem_id, proposal_hash)`.
+Options: A strict physical isolation (an arm scored only on rows it wrote);
+B content-derivation isolation (scored on what its generator derived, shared
+`proposal_id` allowed).
+Strategic reframe considered: reject premise of A — strict physical isolation
+contradicts KTD-6 (dedup state differs first-run vs replay, breaking
+idempotency) and needs per-arm non-deduped rows (a schema change explicitly out
+of scope here).
+Cemented decision: **B** — cross-arm shared `proposal_id` is legitimate; arm
+isolation comes from each arm's own arm-local `member_rank` + assessment and the
+D1 hash-keyed identity.
+Implications: in scope — `member_rank` is arm-local `0..n-1`; out of scope —
+crediting exclusivity by physical authorship.
+Acceptance check: integration asserts each arm's `member_rank` is dense/unique
+`0..n-1`; a fully-deduped replay stays idempotent.
+
+**D3 — Inconclusive arm in `compare`.**
+Grounding: AGENTS.md F5 (unknown/unassessed are epistemic gaps, never coerced);
+the run-level conclusion already gates `no_recovery` on
+`DecisiveCount == ProposalCount`.
+Options: A explicit `inconclusive` status/delta mirroring the run-level rule;
+B refuse to compare a non-decisive arm; C keep binary delta, surface counts.
+Cemented decision: **A** (single coherent path) — `armRecoveryStatus` →
+`recovered|no_recovery|inconclusive`; `recoveryDeltaFrom` emits a negative
+direction only when the called-out arm reached a decisive `no_recovery`.
+Implications: in scope — new per-arm status fields + widened delta enum;
+out of scope — statistical claims over one split.
+Acceptance check: `experiment_compare_test.go` truth table — a negative never
+fires against `inconclusive`; empty/unknown arms report `inconclusive`.
+
+**D4 — `recovery_delta` `--json` enum widening (Product Contract "stable
+`--json`").**
+Grounding: compare first shipped in the same unreleased batch (`9d9f528`);
+new tokens `treatment-only-baseline-inconclusive`,
+`baseline-only-treatment-inconclusive`, `inconclusive` + two status fields.
+Options: A treat as safe additive change on an unreleased surface;
+B version/gate the contract.
+Cemented decision: **A, deferred-with-trigger** — additive fields + widened enum
+on an unreleased surface are safe; confirm no committed consumer parses the old
+4-value enum before declaring the contract stable.
+Trigger: a committed/released `recovery_delta` consumer expecting the old enum
+(none found: only tests + docs reference it).
+Acceptance check: `rg 'recovery_delta|RecoveryDelta'` shows no `cmd/` or
+downstream parser bound to the 4-value set.
+
+**D5 — Abandoned own-generation store surface.**
+Cemented decision: **reverted** — `OwnGenerationHashes` /
+`OwnGenerationRankedIDs` removed; no inert field ships.
+Acceptance check: `go build ./...` green with no dangling references.
+
+**D6 — Concurrent `FindProposalGeneration` interface addition.**
+Grounding: a concurrent writer widened `problemStore` (`app.go`) +
+`frontier_store.go`; the in-package `fakeProblemStore` was briefly missing the
+method, breaking the pipeline test build.
+Cemented decision: **fix forward, resolved by the interface's owner** — the
+concurrent writer added the fake stub (`app_test.go:434`); my transient
+duplicate was removed. No revert of their interface change (user git rule).
+Acceptance check: `go test ./internal/pipeline/...` green.
+
+**D7 — Strict physical isolation as follow-on.**
+Cemented decision: **deferred-with-trigger**, owned by plan authority (new
+plan). Trigger: an operator measurement requirement that an arm must not be
+co-credited for a mechanism another arm physically persisted first; it would
+justify the out-of-scope schema change D2 rejected.

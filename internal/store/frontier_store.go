@@ -342,7 +342,51 @@ func (s *Store) LatestFrontierGeneration(ctx context.Context, problemID string) 
 	return id, true, nil
 }
 
-// RedundantAttackKeys returns the directed-attack redundancy keys (in the exact
+// FindProposalGeneration resolves the owning frontier_generation_run_id for a
+// (problem, proposal). Cross-run dedup keeps a proposal under the generation
+// that FIRST wrote it, so this is stable even when later generations dedup onto
+// it and own zero rows. Returns found=false when the proposal does not exist for
+// the problem (never fabricates a generation).
+func (s *Store) FindProposalGeneration(ctx context.Context, problemID, proposalID string) (string, bool, error) {
+	if err := domain.ValidateProblemID(problemID); err != nil {
+		return "", false, err
+	}
+	row := s.db.QueryRowContext(ctx,
+		`SELECT frontier_generation_run_id FROM frontier_proposals WHERE problem_id = ? AND id = ?`,
+		problemID, proposalID)
+	var genID string
+	if err := row.Scan(&genID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	return genID, true, nil
+}
+
+// LatestFrontierGenerationWithProposals returns the most recent generation that
+// actually OWNS at least one proposal row for the problem. A fully-deduped
+// latest generation owns zero rows; batch evaluate uses this so it does not go
+// blind and miss existing un-evaluated artifacts (finding 2).
+func (s *Store) LatestFrontierGenerationWithProposals(ctx context.Context, problemID string) (string, bool, error) {
+	if err := domain.ValidateProblemID(problemID); err != nil {
+		return "", false, err
+	}
+	row := s.db.QueryRowContext(ctx, `
+SELECT g.id FROM frontier_generation_runs g
+WHERE g.problem_id = ?
+  AND EXISTS (SELECT 1 FROM frontier_proposals p WHERE p.frontier_generation_run_id = g.id)
+ORDER BY g.revision DESC, g.id DESC LIMIT 1`, problemID)
+	var id string
+	if err := row.Scan(&id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	return id, true, nil
+}
+
 // format frontier.RedundancyKey produces: "t:<target ids>,|n:<cluster ids>,")
 // that appear on at least minCount DISTINCT persisted proposals for the problem.
 // Search policy uses these to derive penalize/redundant_attack directives from

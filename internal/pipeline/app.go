@@ -84,6 +84,16 @@ type problemStore interface {
 	GetFrontierGeneration(context.Context, string) (store.FrontierGenerationRecord, error)
 	ListFrontierGenerations(context.Context, string) ([]store.FrontierGenerationRecord, error)
 	LatestFrontierGeneration(context.Context, string) (string, bool, error)
+	// FindProposalGeneration resolves the owning frontier_generation_run_id for a
+	// (problem, proposal) — the generation that FIRST wrote the proposal, which
+	// cross-run dedup preserves. Lets by-id evaluate reach a proposal even when
+	// the LATEST generation deduped it and therefore owns zero proposal rows
+	// (finding 2).
+	FindProposalGeneration(context.Context, string, string) (string, bool, error)
+	// LatestFrontierGenerationWithProposals resolves the most recent generation
+	// that actually OWNS >=1 proposal row for the problem, so batch evaluate does
+	// not go blind when a fully-deduped latest generation owns none (finding 2).
+	LatestFrontierGenerationWithProposals(context.Context, string) (string, bool, error)
 	RedundantAttackKeys(context.Context, string, int) ([]string, error)
 	ListBreakCohortRows(context.Context, string) ([]store.BreakCohortRow, error)
 	PersistSuccessRevision(context.Context, store.SuccessRevisionRecord) (store.PersistSuccessRevisionResult, error)

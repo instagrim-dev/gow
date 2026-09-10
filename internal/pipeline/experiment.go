@@ -215,9 +215,23 @@ type ExperimentCompareView struct {
 	ProposalBudget      int               `json:"proposal_budget_count"`
 	BaselineArm         ExperimentArmView `json:"baseline_arm"`
 	TreatmentArm        ExperimentArmView `json:"treatment_arm"`
-	RecoveryDelta       string            `json:"recovery_delta"` // treatment-only|baseline-only|both|neither
-	Metrics             []ArmMetricDelta  `json:"metrics"`
-	Interpretation      string            `json:"interpretation"`
+	// BaselineRecoveryStatus / TreatmentRecoveryStatus are the per-arm recovery
+	// verdicts under recovery-rule/v1: "recovered" (>=1 proposal recovered),
+	// "no_recovery" (EVERY membership proposal decisively assessed, none
+	// recovered), or "inconclusive" (the arm was not fully decisively assessed —
+	// unknown/unassessed proposals, or an empty own-generation set). An
+	// inconclusive arm is NEVER folded into a negative; the same F5 gate the
+	// run-level conclusion uses (DecisiveCount == ProposalCount) applies here.
+	BaselineRecoveryStatus  string `json:"baseline_recovery_status"`
+	TreatmentRecoveryStatus string `json:"treatment_recovery_status"`
+	// RecoveryDelta is derived from the two statuses. It reports a negative
+	// direction (baseline-only/neither) ONLY when the relevant arm actually
+	// reached a decisive no_recovery; when an arm is inconclusive the delta says
+	// so ("*-inconclusive"/"inconclusive") rather than crediting a false
+	// negative to it.
+	RecoveryDelta  string           `json:"recovery_delta"` // both|treatment-only|baseline-only|neither|treatment-inconclusive|baseline-inconclusive|inconclusive
+	Metrics        []ArmMetricDelta `json:"metrics"`
+	Interpretation string           `json:"interpretation"`
 }
 
 // ExperimentCompareResponse is returned by `newf experiment compare`.
@@ -402,6 +416,19 @@ func (a *App) DefineExperiment(ctx context.Context, input ExperimentDefineInput)
 // executeArmsAndPersist runs every arm under the shared budget, applies the one
 // recovery rule against the quarantined target signatures, computes metrics,
 // and persists the experiment (idempotent on the identity hash).
+// armAssessmentIdentityPart builds one ORDERED experiment-identity token for a
+// single scored proposal (finding 1). Under a finite evaluation budget the
+// per-arm assessment is order-consequential — two orders of the same proposals
+// can yield different assessments — so identity must encode (arm, member_rank,
+// proposal_hash, assessment) in order. proposal_hash (not proposal_id) is the
+// dedup-stable content pointer so the token is invariant across idempotent
+// replays; member_rank + assessment make a consequential reordering a distinct
+// identity. Callers append these in arm-iteration then rank order and must NOT
+// sort the resulting slice.
+func armAssessmentIdentityPart(arm string, memberRank int, proposalHash, assessment string) string {
+	return strings.Join([]string{arm, fmt.Sprint(memberRank), proposalHash, assessment}, "|")
+}
+
 func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore, dbPath string, hs store.HoldoutSetRecord, check store.LeakageCheckRecord, runID string, arms []string, proposalBudget, evaluationBudget int, now time.Time) (ExperimentView, bool, error) {
 	// FROZEN target manifest (F2): scoring consumes EXACTLY the signatures
 	// derived from the REGISTERED withheld sources — the same population the
@@ -428,7 +455,10 @@ func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore,
 		targetRows = append(targetRows, store.ExperimentTargetRow{SignatureID: m.SignatureID, CanonicalFingerprint: m.CanonicalFingerprint})
 		targetFPs = append(targetFPs, m.CanonicalFingerprint)
 	}
-	sort.Strings(targetFPs)
+	// targetFPs stays in manifest order (ListTargetSignaturesForHoldout ORDERs BY
+	// ms.id — deterministic across replays). This is the COMPARISON order the
+	// evaluation budget is consumed against, so identity must encode it in order,
+	// not as a set (finding 1). Do NOT sort here.
 
 	profile := canon.ProfileMechanismV1()
 	var armRows []store.ExperimentArmRow
@@ -470,14 +500,27 @@ func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore,
 			row.FirstRecoveryRank.Int64 = int64(assessment.FirstRecoveryRank)
 		}
 		// Explicit arm<->proposal membership (F1): what THIS arm derived, in
-		// rank order, with its per-proposal assessment.
+		// rank order, with its per-proposal assessment. The membership proposal_id
+		// is the dedup-stable content pointer (two arms that derive the same
+		// mechanism legitimately share it); arm isolation and experiment identity
+		// key on (arm, proposal_hash) — the arm's own DERIVATION — so identity is
+		// stable across idempotent replays and independent of which arm's
+		// generation physically wrote the shared row first.
 		for _, pa := range assessment.Proposals {
 			row.Members = append(row.Members, store.ExperimentArmProposalRow{
 				ProposalID: pa.ProposalID,
 				MemberRank: pa.Rank,
 				Assessment: string(pa.Assessment),
 			})
-			identityParts = append(identityParts, arm+":"+pa.ProposalID)
+			// Ordered identity manifest (finding 1): under a finite evaluation
+			// budget the assessment is order-consequential, so identity must
+			// encode the ORDERED per-arm assessment — not a set. Each part carries
+			// arm, member rank, the dedup-stable proposal_hash, and the resulting
+			// assessment, so a reordering that changes the assessment yields a
+			// distinct experiment identity while an exact replay (same order, same
+			// assessments) still collides for idempotency. Appended in arm-iteration
+			// then rank order; deliberately NOT sorted below.
+			identityParts = append(identityParts, armAssessmentIdentityPart(arm, pa.Rank, pa.ProposalHash, string(pa.Assessment)))
 		}
 		armRows = append(armRows, row)
 
@@ -513,7 +556,9 @@ func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore,
 		}
 	}
 
-	sort.Strings(identityParts)
+	// identityParts is the ORDERED per-arm assessment manifest (finding 1); it is
+	// NOT sorted — arm-iteration order and per-arm rank order carry the
+	// order-consequential information a finite budget makes meaningful.
 	idHeader := []string{hs.ID, experiment.RecoveryRuleV1, profile.Version, profile.Hash(), fmt.Sprint(proposalBudget), fmt.Sprint(evaluationBudget), strings.Join(arms, ","), strings.Join(targetFPs, ",")}
 	idPayload := strings.Join(append(idHeader, identityParts...), "\n")
 	idSum := sha256.Sum256([]byte(idPayload))
@@ -552,9 +597,12 @@ func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore,
 // the ONE shared frontier core (generateFrontierWith): distance, violation
 // verification, hashing, ranking, and persistence are identical across arms;
 // only target selection, policy, generator, and provenance role differ. Each
-// arm keys on the dedup-stable set of proposals ITS generator produced this run
-// (result.ProposalIDByHash), so arms writing into the same problem never
-// contaminate each other and a replay whose proposals all dedup is stable.
+// arm keys on the proposals ITS generator produced this run (the dedup-stable
+// RankedProposalIDs). Two arms that derive the same mechanism legitimately share
+// the deduped proposal row; arm isolation comes from each arm computing its OWN
+// rank + assessment and from keying experiment identity + membership on
+// (arm, proposal_hash) — the arm's own derivation — so a replay whose proposals
+// all dedup stays idempotent and no arm reuses another arm's rank.
 func (a *App) runArm(ctx context.Context, repoStore problemStore, dbPath, problemID, arm string, budget int) (string, []experiment.ProposalContent, error) {
 	var opts frontierArmOptions
 	switch arm {
@@ -583,20 +631,27 @@ func (a *App) runArm(ctx context.Context, repoStore problemStore, dbPath, proble
 	if err != nil {
 		return "", nil, fmt.Errorf("%s generation: %w", arm, err)
 	}
-	// Read content by the AUTHORITATIVE per-arm order: this run's ranked proposal
-	// ids (result.RankedProposalIDs), NOT the read-back rank_ordinal. rank_ordinal
-	// is assigned per generation; when an arm mixes newly-written and
-	// cross-generation-deduped proposals those values are not unique across the
-	// mixed set, and feeding them to the rank-only assessment sort would make
-	// FirstRecoveryRank / membership / budget-consumption non-deterministic. Here
-	// each proposal's per-arm rank is its POSITION in this run's ranked list —
-	// unique, deterministic, and stable across idempotent replays.
-	contentByID, rerr := loadProposalContentByID(ctx, repoStore, result.RankedProposalIDs)
+	// Read content by the AUTHORITATIVE per-arm order: this run's dedup-stable
+	// ranked proposal ids (result.RankedProposalIDs), NOT the read-back
+	// rank_ordinal (which is per-generation and collides when an arm mixes
+	// newly-written + cross-generation-deduped proposals). This order is stable
+	// across idempotent replays because it is the deterministic candidate rank,
+	// resolved through ProposalIDByHash which covers both new and deduped
+	// proposals. Arm ISOLATION does not come from the physical proposal_id (two
+	// arms that derive the same mechanism legitimately share the deduped row);
+	// it comes from each arm computing its OWN rank + assessment, and from
+	// keying experiment identity + membership on (arm, proposal_hash) below.
+	ids := result.RankedProposalIDs
+	hashByID := make(map[string]string, len(ids))
+	for h, id := range result.ProposalIDByHash {
+		hashByID[id] = h
+	}
+	contentByID, rerr := loadProposalContentByID(ctx, repoStore, ids)
 	if rerr != nil {
 		return "", nil, rerr
 	}
-	contents := make([]experiment.ProposalContent, 0, len(result.RankedProposalIDs))
-	for _, id := range result.RankedProposalIDs {
+	contents := make([]experiment.ProposalContent, 0, len(ids))
+	for _, id := range ids {
 		c, ok := contentByID[id]
 		if !ok {
 			continue // pre-v17 content gap; recovery cannot fabricate it
@@ -605,6 +660,7 @@ func (a *App) runArm(ctx context.Context, repoStore problemStore, dbPath, proble
 			break // shared per-arm budget is a stopping condition, not silent truncation
 		}
 		c.Rank = len(contents) // per-arm position: unique, deterministic total order
+		c.ProposalHash = hashByID[id]
 		contents = append(contents, c)
 	}
 	return result.Record.ID, contents, nil
@@ -892,44 +948,95 @@ func (a *App) CompareExperiment(ctx context.Context, input ExperimentCompareInpu
 		deltas = append(deltas, d)
 	}
 
-	recoveryDelta := "neither"
-	switch {
-	case treatment.Recovered && baseline.Recovered:
-		recoveryDelta = "both"
-	case treatment.Recovered && !baseline.Recovered:
-		recoveryDelta = "treatment-only"
-	case !treatment.Recovered && baseline.Recovered:
-		recoveryDelta = "baseline-only"
-	}
+	// F5 at compare time: an arm's non-recovery is a NEGATIVE only when the arm
+	// was fully decisively assessed. An arm with unknown/unassessed proposals (or
+	// an empty own-generation set) is INCONCLUSIVE and must never be coerced into
+	// the negative side of the delta — the same gate the run-level conclusion
+	// uses (DecisiveCount == ProposalCount).
+	baseStatus := armRecoveryStatus(baseline)
+	treatStatus := armRecoveryStatus(treatment)
+	recoveryDelta := recoveryDeltaFrom(baseStatus, treatStatus)
 
 	cmp := ExperimentCompareView{
-		ExperimentID:        rec.ID,
-		Mode:                rec.Mode,
-		ModeDisclaimer:      modeDisclaimer(rec.Mode),
-		RecoveryRuleVersion: rec.RecoveryRuleVersion,
-		ProfileVersion:      rec.ProfileVersion,
-		ProposalBudget:      rec.ProposalBudgetCount,
-		BaselineArm:         baseline,
-		TreatmentArm:        treatment,
-		RecoveryDelta:       recoveryDelta,
-		Metrics:             deltas,
-		Interpretation:      compareInterpretation(recoveryDelta, baselineArm, treatmentArm),
+		ExperimentID:            rec.ID,
+		Mode:                    rec.Mode,
+		ModeDisclaimer:          modeDisclaimer(rec.Mode),
+		RecoveryRuleVersion:     rec.RecoveryRuleVersion,
+		ProfileVersion:          rec.ProfileVersion,
+		ProposalBudget:          rec.ProposalBudgetCount,
+		BaselineArm:             baseline,
+		TreatmentArm:            treatment,
+		BaselineRecoveryStatus:  baseStatus,
+		TreatmentRecoveryStatus: treatStatus,
+		RecoveryDelta:           recoveryDelta,
+		Metrics:                 deltas,
+		Interpretation:          compareInterpretation(recoveryDelta, baselineArm, treatmentArm),
 	}
 	return ExperimentCompareResponse{OK: true, Command: "experiment compare", Store: dbPath, Comparison: cmp}, nil
 }
 
+// armRecoveryStatus classifies one arm's recovery under recovery-rule/v1 at
+// compare time. It applies the SAME F5 gate the run-level conclusion uses: a
+// non-recovery is decisive ("no_recovery") only when EVERY membership proposal
+// was decisively assessed; otherwise the arm is "inconclusive" and must not be
+// reported as a negative. An empty own-generation set (ProposalCount == 0) is
+// inconclusive, not a decisive negative — the arm produced nothing to score.
+func armRecoveryStatus(arm ExperimentArmView) string {
+	switch {
+	case arm.Recovered:
+		return "recovered"
+	case arm.ProposalCount > 0 && arm.DecisiveCount == arm.ProposalCount:
+		return "no_recovery"
+	default:
+		return "inconclusive"
+	}
+}
+
+// recoveryDeltaFrom combines the two per-arm statuses WITHOUT coercing an
+// inconclusive arm into a negative. A negative-for-one direction is emitted only
+// when the other arm reached a decisive no_recovery; if either arm is
+// inconclusive the delta names that explicitly.
+func recoveryDeltaFrom(baseStatus, treatStatus string) string {
+	baseRec := baseStatus == "recovered"
+	treatRec := treatStatus == "recovered"
+	switch {
+	case baseRec && treatRec:
+		return "both"
+	case treatRec && baseStatus == "no_recovery":
+		return "treatment-only"
+	case baseRec && treatStatus == "no_recovery":
+		return "baseline-only"
+	case treatRec && baseStatus == "inconclusive":
+		return "treatment-only-baseline-inconclusive"
+	case baseRec && treatStatus == "inconclusive":
+		return "baseline-only-treatment-inconclusive"
+	case baseStatus == "no_recovery" && treatStatus == "no_recovery":
+		return "neither"
+	default:
+		// At least one arm inconclusive and neither recovered: no honest negative.
+		return "inconclusive"
+	}
+}
+
 // compareInterpretation renders a plain, non-inflated reading of the recovery
 // delta. It states the structural fact only — a single deterministic split
-// supports no statistical claim, and the phrasing must not imply one.
+// supports no statistical claim, and the phrasing must not imply one. An
+// inconclusive arm is reported as inconclusive, never as a negative.
 func compareInterpretation(recoveryDelta, baselineArm, treatmentArm string) string {
 	switch recoveryDelta {
 	case "treatment-only":
 		return treatmentArm + " recovered the held-out structural move on this split; " + baselineArm + " did not (single deterministic split; no statistical claim)"
 	case "baseline-only":
 		return baselineArm + " recovered the held-out structural move on this split; " + treatmentArm + " did not (single deterministic split; no statistical claim)"
+	case "treatment-only-baseline-inconclusive":
+		return treatmentArm + " recovered the held-out structural move on this split; " + baselineArm + " was not decisively assessed (inconclusive, not a negative)"
+	case "baseline-only-treatment-inconclusive":
+		return baselineArm + " recovered the held-out structural move on this split; " + treatmentArm + " was not decisively assessed (inconclusive, not a negative)"
 	case "both":
 		return "both arms recovered the held-out structural move on this split (compare first-recovery rank and diversity)"
-	default:
-		return "neither arm recovered the held-out structural move on this split (an honest negative for both)"
+	case "neither":
+		return "neither arm recovered the held-out structural move on this split, and both were decisively assessed (an honest negative for both)"
+	default: // "inconclusive"
+		return "at least one arm was not decisively assessed on this split; no recovery negative can be claimed (inconclusive)"
 	}
 }

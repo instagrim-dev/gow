@@ -363,6 +363,28 @@ func TestIntegrationExperimentBaselineArmsAndCompare(t *testing.T) {
 		}
 	}
 
+	// Leak-1 regression: arms share the train problem and frontier_proposals
+	// dedups on (problem_id, proposal_hash), so two arms that derive the same
+	// mechanism legitimately reference the SAME persisted proposal_id. Arm
+	// isolation must therefore NOT come from proposal_id uniqueness; it must come
+	// from each arm's member_rank being its OWN arm-local position (dense, unique
+	// 0..n-1) — a rank is never reused from another arm's ordering.
+	for name, a := range arms {
+		if len(a.Members) != a.ProposalCount {
+			t.Fatalf("arm %s: %d members != proposal_count %d", name, len(a.Members), a.ProposalCount)
+		}
+		seenRank := map[int]bool{}
+		for _, m := range a.Members {
+			if m.MemberRank < 0 || m.MemberRank >= len(a.Members) {
+				t.Fatalf("arm %s member_rank %d out of arm-local range [0,%d)", name, m.MemberRank, len(a.Members))
+			}
+			if seenRank[m.MemberRank] {
+				t.Fatalf("arm %s reuses member_rank %d (ranks must be arm-local and unique)", name, m.MemberRank)
+			}
+			seenRank[m.MemberRank] = true
+		}
+	}
+
 	// Default compare (b0 vs b3): apples-to-apples within one experiment.
 	cmp, err := app.CompareExperiment(ctx, ExperimentCompareInput{DBPath: dbPath, ProblemID: trainProblem})
 	if err != nil {
@@ -376,6 +398,26 @@ func TestIntegrationExperimentBaselineArmsAndCompare(t *testing.T) {
 	}
 	if len(cmp.Comparison.Metrics) == 0 {
 		t.Fatal("compare must report metric deltas")
+	}
+	// Leak-2 regression: b0 is offline-empty (ProposalCount 0), so it was NOT
+	// decisively assessed — its status must be "inconclusive", never coerced to a
+	// recovery negative, and the delta must not read "baseline-only"/"neither"
+	// (which would credit b0 with a decisive no_recovery it never earned).
+	if cmp.Comparison.BaselineArm.ProposalCount == 0 {
+		if cmp.Comparison.BaselineRecoveryStatus != "inconclusive" {
+			t.Fatalf("empty baseline arm must be inconclusive, got %q", cmp.Comparison.BaselineRecoveryStatus)
+		}
+		switch cmp.Comparison.RecoveryDelta {
+		case "baseline-only", "neither":
+			t.Fatalf("inconclusive baseline must not be coerced into a negative delta: %q", cmp.Comparison.RecoveryDelta)
+		}
+	}
+	for _, s := range []string{cmp.Comparison.BaselineRecoveryStatus, cmp.Comparison.TreatmentRecoveryStatus} {
+		switch s {
+		case "recovered", "no_recovery", "inconclusive":
+		default:
+			t.Fatalf("invalid recovery status %q", s)
+		}
 	}
 	for _, d := range cmp.Comparison.Metrics {
 		switch d.Direction {

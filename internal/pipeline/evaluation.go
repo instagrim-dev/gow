@@ -63,13 +63,30 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 		return EvaluateResponse{}, err
 	}
 
-	// Resolve the frontier generation to evaluate (latest for the problem).
-	genID, found, err := repoStore.LatestFrontierGeneration(ctx, input.ProblemID)
-	if err != nil {
-		return EvaluateResponse{}, err
-	}
-	if !found {
-		return EvaluateResponse{}, fmt.Errorf("no frontier generation for problem %s; run `frontier generate` first", input.ProblemID)
+	// Resolve the frontier generation to evaluate. By-id evaluation must reach
+	// the proposal's OWNING generation (the one that first wrote it), not the
+	// latest — cross-run dedup keeps the proposal under its original generation,
+	// so a later fully-deduped generation owns zero rows and would hide it
+	// (finding 2). Batch evaluation resolves the latest generation that actually
+	// owns proposal rows for the same reason.
+	var genID string
+	var found bool
+	if input.ProposalID != "" {
+		genID, found, err = repoStore.FindProposalGeneration(ctx, input.ProblemID, input.ProposalID)
+		if err != nil {
+			return EvaluateResponse{}, err
+		}
+		if !found {
+			return EvaluateResponse{}, fmt.Errorf("proposal %s not found for problem %s", input.ProposalID, input.ProblemID)
+		}
+	} else {
+		genID, found, err = repoStore.LatestFrontierGenerationWithProposals(ctx, input.ProblemID)
+		if err != nil {
+			return EvaluateResponse{}, err
+		}
+		if !found {
+			return EvaluateResponse{}, fmt.Errorf("no frontier generation with proposals for problem %s; run `frontier generate` first", input.ProblemID)
+		}
 	}
 	gen, err := repoStore.GetFrontierGeneration(ctx, genID)
 	if err != nil {
@@ -91,7 +108,9 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 		selected = append(selected, p)
 	}
 	if input.ProposalID != "" && len(selected) == 0 {
-		return EvaluateResponse{}, fmt.Errorf("proposal %s not found in latest frontier generation for problem %s", input.ProposalID, input.ProblemID)
+		// The proposal resolved to this generation but is absent from its owned
+		// rows — a store inconsistency, not a missing artifact.
+		return EvaluateResponse{}, fmt.Errorf("proposal %s resolved to generation %s but is absent from its owned proposals", input.ProposalID, gen.ID)
 	}
 
 	// Target predicates are the parsed predicates of the CURRENTLY targetable

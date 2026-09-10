@@ -135,6 +135,74 @@ func TestIntegrationEvaluateEndToEnd(t *testing.T) {
 	}
 }
 
+// TestIntegrationEvaluateReachesDedupedProposal is the finding-2 regression:
+// generate a frontier twice with an unchanged substrate so the second
+// generation FULLY dedups (it owns zero proposal rows). A by-id evaluate of an
+// original proposal must still resolve it through its OWNING generation — not
+// the latest, which is empty — and must not fabricate another copy. A batch
+// evaluate must likewise reach the un-evaluated originals rather than going
+// blind on the empty latest generation.
+func TestIntegrationEvaluateReachesDedupedProposal(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = dataDrivenMiner{}
+	app.challengerFn = biasOnlyChallenger{}
+
+	problemID, invID, _ := mineOneCandidate(t, ctx, app, dbPath)
+	if resp, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID}); err != nil {
+		t.Fatalf("challenge: %v", err)
+	} else if resp.Reports[0].StateAfter != "surviving" {
+		t.Fatalf("state after bias-only campaign = %q, want surviving", resp.Reports[0].StateAfter)
+	}
+
+	gen1, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("first generate: %v", err)
+	}
+	if len(gen1.Generation.Proposals) == 0 {
+		t.Fatal("first generation must own proposals")
+	}
+	originalID := gen1.Generation.Proposals[0].ID
+
+	// Second generation over the unchanged substrate: deterministic candidates
+	// dedup onto the existing rows, so this generation owns ZERO proposal rows.
+	gen2, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("second generate: %v", err)
+	}
+	if len(gen2.Generation.Proposals) != 0 {
+		t.Fatalf("second generation should fully dedup (own zero rows), got %d", len(gen2.Generation.Proposals))
+	}
+
+	// By-id evaluate must reach the original through its owning generation even
+	// though the LATEST generation (gen2) owns nothing.
+	res, err := app.Evaluate(ctx, EvaluateInput{DBPath: dbPath, ProblemID: problemID, ProposalID: originalID})
+	if err != nil {
+		t.Fatalf("by-id evaluate of a deduped-away proposal must still resolve it: %v", err)
+	}
+	if len(res.Run.Evaluations) != 1 {
+		t.Fatalf("want exactly one evaluation (no duplicate proposal created), got %d", len(res.Run.Evaluations))
+	}
+	if res.Run.FrontierGenerationRunID != gen1.Generation.ID {
+		t.Fatalf("by-id evaluate must run in the OWNING generation %s, got %s", gen1.Generation.ID, res.Run.FrontierGenerationRunID)
+	}
+
+	// The proposal count is unchanged: no copy was fabricated.
+	repo, err := store.Open(dbPath)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer repo.Close()
+	owning, err := repo.GetFrontierGeneration(ctx, gen1.Generation.ID)
+	if err != nil {
+		t.Fatalf("get owning gen: %v", err)
+	}
+	if len(owning.Proposals) != len(gen1.Generation.Proposals) {
+		t.Fatalf("owning generation proposal count changed: was %d now %d", len(gen1.Generation.Proposals), len(owning.Proposals))
+	}
+}
+
 // TestIntegrationEvaluateHoldoutRefused proves the holdout mode is refused at the
 // service boundary with a deferred-to-M7 error (R9), not half-built.
 func TestIntegrationEvaluateHoldoutRefused(t *testing.T) {

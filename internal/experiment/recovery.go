@@ -25,9 +25,10 @@ const RecoveryRuleV1 = "recovery-rule/v1"
 // ProposalContent is one generated proposal's persisted canonical content
 // (from the v17 frontier_proposal_signatures sidecar) plus its rank.
 type ProposalContent struct {
-	ProposalID string
-	Rank       int
-	Signature  canon.MechanismSignature
+	ProposalID   string
+	ProposalHash string
+	Rank         int
+	Signature    canon.MechanismSignature
 }
 
 // RecoveryFact is the code-computed classification of one proposal against the
@@ -112,6 +113,7 @@ const (
 // ProposalAssessment is one proposal's budget-audited evaluation outcome.
 type ProposalAssessment struct {
 	ProposalID     string
+	ProposalHash   string
 	Rank           int
 	Assessment     Assessment
 	Nearest        canon.Classification
@@ -159,7 +161,7 @@ func AssessProposals(proposals []ProposalContent, targets []canon.MechanismSigna
 
 	out := ArmAssessment{FirstRecoveryRank: -1, NearestClassification: canon.ClassUnknown}
 	for _, p := range ordered {
-		pa := ProposalAssessment{ProposalID: p.ProposalID, Rank: p.Rank, Nearest: canon.ClassUnknown, Assessment: AssessmentUnassessed}
+		pa := ProposalAssessment{ProposalID: p.ProposalID, ProposalHash: p.ProposalHash, Rank: p.Rank, Nearest: canon.ClassUnknown, Assessment: AssessmentUnassessed}
 		sawUnknown := false
 		completed := true
 		for _, target := range targets {

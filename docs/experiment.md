@@ -115,6 +115,22 @@ split, recovery rule, comparison profile, and shared budget. It reports exact
 counts, an ordinal direction (by exact ratio when comparable, else band), and
 the recovery delta only — a single deterministic split supports **no**
 statistical-significance claim, and the interpretation string never implies one.
+Each arm carries an explicit recovery **status** — `recovered`, `no_recovery`,
+or `inconclusive` — computed with the same F5 gate the run-level conclusion
+uses: a non-recovery is a decisive negative only when EVERY membership proposal
+was decisively assessed. An arm with unknown/unassessed proposals (or an empty
+own generation) is `inconclusive` and is **never** coerced into the negative
+side of the delta (`neither`/`baseline-only` require a decisive `no_recovery`
+on the arm being called out; otherwise the delta reads `*-inconclusive` /
+`inconclusive`).
+
+Two arms that derive the same mechanism legitimately share a deduped
+`proposal_id` (frontier proposals dedup on `(problem_id, proposal_hash)`). Arm
+isolation therefore does not rely on `proposal_id` uniqueness: each arm computes
+its OWN arm-local `member_rank` and assessment, and experiment identity +
+membership key on `(arm, proposal_hash)` — the arm's own derivation — so a
+replay whose proposals all dedup stays idempotent and no arm reuses another
+arm's rank.
 
 ## The v0 value is the harness
 

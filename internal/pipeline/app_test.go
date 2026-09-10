@@ -431,6 +431,14 @@ func (f *fakeProblemStore) LatestFrontierGeneration(context.Context, string) (st
 	return "", false, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) FindProposalGeneration(context.Context, string, string) (string, bool, error) {
+	return "", false, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) LatestFrontierGenerationWithProposals(context.Context, string) (string, bool, error) {
+	return "", false, errors.New("unexpected call")
+}
+
 func (f *fakeProblemStore) RedundantAttackKeys(context.Context, string, int) ([]string, error) {
 	return nil, errors.New("unexpected call")
 }
