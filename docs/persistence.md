@@ -347,7 +347,6 @@ CREATE TABLE holdout_set (
   problem_id TEXT NOT NULL REFERENCES problem(id),
   name TEXT NOT NULL,
   cutoff_time TEXT NOT NULL,
-  held_out_family_label TEXT,
   leakage_check_status TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
@@ -356,6 +355,12 @@ CREATE TABLE holdout_set_source (
   holdout_set_id TEXT NOT NULL REFERENCES holdout_set(id),
   source_id TEXT NOT NULL REFERENCES source(id),
   PRIMARY KEY(holdout_set_id, source_id)
+);
+
+CREATE TABLE holdout_set_family_label (
+  holdout_set_id TEXT NOT NULL REFERENCES holdout_set(id),
+  family_label TEXT NOT NULL,
+  PRIMARY KEY(holdout_set_id, family_label)
 );
 
 -- Evaluation and baselines

@@ -154,12 +154,12 @@ Common machine envelope:
 
 - Purpose: evaluate frontier proposals and/or run historical holdout experiment.
 - Required input: proposals or `--experiment-id`.
-- Optional flags: `--mode proposal|holdout`, `--baseline undirected|semantic-summary`, `--cutoff`, `--holdout-set-id`, `--judge-provider`.
+- Optional flags: `--mode proposal|holdout`, `--baseline undirected|semantic-summary`, `--cutoff`, `--holdout-set-id`, `--holdout-source-id <src-id>` (repeatable), `--holdout-family-label <label>` (repeatable), `--judge-provider`.
 - Persists:
   - `evaluation_run`
   - `evaluation`
   - `evaluation_metric`
-  - `holdout_set` (when creating from flags/sources for holdout mode)
+  - `holdout_set` (when creating from `--holdout-source-id`/`--holdout-family-label` inputs for holdout mode)
   - baseline comparison rows
 - Idempotency: new evaluation run per invocation.
 - Failure semantics: missing holdout partition, unevaluable proposals, judge disagreement (recorded as unresolved).

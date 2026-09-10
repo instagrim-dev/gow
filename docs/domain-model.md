@@ -116,7 +116,6 @@ type EvidenceRecord struct {
     Locator     string // page/section/url fragment
     Strength    string
     CreatedAt   string
-    Immutable   bool
 }
 
 type SyntheticArtifact struct {
