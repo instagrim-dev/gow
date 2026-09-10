@@ -453,10 +453,11 @@ B version/gate the contract.
 Cemented decision: **A, deferred-with-trigger** — additive fields + widened enum
 on an unreleased surface are safe; confirm no committed consumer parses the old
 4-value enum before declaring the contract stable.
-Trigger: a committed/released `recovery_delta` consumer expecting the old enum
-(none found: only tests + docs reference it).
-Acceptance check: `rg 'recovery_delta|RecoveryDelta'` shows no `cmd/` or
-downstream parser bound to the 4-value set.
+Trigger: a committed/released `recovery_delta` consumer that *branches on or
+parses* the old enum (none found: `cmd/newf/experiment.go` prints the token
+verbatim; the rest are tests + docs).
+Acceptance check: `rg 'recovery_delta|RecoveryDelta'` shows the only `cmd/`
+reference prints the value verbatim (no switch/parse on the 4-value set).
 
 **D5 — Abandoned own-generation store surface.**
 Cemented decision: **reverted** — `OwnGenerationHashes` /
