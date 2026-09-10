@@ -29,6 +29,8 @@ const (
 	ClusterRunIDPrefix            = "clr_"
 	MechanismClusterIDPrefix      = "mcl_"
 	FailureSpaceIDPrefix          = "fsp_"
+	InvariantRevisionIDPrefix     = "ivr_"
+	CandidateInvariantIDPrefix    = "inv_"
 )
 
 var (
@@ -48,6 +50,8 @@ var (
 	ErrInvalidClusterRunID            = errors.New("invalid cluster run id")
 	ErrInvalidMechanismClusterID      = errors.New("invalid mechanism cluster id")
 	ErrInvalidFailureSpaceID          = errors.New("invalid failure space id")
+	ErrInvalidInvariantRevisionID     = errors.New("invalid invariant revision id")
+	ErrInvalidCandidateInvariantID    = errors.New("invalid candidate invariant id")
 
 	entropyMu sync.Mutex
 	entropy   = ulid.Monotonic(defaultEntropy(), 0)
@@ -151,6 +155,22 @@ func ValidateMechanismClusterID(id string) error {
 
 func ValidateFailureSpaceID(id string) error {
 	return validateID(id, FailureSpaceIDPrefix, ErrInvalidFailureSpaceID)
+}
+
+func NewInvariantRevisionID(now time.Time) string {
+	return newID(InvariantRevisionIDPrefix, now)
+}
+
+func NewCandidateInvariantID(now time.Time) string {
+	return newID(CandidateInvariantIDPrefix, now)
+}
+
+func ValidateInvariantRevisionID(id string) error {
+	return validateID(id, InvariantRevisionIDPrefix, ErrInvalidInvariantRevisionID)
+}
+
+func ValidateCandidateInvariantID(id string) error {
+	return validateID(id, CandidateInvariantIDPrefix, ErrInvalidCandidateInvariantID)
 }
 
 func ValidateNormalizationRevisionID(id string) error {

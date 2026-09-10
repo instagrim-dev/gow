@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/instagrim-dev/newf/internal/canon"
 	"github.com/instagrim-dev/newf/internal/domain"
 )
 
@@ -39,6 +40,68 @@ func seedTestVocabulary(t *testing.T, ctx context.Context, repo *Store) {
 	})
 	if err != nil {
 		t.Fatalf("SeedVocabulary() error = %v", err)
+	}
+}
+
+// TestRejectedTermSurvivesPersistenceRoundTrip guards the durable-rejected fix:
+// a rejected key seeded into the store must still resolve to ResolutionRejected
+// after the vocabulary is rebuilt from SQLite (runtime always reloads from the
+// store, so an in-memory-only rejected set would silently vanish on reload).
+func TestRejectedTermSurvivesPersistenceRoundTrip(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	repo := openCanonStore(t, ctx)
+	defer repo.Close()
+
+	const version = "mechanism/v1"
+	if err := repo.SeedVocabulary(ctx, VocabularySeedInput{
+		Version:   version,
+		Notes:     "test",
+		CreatedAt: "2026-09-10T12:00:00Z",
+		Terms: []TermRecord{{
+			VocabularyVersion: version,
+			CanonicalID:       "core.operator.modular_decomposition",
+			FieldKind:         "operator",
+			Description:       "test",
+			Aliases:           []string{"modular decomposition"},
+		}},
+		Rejected: []string{canon.Normalize("handwaving")},
+	}); err != nil {
+		t.Fatalf("SeedVocabulary() error = %v", err)
+	}
+
+	// Rebuild the vocabulary purely from persisted rows, exactly as runtime does.
+	terms, err := repo.ListTerms(ctx, version, "")
+	if err != nil {
+		t.Fatalf("ListTerms() error = %v", err)
+	}
+	defs := make([]canon.TermDef, 0, len(terms))
+	for _, tr := range terms {
+		defs = append(defs, canon.TermDef{
+			CanonicalID: domain.CanonicalID(tr.CanonicalID),
+			FieldKind:   domain.FieldKind(tr.FieldKind),
+			Description: tr.Description,
+			Parent:      domain.CanonicalID(tr.ParentCanonicalID),
+			Aliases:     tr.Aliases,
+		})
+	}
+	rejected, err := repo.ListRejected(ctx, version)
+	if err != nil {
+		t.Fatalf("ListRejected() error = %v", err)
+	}
+	if len(rejected) != 1 || rejected[0] != "handwaving" {
+		t.Fatalf("ListRejected() = %v, want [handwaving]", rejected)
+	}
+	v, err := canon.BuildVocabularyWithRejected(version, defs, rejected)
+	if err != nil {
+		t.Fatalf("BuildVocabularyWithRejected() error = %v", err)
+	}
+	if got := v.Resolve(domain.FieldOperator, "Handwaving", true); got.State != domain.ResolutionRejected {
+		t.Fatalf("reloaded Resolve(handwaving) = %q, want rejected (rejection did not survive persistence)", got.State)
+	}
+	// Sanity: a real term still resolves after the round trip.
+	if got := v.Resolve(domain.FieldOperator, "modular decomposition", false); got.State != domain.ResolutionResolved {
+		t.Fatalf("reloaded Resolve(modular decomposition) = %q, want resolved", got.State)
 	}
 }
 

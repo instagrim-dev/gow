@@ -63,6 +63,8 @@ func newRootCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cob
 	cmd.AddCommand(newVocabularyCommand(stdout, app, opts))
 	cmd.AddCommand(newClusterCommand(stdout, app, opts))
 	cmd.AddCommand(newFailureSpaceCommand(stdout, app, opts))
+	cmd.AddCommand(newInvariantsCommand(stdout, app, opts))
+	cmd.AddCommand(newInvariantCommand(stdout, app, opts))
 
 	return cmd
 }

@@ -17,12 +17,13 @@ import (
 )
 
 type App struct {
-	version     string
-	now         func() time.Time
-	getwd       func() (string, error)
-	stdin       io.Reader
-	openStoreFn func(context.Context, string) (string, problemStore, error)
-	normalizers map[string]provider.Normalizer
+	version          string
+	now              func() time.Time
+	getwd            func() (string, error)
+	stdin            io.Reader
+	openStoreFn      func(context.Context, string) (string, problemStore, error)
+	normalizers      map[string]provider.Normalizer
+	invariantMinerFn provider.InvariantMiner
 }
 
 type problemStore interface {
@@ -64,6 +65,10 @@ type problemStore interface {
 	PersistFailureSpace(context.Context, store.FailureSpaceRecord) (store.PersistFailureSpaceResult, error)
 	GetFailureSpace(context.Context, string) (store.FailureSpaceRecord, error)
 	LatestFailureSpace(context.Context, string) (store.FailureSpaceRecord, bool, error)
+	PersistInvariantRevision(context.Context, store.InvariantRevisionRecord) (store.PersistInvariantRevisionResult, error)
+	GetInvariantRevision(context.Context, string) (store.InvariantRevisionRecord, error)
+	ListInvariantRevisions(context.Context, string) ([]store.InvariantRevisionRecord, error)
+	LatestInvariantRevision(context.Context, string) (string, bool, error)
 }
 
 type InitProblemInput struct {

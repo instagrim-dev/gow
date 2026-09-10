@@ -350,3 +350,19 @@ func (f *fakeProblemStore) GetFailureSpace(context.Context, string) (store.Failu
 func (f *fakeProblemStore) LatestFailureSpace(context.Context, string) (store.FailureSpaceRecord, bool, error) {
 	return store.FailureSpaceRecord{}, false, errors.New("unexpected call")
 }
+
+func (f *fakeProblemStore) PersistInvariantRevision(context.Context, store.InvariantRevisionRecord) (store.PersistInvariantRevisionResult, error) {
+	return store.PersistInvariantRevisionResult{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetInvariantRevision(context.Context, string) (store.InvariantRevisionRecord, error) {
+	return store.InvariantRevisionRecord{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListInvariantRevisions(context.Context, string) ([]store.InvariantRevisionRecord, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) LatestInvariantRevision(context.Context, string) (string, bool, error) {
+	return "", false, errors.New("unexpected call")
+}

@@ -931,6 +931,60 @@ present and does nothing. The post-migration integrity check now asserts these
 columns exist, so an incomplete upgrade (tables present but the `v10` columns
 absent) is reported as a corrupt store rather than silently accepted.
 
+## Implemented candidate-invariant schema (#12, migration `v11`)
+
+The `-- Invariants and lifecycle` blueprint above (singular `invariant_revision`,
+`candidate_invariant`, and the full `invariant_state_transition` /
+`invariant_transition_counter` / `invariant_current_state` /
+`invariant_lineage` machinery) is the forward-looking design spanning the whole
+invariant lifecycle. Migration `v11` ships the **`proposed`-only mining subset**
+of it and makes two deliberate departures (see
+[`invariant-mining.md`](invariant-mining.md)):
+
+1. **The invariant is a typed predicate, not prose.** The durable identity is a
+   `predicate_fingerprint` over a canonicalized `invariant-predicate/v1` AST; the
+   blueprint's `statement` is demoted to a human render. The AST is stored in
+   `invariant_predicates`.
+2. **No lifecycle tables.** `invariant_challenge`, `invariant_state_transition`,
+   `invariant_transition_counter`, the `invariant_current_state` view, and
+   `invariant_lineage` are **absent** from `v11` — all transitions beyond
+   `proposed` are M4.3. A reviewer can confirm nothing leaked by checking those
+   names do not appear in the migration.
+
+The tables that actually ship (pluralized to match the shipped convention;
+`internal/store/migrations.go`), all immutable by trigger:
+
+- `invariant_revisions` — one mining pass over a FailureSpace revision. Unique on
+  `(problem_id, failure_space_id, miner_version, predicate_schema, min_support)`
+  (a re-mine under the identical tuple is idempotent, returning the existing
+  revision) and `(problem_id, revision)` (monotonic per problem). Links the
+  `run_id`, `cluster_run_id`, and `provider_invocation_id`.
+- `candidate_invariants` — semantic identity `predicate_fingerprint`;
+  `initial_state` fixed to `proposed` by `CHECK`; `association_status IN
+  ('recurring','discriminative','candidate_obstruction','unknown')` by `CHECK`
+  with `obstruction_is_model_hypothesis` recording a model-proposed obstruction
+  flag; code-computed `distinct_family_support`, `failure_coverage_num/den`, and
+  the matched-claim epistemic composition (`support_explicit/inferred/other_count`).
+- `invariant_predicates` — the canonicalized AST JSON, source of the fingerprint.
+- `invariant_family_evaluations` — per-family verdict
+  (`satisfies|violates|unknown|member_mixed`), `role IN ('support','contrast')`,
+  and matched-claim epistemic counts.
+- `invariant_counterexamples` — eligible failure families that violate the
+  predicate, with the offending reason.
+
+Migration `v11` is otherwise additive, but includes **one guarded, FK-safe
+constraint change**: it generalizes `provider_invocations.role` from
+`CHECK (role IN ('normalize'))` to `('normalize','invariant')` so the miner
+invocation reuses the one auditable invocation table. Because
+`provider_invocations` is a parent (`normalization_revisions.provider_invocation_id`
+references it), the change edits the parent's `CHECK` **in place** via
+`writable_schema` (guarded and idempotent, a no-op when `invariant` is already
+permitted) rather than a DROP+RENAME rebuild — so existing child foreign keys
+survive. The post-migration integrity check probes that an `invariant`-role row
+is now insertable, so a DB left on the `normalize`-only `CHECK` is reported
+corrupt rather than accepted; a pre-v11 migration test additionally asserts a
+pre-existing child FK still resolves after the change.
+
 ## Immutable vs mutable/revisioned
 
 - Immutable: `source`, `evidence_record` (enforced with update/delete-rejecting

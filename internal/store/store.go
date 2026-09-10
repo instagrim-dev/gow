@@ -923,6 +923,8 @@ func validateSchemaTables(ctx context.Context, tx *sql.Tx) error {
 		"cluster_runs", "mechanism_clusters", "cluster_members",
 		"cluster_distances", "cluster_coverage_axes", "cluster_discrimination_losses",
 		"failure_spaces", "failure_space_outcomes", "failure_space_axes",
+		"invariant_revisions", "candidate_invariants", "invariant_predicates",
+		"invariant_family_evaluations", "invariant_counterexamples",
 	} {
 		row := tx.QueryRowContext(ctx, `
 SELECT EXISTS(
@@ -956,6 +958,17 @@ SELECT EXISTS(
 		if !has {
 			return fmt.Errorf("%w: missing column %q on %q for current schema", ErrCorruptStore, c.column, c.table)
 		}
+	}
+	// A column probe cannot see a CHECK constraint, so a database left on the
+	// v3 normalize-only provider_invocations.role CHECK would pass the checks
+	// above while silently rejecting invariant-mining invocations. Assert the
+	// v11 role generalization by reading the table DDL directly.
+	allowsInvariant, err := providerRoleAllowsInvariant(ctx, tx)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrCorruptStore, err)
+	}
+	if !allowsInvariant {
+		return fmt.Errorf("%w: provider_invocations.role CHECK does not permit 'invariant' for current schema", ErrCorruptStore)
 	}
 	return nil
 }

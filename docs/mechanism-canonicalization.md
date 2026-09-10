@@ -62,7 +62,7 @@ fuzzy/embedding fallback**. The five fixed states are:
 | `ambiguous` | Matched more than one candidate (all recorded, none chosen). |
 | `novel_candidate` | No match, but the caller flagged the label as novel. |
 | `unknown` | No match, not flagged novel. |
-| `rejected` | On the vocabulary's explicit rejected-terms list. |
+| `rejected` | On the vocabulary's explicit rejected-terms list (persisted; see below). |
 
 Only `resolved` claims contribute a canonical ID to the fingerprint body. The
 other states are persisted with their surface label and state, and are surfaced
@@ -179,8 +179,10 @@ idempotent (`existing`).
 `newf mechanism compare <a> <b>` is **component-wise** and deterministic. Per set
 field it reports overlap count, union count, Jaccard, and an ordinal
 (`identical`/`high`/`low`/`none`/`incomparable`) over resolved canonical IDs;
-posture axes report enum equality; boundaries compare by canonical relation.
-There is **no single scalar**.
+posture axes report enum equality; boundaries compare over the same
+`canonicalID|relation` composite the fingerprint uses, so the **typed relation
+is decisive**: `stops_at(X)` and `requires(X)` never compare identical even
+though they share a canonical ID. There is **no single scalar**.
 
 Weights are explicit and versioned (`weights/v1`); an unknown weights version is
 an error rather than a silent default swap.
@@ -208,6 +210,33 @@ properties, structural moves, and auxiliary constructions that predict outcome.
 `representation` is the surface qualifier; `boundaries` and `posture` are
 measured but non-decisive **by default** (a caller may promote posture/outcome
 or add boundaries as decisive via a different profile).
+
+### Profile hash: version strings are not enough for #11
+
+A profile carries a human-authored `Version` (e.g. `classify/v1`), but a version
+string alone is only reproducible if nobody edits its meaning later.
+`ComparisonProfile.Hash()` therefore returns a content hash over the profile's
+decisive axis selection (sorted decisive set fields, surface field, and the
+posture/outcome decisiveness flags) — deliberately **excluding** the mutable
+`Version` string. Each comparison verdict carries this `profile_hash`, and
+clustering (#11) persists it alongside a cluster run so a later edit to what
+`classify/v1` means yields a *different* hash, making the drift tamper-evident
+instead of silent. `TestComparisonProfileHashStableAndContentSensitive` guards
+that the hash is order-independent over decisive fields yet changes when any
+decisive axis is added or a decisiveness flag flips.
+
+### Rejected terms are durable
+
+The vocabulary's explicit rejected-terms list is **persisted** (table
+`canonical_rejected_terms`, keyed by `(vocabulary_version, rejected_normalized)`,
+immutable per version). Runtime resolution always rehydrates the vocabulary from
+SQLite, so an in-memory-only rejected set would silently vanish after
+persistence and a rejected label would resolve as `unknown`/`novel_candidate`
+instead of `rejected`. Seeding threads the rejected keys through
+`VocabularySeedInput.Rejected`, and reload rebuilds them via
+`BuildVocabularyWithRejected`; `TestRejectedTermSurvivesPersistenceRoundTrip`
+asserts a rejected label still resolves to `rejected` after a full
+seed → persist → reload cycle.
 
 Rationale: a different *representation* of the same structural move is a surface
 change. But a **break** (an invariant the approach deliberately violates) and an

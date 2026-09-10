@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"path/filepath"
 	"testing"
@@ -234,6 +235,151 @@ func TestMigrateRejectsMissingSchemaTables(t *testing.T) {
 	if err := store.Migrate(ctx); !errors.Is(err, ErrCorruptStore) {
 		t.Fatalf("Migrate() error = %v, want ErrCorruptStore", err)
 	}
+}
+
+// TestMigrateV9RepairsPreFixV6Schema is the review-blocker regression: a
+// database created under the earlier v6 schema (where migrations 4/5 were later
+// corrected in place) recorded migrations 1-6 as applied, so reopening it on
+// current code must still upgrade the alias uniqueness key and add the signature
+// provenance columns via migration 9 — not silently retain the incompatible
+// schema. It reconstructs the actual pre-fix v6 shapes, stamps 1-6 applied, then
+// runs Migrate and asserts the repair.
+func TestMigrateV9RepairsPreFixV6Schema(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "newf.db")
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	defer store.Close()
+
+	// Build a REAL v6 database by running the actual migration SQL for versions
+	// 1-6, then downgrade the two affected areas to their pre-fix shapes. This
+	// faithfully reproduces a database created before 4/5 were corrected: all
+	// v1-6 tables exist, but the alias PK omits canonical_id and the signature
+	// provenance columns are absent.
+	for _, m := range migrations {
+		if m.version > 6 {
+			break
+		}
+		if m.sql == "" {
+			t.Fatalf("migration %d has no SQL to replay", m.version)
+		}
+		if _, err := store.db.ExecContext(ctx, m.sql); err != nil {
+			t.Fatalf("replay migration %d: %v", m.version, err)
+		}
+	}
+	// Downgrade alias table to the pre-fix 3-column PK (drop immutable triggers
+	// first so we can rebuild it).
+	downgrade := []string{
+		`DROP TRIGGER IF EXISTS canonical_term_aliases_immutable_update`,
+		`DROP TRIGGER IF EXISTS canonical_term_aliases_immutable_delete`,
+		`DROP TABLE canonical_term_aliases`,
+		`CREATE TABLE canonical_term_aliases (
+  vocabulary_version TEXT NOT NULL,
+  canonical_id TEXT NOT NULL,
+  field_kind TEXT NOT NULL,
+  alias_normalized TEXT NOT NULL,
+  PRIMARY KEY(vocabulary_version, field_kind, alias_normalized)
+)`,
+		// Downgrade signature provenance tables: drop triggers, rebuild without
+		// the claim_status / support columns.
+		`DROP TRIGGER IF EXISTS signature_postures_immutable_update`,
+		`DROP TRIGGER IF EXISTS signature_postures_immutable_delete`,
+		`DROP TABLE signature_postures`,
+		`CREATE TABLE signature_postures (signature_id TEXT NOT NULL, axis TEXT NOT NULL, value TEXT NOT NULL, PRIMARY KEY(signature_id, axis))`,
+		`DROP TRIGGER IF EXISTS signature_boundaries_immutable_update`,
+		`DROP TRIGGER IF EXISTS signature_boundaries_immutable_delete`,
+		`DROP TABLE signature_boundaries`,
+		`CREATE TABLE signature_boundaries (signature_id TEXT NOT NULL, surface_label TEXT NOT NULL, resolution_state TEXT NOT NULL, canonical_id TEXT NOT NULL DEFAULT '', relation TEXT NOT NULL DEFAULT '', ordinal INTEGER NOT NULL, PRIMARY KEY(signature_id, ordinal))`,
+		`DROP TRIGGER IF EXISTS signature_outcomes_immutable_update`,
+		`DROP TRIGGER IF EXISTS signature_outcomes_immutable_delete`,
+		`DROP TABLE signature_outcomes`,
+		`CREATE TABLE signature_outcomes (signature_id TEXT PRIMARY KEY, class TEXT NOT NULL)`,
+	}
+	for _, s := range downgrade {
+		if _, err := store.db.ExecContext(ctx, s); err != nil {
+			t.Fatalf("downgrade DDL error: %v\n%s", err, s)
+		}
+	}
+	// Seed a vocabulary + an alias row so the rebuild must preserve data.
+	if _, err := store.db.ExecContext(ctx, `INSERT INTO canonical_vocabulary(version, created_at, notes) VALUES('mechanism/v1','t','')`); err != nil {
+		t.Fatalf("seed vocab: %v", err)
+	}
+	if _, err := store.db.ExecContext(ctx, `INSERT INTO canonical_term_aliases(vocabulary_version, canonical_id, field_kind, alias_normalized) VALUES('mechanism/v1','core.operator.alpha','operator','shared')`); err != nil {
+		t.Fatalf("seed alias: %v", err)
+	}
+	// Stamp migrations 1-6 as applied (what a real pre-fix v6 DB recorded).
+	for v := 1; v <= 6; v++ {
+		if _, err := store.db.ExecContext(ctx, `INSERT INTO schema_migrations(version, applied_at) VALUES(?, 't')`, v); err != nil {
+			t.Fatalf("stamp migration %d: %v", v, err)
+		}
+	}
+
+	if err := store.Migrate(ctx); err != nil {
+		t.Fatalf("Migrate() from pre-fix v6 error = %v", err)
+	}
+
+	// Repair 1: provenance columns now present.
+	for _, c := range []struct{ table, column string }{
+		{"signature_postures", "claim_status"},
+		{"signature_boundaries", "claim_status"},
+		{"signature_boundaries", "support_snapshot_id"},
+		{"signature_boundaries", "support_locator"},
+		{"signature_outcomes", "claim_status"},
+	} {
+		if !tableHasColumn(t, ctx, store.db, c.table, c.column) {
+			t.Fatalf("migration 9 did not add %s.%s to pre-fix v6 schema", c.table, c.column)
+		}
+	}
+
+	// Repair 2: alias PK now includes canonical_id — the same (version,
+	// field_kind, alias) may bind to a SECOND canonical id without a UNIQUE
+	// violation (intentional within-field-kind ambiguity). The preserved row
+	// must still be present.
+	if _, err := store.db.ExecContext(ctx, `INSERT INTO canonical_term_aliases(vocabulary_version, canonical_id, field_kind, alias_normalized) VALUES('mechanism/v1','core.operator.beta','operator','shared')`); err != nil {
+		t.Fatalf("second binding rejected after repair (PK still 3-column?): %v", err)
+	}
+	var count int
+	if err := store.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM canonical_term_aliases WHERE alias_normalized='shared'`).Scan(&count); err != nil {
+		t.Fatalf("count aliases: %v", err)
+	}
+	if count != 2 {
+		t.Fatalf("expected 2 preserved+new alias bindings, got %d", count)
+	}
+
+	// Repair 3: durable rejected-terms table exists.
+	var exists bool
+	if err := store.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='canonical_rejected_terms')`).Scan(&exists); err != nil || !exists {
+		t.Fatalf("canonical_rejected_terms missing after migration 9 (err=%v)", err)
+	}
+
+	// Idempotent: re-running Migrate is a no-op and does not error.
+	if err := store.Migrate(ctx); err != nil {
+		t.Fatalf("second Migrate() after repair error = %v", err)
+	}
+}
+
+func tableHasColumn(t *testing.T, ctx context.Context, db *sql.DB, table, column string) bool {
+	t.Helper()
+	rows, err := db.QueryContext(ctx, "PRAGMA table_info("+table+")")
+	if err != nil {
+		t.Fatalf("PRAGMA table_info(%s): %v", table, err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid, notnull, pk int
+		var name, ctype string
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			t.Fatalf("scan table_info: %v", err)
+		}
+		if name == column {
+			return true
+		}
+	}
+	return false
 }
 
 func TestNextProblemSlugIgnoresNonNumericSuffixes(t *testing.T) {

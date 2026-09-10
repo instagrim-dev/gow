@@ -251,3 +251,11 @@ func hasUnresolved(claims []FieldClaim) bool {
 	}
 	return false
 }
+
+// ResolvedFieldIDsExport returns the sorted, de-duplicated canonical IDs of the
+// resolved claims in a field. It exposes resolvedIDs for the invariant mining
+// projection, which summarizes a representative signature's resolved fields for
+// the provider request.
+func ResolvedFieldIDsExport(claims []FieldClaim) []domain.CanonicalID {
+	return resolvedIDs(claims)
+}

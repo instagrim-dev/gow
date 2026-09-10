@@ -11,6 +11,19 @@ The goal is not to make an LLM grind harder on one linear solution path. The
 model's comparative advantage is used as a **failure compressor and frontier
 generator**.
 
+## Contents
+
+- [Current executable slice](#current-executable-slice) — what runs today
+- [Source ingestion and immutable snapshots](#source-ingestion-and-immutable-snapshots)
+- [Approach normalization](#approach-normalization)
+- [Mechanism canonicalization and comparison](#mechanism-canonicalization-and-comparison)
+- [Core loop](#core-loop) — the governing research loop
+- [Failure atlas](#failure-atlas) and [mechanistic diversity](#mechanistic-diversity)
+- [Candidate failure invariants](#candidate-failure-invariants) → [invariant critic](#invariant-critic) → [frontier generation](#frontier-generation)
+- [Evaluation before open-problem theater](#evaluation-before-open-problem-theater)
+- [Roadmap](#roadmap) — planned, not yet shipped
+- [v0 exit criteria](#v0-exit-criteria)
+
 ## Current executable slice
 
 The repository now ships the first provenance-heavy local CLI slice:
@@ -37,6 +50,15 @@ newf mechanism seed-fixture <fixture-path> --problem <problem-id>
 newf vocabulary list [--version <vocab-version>] [--field <field-kind>]
 newf vocabulary show <canonical-id>
 newf vocabulary resolve <candidate-label> --field <field-kind> [--vocab-version <v>] [--novel]
+newf cluster build --problem <problem-id>
+newf cluster show <cluster-run-id>
+newf cluster list --problem <problem-id>
+newf failure-space build --problem <problem-id> [--cluster-run <id>]
+newf failure-space show [--problem <problem-id> | --id <failure-space-id>]
+newf failure-space coverage [--problem <problem-id> | --id <failure-space-id>]
+newf invariants mine --problem <problem-id> [--failure-space <id>] [--min-support <n>]
+newf invariant list --problem <problem-id>
+newf invariant show [invariant-revision-id] [--problem <problem-id>]
 ```
 
 Build it with:
@@ -296,24 +318,39 @@ Useful diversity axes include:
 
 ## Candidate failure invariants
 
-The invariant miner compresses normalized failures and proposes properties that
-survive across independent failure clusters.
+The invariant miner (**shipped**: `newf invariants mine`) compresses a
+materialized failure space and proposes properties conserved across the
+problem's distinct mechanism families. An invariant's durable identity is a
+**machine-evaluable typed predicate** (`invariant-predicate/v1`) over canonical
+signature fields — the prose statement is a human render of the predicate, not
+its executable definition:
 
 ```yaml
-invariant:
-  id: invariant-003
-  statement: "Approaches in the supported families preserve property P."
-  abstraction_level: mechanism
-  support_clusters:
-    - cluster-a
-    - cluster-c
-    - cluster-f
-  counterexamples: []
-  confidence: 0.72
-  causal_status: unknown # unknown | correlational | necessary | proven
+predicate:
+  schema: invariant-predicate/v1
+  root:
+    op: all
+    children:
+      - { op: contains, field: preserves, canonical_id: domain.number_theory.property.residue_locality }
+      - { op: in, field: locality, values: [local, mixed] }
+statement: "failed methods remain confined to residue-local reasoning"  # human render
+abstraction_level: mechanism
+association_status: recurring   # recurring | discriminative | candidate_obstruction | unknown
+state: proposed
 ```
 
-Confidence is a search-control hint, not epistemic proof.
+The model authors the predicate; **code computes support** by evaluating it
+against every persisted non-redundant member signature
+(`Evaluate → satisfies | violates | unknown`; ambiguity stays `unknown`, never
+coerced). Failure coverage (over failure/partial-failure families) and success
+contrast (over partial-success/success families) are separate axes; mixed
+families split member-wise. Support counts `distinct_mechanism_families` under
+the pinned comparison profile — mechanistic non-redundancy, never a claim of
+statistical or historical independence — and retains the epistemic composition
+of the matched claims (`explicit`/`inferred`/other). `recurring` and
+`discriminative` are code-assigned from measured quantities;
+`candidate_obstruction` is recorded only as a flagged model hypothesis. See
+[`docs/invariant-mining.md`](docs/invariant-mining.md).
 
 ## Invariant critic
 
@@ -440,21 +477,23 @@ The first falsifiable claim is:
 > Failure history can be compressed into invariants that predict productive
 > search directions better than undirected solution generation.
 
-## v0 product surface
+## Roadmap
 
-A small CLI is enough:
+The shipped surface above already covers `init` → `ingest` → `normalize` →
+`mechanism signature`/`compare` → `cluster` → `failure-space` → `invariants
+mine`/`invariant list`/`invariant show`. The remaining loop stages are
+**planned, not yet shipped**:
 
 ```text
-newf init <problem>
-newf ingest <sources...>
-newf normalize
-newf cluster
-newf invariants
-newf challenge <invariant-id>
-newf generate --against <invariant-id> --count <n>
-newf evaluate
-newf compress
+newf challenge <invariant-id>                     # planned: adversarial invariant falsification
+newf generate --against <invariant-id> --count <n> # planned: frontier proposals
+newf evaluate                                     # planned: historical-holdout scoring
+newf compress                                     # planned: success-invariant compression
 ```
+
+Do not treat the planned commands as available; they are the next stages of the
+[core loop](#core-loop), tracked so the shipped index stays the single source of
+truth for what actually runs today.
 
 SQLite is sufficient initially. Source/evidence records should be immutable;
 derived judgments should be stored separately with provenance.

@@ -172,3 +172,13 @@ newf failure-space coverage [--problem <id> | --id <failure-space-id>]
 `cluster build` requires that signatures already exist for the problem under the
 chosen version tuple (run `newf mechanism signature` first). All commands support
 `--json` for machine-readable output with stable contracts.
+
+## What consumes the failure space
+
+The materialized failure space is the input contract for **candidate-invariant
+mining** (issue #12, EPIC.md M4.2). Mining compresses the distinct, non-redundant
+mechanism families this layer produces into explicit, typed `CandidateInvariant`
+records — retaining the per-family outcome partition (including `mixed`), the #11
+redundancy structure (so support counts distinct families, not repeated ideas),
+and the epistemic status of the matched claims. See
+[`invariant-mining.md`](invariant-mining.md).

@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
-const currentSchemaVersion = 10
+const currentSchemaVersion = 11
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -704,6 +705,229 @@ END;
 		// checks are no-ops.
 		apply: migrateV10ClusterIdentityAndOutcome,
 	},
+	{
+		version: 11,
+		// Candidate-invariant mining (#12 / M4.2). Additive new tables with
+		// immutability triggers PLUS one guarded generalization of the
+		// provider_invocations.role CHECK from ('normalize') to
+		// ('normalize','invariant') so a mining invocation can be recorded in the
+		// same auditable invocation table (KTD-8a). The generalization edits the
+		// table CHECK in place via writable_schema (NOT a DROP+RENAME rebuild,
+		// which is not FK-safe here because normalization_revisions references
+		// provider_invocations and the deferred child FK fails at commit after
+		// the parent is dropped). Introspective + idempotent: a fresh v11 database
+		// already permits 'invariant' and the edit is skipped.
+		apply: migrateV11CandidateInvariants,
+	},
+}
+
+// invariantTablesSQL is the additive DDL for the candidate-invariant layer
+// (migration v11). It creates the revisioned, immutable tables and their
+// immutability triggers. It creates NONE of the M4.3 challenge-lifecycle tables
+// (invariant_challenge, invariant_state_transition, the transition-counter
+// trigger, the current-state view, invariant_lineage): candidates ship only in
+// the `proposed` state, enforced by CHECK.
+const invariantTablesSQL = `
+CREATE TABLE IF NOT EXISTS invariant_revisions (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  failure_space_id TEXT NOT NULL REFERENCES failure_spaces(id),
+  cluster_run_id TEXT NOT NULL REFERENCES cluster_runs(id),
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  provider_invocation_id TEXT NOT NULL REFERENCES provider_invocations(id),
+  miner_version TEXT NOT NULL,
+  predicate_schema TEXT NOT NULL,
+  min_support INTEGER NOT NULL,
+  revision INTEGER NOT NULL,
+  candidate_count INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(problem_id, failure_space_id, miner_version, predicate_schema, min_support),
+  UNIQUE(problem_id, revision)
+);
+
+CREATE TABLE IF NOT EXISTS candidate_invariants (
+  id TEXT PRIMARY KEY,
+  invariant_revision_id TEXT NOT NULL REFERENCES invariant_revisions(id),
+  predicate_fingerprint TEXT NOT NULL,
+  statement TEXT NOT NULL,
+  abstraction_level TEXT NOT NULL,
+  initial_state TEXT NOT NULL DEFAULT 'proposed' CHECK (initial_state = 'proposed'),
+  association_status TEXT NOT NULL CHECK (association_status IN ('recurring','discriminative','candidate_obstruction','unknown')),
+  obstruction_is_model_hypothesis INTEGER NOT NULL DEFAULT 0,
+  distinct_family_support INTEGER NOT NULL,
+  failure_coverage_num INTEGER NOT NULL,
+  failure_coverage_den INTEGER NOT NULL,
+  support_explicit_count INTEGER NOT NULL,
+  support_inferred_count INTEGER NOT NULL,
+  support_other_count INTEGER NOT NULL,
+  confidence_ordinal TEXT NOT NULL DEFAULT '',
+  ordinal INTEGER NOT NULL,
+  UNIQUE(invariant_revision_id, predicate_fingerprint)
+);
+
+CREATE TABLE IF NOT EXISTS invariant_predicates (
+  invariant_id TEXT PRIMARY KEY REFERENCES candidate_invariants(id),
+  predicate_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS invariant_family_evaluations (
+  invariant_id TEXT NOT NULL REFERENCES candidate_invariants(id),
+  cluster_id TEXT NOT NULL REFERENCES mechanism_clusters(id),
+  outcome_class TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('support','contrast')),
+  verdict TEXT NOT NULL CHECK (verdict IN ('satisfies','violates','unknown','member_mixed')),
+  explicit_count INTEGER NOT NULL,
+  inferred_count INTEGER NOT NULL,
+  other_count INTEGER NOT NULL,
+  PRIMARY KEY(invariant_id, cluster_id, role)
+);
+
+CREATE TABLE IF NOT EXISTS invariant_counterexamples (
+  invariant_id TEXT NOT NULL REFERENCES candidate_invariants(id),
+  cluster_id TEXT NOT NULL REFERENCES mechanism_clusters(id),
+  reason TEXT NOT NULL,
+  PRIMARY KEY(invariant_id, cluster_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_invariant_revisions_problem ON invariant_revisions(problem_id, revision DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_candidate_invariants_revision ON candidate_invariants(invariant_revision_id, ordinal);
+
+CREATE TRIGGER IF NOT EXISTS invariant_revisions_immutable_update
+BEFORE UPDATE ON invariant_revisions
+BEGIN
+  SELECT RAISE(ABORT, 'invariant revisions are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS invariant_revisions_immutable_delete
+BEFORE DELETE ON invariant_revisions
+BEGIN
+  SELECT RAISE(ABORT, 'invariant revisions are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS candidate_invariants_immutable_update
+BEFORE UPDATE ON candidate_invariants
+BEGIN
+  SELECT RAISE(ABORT, 'candidate invariants are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS candidate_invariants_immutable_delete
+BEFORE DELETE ON candidate_invariants
+BEGIN
+  SELECT RAISE(ABORT, 'candidate invariants are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS invariant_predicates_immutable_update
+BEFORE UPDATE ON invariant_predicates
+BEGIN
+  SELECT RAISE(ABORT, 'invariant predicates are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS invariant_predicates_immutable_delete
+BEFORE DELETE ON invariant_predicates
+BEGIN
+  SELECT RAISE(ABORT, 'invariant predicates are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS invariant_family_evaluations_immutable_update
+BEFORE UPDATE ON invariant_family_evaluations
+BEGIN
+  SELECT RAISE(ABORT, 'invariant family evaluations are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS invariant_family_evaluations_immutable_delete
+BEFORE DELETE ON invariant_family_evaluations
+BEGIN
+  SELECT RAISE(ABORT, 'invariant family evaluations are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS invariant_counterexamples_immutable_update
+BEFORE UPDATE ON invariant_counterexamples
+BEGIN
+  SELECT RAISE(ABORT, 'invariant counterexamples are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS invariant_counterexamples_immutable_delete
+BEFORE DELETE ON invariant_counterexamples
+BEGIN
+  SELECT RAISE(ABORT, 'invariant counterexamples are immutable');
+END;
+`
+
+// migrateV11CandidateInvariants creates the candidate-invariant tables and, when
+// necessary, generalizes provider_invocations.role. Both parts are guarded so a
+// fresh v11 database is untouched by the rebuild.
+func migrateV11CandidateInvariants(ctx context.Context, tx *sql.Tx) error {
+	if _, err := tx.ExecContext(ctx, invariantTablesSQL); err != nil {
+		return err
+	}
+	allowsInvariant, err := providerRoleAllowsInvariant(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if !allowsInvariant {
+		if err := generalizeProviderInvocationsRole(ctx, tx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// providerRoleAllowsInvariant reports whether the provider_invocations.role
+// CHECK already admits 'invariant'. It reads the table's DDL text from
+// sqlite_master and looks for 'invariant' in the role CHECK, which is
+// deterministic and side-effect-free (no synthetic FK seeding needed). A fresh
+// v11 database created with the generalized shape reports true and the rebuild
+// is skipped; a pre-v11 database still on ('normalize') reports false.
+func providerRoleAllowsInvariant(ctx context.Context, tx *sql.Tx) (bool, error) {
+	var ddl string
+	row := tx.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type='table' AND name='provider_invocations'`)
+	if err := row.Scan(&ddl); err != nil {
+		return false, err
+	}
+	return strings.Contains(ddl, "'invariant'"), nil
+}
+
+// generalizeProviderInvocationsRole widens the provider_invocations.role CHECK
+// from ('normalize') to ('normalize','invariant').
+//
+// KTD-8a proposed a v10-style DROP+RENAME parent rebuild, but that is NOT
+// FK-safe under this SQLite build when child rows already reference
+// provider_invocations (normalization_revisions.provider_invocation_id): the
+// deferred FK still fails at commit after the parent is dropped and recreated
+// (verified empirically). Instead we edit the table's CHECK in place via
+// PRAGMA writable_schema, which never drops the parent, so every child FK is
+// preserved by construction. This is a targeted, single-table DDL-text edit
+// (widening one CHECK enum), guarded by providerRoleAllowsInvariant so it is a
+// no-op on a fresh v11 DB, and followed by an integrity_check to reject a
+// corrupted schema edit. The immutability triggers are untouched.
+func generalizeProviderInvocationsRole(ctx context.Context, tx *sql.Tx) error {
+	var ddl string
+	if err := tx.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type='table' AND name='provider_invocations'`).Scan(&ddl); err != nil {
+		return err
+	}
+	updated := strings.Replace(ddl, "role IN ('normalize')", "role IN ('normalize','invariant')", 1)
+	if updated == ddl {
+		return fmt.Errorf("v11: could not locate provider_invocations.role normalize-only CHECK to generalize")
+	}
+	var schemaVersion int
+	if err := tx.QueryRowContext(ctx, `PRAGMA schema_version`).Scan(&schemaVersion); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `PRAGMA writable_schema = ON`); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE sqlite_master SET sql = ? WHERE type='table' AND name='provider_invocations'`, updated); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `PRAGMA writable_schema = OFF`); err != nil {
+		return err
+	}
+	// Force SQLite to reparse the edited schema so the widened CHECK takes effect
+	// immediately (both later in this transaction and after commit).
+	if _, err := tx.ExecContext(ctx, fmt.Sprintf(`PRAGMA schema_version = %d`, schemaVersion+1)); err != nil {
+		return err
+	}
+	// A writable_schema edit bypasses parser validation, so verify the schema is
+	// still coherent before trusting it.
+	var res string
+	if err := tx.QueryRowContext(ctx, `PRAGMA integrity_check`).Scan(&res); err != nil {
+		return err
+	}
+	if res != "ok" {
+		return fmt.Errorf("v11: integrity_check after role generalization: %s", res)
+	}
+	return nil
 }
 
 // migrateV10ClusterIdentityAndOutcome adds input_set_hash to cluster_runs (and

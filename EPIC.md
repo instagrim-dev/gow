@@ -234,8 +234,8 @@ manufacture a family containing a `mechanism-distinct` pair (KTD-2); and a famil
 spanning multiple member outcomes is reported as `mixed` rather than compressed
 to its representative's outcome (KTD-9). Schema `v7`/`v8`/`v10`; see
 [`docs/mechanism-clustering.md`](docs/mechanism-clustering.md). This also
-delivers the M4.1 FailureSpace slice below. Invariant mining (M4.2) remains
-not-started.
+delivers the M4.1 FailureSpace slice below. Invariant mining (M4.2) is now
+delivered — see its status note below.
 
 ## Planned slices
 
@@ -263,6 +263,31 @@ Exit condition:
 - the system can say not merely "we have 42 failures," but "we have 7 mechanistically distinct failure families with these gaps."
 
 ### M4.2 — Mine candidate failure invariants
+
+**Status: delivered.** `newf invariants mine --problem <id>` compresses a
+materialized FailureSpace into explicit, typed `CandidateInvariant` records and
+`newf invariant list/show` inspect them. Each invariant's durable identity is a
+validated `invariant-predicate/v1` AST (`preserves`/`operators`/… set membership,
+posture/outcome enums, boundary relations, boolean composition) fingerprinted
+over its canonical form — the prose statement is a human render, not the
+definition. Support is **code-computed**: `Evaluate(predicate, signature) →
+{satisfies|violates|unknown}` runs member-wise against every persisted
+non-redundant signature, so the model authors the predicate but cannot certify
+its coverage (`ModelJudgment != Verification`). Support and contrast are separate
+axes (`FailureCoverage` over failure/partial-failure families, `Contrast` over
+partial-success/success), mixed families split member-wise by each member's own
+`signature_outcomes.class`, and `distinct_family_support` discounts #11-redundant
+members (a mechanistic-non-redundancy count, never an "independence" claim). Every
+candidate retains the epistemic composition of its matched claims
+(`explicit`/`inferred`/other) — `inferred`-only support is never laundered into
+`explicit` — carries an `association_status` (`recurring`/`discriminative`
+code-assigned from measured coverage/contrast, `candidate_obstruction` recorded
+only as a flagged model hypothesis, `unknown` on ambiguity), and enters `proposed`
+with no promotion machinery (that is M4.3). Persisted as immutable, per-problem
+revisioned artifacts under the real run lifecycle (`running` →
+`completed`/`failed`) in schema `v11`; see
+[`docs/invariant-mining.md`](docs/invariant-mining.md). The default miner is a
+deterministic offline fixture; CI makes no network/model calls.
 
 Goal:
 

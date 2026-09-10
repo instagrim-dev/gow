@@ -580,3 +580,97 @@ type FailureSpaceCoverageResponse struct {
 	FailureSpace string                 `json:"failure_space_id"`
 	Axes         []FailureSpaceAxisView `json:"axes"`
 }
+
+// InvariantFamilyEvaluationView is a candidate's per-family verdict + the
+// epistemic composition of the matched claims (support vs. contrast side).
+type InvariantFamilyEvaluationView struct {
+	ClusterID     string `json:"cluster_id"`
+	OutcomeClass  string `json:"outcome_class"`
+	Role          string `json:"role"`
+	Verdict       string `json:"verdict"`
+	ExplicitCount int    `json:"explicit_count"`
+	InferredCount int    `json:"inferred_count"`
+	OtherCount    int    `json:"other_count"`
+}
+
+// InvariantCounterexampleView is an eligible failure family that violated the
+// predicate.
+type InvariantCounterexampleView struct {
+	ClusterID string `json:"cluster_id"`
+	Reason    string `json:"reason"`
+}
+
+// CandidateInvariantView is one proposed candidate invariant: the typed
+// predicate (semantic identity), its human render, code-computed support and
+// contrast, retained epistemic composition, and the model-hypothesis flag. The
+// state is always `proposed` in this slice.
+type CandidateInvariantView struct {
+	ID                           string                          `json:"id"`
+	PredicateFingerprint         string                          `json:"predicate_fingerprint"`
+	Predicate                    string                          `json:"predicate"`
+	Statement                    string                          `json:"statement"`
+	AbstractionLevel             string                          `json:"abstraction_level"`
+	State                        string                          `json:"state"`
+	AssociationStatus            string                          `json:"association_status"`
+	ObstructionIsModelHypothesis bool                            `json:"obstruction_is_model_hypothesis"`
+	DistinctFamilySupport        int                             `json:"distinct_family_support"`
+	FailureCoverageNum           int                             `json:"failure_coverage_num"`
+	FailureCoverageDen           int                             `json:"failure_coverage_den"`
+	SupportExplicitCount         int                             `json:"support_explicit_count"`
+	SupportInferredCount         int                             `json:"support_inferred_count"`
+	SupportOtherCount            int                             `json:"support_other_count"`
+	FamilyEvaluations            []InvariantFamilyEvaluationView `json:"family_evaluations"`
+	Counterexamples              []InvariantCounterexampleView   `json:"counterexamples"`
+}
+
+// InvariantRevisionView is a full mining pass.
+type InvariantRevisionView struct {
+	ID              string                   `json:"id"`
+	ProblemID       string                   `json:"problem_id"`
+	FailureSpaceID  string                   `json:"failure_space_id"`
+	ClusterRunID    string                   `json:"cluster_run_id"`
+	RunID           string                   `json:"run_id"`
+	MinerVersion    string                   `json:"miner_version"`
+	PredicateSchema string                   `json:"predicate_schema"`
+	MinSupport      int                      `json:"min_support"`
+	Revision        int                      `json:"revision"`
+	CandidateCount  int                      `json:"candidate_count"`
+	CreatedAt       string                   `json:"created_at"`
+	Candidates      []CandidateInvariantView `json:"candidates"`
+}
+
+// InvariantRevisionSummaryView is a compact list row.
+type InvariantRevisionSummaryView struct {
+	ID             string `json:"id"`
+	FailureSpaceID string `json:"failure_space_id"`
+	MinerVersion   string `json:"miner_version"`
+	MinSupport     int    `json:"min_support"`
+	Revision       int    `json:"revision"`
+	CandidateCount int    `json:"candidate_count"`
+	CreatedAt      string `json:"created_at"`
+}
+
+// InvariantMineResponse is returned by `newf invariants mine`.
+type InvariantMineResponse struct {
+	OK       bool                  `json:"ok"`
+	Command  string                `json:"command"`
+	Store    string                `json:"store"`
+	Created  bool                  `json:"created"`
+	Revision InvariantRevisionView `json:"revision"`
+}
+
+// InvariantListResponse is returned by `newf invariant list`.
+type InvariantListResponse struct {
+	OK        bool                           `json:"ok"`
+	Command   string                         `json:"command"`
+	Store     string                         `json:"store"`
+	Revisions []InvariantRevisionSummaryView `json:"revisions"`
+}
+
+// InvariantShowResponse is returned by `newf invariant show`.
+type InvariantShowResponse struct {
+	OK       bool                  `json:"ok"`
+	Command  string                `json:"command"`
+	Store    string                `json:"store"`
+	Revision InvariantRevisionView `json:"revision"`
+}

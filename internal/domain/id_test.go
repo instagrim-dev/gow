@@ -70,6 +70,16 @@ func TestGeneratedIDsValidate(t *testing.T) {
 	if err := ValidateFailureSpaceID(failureSpaceID); err != nil {
 		t.Fatalf("ValidateFailureSpaceID() error = %v", err)
 	}
+
+	invariantRevisionID := NewInvariantRevisionID(now)
+	candidateInvariantID := NewCandidateInvariantID(now)
+
+	if err := ValidateInvariantRevisionID(invariantRevisionID); err != nil {
+		t.Fatalf("ValidateInvariantRevisionID() error = %v", err)
+	}
+	if err := ValidateCandidateInvariantID(candidateInvariantID); err != nil {
+		t.Fatalf("ValidateCandidateInvariantID() error = %v", err)
+	}
 }
 
 func TestValidateRejectsCrossClassIDs(t *testing.T) {
@@ -99,5 +109,13 @@ func TestValidateRejectsCrossClassIDs(t *testing.T) {
 	}
 	if err := ValidateFailureSpaceID(clusterRunID); err == nil {
 		t.Fatal("ValidateFailureSpaceID() succeeded for cluster run ID")
+	}
+
+	invariantRevisionID := NewInvariantRevisionID(time.Now().UTC())
+	if err := ValidateCandidateInvariantID(invariantRevisionID); err == nil {
+		t.Fatal("ValidateCandidateInvariantID() succeeded for invariant revision ID")
+	}
+	if err := ValidateInvariantRevisionID(clusterRunID); err == nil {
+		t.Fatal("ValidateInvariantRevisionID() succeeded for cluster run ID")
 	}
 }
