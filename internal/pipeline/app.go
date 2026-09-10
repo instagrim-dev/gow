@@ -3,6 +3,7 @@ package pipeline
 import (
 	"context"
 	"errors"
+	"io"
 	"os"
 	"time"
 
@@ -15,6 +16,7 @@ type App struct {
 	version     string
 	now         func() time.Time
 	getwd       func() (string, error)
+	stdin       io.Reader
 	openStoreFn func(context.Context, string) (string, problemStore, error)
 }
 
@@ -27,6 +29,12 @@ type problemStore interface {
 	GetProblem(context.Context, string) (domain.Problem, error)
 	ListProblems(context.Context) ([]domain.Problem, error)
 	GetRun(context.Context, string) (domain.Run, error)
+	CreateSourceSnapshot(context.Context, store.SnapshotAdmission) (store.SnapshotAdmissionResult, error)
+	ListSourcesByProblem(context.Context, string) ([]domain.Source, error)
+	ListSourcesWithSnapshotStats(context.Context, string) ([]store.SourceSummary, error)
+	GetSource(context.Context, string) (domain.Source, error)
+	GetSourceSnapshot(context.Context, string) (domain.SourceSnapshot, error)
+	ListSourceSnapshots(context.Context, string) ([]domain.SourceSnapshot, error)
 }
 
 type InitProblemInput struct {
@@ -55,6 +63,7 @@ func New(version string) *App {
 			return time.Now().UTC()
 		},
 		getwd: os.Getwd,
+		stdin: os.Stdin,
 	}
 	app.openStoreFn = app.defaultOpenStore
 	return app
