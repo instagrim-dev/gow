@@ -1,0 +1,308 @@
+{
+  "schema": "newf-research-source-register/v1",
+  "collection": "erdos-straus-2026-09-10",
+  "type": "source_linked_curated_notes_not_primary_source_snapshots",
+  "created_on": "2026-09-10",
+  "review_base_commit": "9d9f5281b73ee050f4ab4357d2779b512c0c1088",
+  "benchmark_training_eligible": false,
+  "historical_holdout_eligible": false,
+  "original_source_hashes_available": false,
+  "entry_count": 13,
+  "entries": [
+    {
+      "id": "esr-01",
+      "path": "notes/esr-01-bright-loughran-brauer-manin.md",
+      "title": "Brauer–Manin obstruction for Erdős–Straus surfaces",
+      "authors": [
+        "Martin Bright",
+        "Daniel Loughran"
+      ],
+      "selected_version": "publisher article; DOI 10.1112/blms.12374",
+      "source_date": "2020-07-07",
+      "retrieved_on": "2026-09-10",
+      "primary_urls": [
+        "https://londmathsoc.onlinelibrary.wiley.com/doi/full/10.1112/blms.12374"
+      ],
+      "read_scope": "Publisher first-online metadata; §1.2, Theorems 1.6 and 1.8; §3.",
+      "collection": "notes",
+      "annotation_status": "curator_inferred",
+      "outcome_interpretation": "partial_success",
+      "independent_verification": "not_performed",
+      "original_source_bytes_archived": false,
+      "note_sha256": "0fe86f9f91dce841ce075718c9f26cb065471a51e5c8017320d256748bac4beb"
+    },
+    {
+      "id": "esr-02",
+      "path": "notes/esr-02-elsholtz-tao-counting.md",
+      "title": "Counting the number of solutions to the Erdos-Straus equation on unit fractions",
+      "authors": [
+        "Christian Elsholtz",
+        "Terence Tao"
+      ],
+      "selected_version": "arXiv:1107.1010v6",
+      "source_date": "2015-08-02",
+      "retrieved_on": "2026-09-10",
+      "primary_urls": [
+        "https://arxiv.org/abs/1107.1010v6",
+        "https://arxiv.org/html/1107.1010v6"
+      ],
+      "read_scope": "Abstract; introduction, Theorem 1.1; §10, Proposition 1.9; submission history.",
+      "collection": "notes",
+      "annotation_status": "curator_inferred",
+      "outcome_interpretation": "partial_success",
+      "independent_verification": "not_performed",
+      "original_source_bytes_archived": false,
+      "note_sha256": "63241e7bb0e1788250503f5c07d7317cca69eab3cadf88470db6c738a36d1135"
+    },
+    {
+      "id": "esr-03",
+      "path": "notes/esr-03-elsholtz-planitzer-enumeration.md",
+      "title": "The number of solutions of the Erdős-Straus Equation and sums of k unit fractions",
+      "authors": [
+        "Christian Elsholtz",
+        "Stefan Planitzer"
+      ],
+      "selected_version": "arXiv:1805.02945v1",
+      "source_date": "2018-05-08",
+      "retrieved_on": "2026-09-10",
+      "primary_urls": [
+        "https://arxiv.org/abs/1805.02945v1",
+        "https://arxiv.org/html/1805.02945v1"
+      ],
+      "read_scope": "Abstract; introduction, Theorem 1; §§4–5 (patterns, relative greatest common divisors, three fractions).",
+      "collection": "notes",
+      "annotation_status": "curator_inferred",
+      "outcome_interpretation": "partial_success",
+      "independent_verification": "not_performed",
+      "original_source_bytes_archived": false,
+      "note_sha256": "6b7b3394b90ef0e8863bd7451638aea9c7d92bde7352301ee9acaaeddbf67162"
+    },
+    {
+      "id": "esr-04",
+      "path": "notes/esr-04-salez-modular-sieve.md",
+      "title": "The Erdős-Straus conjecture New modular equations and checking up to N=10^17",
+      "authors": [
+        "Serge E. Salez"
+      ],
+      "selected_version": "arXiv:1406.6307v1",
+      "source_date": "2014-06-24",
+      "retrieved_on": "2026-09-10",
+      "primary_urls": [
+        "https://arxiv.org/abs/1406.6307v1",
+        "https://arxiv.org/html/1406.6307v1"
+      ],
+      "read_scope": "Abstract; §2.3 (modular equations); §§3–4 (filters, optimized sieve, results); arXiv ancillary-file listing.",
+      "collection": "notes",
+      "annotation_status": "curator_inferred",
+      "outcome_interpretation": "partial_success",
+      "independent_verification": "not_performed",
+      "original_source_bytes_archived": false,
+      "note_sha256": "9f8946bf366aed72d6d0f1fc20b73c75ac11c2021d73a100d16020abe0ed5f58"
+    },
+    {
+      "id": "esr-05",
+      "path": "notes/esr-05-mihnea-bogdan-verification.md",
+      "title": "Further verification and empirical evidence for the Erdős-Straus conjecture",
+      "authors": [
+        "Spiridon Mihnea",
+        "Dumitru C. Bogdan"
+      ],
+      "selected_version": "arXiv:2509.00128v1",
+      "source_date": "2025-08-29",
+      "retrieved_on": "2026-09-10",
+      "primary_urls": [
+        "https://arxiv.org/abs/2509.00128v1",
+        "https://arxiv.org/html/2509.00128v1",
+        "https://github.com/esc-paper/erdos-straus"
+      ],
+      "read_scope": "Abstract; §2.1 Process; §2.2 Details; §3 Solution counting.",
+      "collection": "notes",
+      "annotation_status": "curator_inferred",
+      "outcome_interpretation": "partial_success",
+      "independent_verification": "not_performed",
+      "original_source_bytes_archived": false,
+      "note_sha256": "85753e1372632a5d17d658d0d7b904ced53001feff55aece5a9615fb7b601b90"
+    },
+    {
+      "id": "esr-06",
+      "path": "notes/esr-06-bradford-ionascu-euclidean-rings.md",
+      "title": "Unit Fractions in Norm-Euclidean Rings of Integers",
+      "authors": [
+        "Kyle Bradford",
+        "Eugen J. Ionascu"
+      ],
+      "selected_version": "arXiv:1405.4025v2",
+      "source_date": "2014-05-25",
+      "retrieved_on": "2026-09-10",
+      "primary_urls": [
+        "https://arxiv.org/abs/1405.4025v2",
+        "https://arxiv.org/html/1405.4025v2",
+        "https://www.iam.fmph.uniba.sk/amuc/ojs/index.php/amuc/article/view/368"
+      ],
+      "read_scope": "Abstract; ring definitions; §4, Theorems 4.7–4.11; publisher abstract and journal metadata.",
+      "collection": "notes",
+      "annotation_status": "curator_inferred",
+      "outcome_interpretation": "unknown",
+      "independent_verification": "not_performed",
+      "original_source_bytes_archived": false,
+      "note_sha256": "96e6afb8ccb425fea001f9bd6734521ef7467679d1b88eedd37ebae4ff420078"
+    },
+    {
+      "id": "esr-07",
+      "path": "notes/esr-07-bradford-pythagorean-bezout.md",
+      "title": "Pythagorean Triples, Bézout Coefficients and the Erdős-Straus Conjeceture",
+      "authors": [
+        "Kyle Bradford"
+      ],
+      "selected_version": "arXiv:2107.05400v1",
+      "source_date": "2021-07-12",
+      "retrieved_on": "2026-09-10",
+      "primary_urls": [
+        "https://arxiv.org/abs/2107.05400v1",
+        "https://arxiv.org/html/2107.05400v1"
+      ],
+      "read_scope": "ArXiv abstract; introduction; §§2–3 (Pythagorean triples and Bézout coefficients).",
+      "collection": "notes",
+      "annotation_status": "curator_inferred",
+      "outcome_interpretation": "unknown",
+      "independent_verification": "not_performed",
+      "original_source_bytes_archived": false,
+      "note_sha256": "c3039fdca5f387850a9adb7686357b025e0c095cff337085714f5aa5dcf33460"
+    },
+    {
+      "id": "esr-08",
+      "path": "notes/esr-08-bradford-divisor-congruences.md",
+      "title": "Elemental Patterns from the Erdős Straus Conjecture",
+      "authors": [
+        "Kyle Bradford"
+      ],
+      "selected_version": "arXiv:2403.16047v1",
+      "source_date": "2024-03-24",
+      "retrieved_on": "2026-09-10",
+      "primary_urls": [
+        "https://arxiv.org/abs/2403.16047v1",
+        "https://arxiv.org/html/2403.16047v1"
+      ],
+      "read_scope": "Abstract; §2 New Results; §3 computational motivation; §4 proofs.",
+      "collection": "notes",
+      "annotation_status": "curator_inferred",
+      "outcome_interpretation": "partial_success",
+      "independent_verification": "not_performed",
+      "original_source_bytes_archived": false,
+      "note_sha256": "a8c4baca7946258ce4f90e21b813959f378920def6ae5ab8d4ed668eb090ac92"
+    },
+    {
+      "id": "esr-09",
+      "path": "exploratory/esr-09-bello-benito-fernandez-divisor.md",
+      "title": "A Divisor Parametrization for the Erdős--Straus Conjecture",
+      "authors": [
+        "M. Bello-Hernández",
+        "M. Benito",
+        "E. Fernández"
+      ],
+      "selected_version": "arXiv:2606.10922v1",
+      "source_date": "2026-06-09",
+      "retrieved_on": "2026-09-10",
+      "primary_urls": [
+        "https://arxiv.org/abs/2606.10922v1",
+        "https://arxiv.org/html/2606.10922v1"
+      ],
+      "read_scope": "Abstract; §2, Definition 1 and Theorem 5; §6, Remark 23.",
+      "collection": "exploratory",
+      "annotation_status": "curator_inferred",
+      "outcome_interpretation": "unknown",
+      "independent_verification": "not_performed",
+      "original_source_bytes_archived": false,
+      "note_sha256": "bee47ffef3a0844da479e768f47b7e23015bd170de89423a3c9b043f4814913b"
+    },
+    {
+      "id": "esr-10",
+      "path": "exploratory/esr-10-mballa-perfect-square-reduction.md",
+      "title": "Partial Resolution of the Erdös-Straus, Sierpinski, and Generalized Erdös-Straus Conjectures Using New Analytical Formulas",
+      "authors": [
+        "Philemon Urbain Mballa"
+      ],
+      "selected_version": "arXiv:2502.20935v2",
+      "source_date": "2026-02-16",
+      "retrieved_on": "2026-09-10",
+      "primary_urls": [
+        "https://arxiv.org/abs/2502.20935v2",
+        "https://arxiv.org/html/2502.20935v2"
+      ],
+      "read_scope": "Version-2 abstract; formulas and perfect-square existence discussion.",
+      "collection": "exploratory",
+      "annotation_status": "curator_inferred",
+      "outcome_interpretation": "unknown",
+      "independent_verification": "not_performed",
+      "original_source_bytes_archived": false,
+      "note_sha256": "2e452f3047fc8c6bbd74a4513c951cd0ee638ed6d6b95d7a357eed2a5f4b2570"
+    },
+    {
+      "id": "esr-11",
+      "path": "exploratory/esr-11-ghermoul-polynomial-families.md",
+      "title": "Exact Polynomial Families Solving the Erdos-Straus Equation",
+      "authors": [
+        "Bilal Ghermoul"
+      ],
+      "selected_version": "arXiv:2508.07383v1",
+      "source_date": "2025-08-10",
+      "retrieved_on": "2026-09-10",
+      "primary_urls": [
+        "https://arxiv.org/abs/2508.07383v1",
+        "https://arxiv.org/html/2508.07383v1"
+      ],
+      "read_scope": "Abstract; §3.1, Conjecture 2 and Theorems 2–3; §3.2, Theorem 4; §4 conclusion.",
+      "collection": "exploratory",
+      "annotation_status": "curator_inferred",
+      "outcome_interpretation": "unknown",
+      "independent_verification": "not_performed",
+      "original_source_bytes_archived": false,
+      "note_sha256": "6516f4b8ee4a6470c9deb66f0e437b5eabe9b199147e8e5fbfcbb929eb4d72e1"
+    },
+    {
+      "id": "esr-12",
+      "path": "quarantine/esr-12-bradford-solution-claim.md",
+      "title": "A solution to the Straus-Erdős conjecture",
+      "authors": [
+        "Kyle Bradford"
+      ],
+      "selected_version": "arXiv:2602.11774v1",
+      "source_date": "2026-02-12",
+      "retrieved_on": "2026-09-10",
+      "primary_urls": [
+        "https://arxiv.org/abs/2602.11774v1",
+        "https://arxiv.org/html/2602.11774v1"
+      ],
+      "read_scope": "ArXiv title, abstract, submission history; manuscript opening and Proposition 1.",
+      "collection": "quarantine",
+      "annotation_status": "quarantined_unverified_claim",
+      "outcome_interpretation": "unknown",
+      "independent_verification": "not_performed",
+      "original_source_bytes_archived": false,
+      "note_sha256": "712595453d09e89015b0a923696ab152bcbbf66cf469ae65f6e3d2e8657559ee"
+    },
+    {
+      "id": "esr-13",
+      "path": "notes/esr-13-chamberland-prime-representation.md",
+      "title": "The Erdős-Straus Conjecture and the Structure of Primes",
+      "authors": [
+        "Marc Chamberland"
+      ],
+      "selected_version": "Integers 26 (2026), A42; DOI 10.5281/zenodo.19403738",
+      "source_date": "2026-04-03",
+      "retrieved_on": "2026-09-10",
+      "primary_urls": [
+        "https://math.colgate.edu/~integers/vol26.html",
+        "https://math.colgate.edu/~integers/aa42/aa42.pdf",
+        "https://zenodo.org/records/19403738"
+      ],
+      "read_scope": "Publisher volume listing; PDF pp. 1–4, abstract, Theorem 1 and Conjecture 2. Equation and quantifier rendering checked in page images on pp. 2 and 4.",
+      "collection": "notes",
+      "annotation_status": "curator_inferred",
+      "outcome_interpretation": "partial_success",
+      "independent_verification": "not_performed",
+      "original_source_bytes_archived": false,
+      "note_sha256": "0af1f891a7bf5187203a585a7b1a9128818543878c6668c2633e49519c253765"
+    }
+  ]
+}
