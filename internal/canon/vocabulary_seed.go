@@ -50,6 +50,16 @@ var mechanismV1Seed = vocabularyBuilder{
 			},
 		},
 		{
+			CanonicalID: "core.representation.affine_lattice",
+			FieldKind:   domain.FieldRepresentation,
+			Description: "Represent the admissible parameter set as an affine class of integer points (an affine lattice).",
+			Aliases: []string{
+				"affine lattice",
+				"affine class in z 3",
+				"integer lattice representation",
+			},
+		},
+		{
 			CanonicalID: "domain.number_theory.property.residue_locality",
 			FieldKind:   domain.FieldPreserves,
 			Description: "The property that behavior is determined locally within each residue class.",
@@ -77,6 +87,27 @@ var mechanismV1Seed = vocabularyBuilder{
 				"residues are independent",
 				"residue independence",
 				"independent residues",
+			},
+		},
+		{
+			CanonicalID: "domain.number_theory.property.residue_class_locality",
+			FieldKind:   domain.FieldBreaks,
+			Description: "The invariant that a construction stays confined to residue classes modulo n; a mechanism that breaks it leaves congruence-local reasoning entirely.",
+			Aliases: []string{
+				"residue class locality",
+				"confinement to residue classes",
+				"congruence class confinement",
+			},
+		},
+		{
+			CanonicalID: "core.auxiliary_object.affine_lattice",
+			FieldKind:   domain.FieldAuxiliaryObject,
+			Description: "An affine sublattice of Z^k introduced to search integer points off the residue-class grid.",
+			Aliases: []string{
+				"affine lattice",
+				"affine sublattice",
+				"integer lattice in z 3",
+				"lattice of integer points",
 			},
 		},
 	},

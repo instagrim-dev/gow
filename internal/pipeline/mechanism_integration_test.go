@@ -191,6 +191,22 @@ func TestIntegrationSignatureIdempotentAndDeterministic(t *testing.T) {
 	if !sawExplicit {
 		t.Fatal("explicit claim status not preserved through signature")
 	}
+
+	// Epistemic boundary: fields WITHOUT a support row must NOT be promoted to
+	// explicit. The fixture supports only mechanism.operator; representation,
+	// assumption, and preserves have no support row and must therefore surface
+	// as unknown provenance, never as source-backed explicit claims.
+	for _, c := range first.Signature.FieldClaims {
+		if c.FieldKind == "operator" {
+			continue
+		}
+		if c.ClaimStatus == "explicit" {
+			t.Fatalf("unprovenanced %s claim %q was silently promoted to explicit", c.FieldKind, c.SurfaceLabel)
+		}
+		if c.ClaimStatus != "unknown" {
+			t.Fatalf("unprovenanced %s claim %q status = %q, want unknown", c.FieldKind, c.SurfaceLabel, c.ClaimStatus)
+		}
+	}
 }
 
 func TestIntegrationVersionIsolation(t *testing.T) {

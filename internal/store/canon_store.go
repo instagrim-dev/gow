@@ -68,10 +68,17 @@ VALUES(?, ?, ?, ?, ?)
 			return err
 		}
 		for _, alias := range term.Aliases {
+			// INSERT OR IGNORE is safe here because the alias key now includes
+			// canonical_id: it ignores only exact-duplicate rows, and can never
+			// collapse a second binding to a *different* canonical id (that row
+			// has a different key). The alias namespace is scoped by field kind,
+			// so the same phrase may bind to different canonical ids across
+			// field kinds, and to multiple ids within one field kind (which the
+			// resolver reports as ambiguous). No binding is silently dropped.
 			if _, err := tx.ExecContext(ctx, `
-INSERT OR IGNORE INTO canonical_term_aliases(vocabulary_version, canonical_id, alias_normalized)
-VALUES(?, ?, ?)
-`, input.Version, term.CanonicalID, alias); err != nil {
+INSERT OR IGNORE INTO canonical_term_aliases(vocabulary_version, canonical_id, field_kind, alias_normalized)
+VALUES(?, ?, ?, ?)
+`, input.Version, term.CanonicalID, term.FieldKind, alias); err != nil {
 				return err
 			}
 		}
@@ -206,11 +213,14 @@ type SignatureFieldClaimRow struct {
 
 // SignatureBoundaryRow is one persisted signature boundary.
 type SignatureBoundaryRow struct {
-	SurfaceLabel    string
-	ResolutionState string
-	CanonicalID     string
-	Relation        string
-	Ordinal         int
+	SurfaceLabel      string
+	ResolutionState   string
+	CanonicalID       string
+	Relation          string
+	ClaimStatus       string
+	SupportSnapshotID string
+	SupportLocator    string
+	Ordinal           int
 }
 
 // SignatureRecord is the full persisted signature.
@@ -223,7 +233,9 @@ type SignatureRecord struct {
 	RunID             string
 	CreatedAt         string
 	OutcomeClass      string
+	OutcomeStatus     string
 	Posture           map[string]string
+	PostureStatus     map[string]string
 	FieldClaims       []SignatureFieldClaimRow
 	Boundaries        []SignatureBoundaryRow
 }
@@ -279,23 +291,35 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		}
 	}
 	for axis, value := range record.Posture {
+		status := record.PostureStatus[axis]
+		if status == "" {
+			status = "unknown"
+		}
 		if _, err := tx.ExecContext(ctx, `
-INSERT INTO signature_postures(signature_id, axis, value) VALUES(?, ?, ?)
-`, record.ID, axis, value); err != nil {
+INSERT INTO signature_postures(signature_id, axis, value, claim_status) VALUES(?, ?, ?, ?)
+`, record.ID, axis, value, status); err != nil {
 			return PersistSignatureResult{}, err
 		}
 	}
 	for _, b := range record.Boundaries {
+		status := b.ClaimStatus
+		if status == "" {
+			status = "unknown"
+		}
 		if _, err := tx.ExecContext(ctx, `
-INSERT INTO signature_boundaries(signature_id, surface_label, resolution_state, canonical_id, relation, ordinal)
-VALUES(?, ?, ?, ?, ?, ?)
-`, record.ID, b.SurfaceLabel, b.ResolutionState, b.CanonicalID, b.Relation, b.Ordinal); err != nil {
+INSERT INTO signature_boundaries(signature_id, surface_label, resolution_state, canonical_id, relation, claim_status, support_snapshot_id, support_locator, ordinal)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, record.ID, b.SurfaceLabel, b.ResolutionState, b.CanonicalID, b.Relation, status, b.SupportSnapshotID, b.SupportLocator, b.Ordinal); err != nil {
 			return PersistSignatureResult{}, err
 		}
 	}
+	outcomeStatus := record.OutcomeStatus
+	if outcomeStatus == "" {
+		outcomeStatus = "unknown"
+	}
 	if _, err := tx.ExecContext(ctx, `
-INSERT INTO signature_outcomes(signature_id, class) VALUES(?, ?)
-`, record.ID, record.OutcomeClass); err != nil {
+INSERT INTO signature_outcomes(signature_id, class, claim_status) VALUES(?, ?, ?)
+`, record.ID, record.OutcomeClass, outcomeStatus); err != nil {
 		return PersistSignatureResult{}, err
 	}
 
@@ -333,7 +357,7 @@ func (s *Store) loadSignature(ctx context.Context, id string) (SignatureRecord, 
 SELECT id, mechanism_id, schema_version, vocabulary_version, fingerprint, run_id, created_at
 FROM mechanism_signatures WHERE id = ?
 `, id)
-	rec := SignatureRecord{Posture: map[string]string{}}
+	rec := SignatureRecord{Posture: map[string]string{}, PostureStatus: map[string]string{}}
 	if err := row.Scan(&rec.ID, &rec.MechanismID, &rec.SchemaVersion, &rec.VocabularyVersion, &rec.Fingerprint, &rec.RunID, &rec.CreatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return SignatureRecord{}, fmt.Errorf("%w: signature %s", ErrNotFound, id)
@@ -360,24 +384,25 @@ FROM signature_field_claims WHERE signature_id = ? ORDER BY field_kind, ordinal
 		return SignatureRecord{}, err
 	}
 
-	postureRows, err := s.db.QueryContext(ctx, `SELECT axis, value FROM signature_postures WHERE signature_id = ?`, id)
+	postureRows, err := s.db.QueryContext(ctx, `SELECT axis, value, claim_status FROM signature_postures WHERE signature_id = ?`, id)
 	if err != nil {
 		return SignatureRecord{}, err
 	}
 	defer postureRows.Close()
 	for postureRows.Next() {
-		var axis, value string
-		if err := postureRows.Scan(&axis, &value); err != nil {
+		var axis, value, status string
+		if err := postureRows.Scan(&axis, &value, &status); err != nil {
 			return SignatureRecord{}, err
 		}
 		rec.Posture[axis] = value
+		rec.PostureStatus[axis] = status
 	}
 	if err := postureRows.Err(); err != nil {
 		return SignatureRecord{}, err
 	}
 
 	boundaryRows, err := s.db.QueryContext(ctx, `
-SELECT surface_label, resolution_state, canonical_id, relation, ordinal
+SELECT surface_label, resolution_state, canonical_id, relation, claim_status, support_snapshot_id, support_locator, ordinal
 FROM signature_boundaries WHERE signature_id = ? ORDER BY ordinal
 `, id)
 	if err != nil {
@@ -386,7 +411,7 @@ FROM signature_boundaries WHERE signature_id = ? ORDER BY ordinal
 	defer boundaryRows.Close()
 	for boundaryRows.Next() {
 		var b SignatureBoundaryRow
-		if err := boundaryRows.Scan(&b.SurfaceLabel, &b.ResolutionState, &b.CanonicalID, &b.Relation, &b.Ordinal); err != nil {
+		if err := boundaryRows.Scan(&b.SurfaceLabel, &b.ResolutionState, &b.CanonicalID, &b.Relation, &b.ClaimStatus, &b.SupportSnapshotID, &b.SupportLocator, &b.Ordinal); err != nil {
 			return SignatureRecord{}, err
 		}
 		rec.Boundaries = append(rec.Boundaries, b)
@@ -395,8 +420,8 @@ FROM signature_boundaries WHERE signature_id = ? ORDER BY ordinal
 		return SignatureRecord{}, err
 	}
 
-	outcomeRow := s.db.QueryRowContext(ctx, `SELECT class FROM signature_outcomes WHERE signature_id = ?`, id)
-	if err := outcomeRow.Scan(&rec.OutcomeClass); err != nil && !errors.Is(err, sql.ErrNoRows) {
+	outcomeRow := s.db.QueryRowContext(ctx, `SELECT class, claim_status FROM signature_outcomes WHERE signature_id = ?`, id)
+	if err := outcomeRow.Scan(&rec.OutcomeClass, &rec.OutcomeStatus); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return SignatureRecord{}, err
 	}
 	return rec, nil

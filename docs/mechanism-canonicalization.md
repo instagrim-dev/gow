@@ -68,6 +68,46 @@ Only `resolved` claims contribute a canonical ID to the fingerprint body. The
 other states are persisted with their surface label and state, and are surfaced
 by comparison as `incomparable` — never silently dropped or coerced.
 
+### Provenance is preserved, never promoted
+
+Every field claim carries a preserved `claim_status` (`explicit` / `inferred` /
+`unsupported` / `unknown`). Canonicalization never upgrades it: a claim whose
+label resolves to a canonical ID keeps its original status. Crucially, **absence
+of a `source_support` row does not mean explicit** — #7 does not require support
+for every populated field, so a missing row maps to `unknown`, not `explicit`.
+Defaulting to explicit would silently promote an unprovenanced value into a
+source-backed claim, violating the epistemic-status hard constraint; this is
+guarded by the provenance assertions in the mechanism integration test.
+
+This holds for the non-vocabulary fields too: posture axes, outcome class, and
+boundaries each carry their own preserved claim status through
+`MechanismSignature` (from the #7 dotted-path support: `mechanism.locality`,
+`mechanism.construction`, `mechanism.uncertainty`, `outcome.class`,
+`outcome.boundary`) and are persisted alongside the signature, so invariant
+mining reads their provenance rather than assuming source backing. Unprovenanced
+posture/outcome round-trips as `unknown`
+(`TestSignatureCarriesPostureOutcomeBoundaryProvenance`).
+
+### Alias namespace (per field kind)
+
+Aliases are namespaced by field kind: the resolver keys the alias index on
+`(field_kind, normalized_alias)`, and persistence keys `canonical_term_aliases`
+on `(vocabulary_version, field_kind, alias_normalized, canonical_id)`. Two
+consequences follow, both intentional and now consistent between the in-memory
+resolver and SQLite:
+
+- The **same phrase may map to different canonical IDs in different field
+  kinds** (e.g. an "averaging" operator vs. an "averaging" assumption). The
+  earlier alias key omitted `field_kind`, so a phrase reused across field kinds
+  was silently dropped at seed time by `INSERT OR IGNORE`; the corrected key
+  represents both bindings. Guarded by `TestAliasNamespaceIsPerFieldKind`.
+- Within a single field kind a phrase **may** still bind to more than one
+  canonical ID; the resolver reports this as the explicit `ambiguous` state
+  (candidates recorded, none chosen). Including `canonical_id` in the primary
+  key lets the store represent that legitimately while still forbidding
+  exact-duplicate rows, so `INSERT OR IGNORE` can never collapse two *different*
+  bindings.
+
 ```bash
 newf vocabulary list
 newf vocabulary list --version mechanism/v1 --field operator
@@ -134,18 +174,48 @@ There is **no single scalar**.
 Weights are explicit and versioned (`weights/v1`); an unknown weights version is
 an error rather than a silent default swap.
 
-### Mechanistic vs surface classification (`classify/v1`)
+### Comparison profiles: the comparator measures, the caller decides
 
-The classification uses an explicit, versioned rule. The **decisive** fields are
-`preserves`, `operators`, and `assumptions` — the conserved properties and
-structural moves that predict outcome. `representations`, `boundaries`, and
-`posture` are non-decisive and feed only the surface axis. Rationale: a different
-representation of the same move is a surface change, not a mechanistic one.
+`Compare` (and `CompareWithProfile`) **measure every axis** — all six set fields,
+posture, outcome, and boundaries — regardless of which axes are treated as
+decisive. A `ComparisonProfile` (versioned) then decides *which* measured axes
+determine the mechanistic verdict for a given experiment or domain. There is no
+universal hardcoded decisive-field list: mechanistic distance is not universal,
+so clustering (#11) and invariant mining choose the profile rather than inherit
+a hidden global definition of "mechanism". A non-decisive axis is still fully
+measured and reported; it is simply not consulted for that profile's verdict, so
+no measurement is ever hidden by axis selection. This is guarded by
+`TestComparisonProfileIsCallerControlled`, which shows the same signatures
+classifying differently under two profiles while their component measurements
+stay identical.
+
+### Default profile (`classify/v1` / `ProfileMechanismV1`)
+
+The default profile's **decisive** fields are `preserves`, `operators`,
+`assumptions`, `breaks`, and `auxiliary_objects` — the conserved/violated
+properties, structural moves, and auxiliary constructions that predict outcome.
+`representation` is the surface qualifier; `boundaries` and `posture` are
+measured but non-decisive **by default** (a caller may promote posture/outcome
+or add boundaries as decisive via a different profile).
+
+Rationale: a different *representation* of the same structural move is a surface
+change. But a **break** (an invariant the approach deliberately violates) and an
+**auxiliary object** (a lattice, a convex body, an averaging kernel newly
+introduced) are themselves mechanism changes, not rewordings — the project
+thesis is that a representation change or auxiliary object *can be the mechanism
+break itself*. The Erdős–Straus → affine-lattice family is exactly such a case:
+it shares operators/assumptions with congruence-local families but is productive
+precisely because it **breaks** residue-class locality and introduces an affine
+lattice. Treating `breaks`/`auxiliary_objects` as non-decisive would let the
+comparator rate that genuine mechanism break as `mechanism-near`, erasing the
+variable that determines outcome — the abstraction-safety failure this system
+exists to prevent. This contract is guarded by
+`TestBreakIsDecisive_ESAffineLattice`.
 
 | Verdict | Condition |
 |---|---|
 | `mechanism-near` | Every decisive field is `identical`/`high`; none `low`/`none`/`incomparable`. |
-| `mechanism-distinct` | Any decisive field is `low`/`none`. |
+| `mechanism-distinct` | Any decisive field is `low`/`none` (so differing only in what an approach *breaks* or in its auxiliary construction is enough to be distinct). |
 | `unknown` | Otherwise (e.g. all decisive fields incomparable). |
 
 The verdict is qualified by the surface axis into

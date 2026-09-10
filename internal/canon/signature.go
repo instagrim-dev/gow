@@ -33,12 +33,26 @@ type Posture struct {
 	Uncertainty  domain.UncertaintyMode
 }
 
-// Boundary is a canonicalized failure boundary with a relation label.
+// Boundary is a canonicalized failure boundary with a relation label. Status is
+// the preserved epistemic provenance of the boundary claim (never promoted).
 type Boundary struct {
-	SurfaceLabel string
-	State        domain.ResolutionState
-	CanonicalID  domain.CanonicalID
-	Relation     string
+	SurfaceLabel      string
+	State             domain.ResolutionState
+	CanonicalID       domain.CanonicalID
+	Relation          string
+	Status            domain.ClaimStatus
+	SupportSnapshotID string
+	SupportLocator    string
+}
+
+// PostureAxisProvenance records the preserved claim status for one posture axis.
+// Posture reuses the validated enum columns rather than the vocabulary, but its
+// provenance still matters before it can influence invariant mining, so it is
+// carried explicitly rather than defaulting to explicit.
+type PostureProvenance struct {
+	Locality     domain.ClaimStatus
+	Construction domain.ClaimStatus
+	Uncertainty  domain.ClaimStatus
 }
 
 // MechanismSignature is the versioned canonical projection of one mechanism.
@@ -59,6 +73,13 @@ type MechanismSignature struct {
 	Posture      Posture
 	OutcomeClass domain.OutcomeClass
 	Boundaries   []Boundary
+
+	// Provenance for the non-vocabulary fields. These are preserved epistemic
+	// statuses, never promoted: an unprovenanced posture axis or outcome is
+	// ClaimUnknown, not ClaimExplicit, so downstream invariant mining cannot
+	// mistake an omission for a source-backed claim.
+	PostureProvenance PostureProvenance
+	OutcomeProvenance domain.ClaimStatus
 }
 
 // MechanismClaimInput is one surface-labeled field value to canonicalize, with
@@ -75,11 +96,15 @@ type MechanismClaimInput struct {
 	ClassifierContract string
 }
 
-// MechanismBoundaryInput is a surface boundary condition plus relation.
+// MechanismBoundaryInput is a surface boundary condition plus relation and its
+// preserved provenance.
 type MechanismBoundaryInput struct {
-	SurfaceLabel string
-	Relation     string
-	NovelFlag    bool
+	SurfaceLabel      string
+	Relation          string
+	NovelFlag         bool
+	Status            domain.ClaimStatus
+	SupportSnapshotID string
+	SupportLocator    string
 }
 
 // MechanismInput is the neutral, store-free input to BuildSignature. The
@@ -91,6 +116,13 @@ type MechanismInput struct {
 	Posture      Posture
 	OutcomeClass domain.OutcomeClass
 	Boundaries   []MechanismBoundaryInput
+
+	// Provenance for the non-vocabulary fields. The caller supplies the
+	// preserved claim status derived from #7 source_supports (dotted paths
+	// mechanism.locality/.construction/.uncertainty and outcome.class). Absent
+	// entries default to ClaimUnknown in BuildSignature, never explicit.
+	PostureProvenance PostureProvenance
+	OutcomeProvenance domain.ClaimStatus
 }
 
 // BuildSignature projects a mechanism into a versioned MechanismSignature by
@@ -103,6 +135,12 @@ func BuildSignature(input MechanismInput, vocab *Vocabulary) MechanismSignature 
 		MechanismID:       input.MechanismID,
 		Posture:           input.Posture,
 		OutcomeClass:      normalizeOutcome(input.OutcomeClass),
+		PostureProvenance: PostureProvenance{
+			Locality:     defaultUnknown(input.PostureProvenance.Locality),
+			Construction: defaultUnknown(input.PostureProvenance.Construction),
+			Uncertainty:  defaultUnknown(input.PostureProvenance.Uncertainty),
+		},
+		OutcomeProvenance: defaultUnknown(input.OutcomeProvenance),
 		// Always-present (possibly empty) slices.
 		Representations:  []FieldClaim{},
 		Operators:        []FieldClaim{},
@@ -148,14 +186,26 @@ func BuildSignature(input MechanismInput, vocab *Vocabulary) MechanismSignature 
 	for _, b := range input.Boundaries {
 		res := vocab.Resolve(domain.FieldBoundary, b.SurfaceLabel, b.NovelFlag)
 		sig.Boundaries = append(sig.Boundaries, Boundary{
-			SurfaceLabel: b.SurfaceLabel,
-			State:        res.State,
-			CanonicalID:  res.CanonicalID,
-			Relation:     b.Relation,
+			SurfaceLabel:      b.SurfaceLabel,
+			State:             res.State,
+			CanonicalID:       res.CanonicalID,
+			Relation:          b.Relation,
+			Status:            defaultUnknown(b.Status),
+			SupportSnapshotID: b.SupportSnapshotID,
+			SupportLocator:    b.SupportLocator,
 		})
 	}
 
 	return sig
+}
+
+// defaultUnknown preserves an unset claim status as ClaimUnknown, never
+// promoting a missing provenance to explicit.
+func defaultUnknown(s domain.ClaimStatus) domain.ClaimStatus {
+	if s == "" || !s.Valid() {
+		return domain.ClaimUnknown
+	}
+	return s
 }
 
 func normalizeOutcome(c domain.OutcomeClass) domain.OutcomeClass {

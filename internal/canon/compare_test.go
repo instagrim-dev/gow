@@ -158,6 +158,171 @@ func TestCompareDecisiveVsNonDecisiveFlip(t *testing.T) {
 	}
 }
 
+// TestBreakIsDecisive_ESAffineLattice is the falsifiable guard for the
+// classify/v1 decisive-field contract (issue #9 finding). Two mechanisms share
+// *identical* operators, assumptions, and preserves, but one breaks residue-
+// class locality (and introduces an affine-lattice auxiliary object) — exactly
+// the ES -> affine-lattice move. The project thesis is that such a break IS the
+// mechanism change, so the verdict must be mechanism-distinct. Under the old
+// three-field classifier (operator/assumption/preserves only) this case
+// wrongly returned mechanism-near; this test fails if that regression returns.
+func TestBreakIsDecisive_ESAffineLattice(t *testing.T) {
+	t.Parallel()
+	v := MechanismV1()
+
+	// Congruence-local family: works residue-by-residue, preserves locality,
+	// breaks nothing, introduces no auxiliary object.
+	local := MechanismInput{
+		MechanismID:  "mech_local",
+		Posture:      Posture{Locality: domain.LocalityLocal, Construction: domain.ConstructionConstructive, Uncertainty: domain.UncertaintyDeterministic},
+		OutcomeClass: domain.OutcomeFailure,
+		Claims: []MechanismClaimInput{
+			{FieldKind: domain.FieldOperator, SurfaceLabel: "modular decomposition", Status: domain.ClaimExplicit},
+			{FieldKind: domain.FieldAssumption, SurfaceLabel: "residue independence", Status: domain.ClaimExplicit},
+			{FieldKind: domain.FieldPreserves, SurfaceLabel: "residue locality", Status: domain.ClaimExplicit},
+		},
+	}
+	// Affine-lattice family: SAME operator/assumption/preserves surface labels,
+	// but it *breaks* residue-class locality and introduces an affine lattice.
+	affine := MechanismInput{
+		MechanismID:  "mech_affine",
+		Posture:      Posture{Locality: domain.LocalityLocal, Construction: domain.ConstructionConstructive, Uncertainty: domain.UncertaintyDeterministic},
+		OutcomeClass: domain.OutcomePartialSuccess,
+		Claims: []MechanismClaimInput{
+			{FieldKind: domain.FieldOperator, SurfaceLabel: "modular decomposition", Status: domain.ClaimExplicit},
+			{FieldKind: domain.FieldAssumption, SurfaceLabel: "residue independence", Status: domain.ClaimExplicit},
+			{FieldKind: domain.FieldPreserves, SurfaceLabel: "residue locality", Status: domain.ClaimExplicit},
+			{FieldKind: domain.FieldBreaks, SurfaceLabel: "residue-class locality", Status: domain.ClaimExplicit},
+			{FieldKind: domain.FieldAuxiliaryObject, SurfaceLabel: "affine lattice", Status: domain.ClaimExplicit},
+		},
+	}
+
+	cmp, err := Compare(sigFrom(t, local, v), sigFrom(t, affine, v), "")
+	if err != nil {
+		t.Fatalf("Compare() error = %v", err)
+	}
+	switch cmp.Classification {
+	case ClassMechanismDistinct, ClassSurfaceNearMechDistinct:
+		// correct: the break/auxiliary difference is decisive
+	default:
+		t.Fatalf("classification = %q, want a mechanism-distinct variant; a mechanism break must be decisive, not surface", cmp.Classification)
+	}
+
+	// The decisive difference must be visible on the breaks/auxiliary fields.
+	byKind := map[domain.FieldKind]FieldResult{}
+	for _, f := range cmp.Fields {
+		byKind[f.FieldKind] = f
+	}
+	if b := byKind[domain.FieldBreaks]; b.Ordinal == OrdinalIdentical {
+		t.Fatal("breaks field reported identical despite one side breaking residue-class locality")
+	}
+	if a := byKind[domain.FieldAuxiliaryObject]; a.Ordinal == OrdinalIdentical {
+		t.Fatal("auxiliary_object field reported identical despite one side introducing an affine lattice")
+	}
+}
+
+// TestAuxiliaryObjectAloneIsDecisive proves introducing an auxiliary object,
+// with everything else identical, is a mechanism change (not surface).
+func TestAuxiliaryObjectAloneIsDecisive(t *testing.T) {
+	t.Parallel()
+	v := MechanismV1()
+	base := MechanismInput{
+		MechanismID:  "mech_base",
+		Posture:      Posture{Locality: domain.LocalityLocal, Construction: domain.ConstructionConstructive, Uncertainty: domain.UncertaintyDeterministic},
+		OutcomeClass: domain.OutcomeFailure,
+		Claims: []MechanismClaimInput{
+			{FieldKind: domain.FieldOperator, SurfaceLabel: "modular decomposition", Status: domain.ClaimExplicit},
+			{FieldKind: domain.FieldPreserves, SurfaceLabel: "residue locality", Status: domain.ClaimExplicit},
+		},
+	}
+	withAux := base
+	withAux.MechanismID = "mech_aux"
+	withAux.Claims = append(append([]MechanismClaimInput{}, base.Claims...),
+		MechanismClaimInput{FieldKind: domain.FieldAuxiliaryObject, SurfaceLabel: "affine lattice", Status: domain.ClaimExplicit},
+	)
+	cmp, err := Compare(sigFrom(t, base, v), sigFrom(t, withAux, v), "")
+	if err != nil {
+		t.Fatalf("Compare() error = %v", err)
+	}
+	switch cmp.Classification {
+	case ClassMechanismDistinct, ClassSurfaceNearMechDistinct:
+		// correct
+	default:
+		t.Fatalf("classification = %q, want mechanism-distinct: an auxiliary-object introduction is a structural move", cmp.Classification)
+	}
+}
+
+// TestComparisonProfileIsCallerControlled proves the core item-2 contract: the
+// comparator MEASURES every axis and the PROFILE decides what is decisive. The
+// same two signatures — identical structural fields, differing only in
+// representation — classify as mechanism-near under the default profile (where
+// representation is surface) but mechanism-distinct under a caller profile that
+// promotes representation to decisive. No re-measurement, only reinterpretation.
+func TestComparisonProfileIsCallerControlled(t *testing.T) {
+	t.Parallel()
+	v := MechanismV1()
+	a := MechanismInput{
+		MechanismID:  "mech_a",
+		Posture:      Posture{Locality: domain.LocalityLocal, Construction: domain.ConstructionConstructive, Uncertainty: domain.UncertaintyDeterministic},
+		OutcomeClass: domain.OutcomeFailure,
+		Claims: []MechanismClaimInput{
+			{FieldKind: domain.FieldOperator, SurfaceLabel: "modular decomposition", Status: domain.ClaimExplicit},
+			{FieldKind: domain.FieldRepresentation, SurfaceLabel: "congruence classes", Status: domain.ClaimExplicit},
+		},
+	}
+	b := MechanismInput{
+		MechanismID:  "mech_b",
+		Posture:      Posture{Locality: domain.LocalityLocal, Construction: domain.ConstructionConstructive, Uncertainty: domain.UncertaintyDeterministic},
+		OutcomeClass: domain.OutcomeFailure,
+		Claims: []MechanismClaimInput{
+			{FieldKind: domain.FieldOperator, SurfaceLabel: "modular decomposition", Status: domain.ClaimExplicit},
+			// Different representation (congruence classes vs affine lattice),
+			// same operator. Under default profile: surface-only difference.
+			{FieldKind: domain.FieldRepresentation, SurfaceLabel: "affine lattice", Status: domain.ClaimExplicit},
+		},
+	}
+	sigA, sigB := sigFrom(t, a, v), sigFrom(t, b, v)
+
+	// Default profile: representation is surface -> mechanism-near variant.
+	def := CompareWithProfile(sigA, sigB, ProfileMechanismV1())
+	switch def.Classification {
+	case ClassMechanismNear, ClassSurfaceDistinctMechNear:
+		// correct
+	default:
+		t.Fatalf("default profile classification = %q, want a mechanism-near variant", def.Classification)
+	}
+
+	// Caller profile that promotes representation to decisive -> distinct.
+	repDecisive := ComparisonProfile{
+		Version:           "classify/rep-decisive-test",
+		DecisiveSetFields: []domain.FieldKind{domain.FieldOperator, domain.FieldRepresentation},
+	}
+	got := CompareWithProfile(sigA, sigB, repDecisive)
+	if got.Classification != ClassMechanismDistinct {
+		t.Fatalf("rep-decisive profile classification = %q, want mechanism-distinct", got.Classification)
+	}
+
+	// The MEASUREMENT must be identical under both profiles: only the verdict
+	// and the recorded profile version differ. No axis is hidden by selection.
+	repDef := fieldByKind(def.Fields, domain.FieldRepresentation)
+	repGot := fieldByKind(got.Fields, domain.FieldRepresentation)
+	if repDef.Ordinal != repGot.Ordinal || repDef.Jaccard != repGot.Jaccard {
+		t.Fatalf("representation measurement differed across profiles: %+v vs %+v", repDef, repGot)
+	}
+	if def.ClassifyVersion == got.ClassifyVersion {
+		t.Fatal("profiles must record distinct classify versions")
+	}
+}
+
+func fieldByKind(fields []FieldResult, kind domain.FieldKind) FieldResult {
+	for _, f := range fields {
+		if f.FieldKind == kind {
+			return f
+		}
+	}
+	return FieldResult{}
+}
+
 func TestCompareUnknownWeightsVersionErrors(t *testing.T) {
 	t.Parallel()
 	v := MechanismV1()

@@ -7,15 +7,75 @@ import (
 	"github.com/instagrim-dev/newf/internal/domain"
 )
 
-// WeightsMechanismV1 is the default, versioned comparison weighting. Weights are
-// explicit and versioned so no behavior hides inside an opaque distance. In v1
-// the weights only tag which fields are decisive for the mechanistic
-// classification; per-field results are always reported unweighted.
+// ComparisonProfile makes "which axes are decisive" an explicit, versioned,
+// caller-owned decision instead of a universal constant baked into the
+// comparator. The comparator MEASURES every axis (see Comparison.Fields, which
+// always contains all six set fields, plus Posture and OutcomeEqual); a profile
+// decides what those measurements MEAN for a given experiment or domain.
+//
+// This is deliberate: newf's thesis is that mechanistic distance is not
+// universal — a representation change or an auxiliary object can be the
+// mechanism break in one domain and mere surface in another. Clustering (#11)
+// and invariant mining must be able to choose the profile per experiment rather
+// than inherit a hidden global definition of "mechanism".
+type ComparisonProfile struct {
+	// Version is the stable identifier persisted alongside a comparison so a
+	// verdict is always reproducible against the exact axis selection used.
+	Version string
+	// DecisiveSetFields are the set-valued field kinds whose (dis)agreement
+	// determines the mechanistic verdict. Any field kind NOT listed here is
+	// still measured and reported, but is non-decisive (surface/diagnostic).
+	DecisiveSetFields []domain.FieldKind
+	// SurfaceField names the set field used only to qualify a verdict as
+	// surface-near/surface-distinct. It is never decisive. Empty disables the
+	// surface qualifier.
+	SurfaceField domain.FieldKind
+	// DecisivePosture, when true, treats a posture-axis disagreement as a
+	// decisive mechanism difference. Default profile keeps posture non-decisive
+	// (reported only) pending posture provenance (#issue hardening).
+	DecisivePosture bool
+	// DecisiveOutcome, when true, treats differing outcome classes as a decisive
+	// difference. Default keeps it reported-only (outcome is an effect, not a
+	// mechanism).
+	DecisiveOutcome bool
+}
+
+// WeightsMechanismV1 is retained as the default profile version identifier for
+// backward compatibility with persisted comparison rows.
 const WeightsMechanismV1 = "weights/v1"
 
 // ClassifyMechanismV1 is the versioned mechanistic-vs-surface classification
-// rule. It names which fields are decisive.
+// rule (the default profile's classifier contract).
 const ClassifyMechanismV1 = "classify/v1"
+
+// ProfileMechanismV1 is the default comparison profile. It treats the
+// structural moves, conserved/violated properties, and auxiliary constructions
+// as decisive, and representation as a surface qualifier only. Unlike the prior
+// hardcoded list it is a value a caller can inspect, override, or replace with a
+// domain-specific profile.
+//
+// breaks and auxiliary_objects are decisive because a deliberately violated
+// invariant or a newly introduced auxiliary object IS a mechanism change (the
+// ES -> affine-lattice family is productive precisely because of that break),
+// not a rewording. representation stays non-decisive: the same move written over
+// an equivalent representation should not, by itself, read as a distinct
+// mechanism — but a representation change that carries a real structural change
+// surfaces through breaks/auxiliary_objects, which are decisive.
+func ProfileMechanismV1() ComparisonProfile {
+	return ComparisonProfile{
+		Version: ClassifyMechanismV1,
+		DecisiveSetFields: []domain.FieldKind{
+			domain.FieldPreserves,
+			domain.FieldOperator,
+			domain.FieldAssumption,
+			domain.FieldBreaks,
+			domain.FieldAuxiliaryObject,
+		},
+		SurfaceField:    domain.FieldRepresentation,
+		DecisivePosture: false,
+		DecisiveOutcome: false,
+	}
+}
 
 // Ordinal is the per-field similarity ordinal. No single scalar is emitted.
 type Ordinal string
@@ -58,14 +118,18 @@ type PostureResult struct {
 	UncertaintyEqual  bool
 }
 
-// Comparison is the full, per-field, non-scalar comparison result.
+// Comparison is the full, per-field, non-scalar comparison result. Every axis
+// is measured and present regardless of which axes the profile treats as
+// decisive, so no measurement is hidden by axis selection.
 type Comparison struct {
 	WeightsVersion  string
 	ClassifyVersion string
 	Fields          []FieldResult
-	Posture         PostureResult
-	OutcomeEqual    bool
-	Classification  Classification
+	// Boundary is the measured (non-decisive by default) boundary-set result.
+	Boundary       FieldResult
+	Posture        PostureResult
+	OutcomeEqual   bool
+	Classification Classification
 	// SurfaceSimilarity is auxiliary-only diagnostic data; it never drives the
 	// mechanistic classification. Nil when no surface text was supplied.
 	SurfaceSimilarity *SurfaceSimilarity
@@ -78,22 +142,11 @@ type SurfaceSimilarity struct {
 	AuxiliaryOnly bool
 }
 
-// decisiveFields are the fields that determine the mechanistic classification in
-// classify/v1. Representations, boundaries, and posture are non-decisive and
-// feed only the surface axis. The rationale: operators/assumptions/preserves are
-// the structural moves and conserved properties that predict outcome; a
-// different representation of the same move is a surface change.
-var decisiveFields = []domain.FieldKind{
-	domain.FieldPreserves,
-	domain.FieldOperator,
-	domain.FieldAssumption,
-}
-
-// Compare produces a deterministic, component-wise comparison of two signatures.
-// Set fields are compared over resolved canonical IDs; a field with any
-// non-resolved claim on either side is marked incomparable and cannot count as
-// agreement. weightsVersion selects the (currently single) weighting; an unknown
-// version is an error so callers cannot silently compare under an absent config.
+// Compare produces a deterministic, component-wise comparison of two signatures
+// under the default profile (ProfileMechanismV1). It is a thin wrapper over
+// CompareWithProfile kept for backward compatibility; weightsVersion continues
+// to select the default profile version. An unknown version is an error so
+// callers cannot silently compare under an absent config.
 func Compare(a, b MechanismSignature, weightsVersion string) (Comparison, error) {
 	if weightsVersion == "" {
 		weightsVersion = WeightsMechanismV1
@@ -101,10 +154,19 @@ func Compare(a, b MechanismSignature, weightsVersion string) (Comparison, error)
 	if weightsVersion != WeightsMechanismV1 {
 		return Comparison{}, fmt.Errorf("unknown weights version %q", weightsVersion)
 	}
+	return CompareWithProfile(a, b, ProfileMechanismV1()), nil
+}
 
+// CompareWithProfile measures every axis and then applies the given profile to
+// decide the verdict. The measurement (Comparison.Fields for all six set
+// fields, Posture, OutcomeEqual, and per-field boundary results) is independent
+// of the profile: the comparator MEASURES, the profile DECIDES. Two callers
+// with different profiles see identical component data and only differ in the
+// resulting Classification, so no measurement is ever hidden by axis selection.
+func CompareWithProfile(a, b MechanismSignature, profile ComparisonProfile) Comparison {
 	cmp := Comparison{
-		WeightsVersion:  weightsVersion,
-		ClassifyVersion: ClassifyMechanismV1,
+		WeightsVersion:  profile.Version,
+		ClassifyVersion: profile.Version,
 		OutcomeEqual:    a.OutcomeClass == b.OutcomeClass,
 		Posture: PostureResult{
 			LocalityEqual:     a.Posture.Locality == b.Posture.Locality,
@@ -129,8 +191,27 @@ func Compare(a, b MechanismSignature, weightsVersion string) (Comparison, error)
 		cmp.Fields = append(cmp.Fields, compareSetField(sf.kind, sf.a, sf.b))
 	}
 
-	cmp.Classification = classifyV1(cmp)
-	return cmp, nil
+	// Boundaries are measured too, as a set over resolved canonical IDs, so a
+	// profile MAY treat them as decisive without the comparator having to
+	// re-run. They default to non-decisive in ProfileMechanismV1.
+	cmp.Boundary = compareSetField(domain.FieldBoundary, boundaryClaims(a.Boundaries), boundaryClaims(b.Boundaries))
+
+	cmp.Classification = classify(cmp, profile)
+	return cmp
+}
+
+// boundaryClaims adapts a signature's boundaries into the FieldClaim shape so
+// they can be compared with the same set machinery as the other fields.
+func boundaryClaims(bs []Boundary) []FieldClaim {
+	out := make([]FieldClaim, 0, len(bs))
+	for _, b := range bs {
+		out = append(out, FieldClaim{
+			FieldKind:   domain.FieldBoundary,
+			State:       b.State,
+			CanonicalID: b.CanonicalID,
+		})
+	}
+	return out
 }
 
 func compareSetField(kind domain.FieldKind, a, b []FieldClaim) FieldResult {
@@ -186,32 +267,38 @@ func jaccardOrdinal(j float64) Ordinal {
 	}
 }
 
-// classifyV1 applies the versioned decisive-field rule:
+// classify applies a ComparisonProfile to already-measured components. The
+// profile names which set fields (and optionally posture/outcome) are decisive:
 //
 //   - mechanism-near: every decisive field is identical-or-high and none is
 //     low/none/incomparable;
-//   - mechanism-distinct: any decisive field is low/none;
+//   - mechanism-distinct: any decisive field is low/none (so differing in what
+//     an approach *breaks* or in its auxiliary construction alone is enough to
+//     be distinct under the default profile);
 //   - unknown: otherwise (e.g. all decisive fields incomparable).
 //
-// Surface axis: representations similarity (non-decisive) produces the
-// surface-distinct/surface-near qualifier when a mechanistic verdict exists.
-func classifyV1(cmp Comparison) Classification {
+// The profile's SurfaceField (non-decisive) only adds the
+// surface-distinct/surface-near qualifier to an already-decided verdict; it can
+// never flip the verdict, and no measured axis is discarded — a non-decisive
+// axis is simply not consulted for THIS profile's verdict while remaining fully
+// present in the Comparison for other profiles to use.
+func classify(cmp Comparison, profile ComparisonProfile) Classification {
 	byKind := map[domain.FieldKind]FieldResult{}
 	for _, f := range cmp.Fields {
 		byKind[f.FieldKind] = f
 	}
+	byKind[domain.FieldBoundary] = cmp.Boundary
 
 	anyDistinct := false
 	allNearOrBetter := true
 	anyComparable := false
-	for _, k := range decisiveFields {
-		f, ok := byKind[k]
-		if !ok {
-			continue
+	consider := func(f FieldResult, present bool) {
+		if !present {
+			return
 		}
 		if f.Incomparable {
 			allNearOrBetter = false
-			continue
+			return
 		}
 		anyComparable = true
 		switch f.Ordinal {
@@ -219,6 +306,25 @@ func classifyV1(cmp Comparison) Classification {
 			anyDistinct = true
 		case OrdinalHigh, OrdinalIdentical:
 			// still near
+		}
+	}
+	for _, k := range profile.DecisiveSetFields {
+		f, ok := byKind[k]
+		consider(f, ok)
+	}
+	// Posture / outcome may be promoted to decisive by the profile. When
+	// decisive, a disagreement counts as a distinct-making difference; posture
+	// and outcome are always comparable enums, so they never mark incomparable.
+	if profile.DecisivePosture {
+		anyComparable = true
+		if !cmp.Posture.LocalityEqual || !cmp.Posture.ConstructionEqual || !cmp.Posture.UncertaintyEqual {
+			anyDistinct = true
+		}
+	}
+	if profile.DecisiveOutcome {
+		anyComparable = true
+		if !cmp.OutcomeEqual {
+			anyDistinct = true
 		}
 	}
 
@@ -232,10 +338,14 @@ func classifyV1(cmp Comparison) Classification {
 		return ClassUnknown
 	}
 
-	// Surface qualifier from the non-decisive representation field, when present.
-	rep, hasRep := byKind[domain.FieldRepresentation]
-	surfaceDistinct := hasRep && !rep.Incomparable && (rep.Ordinal == OrdinalLow || rep.Ordinal == OrdinalNone)
-	surfaceNear := hasRep && !rep.Incomparable && (rep.Ordinal == OrdinalHigh || rep.Ordinal == OrdinalIdentical)
+	// Surface qualifier from the profile's non-decisive surface field, if any.
+	surfaceDistinct, surfaceNear := false, false
+	if profile.SurfaceField != "" {
+		if rep, ok := byKind[profile.SurfaceField]; ok && !rep.Incomparable {
+			surfaceDistinct = rep.Ordinal == OrdinalLow || rep.Ordinal == OrdinalNone
+			surfaceNear = rep.Ordinal == OrdinalHigh || rep.Ordinal == OrdinalIdentical
+		}
+	}
 
 	switch mech {
 	case ClassMechanismNear:

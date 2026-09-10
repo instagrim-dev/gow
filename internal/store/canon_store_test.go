@@ -66,6 +66,58 @@ func TestSeedVocabularyIdempotentAndImmutable(t *testing.T) {
 	}
 }
 
+// TestAliasNamespaceIsPerFieldKind is the persistence guard for the #9 finding:
+// the alias namespace is (vocabulary_version, field_kind, alias_normalized), so
+// the same normalized phrase may legally bind to different canonical IDs in
+// different field kinds. The prior PK (version, alias_normalized) + INSERT OR
+// IGNORE silently dropped the second binding; this test fails if that returns.
+func TestAliasNamespaceIsPerFieldKind(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	repo := openCanonStore(t, ctx)
+	defer repo.Close()
+
+	// Same alias phrase "averaging" under two different field kinds.
+	err := repo.SeedVocabulary(ctx, VocabularySeedInput{
+		Version:   "mechanism/collide",
+		Notes:     "cross-field-kind alias test",
+		CreatedAt: "2026-09-10T12:00:00Z",
+		Terms: []TermRecord{
+			{
+				VocabularyVersion: "mechanism/collide",
+				CanonicalID:       "core.operator.density_averaging",
+				FieldKind:         "operator",
+				Aliases:           []string{"averaging"},
+			},
+			{
+				VocabularyVersion: "mechanism/collide",
+				CanonicalID:       "core.assumption.averaging_admissible",
+				FieldKind:         "assumption",
+				Aliases:           []string{"averaging"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("SeedVocabulary() with cross-field-kind alias error = %v", err)
+	}
+
+	// Both aliases must survive persistence — one per canonical id.
+	opTerm, err := repo.GetTerm(ctx, "mechanism/collide", "core.operator.density_averaging")
+	if err != nil {
+		t.Fatalf("GetTerm(operator) error = %v", err)
+	}
+	asTerm, err := repo.GetTerm(ctx, "mechanism/collide", "core.assumption.averaging_admissible")
+	if err != nil {
+		t.Fatalf("GetTerm(assumption) error = %v", err)
+	}
+	if len(opTerm.Aliases) != 1 || opTerm.Aliases[0] != "averaging" {
+		t.Fatalf("operator term aliases = %v, want [averaging] (alias silently dropped?)", opTerm.Aliases)
+	}
+	if len(asTerm.Aliases) != 1 || asTerm.Aliases[0] != "averaging" {
+		t.Fatalf("assumption term aliases = %v, want [averaging] (alias silently dropped?)", asTerm.Aliases)
+	}
+}
+
 func TestListTermsUnknownVocabularyNotFound(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -138,5 +190,64 @@ func TestPersistSignatureIdempotentAndImmutable(t *testing.T) {
 	// Immutability trigger.
 	if _, err := repo.db.ExecContext(ctx, `UPDATE mechanism_signatures SET fingerprint = 'z' WHERE id = ?`, first.Record.ID); err == nil {
 		t.Fatal("UPDATE on mechanism_signatures succeeded, want immutability abort")
+	}
+}
+
+// TestSignatureCarriesPostureOutcomeBoundaryProvenance proves posture, outcome,
+// and boundary provenance are persisted and reloaded rather than lost or
+// silently defaulted to explicit. An unprovenanced posture axis / outcome must
+// round-trip as its recorded status (here unknown), so downstream invariant
+// mining reads provenance instead of assuming source backing.
+func TestSignatureCarriesPostureOutcomeBoundaryProvenance(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	repo := openCanonStore(t, ctx)
+	defer repo.Close()
+	seedTestVocabulary(t, ctx, repo)
+
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	problemID, runID, snapshotID := seedSnapshotForNormalizeTests(t, ctx, repo)
+	input := normalizationInput(t, problemID, runID, snapshotID, now, "approach-prov")
+	writeResult, err := repo.PersistNormalization(ctx, input)
+	if err != nil {
+		t.Fatalf("PersistNormalization() error = %v", err)
+	}
+	mechanismID := writeResult.Approaches[0].MechanismID
+
+	record := SignatureRecord{
+		ID:                domain.NewMechanismSignatureID(now),
+		MechanismID:       mechanismID,
+		SchemaVersion:     "mechanism/v1",
+		VocabularyVersion: "mechanism/v1",
+		Fingerprint:       "prov-fp",
+		RunID:             runID,
+		CreatedAt:         "2026-09-10T12:00:00Z",
+		OutcomeClass:      "partial_success",
+		OutcomeStatus:     "inferred",
+		Posture:           map[string]string{"locality": "local", "construction": "constructive", "uncertainty": "deterministic"},
+		PostureStatus:     map[string]string{"locality": "explicit", "construction": "unknown", "uncertainty": "unknown"},
+		Boundaries: []SignatureBoundaryRow{
+			{SurfaceLabel: "composite modulus", ResolutionState: "unknown", Relation: "stops_at", ClaimStatus: "unknown", Ordinal: 0},
+		},
+	}
+	if _, err := repo.PersistSignature(ctx, record); err != nil {
+		t.Fatalf("PersistSignature() error = %v", err)
+	}
+
+	got, err := repo.GetSignature(ctx, record.ID)
+	if err != nil {
+		t.Fatalf("GetSignature() error = %v", err)
+	}
+	if got.OutcomeStatus != "inferred" {
+		t.Fatalf("outcome status = %q, want inferred (not silently promoted)", got.OutcomeStatus)
+	}
+	if got.PostureStatus["locality"] != "explicit" {
+		t.Fatalf("locality provenance = %q, want explicit", got.PostureStatus["locality"])
+	}
+	if got.PostureStatus["construction"] != "unknown" {
+		t.Fatalf("unprovenanced construction status = %q, want unknown (not explicit)", got.PostureStatus["construction"])
+	}
+	if len(got.Boundaries) != 1 || got.Boundaries[0].ClaimStatus != "unknown" {
+		t.Fatalf("boundary provenance not round-tripped: %+v", got.Boundaries)
 	}
 }

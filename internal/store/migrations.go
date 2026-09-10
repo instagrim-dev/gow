@@ -270,8 +270,16 @@ CREATE TABLE IF NOT EXISTS canonical_terms (
 CREATE TABLE IF NOT EXISTS canonical_term_aliases (
   vocabulary_version TEXT NOT NULL REFERENCES canonical_vocabulary(version),
   canonical_id TEXT NOT NULL,
+  field_kind TEXT NOT NULL CHECK (field_kind IN ('representation', 'assumption', 'operator', 'preserves', 'breaks', 'auxiliary_object', 'outcome', 'boundary', 'posture')),
   alias_normalized TEXT NOT NULL,
-  PRIMARY KEY(vocabulary_version, alias_normalized)
+  -- Uniqueness is scoped by (version, field_kind, alias_normalized, canonical_id):
+  --   * the same phrase MAY map to different canonical ids in DIFFERENT field
+  --     kinds (the resolver namespaces aliases by field kind on purpose), and
+  --   * the same phrase MAY map to more than one canonical id WITHIN a field
+  --     kind, which the resolver reports as an explicit ambiguous state.
+  -- Including canonical_id in the key forbids only exact-duplicate rows, never
+  -- a legitimate second binding, so no binding is ever silently dropped.
+  PRIMARY KEY(vocabulary_version, field_kind, alias_normalized, canonical_id)
 );
 
 CREATE TABLE IF NOT EXISTS classification_rubrics (
@@ -354,6 +362,7 @@ CREATE TABLE IF NOT EXISTS signature_postures (
   signature_id TEXT NOT NULL REFERENCES mechanism_signatures(id),
   axis TEXT NOT NULL,
   value TEXT NOT NULL,
+  claim_status TEXT NOT NULL DEFAULT 'unknown',
   PRIMARY KEY(signature_id, axis)
 );
 
@@ -363,13 +372,17 @@ CREATE TABLE IF NOT EXISTS signature_boundaries (
   resolution_state TEXT NOT NULL,
   canonical_id TEXT NOT NULL DEFAULT '',
   relation TEXT NOT NULL DEFAULT '',
+  claim_status TEXT NOT NULL DEFAULT 'unknown',
+  support_snapshot_id TEXT NOT NULL DEFAULT '',
+  support_locator TEXT NOT NULL DEFAULT '',
   ordinal INTEGER NOT NULL,
   PRIMARY KEY(signature_id, ordinal)
 );
 
 CREATE TABLE IF NOT EXISTS signature_outcomes (
   signature_id TEXT PRIMARY KEY REFERENCES mechanism_signatures(id),
-  class TEXT NOT NULL
+  class TEXT NOT NULL,
+  claim_status TEXT NOT NULL DEFAULT 'unknown'
 );
 
 CREATE INDEX IF NOT EXISTS idx_mechanism_signatures_mechanism ON mechanism_signatures(mechanism_id);

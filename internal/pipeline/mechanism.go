@@ -198,6 +198,12 @@ func (a *App) CompareMechanisms(ctx context.Context, input CompareInput) (Compar
 // canon.MechanismInput. Support locators are matched to claims by field path
 // where available; when absent the claim carries no support locator.
 func mechanismInputFromDetail(detail store.ApproachDetail) canon.MechanismInput {
+	// Index support by field path for provenance lookup.
+	supportByField := map[string]domain.SourceSupport{}
+	for _, s := range detail.Support {
+		supportByField[s.FieldPath] = s
+	}
+
 	in := canon.MechanismInput{
 		MechanismID: detail.Mechanism.ID,
 		Posture: canon.Posture{
@@ -206,12 +212,14 @@ func mechanismInputFromDetail(detail store.ApproachDetail) canon.MechanismInput 
 			Uncertainty:  detail.Mechanism.UncertaintyMode,
 		},
 		OutcomeClass: detail.Outcome.Class,
-	}
-
-	// Index support by field path for provenance lookup.
-	supportByField := map[string]domain.SourceSupport{}
-	for _, s := range detail.Support {
-		supportByField[s.FieldPath] = s
+		// Posture/outcome provenance is preserved from #7 dotted-path support,
+		// defaulting to unknown (never explicit) when no support row exists.
+		PostureProvenance: canon.PostureProvenance{
+			Locality:     claimStatusForSupport(supportByField, "mechanism.locality"),
+			Construction: claimStatusForSupport(supportByField, "mechanism.construction"),
+			Uncertainty:  claimStatusForSupport(supportByField, "mechanism.uncertainty"),
+		},
+		OutcomeProvenance: claimStatusForSupport(supportByField, "outcome.class"),
 	}
 
 	for _, attr := range detail.Attributes {
@@ -233,20 +241,32 @@ func mechanismInputFromDetail(detail store.ApproachDetail) canon.MechanismInput 
 	}
 
 	for _, b := range detail.Boundaries {
-		in.Boundaries = append(in.Boundaries, canon.MechanismBoundaryInput{
+		bin := canon.MechanismBoundaryInput{
 			SurfaceLabel: b.Condition,
 			Relation:     "stops_at",
-		})
+			Status:       claimStatusForSupport(supportByField, "outcome.boundary"),
+		}
+		if sup, ok := supportByField["outcome.boundary"]; ok {
+			bin.SupportSnapshotID = sup.SnapshotID
+			bin.SupportLocator = sup.Locator
+		}
+		in.Boundaries = append(in.Boundaries, bin)
 	}
 	return in
 }
 
-// claimStatusForSupport maps the #7 SupportKind to a ClaimStatus, defaulting to
-// explicit when no support row is present (the fixture asserted the value).
+// claimStatusForSupport maps the #7 SupportKind to a ClaimStatus. Absence of a
+// support row is NOT treated as explicit: #7 does not require a support row for
+// every populated field, so a missing row means the provenance is unknown, not
+// that the value is source-backed. Defaulting to explicit here would silently
+// promote an unprovenanced value into an explicit source-backed claim, which
+// violates the epistemic-status hard constraint (an operation must never
+// upgrade Hypothesis->Evidence-class strength). We preserve the weaker type
+// (unknown) and let downstream mining see the value as unprovenanced.
 func claimStatusForSupport(byField map[string]domain.SourceSupport, fieldPath string) domain.ClaimStatus {
 	sup, ok := byField[fieldPath]
 	if !ok {
-		return domain.ClaimExplicit
+		return domain.ClaimUnknown
 	}
 	switch sup.SupportKind {
 	case domain.SupportExplicit:
@@ -271,10 +291,16 @@ func signatureRecord(sig canon.MechanismSignature, mechanismID, runID string, no
 		RunID:             runID,
 		CreatedAt:         now.Format(timeLayout),
 		OutcomeClass:      string(sig.OutcomeClass),
+		OutcomeStatus:     string(sig.OutcomeProvenance),
 		Posture: map[string]string{
 			"locality":     string(sig.Posture.Locality),
 			"construction": string(sig.Posture.Construction),
 			"uncertainty":  string(sig.Posture.Uncertainty),
+		},
+		PostureStatus: map[string]string{
+			"locality":     string(sig.PostureProvenance.Locality),
+			"construction": string(sig.PostureProvenance.Construction),
+			"uncertainty":  string(sig.PostureProvenance.Uncertainty),
 		},
 	}
 	appendClaims := func(claims []canon.FieldClaim) {
@@ -301,11 +327,14 @@ func signatureRecord(sig canon.MechanismSignature, mechanismID, runID string, no
 	appendClaims(sig.AuxiliaryObjects)
 	for i, b := range sig.Boundaries {
 		rec.Boundaries = append(rec.Boundaries, store.SignatureBoundaryRow{
-			SurfaceLabel:    b.SurfaceLabel,
-			ResolutionState: string(b.State),
-			CanonicalID:     string(b.CanonicalID),
-			Relation:        b.Relation,
-			Ordinal:         i,
+			SurfaceLabel:      b.SurfaceLabel,
+			ResolutionState:   string(b.State),
+			CanonicalID:       string(b.CanonicalID),
+			Relation:          b.Relation,
+			ClaimStatus:       string(b.Status),
+			SupportSnapshotID: b.SupportSnapshotID,
+			SupportLocator:    b.SupportLocator,
+			Ordinal:           i,
 		})
 	}
 	return rec

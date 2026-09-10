@@ -232,6 +232,11 @@ func (v *Vocabulary) indexAlias(fieldKind domain.FieldKind, key string, id domai
 		set = make(map[domain.CanonicalID]struct{})
 		v.aliasIndex[idxKey] = set
 	}
+	// A set: the same alias binding twice to the same canonical id is a no-op,
+	// while binding to a second canonical id within the field kind is retained
+	// and surfaces as an explicit `ambiguous` resolution. This mirrors the
+	// persisted alias key (version, field_kind, alias_normalized, canonical_id),
+	// which forbids only exact-duplicate rows, never a legitimate binding.
 	set[id] = struct{}{}
 }
 

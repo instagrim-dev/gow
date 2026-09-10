@@ -47,13 +47,20 @@ func (a *App) seedVocabularies(ctx context.Context, repoStore problemStore) erro
 			CreatedAt: now,
 		}
 		for _, term := range v.Terms("") {
+			aliases := make([]string, 0, len(term.Aliases))
+			for _, alias := range term.Aliases {
+				// Persist the normalized alias key so the stored uniqueness key
+				// (version, field_kind, alias_normalized) matches exactly what
+				// the in-memory resolver looks up. Normalize is idempotent.
+				aliases = append(aliases, canon.Normalize(alias))
+			}
 			input.Terms = append(input.Terms, store.TermRecord{
 				VocabularyVersion: v.Version(),
 				CanonicalID:       string(term.CanonicalID),
 				FieldKind:         string(term.FieldKind),
 				Description:       term.Description,
 				ParentCanonicalID: string(term.Parent),
-				Aliases:           term.Aliases,
+				Aliases:           aliases,
 			})
 		}
 		if err := repoStore.SeedVocabulary(ctx, input); err != nil {
