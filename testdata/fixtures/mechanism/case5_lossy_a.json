@@ -1,0 +1,13 @@
+{
+  "approaches": [
+    {
+      "logical_identity": "case5-a-modular",
+      "label": "Modular operator, partial success",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "operators": ["modular decomposition"],
+      "outcome": { "class": "partial_success" }
+    }
+  ]
+}

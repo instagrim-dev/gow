@@ -1,0 +1,24 @@
+{
+  "approaches": [
+    {
+      "logical_identity": "modular-descent",
+      "label": "Modular descent argument",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "operators": ["modular decomposition"],
+      "preserves": ["residue locality"],
+      "outcome": { "class": "partial_success" }
+    },
+    {
+      "logical_identity": "global-averaging",
+      "label": "Global averaging bound",
+      "locality": "global",
+      "construction_mode": "existential",
+      "uncertainty_mode": "probabilistic",
+      "operators": ["density averaging"],
+      "preserves": ["mean growth rate"],
+      "outcome": { "class": "failure" }
+    }
+  ]
+}

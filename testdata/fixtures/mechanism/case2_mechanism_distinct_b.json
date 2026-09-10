@@ -1,0 +1,15 @@
+{
+  "approaches": [
+    {
+      "logical_identity": "case2-b-global",
+      "label": "Modular global method",
+      "locality": "global",
+      "construction_mode": "existential",
+      "uncertainty_mode": "probabilistic",
+      "representations": ["congruence classes"],
+      "operators": ["density averaging"],
+      "preserves": ["mean growth rate"],
+      "outcome": { "class": "failure" }
+    }
+  ]
+}

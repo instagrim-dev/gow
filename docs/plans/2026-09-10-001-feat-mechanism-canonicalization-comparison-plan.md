@@ -24,16 +24,21 @@ same?" answer as truth.
 This slice is the input contract for the next mechanism-clustering slice. It runs
 entirely offline against project-authored deterministic fixtures.
 
-**Settled scope decision (session-settled: user-directed — chosen over
-implementing #7 or blocking on #7): plan #9 as if #7 (approach normalization) is
-already complete.** The plan assumes the `normalization_revision` /
-`approach` / `mechanism` / `mechanism_representation|assumption|operator|preserves`
-/ `mechanism_axis_value` / `outcome` / `failure_boundary` substrate designed in
-`docs/persistence.md` already exists and is populated. Where that substrate is
-needed to run and test #9 in isolation, the plan builds the minimal typed
-mechanism-record tables and a fixture loader that stands in for #7's provider-driven
-`normalize` — see U1 and the Assumptions section. This keeps #9 shippable and
-fully offline while leaving #7's provider path to its own issue.
+**Settled scope decision (session-settled: user-directed): plan #9 as if #7
+(approach normalization) is complete.** As of implementation time, **#7 has
+already landed on this branch** (`currentSchemaVersion = 3`): the
+`normalization_revisions` / `approaches` / `approach_revisions` / `mechanisms`
+(inline `locality`/`construction_mode`/`uncertainty_mode` posture columns) /
+`mechanism_attributes(kind,value,ordinal)` / `outcomes(class)` /
+`failure_boundaries(condition,ordinal)` / `source_supports` substrate exists in
+migration v3, with domain types in `internal/domain/normalize.go`, the store
+writer/reader in `internal/store/normalize.go` (`PersistNormalization`,
+`GetMechanismDetail`, `GetApproachDetail`, `ListApproaches`, …), and a registered
+`newf mechanism show` command. **#9 therefore consumes this substrate directly
+and does not recreate it.** The only stand-in #9 adds is a thin, offline
+*fixture-seed loader* that constructs a `store.NormalizationInput` and calls the
+existing `PersistNormalization` to populate mechanism rows without a provider
+call (U1). New canonicalization tables are added as **migrations v4/v5/v6**.
 
 ---
 
@@ -45,11 +50,13 @@ that two approaches can be compared component-by-component (assumptions,
 operators, preserved properties, representations, boundaries, posture) without a
 model making the final identity decision.
 
-Today the repository has problems/runs (migration v1) and immutable
-sources/snapshots (v2). The normalized-approach substrate is fully *designed* in
-`docs/persistence.md` and `docs/domain-model.md` but not yet implemented. This
-plan implements the canonicalization/comparison/fingerprint layer and the minimal
-mechanism-record substrate it consumes.
+Today the repository has problems/runs (migration v1), immutable
+sources/snapshots (v2), and the **normalized-approach substrate (v3): approaches,
+normalization revisions, approach revisions, mechanisms (with inline posture),
+mechanism attributes, outcomes, failure boundaries, source supports** — the #7
+substrate is *implemented*, not merely designed. This plan implements the
+canonicalization/comparison/fingerprint layer **on top of** that existing
+substrate, adding only a fixture-seed loader to populate it offline.
 
 ### Governing constraints (from `AGENTS.md` and `docs/abstraction-safety.md`)
 
@@ -108,13 +115,17 @@ autonomous ontology expansion; cross-domain transfer; proof verification; scalar
 
 ## Assumptions
 
-- **A1 — #7 substrate treated as existing.** Per the settled scope decision, the
-  normalized `approach` / `mechanism` / `mechanism_*` tables exist. Because they are
-  not yet implemented in the repo, **U1 creates the minimal subset of those exact
-  tables** (matching `docs/persistence.md` names/columns so #7 can extend, not
-  rewrite) plus a fixture loader. If, at implementation time, #7 has already landed
-  these tables, U1 reduces to "reuse existing tables + add the fixture loader path";
-  do not duplicate or rename them.
+- **A1 — #7 substrate exists and is consumed directly.** The
+  `approaches` / `normalization_revisions` / `approach_revisions` / `mechanisms` /
+  `mechanism_attributes` / `outcomes` / `failure_boundaries` / `source_supports`
+  tables (migration v3) and their domain types (`internal/domain/normalize.go`:
+  `Approach`, `ApproachRevision`, `Mechanism`, `MechanismAttribute`, `Outcome`,
+  `FailureBoundary`, `SourceSupport`, `NormalizationRevision`) already exist. **U1
+  does not create tables or domain types.** U1 adds only a fixture-seed loader that
+  builds a `store.NormalizationInput` and calls the existing
+  `store.PersistNormalization` to populate mechanism rows offline (the deterministic
+  stand-in for #7's provider `normalize`). #9 reads mechanisms via the existing
+  `store.GetMechanismDetail` / `GetApproachDetail`.
 - **A2 — Classification is upstream.** Mechanism field values arrive already
   semantically classified (the provider/rubric step is #7's / a later slice's job).
   #9 canonicalizes classified labels deterministically. The `classifier_contract`
@@ -153,11 +164,11 @@ Traceability back to issue #9 acceptance criteria (AC) and definition of done (D
 
 - **KTD2 — Canonicalization consumes already-classified labels; it does not classify.** The input to canonicalization is a `(field, classified_label, support, status, classifier_contract)` tuple. Resolution is a deterministic lookup/alias-match against the vocabulary version, producing one of the five resolution states. Rationale: keeps the truth-sensitive fuzzy step (semantic classification) out of #9 per `AGENTS.md`; #9 owns only the deterministic identity resolution. Alias matching is exact-normalized-string + explicit alias table only — **no fuzzy/embedding match** (chosen over nearest-term matching: nearest-term silently coerces and violates R4).
 
-- **KTD3 — Fingerprint = SHA-256 over a canonical JSON serialization of `{schema_version, vocabulary_version, sorted canonical-ID sets per field, posture enums, outcome.class, sorted boundary relations}` with provenance excluded.** Sets are sorted by canonical ID; posture is fixed-key ordered; JSON uses sorted keys and no insignificant whitespace. Rationale: reuses `crypto/sha256` already in the tree (`internal/pipeline/source.go`); order-independence and version-visibility fall out of the canonical serialization (satisfies R5). Provenance is excluded from the hashed body by default; a separate `provenance_fingerprint` may be added later if needed (not in v0).
+- **KTD3 — Fingerprint = SHA-256 over a canonical JSON serialization of `{schema_version, vocabulary_version, sorted canonical-ID sets per field, posture enums, outcome.class, sorted boundary relations}` with provenance excluded.** Sets are sorted by canonical ID; posture is fixed-key ordered; JSON uses sorted keys and no insignificant whitespace. Rationale: reuses `crypto/sha256` already in the tree (`internal/pipeline/source.go`); order-independence and version-visibility fall out of the canonical serialization (satisfies R5). Provenance is excluded from the hashed body by default; a separate `provenance_fingerprint` may be added later if needed (not in v0). **Fingerprint equality asserts *resolved-identity equality only* (adversarial P1):** the body is built from `resolved` claims plus posture/outcome/boundaries, so two signatures sharing those but differing in `ambiguous`/`novel_candidate`/`unknown` claims hash equal. This is a deliberate, documented boundary — it is *not* a claim of full mechanistic sameness. To prevent a downstream consumer over-trusting equality, **comparison (U6) must surface any non-`resolved` claim on either side as `incomparable` before any identity conclusion**, and U7 adds a fixture asserting this (equal-resolved / differing-unresolved pair is flagged `incomparable`, not merged). **Identity is also conditional on a fixed `classifier_contract`:** because which claims reach `resolved` depends on the upstream classified label, fingerprints produced under different `classifier_contract` versions are not identity-comparable; the plan states this explicitly and comparison records the contract so cross-contract comparison is not silently treated as sameness.
 
 - **KTD4 — Per-field comparison methods are explicit and typed, keyed by field kind.** Unordered canonical-ID sets (operators, assumptions, preserves, breaks, representations, auxiliary_objects) → set overlap + Jaccard (both reported). Posture (locality/construction/uncertainty) → enum equality. Boundaries → typed relation comparison over canonical IDs. Where the vocabulary declares parent/child, an explicit hierarchy distance is available. Rationale: matches the issue's "possible v0 choices" and the abstraction-safety requirement that behavior be inspectable, not buried in a distance function (R6, R13).
 
-- **KTD5 — No single scalar in v0.** Comparison output is a per-field structure plus an ordinal similarity per field (`identical`/`high`/`low`/`none`/`incomparable`) and a categorical mechanistic-vs-surface classification. Surface similarity is computed only if fixtures/inputs carry surface text, and is tagged `auxiliary_only`. Rationale: issue explicitly forbids fake precision and forbids surface similarity defining identity (R6, R7, R12).
+- **KTD5 — No single scalar in v0.** Comparison output is a per-field structure plus an ordinal similarity per field (`identical`/`high`/`low`/`none`/`incomparable`) and a categorical mechanistic-vs-surface classification. Surface similarity is computed only if fixtures/inputs carry surface text, and is tagged `auxiliary_only`. Rationale: issue explicitly forbids fake precision and forbids surface similarity defining identity (R6, R7, R12). **The mechanistic-vs-surface predicate is explicit, versioned (`classify/v1`), and documented**, not a loose heuristic: `mechanism-near` iff every *decisive* field (`preserves`, `operators`, `assumptions`) is `identical`-or-`high` **and** no decisive field is `low`/`none`/`incomparable`; `mechanism-distinct` iff any decisive field is `low`/`none`; otherwise (decisive fields all `incomparable`, or mixed with non-decisive disagreement only) `unknown`. `representations`/`boundaries`/`posture` are non-decisive in v1 and affect only the surface axis. The choice of decisive fields is an explicit invariant claim recorded in the doc (U8) with rationale, and U7 adds a fixture where a decisive-vs-non-decisive disagreement flips the classification, so the weighting is falsifiable rather than assumed.
 
 - **KTD6 — Vocabulary is seeded from an in-repo versioned Go definition, persisted on migrate/first-use, and immutable per version.** New terms/versions append; existing `(version, canonical_id)` rows are immutable (triggers, mirroring the source-immutability pattern). Rationale: deterministic, offline, and makes "historical signatures reproducible" enforceable (R8, R11).
 
@@ -194,7 +205,19 @@ Traceability back to issue #9 acceptance criteria (AC) and definition of done (D
     -> mechanistic-vs-surface classification (+ optional auxiliary surface diagnostic)
 ```
 
-### Persistence shape (new tables, names aligned to `docs/persistence.md`)
+### Persistence shape (new tables — additive, on top of the existing v3 substrate)
+
+**Vocabulary reconciliation (scope-guardian).** The existing v3 substrate stores
+posture as inline enum columns on `mechanisms` (`locality`, `construction_mode`,
+`uncertainty_mode`) — there is no separate `mechanism_axis_*` table in the live
+schema, so #9's posture canonicalization reads those columns directly (no new
+axis vocabulary needed for posture; posture "canonical IDs" are the existing
+validated enum values). The new `canonical_term` vocabulary is therefore scoped
+**only to the set fields** carried in `mechanism_attributes` (`representation`,
+`assumption`, `operator`, `preserves`, `breaks`, `auxiliary_object`) plus
+`boundary`. `canonical_term.field_kind` reuses those exact `mechanism_attributes.kind`
+values so canonicalization maps 1:1 onto attribute rows and does not introduce a
+parallel posture ontology.
 
 ```text
 canonical_vocabulary(version PK, created_at, notes)
@@ -256,20 +279,20 @@ internal/
     compare.go                   # per-field comparison + classification
     *_test.go
   domain/
-    canonical.go                 # NEW — CanonicalID, ResolutionState, ClaimStatus, Posture enums + validation
-    mechanism.go                 # NEW (A1) — minimal Approach/Mechanism/NormalizationRevision types
+    canonical.go                 # NEW — CanonicalID, ResolutionState, ClaimStatus, FieldKind enums + validation
+                                 # (Approach/Mechanism/etc. already exist in internal/domain/normalize.go — reused, not recreated)
   store/
     migrations.go                # EXTEND — v4 (vocab/rubric), v5 (signatures), v6 (comparison); v3 mechanism substrate already exists
     canon_store.go               # NEW — vocab/signature/comparison repositories
-    mechanism_store.go           # NEW (A1) — minimal mechanism-record repo + fixture loader
+    fixture_seed.go              # NEW (A1) — offline loader: build store.NormalizationInput + call existing PersistNormalization
   pipeline/
     mechanism.go                 # NEW — SignatureMechanism / CompareMechanisms services
     vocabulary.go                # NEW — Vocabulary list/show/resolve services
     output.go                    # EXTEND — response view structs
 cmd/newf/
-    mechanism.go                 # NEW — `newf mechanism signature|compare`
+    mechanism.go                 # EXTEND newMechanismCommand (in approach.go today) — add `signature` + `compare` subcommands to existing `newf mechanism show`
     vocabulary.go                # NEW — `newf vocabulary list|show|resolve`
-    root.go                      # EXTEND — register commands + error classes
+    root.go                      # EXTEND — register vocabulary command + error classes
 testdata/
   fixtures/mechanism/            # NEW — 6 required deterministic fixtures
 docs/
@@ -280,25 +303,24 @@ docs/
 
 ## Implementation Units
 
-### U1. Minimal mechanism-record substrate + fixture loader (stands in for #7)
+### U1. Offline fixture-seed loader over the existing #7 substrate
 
-- **Goal:** Provide the assumed-existing normalized mechanism records #9 consumes, plus a deterministic offline loader that populates them from fixtures.
+- **Goal:** Populate the *existing* v3 mechanism substrate offline (no provider call) so #9 has mechanism records to canonicalize and compare.
 - **Requirements:** R1 (input side), R11, R15; enables A1/A2/A3.
-- **Dependencies:** none.
-- **Files:** `internal/domain/mechanism.go`, `internal/store/mechanism_store.go`, `internal/store/migrations.go` (migration v3), `internal/store/mechanism_store_test.go`, `testdata/fixtures/mechanism/` (initial fixtures used by loader tests).
+- **Dependencies:** none (consumes existing v3 tables/types/store).
+- **Files:** `internal/store/fixture_seed.go`, `internal/store/fixture_seed_test.go`, `testdata/fixtures/mechanism/` (initial fixtures used by loader tests). **No new migration, no new domain types.**
 - **Approach:**
-  1. Add migration v3 creating the minimal subset of `docs/persistence.md` tables needed to hold a mechanism: `normalization_revision` (minimal columns), `approach`, `mechanism`, `mechanism_representation|assumption|operator|preserves`, `mechanism_axis_value`, `outcome`, `failure_boundary`, `outcome_boundary`. Use the exact names/columns from `docs/persistence.md` so #7 extends rather than rewrites. Include the immutable-source-style triggers only where the design marks these revisioned/append-only.
-  2. Add domain types `NormalizationRevision`, `Approach`, `Mechanism` (with representation/assumptions/operators/preserves slices + axis values), `Outcome`, `FailureBoundary`, each with `Validate()`, following the `NewSource`/`Validate()` pattern. Include a `mch_` ID prefix (and any others needed) in `internal/domain/id.go`.
-  3. Add a fixture loader on the store that reads a mechanism fixture (JSON) and inserts a normalization revision + approach(es) + mechanism(s) transactionally. This is the offline stand-in for #7's provider `normalize`.
-- **Patterns to follow:** `internal/domain/source.go` (`New*`/`Validate`), `internal/store/store.go` (`CreateSourceSnapshot` transaction + scan helpers), `internal/store/migrations.go` (append a new numbered migration; bump `currentSchemaVersion`; add tables to `validateSchemaTables`).
+  1. Add a fixture-seed loader (`LoadMechanismFixture` on `*store.Store`, or a small `internal/pipeline` helper) that reads a mechanism fixture JSON and builds a `store.NormalizationInput` — `NormalizationRevision` + `ProviderInvocation` (role `normalize`, marked fixture-sourced) + `[]ApproachInput{LogicalIdentity, Revision, Mechanism, Attributes, Outcome, Boundaries, Support}` — then calls the **existing** `store.PersistNormalization`. This is the deterministic offline stand-in for #7's provider `normalize`.
+  2. The fixture JSON schema mirrors the existing domain types (`domain.Mechanism` posture enums, `domain.MechanismAttribute{Kind,Value,Ordinal}`, `domain.Outcome{Class}`, `domain.FailureBoundary{Condition,Ordinal}`, `domain.SourceSupport{...}`). Loader relies on the existing `Validate()` methods; it does not re-validate independently.
+  3. Reuse existing IDs (`domain.NewMechanismID`, `NewApproachID`, `NewNormalizationRevisionID`, etc.) — all already defined in `internal/domain/id.go`. **Do not add ID prefixes.**
+- **Patterns to follow:** `internal/store/normalize.go` (`PersistNormalization`, `NormalizationInput`/`ApproachInput` shapes, `persistApproachTx`); existing fixture patterns under `testdata/`.
 - **Test scenarios:**
-  - Migration v3 applies fresh and is idempotent; `SchemaVersion` reflects the bump.
-  - Loading a single-mechanism fixture creates one revision, one approach, one mechanism with all field slices populated.
-  - Loading a multi-approach fixture creates multiple approaches under one revision (issue: one source → multiple approaches).
-  - Field-value rows preserve original surface labels (no canonicalization here).
-  - Invalid fixture (missing required field) fails the transaction leaving no partial rows.
-  - `Validate()` rejects bad IDs / empty required fields.
-- **Verification:** A fixture file loads into queryable mechanism rows; `go test ./internal/store/...` passes offline.
+  - Loading a single-mechanism fixture creates one normalization revision, one approach + revision, one mechanism with all attribute kinds populated (queryable via `GetMechanismDetail`).
+  - Loading a multi-approach fixture creates multiple approaches under one revision (one source → multiple approaches).
+  - Attribute rows preserve original surface labels/values (no canonicalization here).
+  - Re-loading the same logical identity reuses the approach (via `getOrCreateApproachTx`) rather than duplicating.
+  - Invalid fixture (failing a `domain.*.Validate()`) aborts the transaction leaving no partial rows.
+- **Verification:** A fixture file loads into rows readable by the existing `GetMechanismDetail`/`GetApproachDetail`; `go test ./internal/store/...` passes offline.
 
 ### U2. Canonical domain types + versioned vocabulary with deterministic resolution
 
@@ -307,7 +329,7 @@ docs/
 - **Dependencies:** U1 (for `field_kind` alignment only; can proceed in parallel on pure types).
 - **Files:** `internal/domain/canonical.go`, `internal/canon/vocabulary.go`, `internal/canon/vocabulary_seed.go`, `internal/canon/vocabulary_test.go`.
 - **Approach:**
-  1. `internal/domain/canonical.go`: `CanonicalID string` with validation of the namespaced shape (`core.<kind>.<name>` / `domain.<field>.<kind>.<name>`); `ResolutionState` enum (`resolved|ambiguous|novel_candidate|unknown|rejected`) with an exhaustive-check helper; `ClaimStatus` enum (`explicit|inferred|ambiguous|unknown|unsupported`); `PostureAxis`/values enums (locality: local|global|mixed|unknown; construction: constructive|existential|mixed|unknown; uncertainty: deterministic|probabilistic|unknown); `FieldKind` enum for the spine (`representation|operator|assumption|preserves|breaks|auxiliary_object|outcome|boundary|posture`) — the set-field kinds match the existing `mechanism_attributes.kind` CHECK values exactly (`representation|assumption|operator|preserves|breaks|auxiliary_object`).
+  1. `internal/domain/canonical.go`: `CanonicalID string` with validation of the namespaced shape (`core.<kind>.<name>` / `domain.<field>.<kind>.<name>`); `ResolutionState` enum (`resolved|ambiguous|novel_candidate|unknown|rejected`) with an exhaustive-check helper; `ClaimStatus` enum (`explicit|inferred|ambiguous|unknown|unsupported`); `FieldKind` enum for the spine (`representation|operator|assumption|preserves|breaks|auxiliary_object|outcome|boundary|posture`) — the set-field kinds match the existing `mechanism_attributes.kind` CHECK values exactly (`representation|assumption|operator|preserves|breaks|auxiliary_object`). **Posture enums are NOT redefined here** — reuse the existing `domain.Locality`/`domain.ConstructionMode`/`domain.UncertaintyMode` from `internal/domain/normalize.go` (already validated: local|global|mixed|unknown, constructive|existential|mixed|unknown, deterministic|probabilistic|unknown), and reuse `domain.OutcomeClass` for outcome.
   2. `vocabulary_seed.go`: the in-repo `mechanism/v1` vocabulary — a small set of `core.*` terms plus a couple of `domain.number_theory.*` terms (e.g. `core.operator.modular_decomposition`, `core.representation.congruence_classes`, `domain.number_theory.property.residue_locality`), each with normalized aliases (e.g. `"works residue-by-residue"`, `"local congruence argument"` → `domain.number_theory.property.residue_locality`), optional parent links, and a `rejected` list.
   3. `vocabulary.go`: `Vocabulary` value object built from the seed; `Normalize(label)` (lowercase, collapse whitespace/punctuation deterministically); `Resolve(field, label, novelFlag) -> Resolution{state, canonicalID, candidates}` implementing the KTD2/state-machine rules with **no fuzzy fallback**.
 - **Patterns to follow:** exhaustive switch with `never`-style default per workspace TS rule analog in Go (return error on unknown enum); table-driven tests like existing `_test.go` files.
@@ -328,9 +350,9 @@ docs/
 - **Goal:** Persist vocabulary versions/terms/aliases/rubrics immutably; expose read + resolve CLI with `--json`.
 - **Requirements:** R4, R8 (version isolation), R10, R14, KTD6.
 - **Dependencies:** U2.
-- **Files:** `internal/store/canon_store.go` (vocab portion), `internal/store/migrations.go` (migration v4, vocab + rubric tables), `internal/pipeline/vocabulary.go`, `internal/pipeline/output.go` (vocab views), `cmd/newf/vocabulary.go`, `cmd/newf/root.go` (register + error classes), `internal/store/canon_store_test.go`, `internal/pipeline/vocabulary_test.go`, `cmd/newf/root_test.go` (CLI JSON).
+- **Files:** `internal/store/canon_store.go` (vocab portion), `internal/store/migrations.go` (**migration v4**, vocab + rubric tables), `internal/pipeline/vocabulary.go`, `internal/pipeline/output.go` (vocab views), `cmd/newf/vocabulary.go`, `cmd/newf/root.go` (register + error classes), `internal/store/canon_store_test.go`, `internal/pipeline/vocabulary_test.go`, `cmd/newf/root_test.go` (CLI JSON).
 - **Approach:**
-  1. Migration v4: `canonical_vocabulary`, `canonical_term`, `canonical_term_alias`, `classification_rubric` with immutability triggers; add to `validateSchemaTables`; bump `currentSchemaVersion`.
+  1. Migration **v4** (`currentSchemaVersion` 3 → 4): `canonical_vocabulary`, `canonical_term`, `canonical_term_alias`, `classification_rubric` with immutability triggers; add to `validateSchemaTables`; bump `currentSchemaVersion`.
   2. On migrate/first-use, seed the `mechanism/v1` vocabulary + `locality/v1` rubric record from U2's in-repo definition (idempotent insert; existing rows immutable).
   3. Repository methods: `ListVocabularies`, `GetVocabulary(version)`, `ListTerms(version, fieldKind?)`, `GetTerm(version, canonicalID)`.
   4. Pipeline services + `--json` response structs following the `SourceListResponse`/`writeJSON` pattern; `resolve` service calls U2's pure `Resolve` against a persisted version and returns the resolution + candidates + the (unchanged) claim status semantics.
@@ -372,11 +394,11 @@ docs/
 - **Goal:** Persist immutable, version-keyed signatures with field-level provenance; expose `mechanism signature <mechanism-id>` with `--json`.
 - **Requirements:** R1, R3, R5, R8, R10, R15, KTD1, KTD7.
 - **Dependencies:** U3 (vocab persistence), U4 (builder/fingerprint), U1 (mechanism rows).
-- **Files:** `internal/store/canon_store.go` (signature portion), `internal/store/migrations.go` (extend v4 or add v5 with signature tables), `internal/pipeline/mechanism.go` (SignatureMechanism service), `internal/pipeline/output.go` (signature views), `cmd/newf/mechanism.go`, `cmd/newf/root.go` (register), `internal/store/canon_store_test.go`, `internal/pipeline/mechanism_test.go`, `cmd/newf/root_test.go`.
+- **Files:** `internal/store/canon_store.go` (signature portion), `internal/store/migrations.go` (**migration v5**, signature tables), `internal/pipeline/mechanism.go` (SignatureMechanism service), `internal/pipeline/output.go` (signature views), `cmd/newf/mechanism.go`, `cmd/newf/root.go` (register), `internal/store/canon_store_test.go`, `internal/pipeline/mechanism_test.go`, `cmd/newf/root_test.go`.
 - **Approach:**
-  1. Migration: `mechanism_signature` (+ `UNIQUE(mechanism_id, schema_version, vocabulary_version)`), `signature_field_claim`, `signature_posture`, `signature_boundary`, `signature_outcome`, with append-only immutability triggers; register in `validateSchemaTables`; bump version.
+  1. Migration **v5** (4 → 5): `mechanism_signature` (+ `UNIQUE(mechanism_id, schema_version, vocabulary_version)`), `signature_field_claim`, `signature_posture`, `signature_boundary`, `signature_outcome`, with append-only immutability triggers; register in `validateSchemaTables`; bump version.
   2. `SignatureMechanism` service: load mechanism (U1), resolve vocab version (default = latest seeded), `BuildSignature`, persist all rows transactionally under a new `run`, return the view. If a signature already exists for `(mechanism, schema, vocab)`, return it as `existing` (idempotent, matching the snapshot-admission `existing`/`created` status pattern) rather than recomputing/rewriting.
-  3. CLI `mechanism signature <mechanism-id>` with `--vocab-version`, `--schema-version` (default `mechanism/v1`), `--json`. Human output shows fingerprint, per-field canonical IDs with resolution state + claim status, posture, outcome, boundaries. `--json` returns the full signature incl. provenance.
+  3. CLI: add a `signature <mechanism-id>` subcommand to the **existing** `newMechanismCommand` (currently in `cmd/newf/approach.go`, alongside `show`), with `--vocab-version`, `--schema-version` (default `mechanism/v1`), `--json`. Human output shows fingerprint, per-field canonical IDs with resolution state + claim status, posture, outcome, boundaries. `--json` returns the full signature incl. provenance.
 - **Patterns to follow:** `CreateSourceSnapshot` (transaction + `existing`/`created` status), `cmd/newf/source.go` wiring, `writeJSON`.
 - **Test scenarios:**
   - First `signature` call creates the row + child rows and returns `created`; second identical call returns `existing` with the same fingerprint and does not write a duplicate.
@@ -392,10 +414,10 @@ docs/
 - **Goal:** Compare two signatures per-field deterministically, classify mechanistic-vs-surface, optionally persist the comparison run; expose `mechanism compare <a> <b>` with `--json`.
 - **Requirements:** R6, R7, R12, R13, KTD4, KTD5.
 - **Dependencies:** U4 (types), U5 (persisted signatures to compare).
-- **Files:** `internal/canon/compare.go`, `internal/canon/compare_test.go`, `internal/store/canon_store.go` (comparison_run persistence), `internal/store/migrations.go` (comparison tables), `internal/pipeline/mechanism.go` (CompareMechanisms service), `internal/pipeline/output.go` (comparison views), `cmd/newf/mechanism.go` (compare subcommand), `internal/pipeline/mechanism_test.go`, `cmd/newf/root_test.go`.
+- **Files:** `internal/canon/compare.go`, `internal/canon/compare_test.go`, `internal/store/canon_store.go` (comparison_run persistence), `internal/store/migrations.go` (**migration v6**, comparison tables), `internal/pipeline/mechanism.go` (CompareMechanisms service), `internal/pipeline/output.go` (comparison views), `cmd/newf/mechanism.go` (add `compare` subcommand to the existing `newMechanismCommand`), `internal/pipeline/mechanism_test.go`, `cmd/newf/root_test.go`.
 - **Approach:**
   1. `Compare(sigA, sigB, weights)`: for each set field compute intersection/union over **resolved** canonical IDs → `{overlap_count, jaccard}` and an ordinal (`identical|high|low|none`); elements with non-`resolved` state on either side are reported `incomparable` for that field rather than counted as agreement. Posture axes → enum equality. Boundaries → typed relation comparison. Weights come from an explicit, versioned `weights_version` table/struct (default `weights/v1`), configurable via flag; never collapse to one scalar.
-  2. Classification: derive `mechanism-near`/`mechanism-distinct` from the aggregate of canonical-field ordinals (explicit, documented rule, e.g., near if preserves+operators+assumptions are high/identical and no material distinct field); compute optional surface similarity **only** from any surface text carried on inputs, tag it `auxiliary_only`, and combine into `surface-distinct+mechanism-near` / `surface-near+mechanism-distinct` / `mechanism-near` / `mechanism-distinct` / `unknown`. Surface similarity never feeds the mechanistic decision (R7).
+  2. Classification per the versioned `classify/v1` predicate (KTD5): derive `mechanism-near`/`mechanism-distinct`/`unknown` from the decisive fields (`preserves`, `operators`, `assumptions`) only; `representations`/`boundaries`/`posture` are non-decisive and feed only the surface axis. Compute optional surface similarity **only** from any surface text carried on inputs, tag it `auxiliary_only`, and combine into `surface-distinct+mechanism-near` / `surface-near+mechanism-distinct` / `mechanism-near` / `mechanism-distinct` / `unknown`. Surface similarity never feeds the mechanistic decision (R7). Any non-`resolved` claim on either side makes its field `incomparable` and cannot count toward `mechanism-near`.
   3. Persist `comparison_run` + `comparison_field_result` when not `--no-write`; return the view.
   4. CLI `mechanism compare <a> <b>` (`--weights-version`, `--no-write`, `--json`) producing the issue's example human table + full `--json`.
 - **Patterns to follow:** `cmd/newf/source.go` two-arg command; `writeJSON`; deterministic table-driven tests.
@@ -405,6 +427,8 @@ docs/
   - Textually similar but mechanistically different fixture → low canonical-field overlap, classification `surface-near+mechanism-distinct` (proves surface text does not drive identity, R7).
   - Jaccard math correct on known sets; enum posture equality correct.
   - Fields with ambiguous/unknown claims are reported `incomparable`, not silently equal.
+  - **Resolved-identity boundary (adversarial P1):** two signatures with identical `resolved` sets/posture/outcome/boundaries but differing `ambiguous`/`unknown` claims — equal fingerprints, yet `compare` flags the differing field `incomparable` and does **not** emit `mechanism-near` on the strength of the equal fingerprint alone.
+  - **Decisive-vs-non-decisive flip:** a pair agreeing on `representations` but disagreeing on `preserves` classifies `mechanism-distinct`; the reverse (agree on decisive, differ only on `representations`) classifies `mechanism-near` (or `surface-distinct+mechanism-near`) — proving the `classify/v1` weighting.
   - Weights are read from the versioned config and reflected in output; changing `--weights-version` is visible and does not hide behavior.
   - `--no-write` performs comparison without persisting; default persists a `comparison_run` retrievable by ID.
   - No single scalar is emitted (assert output shape is per-field + categorical).
@@ -421,7 +445,7 @@ docs/
   2. two textually similar approaches that differ **mechanistically**;
   3. an **ambiguous** classification that must remain unresolved;
   4. a **novel candidate** term absent from the current vocabulary;
-  5. an **over-compression** case: under a deliberately lossy vocabulary version, two mechanisms with different outcomes canonicalize identically — the test asserts this collapse is **detectable** (e.g., signatures/fingerprints equal under lossy vocab but the mechanisms carry different `outcome.class`), demonstrating the defective-normalization failure mode;
+  5. an **over-compression** case: under a deliberately lossy vocabulary version, two mechanisms that differ in `outcome.class` have their *outcome-predictive operators* merged to one canonical ID. Detection is a **system-owned invariant, not a hand-checked equality**: implement `AssertDiscriminationPreserved(mechanisms, vocab)` in `internal/canon` that, for every pair whose `outcome.class` differs, recomputes an **outcome-excluded** canonical body (schema+vocab+resolved field sets+posture+boundaries, *without* `outcome.class`) and flags a discrimination-loss defect if those bodies are equal — i.e. the vocabulary erased every non-outcome distinction between two mechanisms known to differ in outcome. The test asserts this invariant *fires* under the lossy vocab and *does not fire* under `mechanism/v1`. This keeps `outcome.class` in the real identity fingerprint (KTD3/KTD8) while still catching a vocabulary that collapses the fields that *should* have predicted the outcome difference;
   6. **ordering differences** that must yield the **same** fingerprint.
   Then an integration test that, in a temp workspace: migrates, loads fixture A and fixture B, builds both signatures, compares them, and asserts the expected classification per fixture pair.
 - **Test scenarios / assertions:**
@@ -429,7 +453,7 @@ docs/
   - Case 2: equal/near surface text → `mechanism-distinct` (`surface-near+mechanism-distinct`); asserts R7.
   - Case 3: the ambiguous field stays `ambiguous` through signature + comparison (`incomparable`), never guessed.
   - Case 4: the novel label persists as `novel_candidate`; it is not coerced to an existing canonical ID.
-  - Case 5 (R9 regression): under lossy vocab the two different-outcome mechanisms collapse to one fingerprint; the test documents/asserts detection so the abstraction defect cannot pass silently. Under the correct `mechanism/v1` vocab they remain distinguishable.
+  - Case 5 (R9 regression): `AssertDiscriminationPreserved` **fires** under the lossy vocab (outcome-excluded bodies of the two different-outcome mechanisms are equal) and **does not fire** under `mechanism/v1`. The defect cannot pass silently because the invariant is code-owned, not author-checked.
   - Case 6: reordered field values → identical fingerprint.
   - Integration: signatures stable across runs; fingerprints deterministic; ambiguous fields stay ambiguous; no provenance lost end-to-end (support/status survive load→signature→json).
 - **Execution note:** Author the abstraction-loss (case 5) regression test first and let it drive the shape of the lossy-vocab fixture; it is the highest-value guard in the slice per `AGENTS.md` abstraction-safety.
@@ -441,7 +465,7 @@ docs/
 - **Requirements:** supports R1–R15 discoverability; repo `AGENTS.md` "update docs where contracts changed".
 - **Dependencies:** U2–U7.
 - **Files:** `docs/mechanism-canonicalization.md` (new), `README.md` (extend the executable-slice list with the new commands), light cross-links from `docs/domain-model.md`/`docs/persistence.md` only if a contract detail changed.
-- **Approach:** Write the new doc: what canonicalization means and why it is not evidence promotion; the `mechanism/v1` signature shape; the five resolution states and the no-fuzzy-fallback rule; the fingerprint contract (what is/ isn't hashed); comparison methods + weights versioning + mechanistic-vs-surface classification; the abstraction-safety record answered by each mapping (compressed wording / retained distinction / lost / introduced); how to run the deterministic fixture path and the CLI with `--json`.
+- **Approach:** Write the new doc: what canonicalization means and why it is not evidence promotion; the `mechanism/v1` signature shape; the five resolution states and the no-fuzzy-fallback rule; the fingerprint contract (what is/isn't hashed) including that **fingerprint equality is resolved-identity equality only** and is **conditional on a fixed `classifier_contract`**; comparison methods + weights versioning + the **`classify/v1` decisive-field rule (why `preserves`/`operators`/`assumptions` are decisive and posture/representations/boundaries are not)**; the abstraction-safety record answered by each mapping (compressed wording / retained distinction / lost / introduced) and the `AssertDiscriminationPreserved` invariant; an explicit **"fixtures test contract-consistency, not discrimination power"** caveat naming historical-holdout as the deferred primary benchmark; how to run the deterministic fixture path and the CLI with `--json`.
 - **Test scenarios:** `Test expectation: none — documentation only.`
 - **Verification:** New commands appear in `README.md`; the contract doc matches implemented behavior; no duplicated contract text.
 
@@ -475,10 +499,19 @@ for the next mechanism-clustering slice.
 
 ## Risks & Dependencies
 
-- **#7 substrate overlap (R-risk).** U1 creates a subset of tables that #7 will
-  also want. Mitigation: use the exact `docs/persistence.md` names/columns so #7
-  extends via later migrations; if #7 lands first, U1 degrades to "reuse + add
-  fixture loader" (see A1). Reconcile forward, do not rename.
+- **#7 substrate is live, not designed (resolved).** #7 landed on this branch
+  (migration v3, `internal/domain/normalize.go`, `internal/store/normalize.go`,
+  `newf mechanism show`). #9 consumes it directly; U1 is only a fixture-seed loader
+  over `PersistNormalization`, and new tables are v4/v5/v6. No table/type/command
+  is recreated. If v3 is later renumbered by a rebase, only the migration constants
+  shift — the additive v4/v5/v6 design is unaffected.
+- **Fixtures are self-authored (closed-loop caveat).** The six fixtures and the
+  tiny `mechanism/v1` vocabulary are co-designed, so they test *internal
+  consistency and the resolution/fingerprint/compare contracts*, **not**
+  discrimination power on unseen mechanisms. This is acceptable for the v0 slice
+  but is explicitly **not** the historical-holdout evaluation `AGENTS.md` names as
+  the primary benchmark; that evaluation is deferred to a later slice. Documented in
+  U8 so no reader mistakes fixture pass for validated discrimination.
 - **Fingerprint stability across Go versions.** Mitigation: canonical JSON with
   sorted keys + explicit field ordering + golden test (KTD3); never rely on
   struct/map iteration order.
@@ -492,11 +525,11 @@ for the next mechanism-clustering slice.
 
 - Issue #9 (instagrim-dev/newf) — full requirements, six-fixture set, acceptance criteria.
 - `AGENTS.md` — division of responsibility, epistemic invariants, abstraction safety, Go bias.
-- `docs/persistence.md` — canonical table names/columns for mechanism substrate and revisioned/immutable patterns.
+- `docs/persistence.md` — *design* reference for revisioned/immutable patterns; note the **live v3 schema is authoritative** where it diverges (posture is inline columns on `mechanisms`, not a `mechanism_axis_*` table; boundaries are `failure_boundaries(condition,ordinal)`).
 - `docs/domain-model.md` — `MechanismAxis`, versioned vocabulary tables, ownership boundaries.
 - `docs/abstraction-safety.md` — abstraction record + predictive-discrimination criterion (drives U7 case 5).
 - `docs/cli-design.md` — package boundaries and `--json` envelope conventions.
-- Existing code: `internal/store/store.go`, `internal/store/migrations.go`, `internal/pipeline/source.go`, `cmd/newf/source.go`, `internal/domain/{id,source}.go` — established patterns to mirror.
+- Existing code: `internal/domain/normalize.go` (Approach/Mechanism/Outcome/… types + `Validate()`), `internal/store/normalize.go` (`PersistNormalization`, `NormalizationInput`, `GetMechanismDetail`), `internal/store/store.go`, `internal/store/migrations.go` (v3 substrate + migration pattern), `internal/pipeline/source.go`, `cmd/newf/{source,approach}.go` (`newMechanismCommand`), `internal/domain/{id,source}.go` — established patterns to mirror and the substrate #9 consumes.
 
 ## Product Contract preservation
 

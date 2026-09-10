@@ -1,0 +1,13 @@
+{
+  "approaches": [
+    {
+      "logical_identity": "case3-ambiguous",
+      "label": "Ambiguous shared-alias method",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "operators": ["shared ambiguous phrase"],
+      "outcome": { "class": "unknown" }
+    }
+  ]
+}

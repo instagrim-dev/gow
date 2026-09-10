@@ -24,6 +24,8 @@ const (
 	MechanismIDPrefix             = "mech_"
 	OutcomeIDPrefix               = "out_"
 	FailureBoundaryIDPrefix       = "fbnd_"
+	MechanismSignatureIDPrefix    = "msig_"
+	ComparisonRunIDPrefix         = "cmp_"
 )
 
 var (
@@ -38,6 +40,8 @@ var (
 	ErrInvalidMechanismID             = errors.New("invalid mechanism id")
 	ErrInvalidOutcomeID               = errors.New("invalid outcome id")
 	ErrInvalidFailureBoundaryID       = errors.New("invalid failure boundary id")
+	ErrInvalidMechanismSignatureID    = errors.New("invalid mechanism signature id")
+	ErrInvalidComparisonRunID         = errors.New("invalid comparison run id")
 
 	entropyMu sync.Mutex
 	entropy   = ulid.Monotonic(defaultEntropy(), 0)
@@ -101,6 +105,22 @@ func NewOutcomeID(now time.Time) string {
 
 func NewFailureBoundaryID(now time.Time) string {
 	return newID(FailureBoundaryIDPrefix, now)
+}
+
+func NewMechanismSignatureID(now time.Time) string {
+	return newID(MechanismSignatureIDPrefix, now)
+}
+
+func NewComparisonRunID(now time.Time) string {
+	return newID(ComparisonRunIDPrefix, now)
+}
+
+func ValidateMechanismSignatureID(id string) error {
+	return validateID(id, MechanismSignatureIDPrefix, ErrInvalidMechanismSignatureID)
+}
+
+func ValidateComparisonRunID(id string) error {
+	return validateID(id, ComparisonRunIDPrefix, ErrInvalidComparisonRunID)
 }
 
 func ValidateNormalizationRevisionID(id string) error {

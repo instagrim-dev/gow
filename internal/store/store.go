@@ -879,6 +879,10 @@ func validateSchemaTables(ctx context.Context, tx *sql.Tx) error {
 		"provider_invocations", "approaches", "normalization_revisions",
 		"approach_revisions", "mechanisms", "mechanism_attributes",
 		"outcomes", "failure_boundaries", "source_supports",
+		"canonical_vocabulary", "canonical_terms", "canonical_term_aliases",
+		"classification_rubrics", "mechanism_signatures", "signature_field_claims",
+		"signature_postures", "signature_boundaries", "signature_outcomes",
+		"comparison_runs", "comparison_field_results",
 	} {
 		row := tx.QueryRowContext(ctx, `
 SELECT EXISTS(

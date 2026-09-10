@@ -44,6 +44,13 @@ type problemStore interface {
 	GetApproachDetail(context.Context, string) (store.ApproachDetail, error)
 	GetMechanismDetail(context.Context, string) (store.ApproachDetail, error)
 	ListApproachRevisions(context.Context, string) (domain.Approach, []domain.ApproachRevision, error)
+	SeedVocabulary(context.Context, store.VocabularySeedInput) error
+	ListVocabularies(context.Context) ([]store.VocabularyRecord, error)
+	ListTerms(context.Context, string, string) ([]store.TermRecord, error)
+	GetTerm(context.Context, string, string) (store.TermRecord, error)
+	PersistSignature(context.Context, store.SignatureRecord) (store.PersistSignatureResult, error)
+	GetSignature(context.Context, string) (store.SignatureRecord, error)
+	PersistComparison(context.Context, store.ComparisonRecord) error
 }
 
 type InitProblemInput struct {
@@ -285,6 +292,11 @@ func (a *App) defaultOpenStore(ctx context.Context, dbPath string) (string, prob
 	}
 
 	if err := repoStore.Migrate(ctx); err != nil {
+		repoStore.Close()
+		return "", nil, err
+	}
+
+	if err := a.seedVocabularies(ctx, repoStore); err != nil {
 		repoStore.Close()
 		return "", nil, err
 	}

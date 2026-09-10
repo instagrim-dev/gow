@@ -1,0 +1,15 @@
+{
+  "approaches": [
+    {
+      "logical_identity": "case1-a-modular",
+      "label": "Residue-by-residue descent",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "operators": ["modular decomposition"],
+      "preserves": ["works residue-by-residue"],
+      "representations": ["congruence classes"],
+      "outcome": { "class": "partial_success" }
+    }
+  ]
+}

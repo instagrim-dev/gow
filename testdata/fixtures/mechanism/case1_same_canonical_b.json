@@ -1,0 +1,15 @@
+{
+  "approaches": [
+    {
+      "logical_identity": "case1-b-modular",
+      "label": "Local congruence argument",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "operators": ["residue-by-residue reduction"],
+      "preserves": ["local congruence argument"],
+      "representations": ["residue classes"],
+      "outcome": { "class": "partial_success" }
+    }
+  ]
+}

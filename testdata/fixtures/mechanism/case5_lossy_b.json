@@ -1,0 +1,13 @@
+{
+  "approaches": [
+    {
+      "logical_identity": "case5-b-averaging",
+      "label": "Averaging operator, failure",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "operators": ["density averaging"],
+      "outcome": { "class": "failure" }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 package store
 
-const currentSchemaVersion = 3
+const currentSchemaVersion = 6
 
 type migration struct {
 	version int
@@ -244,6 +244,236 @@ CREATE TRIGGER IF NOT EXISTS mechanisms_immutable_delete
 BEFORE DELETE ON mechanisms
 BEGIN
   SELECT RAISE(ABORT, 'mechanisms are immutable');
+END;
+`,
+	},
+	{
+		version: 4,
+		sql: `
+-- Canonicalization vocabulary layer (#9). Versioned, immutable-per-version
+-- semantic spine: models discover candidate labels; software owns identity.
+CREATE TABLE IF NOT EXISTS canonical_vocabulary (
+  version TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL,
+  notes TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS canonical_terms (
+  vocabulary_version TEXT NOT NULL REFERENCES canonical_vocabulary(version),
+  canonical_id TEXT NOT NULL,
+  field_kind TEXT NOT NULL CHECK (field_kind IN ('representation', 'assumption', 'operator', 'preserves', 'breaks', 'auxiliary_object', 'outcome', 'boundary', 'posture')),
+  description TEXT NOT NULL DEFAULT '',
+  parent_canonical_id TEXT,
+  PRIMARY KEY(vocabulary_version, canonical_id)
+);
+
+CREATE TABLE IF NOT EXISTS canonical_term_aliases (
+  vocabulary_version TEXT NOT NULL REFERENCES canonical_vocabulary(version),
+  canonical_id TEXT NOT NULL,
+  alias_normalized TEXT NOT NULL,
+  PRIMARY KEY(vocabulary_version, alias_normalized)
+);
+
+CREATE TABLE IF NOT EXISTS classification_rubrics (
+  contract_version TEXT PRIMARY KEY,
+  field_kind TEXT NOT NULL,
+  definition_json TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_canonical_terms_field ON canonical_terms(vocabulary_version, field_kind, canonical_id);
+CREATE INDEX IF NOT EXISTS idx_canonical_term_aliases_id ON canonical_term_aliases(vocabulary_version, canonical_id);
+
+-- Vocabulary rows are immutable per version: evolution appends a new version,
+-- never rewrites history, so historical signatures stay reproducible.
+CREATE TRIGGER IF NOT EXISTS canonical_vocabulary_immutable_update
+BEFORE UPDATE ON canonical_vocabulary
+BEGIN
+  SELECT RAISE(ABORT, 'canonical vocabulary is immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS canonical_vocabulary_immutable_delete
+BEFORE DELETE ON canonical_vocabulary
+BEGIN
+  SELECT RAISE(ABORT, 'canonical vocabulary is immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS canonical_terms_immutable_update
+BEFORE UPDATE ON canonical_terms
+BEGIN
+  SELECT RAISE(ABORT, 'canonical terms are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS canonical_terms_immutable_delete
+BEFORE DELETE ON canonical_terms
+BEGIN
+  SELECT RAISE(ABORT, 'canonical terms are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS canonical_term_aliases_immutable_update
+BEFORE UPDATE ON canonical_term_aliases
+BEGIN
+  SELECT RAISE(ABORT, 'canonical term aliases are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS canonical_term_aliases_immutable_delete
+BEFORE DELETE ON canonical_term_aliases
+BEGIN
+  SELECT RAISE(ABORT, 'canonical term aliases are immutable');
+END;
+`,
+	},
+	{
+		version: 5,
+		sql: `
+-- Mechanism signatures (#9): derived, version-keyed, immutable projections of a
+-- mechanism under a specific schema + vocabulary version. Re-canonicalizing
+-- under a newer vocabulary creates a new row; the old one stays reproducible.
+CREATE TABLE IF NOT EXISTS mechanism_signatures (
+  id TEXT PRIMARY KEY,
+  mechanism_id TEXT NOT NULL REFERENCES mechanisms(id),
+  schema_version TEXT NOT NULL,
+  vocabulary_version TEXT NOT NULL REFERENCES canonical_vocabulary(version),
+  fingerprint TEXT NOT NULL,
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  created_at TEXT NOT NULL,
+  UNIQUE(mechanism_id, schema_version, vocabulary_version)
+);
+
+CREATE TABLE IF NOT EXISTS signature_field_claims (
+  signature_id TEXT NOT NULL REFERENCES mechanism_signatures(id),
+  field_kind TEXT NOT NULL,
+  surface_label TEXT NOT NULL,
+  resolution_state TEXT NOT NULL CHECK (resolution_state IN ('resolved', 'ambiguous', 'novel_candidate', 'unknown', 'rejected')),
+  canonical_id TEXT NOT NULL DEFAULT '',
+  claim_status TEXT NOT NULL,
+  support_snapshot_id TEXT NOT NULL DEFAULT '',
+  support_locator TEXT NOT NULL DEFAULT '',
+  confidence TEXT NOT NULL DEFAULT '',
+  classifier_contract TEXT NOT NULL DEFAULT '',
+  ordinal INTEGER NOT NULL,
+  PRIMARY KEY(signature_id, field_kind, surface_label, ordinal)
+);
+
+CREATE TABLE IF NOT EXISTS signature_postures (
+  signature_id TEXT NOT NULL REFERENCES mechanism_signatures(id),
+  axis TEXT NOT NULL,
+  value TEXT NOT NULL,
+  PRIMARY KEY(signature_id, axis)
+);
+
+CREATE TABLE IF NOT EXISTS signature_boundaries (
+  signature_id TEXT NOT NULL REFERENCES mechanism_signatures(id),
+  surface_label TEXT NOT NULL,
+  resolution_state TEXT NOT NULL,
+  canonical_id TEXT NOT NULL DEFAULT '',
+  relation TEXT NOT NULL DEFAULT '',
+  ordinal INTEGER NOT NULL,
+  PRIMARY KEY(signature_id, ordinal)
+);
+
+CREATE TABLE IF NOT EXISTS signature_outcomes (
+  signature_id TEXT PRIMARY KEY REFERENCES mechanism_signatures(id),
+  class TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_mechanism_signatures_mechanism ON mechanism_signatures(mechanism_id);
+
+CREATE TRIGGER IF NOT EXISTS mechanism_signatures_immutable_update
+BEFORE UPDATE ON mechanism_signatures
+BEGIN
+  SELECT RAISE(ABORT, 'mechanism signatures are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS mechanism_signatures_immutable_delete
+BEFORE DELETE ON mechanism_signatures
+BEGIN
+  SELECT RAISE(ABORT, 'mechanism signatures are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS signature_field_claims_immutable_update
+BEFORE UPDATE ON signature_field_claims
+BEGIN
+  SELECT RAISE(ABORT, 'signature field claims are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS signature_field_claims_immutable_delete
+BEFORE DELETE ON signature_field_claims
+BEGIN
+  SELECT RAISE(ABORT, 'signature field claims are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS signature_postures_immutable_update
+BEFORE UPDATE ON signature_postures
+BEGIN
+  SELECT RAISE(ABORT, 'signature postures are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS signature_postures_immutable_delete
+BEFORE DELETE ON signature_postures
+BEGIN
+  SELECT RAISE(ABORT, 'signature postures are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS signature_boundaries_immutable_update
+BEFORE UPDATE ON signature_boundaries
+BEGIN
+  SELECT RAISE(ABORT, 'signature boundaries are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS signature_boundaries_immutable_delete
+BEFORE DELETE ON signature_boundaries
+BEGIN
+  SELECT RAISE(ABORT, 'signature boundaries are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS signature_outcomes_immutable_update
+BEFORE UPDATE ON signature_outcomes
+BEGIN
+  SELECT RAISE(ABORT, 'signature outcomes are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS signature_outcomes_immutable_delete
+BEFORE DELETE ON signature_outcomes
+BEGIN
+  SELECT RAISE(ABORT, 'signature outcomes are immutable');
+END;
+`,
+	},
+	{
+		version: 6,
+		sql: `
+-- Comparison runs (#9): component-wise, versioned comparison results. No single
+-- scalar; per-field results are stored explicitly.
+CREATE TABLE IF NOT EXISTS comparison_runs (
+  id TEXT PRIMARY KEY,
+  signature_a_id TEXT NOT NULL REFERENCES mechanism_signatures(id),
+  signature_b_id TEXT NOT NULL REFERENCES mechanism_signatures(id),
+  weights_version TEXT NOT NULL,
+  classify_version TEXT NOT NULL,
+  classification TEXT NOT NULL,
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS comparison_field_results (
+  comparison_run_id TEXT NOT NULL REFERENCES comparison_runs(id),
+  field_kind TEXT NOT NULL,
+  overlap_count INTEGER NOT NULL,
+  union_count INTEGER NOT NULL,
+  jaccard REAL NOT NULL,
+  ordinal TEXT NOT NULL,
+  incomparable INTEGER NOT NULL,
+  PRIMARY KEY(comparison_run_id, field_kind)
+);
+
+CREATE INDEX IF NOT EXISTS idx_comparison_runs_sigs ON comparison_runs(signature_a_id, signature_b_id);
+
+CREATE TRIGGER IF NOT EXISTS comparison_runs_immutable_update
+BEFORE UPDATE ON comparison_runs
+BEGIN
+  SELECT RAISE(ABORT, 'comparison runs are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS comparison_runs_immutable_delete
+BEFORE DELETE ON comparison_runs
+BEGIN
+  SELECT RAISE(ABORT, 'comparison runs are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS comparison_field_results_immutable_update
+BEFORE UPDATE ON comparison_field_results
+BEGIN
+  SELECT RAISE(ABORT, 'comparison field results are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS comparison_field_results_immutable_delete
+BEFORE DELETE ON comparison_field_results
+BEGIN
+  SELECT RAISE(ABORT, 'comparison field results are immutable');
 END;
 `,
 	},

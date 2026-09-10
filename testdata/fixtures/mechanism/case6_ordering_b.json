@@ -1,0 +1,14 @@
+{
+  "approaches": [
+    {
+      "logical_identity": "case6-b-order",
+      "label": "Ordering B",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "operators": ["density averaging", "modular decomposition"],
+      "preserves": ["mean growth rate", "residue locality"],
+      "outcome": { "class": "partial_success" }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "approaches": [
+    {
+      "logical_identity": "case4-novel",
+      "label": "Novel operator method",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "operators": ["an entirely new operator not in the vocabulary"],
+      "outcome": { "class": "partial_success" }
+    }
+  ]
+}

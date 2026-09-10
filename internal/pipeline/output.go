@@ -284,3 +284,126 @@ type MechanismShowResponse struct {
 	Mechanism   MechanismView `json:"mechanism"`
 	Outcome     OutcomeView   `json:"outcome"`
 }
+
+// --- #9 canonicalization / signature / comparison views ---
+
+type VocabularyView struct {
+	Version   string `json:"version"`
+	CreatedAt string `json:"created_at"`
+	Notes     string `json:"notes,omitempty"`
+}
+
+type TermView struct {
+	VocabularyVersion string   `json:"vocabulary_version"`
+	CanonicalID       string   `json:"canonical_id"`
+	FieldKind         string   `json:"field_kind"`
+	Description       string   `json:"description,omitempty"`
+	ParentCanonicalID string   `json:"parent_canonical_id,omitempty"`
+	Aliases           []string `json:"aliases,omitempty"`
+}
+
+type VocabularyListResponse struct {
+	OK           bool             `json:"ok"`
+	Command      string           `json:"command"`
+	Store        string           `json:"store"`
+	Version      string           `json:"version,omitempty"`
+	Vocabularies []VocabularyView `json:"vocabularies,omitempty"`
+	Terms        []TermView       `json:"terms,omitempty"`
+}
+
+type VocabularyShowResponse struct {
+	OK          bool       `json:"ok"`
+	Command     string     `json:"command"`
+	Store       string     `json:"store"`
+	CanonicalID string     `json:"canonical_id"`
+	Found       bool       `json:"found"`
+	Terms       []TermView `json:"terms"`
+}
+
+type VocabularyResolveResponse struct {
+	OK          bool     `json:"ok"`
+	Command     string   `json:"command"`
+	Store       string   `json:"store"`
+	Version     string   `json:"vocabulary_version"`
+	Field       string   `json:"field"`
+	SurfaceKey  string   `json:"surface_key"`
+	State       string   `json:"state"`
+	CanonicalID string   `json:"canonical_id,omitempty"`
+	Candidates  []string `json:"candidates,omitempty"`
+}
+
+type SignatureFieldClaimView struct {
+	FieldKind          string `json:"field_kind"`
+	SurfaceLabel       string `json:"surface_label"`
+	ResolutionState    string `json:"resolution_state"`
+	CanonicalID        string `json:"canonical_id,omitempty"`
+	ClaimStatus        string `json:"claim_status"`
+	SupportSnapshotID  string `json:"support_snapshot_id,omitempty"`
+	SupportLocator     string `json:"support_locator,omitempty"`
+	Confidence         string `json:"confidence,omitempty"`
+	ClassifierContract string `json:"classifier_contract,omitempty"`
+}
+
+type SignatureBoundaryView struct {
+	SurfaceLabel    string `json:"surface_label"`
+	ResolutionState string `json:"resolution_state"`
+	CanonicalID     string `json:"canonical_id,omitempty"`
+	Relation        string `json:"relation,omitempty"`
+}
+
+type SignatureView struct {
+	ID                string                    `json:"id"`
+	MechanismID       string                    `json:"mechanism_id"`
+	SchemaVersion     string                    `json:"schema_version"`
+	VocabularyVersion string                    `json:"vocabulary_version"`
+	Fingerprint       string                    `json:"fingerprint"`
+	OutcomeClass      string                    `json:"outcome_class"`
+	Posture           map[string]string         `json:"posture"`
+	FieldClaims       []SignatureFieldClaimView `json:"field_claims"`
+	Boundaries        []SignatureBoundaryView   `json:"boundaries,omitempty"`
+	CreatedAt         string                    `json:"created_at"`
+}
+
+type SignatureResponse struct {
+	OK        bool          `json:"ok"`
+	Command   string        `json:"command"`
+	Store     string        `json:"store"`
+	Status    string        `json:"status"`
+	Signature SignatureView `json:"signature"`
+}
+
+type ComparisonFieldView struct {
+	FieldKind    string  `json:"field_kind"`
+	OverlapCount int     `json:"overlap_count"`
+	UnionCount   int     `json:"union_count"`
+	Jaccard      float64 `json:"jaccard"`
+	Ordinal      string  `json:"ordinal"`
+	Incomparable bool    `json:"incomparable"`
+}
+
+type PostureComparisonView struct {
+	LocalityEqual     bool `json:"locality_equal"`
+	ConstructionEqual bool `json:"construction_equal"`
+	UncertaintyEqual  bool `json:"uncertainty_equal"`
+}
+
+type ComparisonView struct {
+	WeightsVersion  string                `json:"weights_version"`
+	ClassifyVersion string                `json:"classify_version"`
+	Classification  string                `json:"classification"`
+	OutcomeEqual    bool                  `json:"outcome_equal"`
+	Posture         PostureComparisonView `json:"posture"`
+	Fields          []ComparisonFieldView `json:"fields"`
+}
+
+type CompareResponse struct {
+	OK              bool           `json:"ok"`
+	Command         string         `json:"command"`
+	Store           string         `json:"store"`
+	SignatureAID    string         `json:"signature_a_id"`
+	SignatureBID    string         `json:"signature_b_id"`
+	FingerprintA    string         `json:"fingerprint_a"`
+	FingerprintB    string         `json:"fingerprint_b"`
+	ComparisonRunID string         `json:"comparison_run_id,omitempty"`
+	Comparison      ComparisonView `json:"comparison"`
+}

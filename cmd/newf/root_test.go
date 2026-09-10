@@ -424,3 +424,56 @@ func decodeJSONBuffer(t *testing.T, buffer *bytes.Buffer, target any) {
 		t.Fatalf("json.Unmarshal() error = %v raw=%s", err, buffer.String())
 	}
 }
+
+func TestCLIVocabularyListAndResolve(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "workspace", "newf.db")
+	// init creates + migrates + seeds the vocabulary.
+	runCLIJSON(t, []string{"--db", dbPath, "--json", "init", "Erdős-Straus conjecture"})
+
+	list := runCLIJSON(t, []string{"--db", dbPath, "--json", "vocabulary", "list"})
+	vocabs, ok := list["vocabularies"].([]any)
+	if !ok || len(vocabs) == 0 {
+		t.Fatalf("vocabulary list returned no vocabularies: %v", list)
+	}
+
+	resolve := runCLIJSON(t, []string{"--db", dbPath, "--json", "vocabulary", "resolve", "works residue-by-residue", "--field", "preserves"})
+	if resolve["state"] != "resolved" {
+		t.Fatalf("resolve state = %v, want resolved", resolve["state"])
+	}
+	if resolve["canonical_id"] != "domain.number_theory.property.residue_locality" {
+		t.Fatalf("resolve canonical_id = %v", resolve["canonical_id"])
+	}
+
+	// An unknown label must not be coerced.
+	unknown := runCLIJSON(t, []string{"--db", dbPath, "--json", "vocabulary", "resolve", "totally unseen phrase", "--field", "operator"})
+	if unknown["state"] != "unknown" {
+		t.Fatalf("unknown resolve state = %v, want unknown", unknown["state"])
+	}
+	if _, present := unknown["canonical_id"]; present {
+		t.Fatalf("unknown resolve leaked canonical_id: %v", unknown)
+	}
+}
+
+func TestCLIVocabularyShowNotFound(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "workspace", "newf.db")
+	runCLIJSON(t, []string{"--db", dbPath, "--json", "init", "Erdős-Straus conjecture"})
+
+	stdout := &bytes.Buffer{}
+	code := execute(context.Background(), []string{"--db", dbPath, "--json", "vocabulary", "show", "core.operator.does_not_exist"}, stdout, &bytes.Buffer{})
+	if code == 0 {
+		t.Fatal("vocabulary show of missing term succeeded, want failure")
+	}
+	var response struct {
+		Error struct {
+			Code string `json:"code"`
+		} `json:"error"`
+	}
+	decodeJSONBuffer(t, stdout, &response)
+	if response.Error.Code != "not_found" {
+		t.Fatalf("error code = %q, want not_found", response.Error.Code)
+	}
+}

@@ -1,0 +1,196 @@
+package canon
+
+import (
+	"sort"
+
+	"github.com/instagrim-dev/newf/internal/domain"
+)
+
+// SchemaMechanismV1 is the signature schema version this package produces.
+const SchemaMechanismV1 = "mechanism/v1"
+
+// FieldClaim is one canonicalized field value plus its preserved provenance.
+// Canonicalization never alters Status: an inferred claim stays inferred even
+// after its label resolves to a canonical ID.
+type FieldClaim struct {
+	FieldKind          domain.FieldKind
+	SurfaceLabel       string
+	State              domain.ResolutionState
+	CanonicalID        domain.CanonicalID // set only when State == resolved
+	Candidates         []domain.CanonicalID
+	Status             domain.ClaimStatus
+	SupportSnapshotID  string
+	SupportLocator     string
+	Confidence         string
+	ClassifierContract string
+}
+
+// Posture is the enum-valued reasoning posture, reused directly from the #7
+// mechanism record (no separate posture ontology).
+type Posture struct {
+	Locality     domain.Locality
+	Construction domain.ConstructionMode
+	Uncertainty  domain.UncertaintyMode
+}
+
+// Boundary is a canonicalized failure boundary with a relation label.
+type Boundary struct {
+	SurfaceLabel string
+	State        domain.ResolutionState
+	CanonicalID  domain.CanonicalID
+	Relation     string
+}
+
+// MechanismSignature is the versioned canonical projection of one mechanism.
+// Every spine field is an always-present key (possibly empty) so fingerprints
+// and comparisons are stable across sparse mechanisms.
+type MechanismSignature struct {
+	SchemaVersion     string
+	VocabularyVersion string
+	MechanismID       string
+
+	Representations  []FieldClaim
+	Operators        []FieldClaim
+	Assumptions      []FieldClaim
+	Preserves        []FieldClaim
+	Breaks           []FieldClaim
+	AuxiliaryObjects []FieldClaim
+
+	Posture      Posture
+	OutcomeClass domain.OutcomeClass
+	Boundaries   []Boundary
+}
+
+// MechanismClaimInput is one surface-labeled field value to canonicalize, with
+// its preserved provenance. It is built from #7's mechanism_attributes rows and
+// their source support.
+type MechanismClaimInput struct {
+	FieldKind          domain.FieldKind
+	SurfaceLabel       string
+	NovelFlag          bool
+	Status             domain.ClaimStatus
+	SupportSnapshotID  string
+	SupportLocator     string
+	Confidence         string
+	ClassifierContract string
+}
+
+// MechanismBoundaryInput is a surface boundary condition plus relation.
+type MechanismBoundaryInput struct {
+	SurfaceLabel string
+	Relation     string
+	NovelFlag    bool
+}
+
+// MechanismInput is the neutral, store-free input to BuildSignature. The
+// pipeline maps a store.ApproachDetail into this shape so canon never imports
+// the store package.
+type MechanismInput struct {
+	MechanismID  string
+	Claims       []MechanismClaimInput
+	Posture      Posture
+	OutcomeClass domain.OutcomeClass
+	Boundaries   []MechanismBoundaryInput
+}
+
+// BuildSignature projects a mechanism into a versioned MechanismSignature by
+// resolving each field label against the vocabulary. Provenance is copied
+// through unchanged; a resolved canonical ID never upgrades claim status.
+func BuildSignature(input MechanismInput, vocab *Vocabulary) MechanismSignature {
+	sig := MechanismSignature{
+		SchemaVersion:     SchemaMechanismV1,
+		VocabularyVersion: vocab.Version(),
+		MechanismID:       input.MechanismID,
+		Posture:           input.Posture,
+		OutcomeClass:      normalizeOutcome(input.OutcomeClass),
+		// Always-present (possibly empty) slices.
+		Representations:  []FieldClaim{},
+		Operators:        []FieldClaim{},
+		Assumptions:      []FieldClaim{},
+		Preserves:        []FieldClaim{},
+		Breaks:           []FieldClaim{},
+		AuxiliaryObjects: []FieldClaim{},
+		Boundaries:       []Boundary{},
+	}
+
+	for _, claim := range input.Claims {
+		res := vocab.Resolve(claim.FieldKind, claim.SurfaceLabel, claim.NovelFlag)
+		fc := FieldClaim{
+			FieldKind:          claim.FieldKind,
+			SurfaceLabel:       claim.SurfaceLabel,
+			State:              res.State,
+			CanonicalID:        res.CanonicalID,
+			Candidates:         res.Candidates,
+			Status:             claim.Status, // preserved unchanged
+			SupportSnapshotID:  claim.SupportSnapshotID,
+			SupportLocator:     claim.SupportLocator,
+			Confidence:         claim.Confidence,
+			ClassifierContract: claim.ClassifierContract,
+		}
+		switch claim.FieldKind {
+		case domain.FieldRepresentation:
+			sig.Representations = append(sig.Representations, fc)
+		case domain.FieldOperator:
+			sig.Operators = append(sig.Operators, fc)
+		case domain.FieldAssumption:
+			sig.Assumptions = append(sig.Assumptions, fc)
+		case domain.FieldPreserves:
+			sig.Preserves = append(sig.Preserves, fc)
+		case domain.FieldBreaks:
+			sig.Breaks = append(sig.Breaks, fc)
+		case domain.FieldAuxiliaryObject:
+			sig.AuxiliaryObjects = append(sig.AuxiliaryObjects, fc)
+		default:
+			// outcome/boundary/posture are not carried as set claims; ignore.
+		}
+	}
+
+	for _, b := range input.Boundaries {
+		res := vocab.Resolve(domain.FieldBoundary, b.SurfaceLabel, b.NovelFlag)
+		sig.Boundaries = append(sig.Boundaries, Boundary{
+			SurfaceLabel: b.SurfaceLabel,
+			State:        res.State,
+			CanonicalID:  res.CanonicalID,
+			Relation:     b.Relation,
+		})
+	}
+
+	return sig
+}
+
+func normalizeOutcome(c domain.OutcomeClass) domain.OutcomeClass {
+	if !c.Valid() || c == "" {
+		return domain.OutcomeUnknown
+	}
+	return c
+}
+
+// resolvedIDs returns the sorted, de-duplicated canonical IDs of the resolved
+// claims in a field. Only resolved claims contribute to identity.
+func resolvedIDs(claims []FieldClaim) []domain.CanonicalID {
+	seen := map[domain.CanonicalID]struct{}{}
+	out := make([]domain.CanonicalID, 0, len(claims))
+	for _, c := range claims {
+		if c.State != domain.ResolutionResolved || c.CanonicalID == "" {
+			continue
+		}
+		if _, dup := seen[c.CanonicalID]; dup {
+			continue
+		}
+		seen[c.CanonicalID] = struct{}{}
+		out = append(out, c.CanonicalID)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
+	return out
+}
+
+// hasUnresolved reports whether any claim in the field is in a non-resolved
+// state (used by comparison to mark a field incomparable).
+func hasUnresolved(claims []FieldClaim) bool {
+	for _, c := range claims {
+		if c.State != domain.ResolutionResolved {
+			return true
+		}
+	}
+	return false
+}

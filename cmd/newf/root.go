@@ -60,6 +60,7 @@ func newRootCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cob
 	cmd.AddCommand(newSourceCommand(stdout, app, opts))
 	cmd.AddCommand(newApproachCommand(stdout, app, opts))
 	cmd.AddCommand(newMechanismCommand(stdout, app, opts))
+	cmd.AddCommand(newVocabularyCommand(stdout, app, opts))
 
 	return cmd
 }
@@ -93,7 +94,10 @@ func classifyError(err error) string {
 		errors.Is(err, domain.ErrInvalidSourceID), errors.Is(err, domain.ErrInvalidSnapshotID),
 		errors.Is(err, domain.ErrInvalidApproachID), errors.Is(err, domain.ErrInvalidMechanismID),
 		errors.Is(err, domain.ErrInvalidApproachRevisionID),
-		errors.Is(err, domain.ErrInvalidNormalizationRevisionID):
+		errors.Is(err, domain.ErrInvalidNormalizationRevisionID),
+		errors.Is(err, domain.ErrInvalidMechanismSignatureID),
+		errors.Is(err, domain.ErrInvalidComparisonRunID),
+		errors.Is(err, domain.ErrInvalidCanonicalID):
 		return "invalid_input"
 	case errors.Is(err, pipeline.ErrUnknownProvider):
 		return "unknown_provider"

@@ -1,0 +1,20 @@
+{
+  "approaches": [
+    {
+      "logical_identity": "modular-descent",
+      "label": "Modular descent argument",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "representations": ["congruence classes"],
+      "assumptions": ["residues are independent"],
+      "operators": ["modular decomposition"],
+      "preserves": ["residue locality"],
+      "outcome": { "class": "partial_success", "boundary_statement": "stalls at composite moduli" },
+      "boundaries": ["composite modulus"],
+      "support": [
+        { "field_path": "mechanism.operator", "support_kind": "explicit", "locator": "p.3" }
+      ]
+    }
+  ]
+}

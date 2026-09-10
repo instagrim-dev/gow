@@ -1,0 +1,15 @@
+{
+  "approaches": [
+    {
+      "logical_identity": "case2-a-local",
+      "label": "Modular local method",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "representations": ["congruence classes"],
+      "operators": ["modular decomposition"],
+      "preserves": ["residue locality"],
+      "outcome": { "class": "partial_success" }
+    }
+  ]
+}

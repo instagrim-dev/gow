@@ -31,6 +31,11 @@ newf approach list --problem <problem-id>
 newf approach show <approach-id>
 newf approach revisions <approach-id>
 newf mechanism show <mechanism-id>
+newf mechanism signature <mechanism-id>
+newf mechanism compare <mechanism-a> <mechanism-b>
+newf vocabulary list [--version <vocab-version>] [--field <field-kind>]
+newf vocabulary show <canonical-id>
+newf vocabulary resolve <candidate-label> --field <field-kind> [--vocab-version <v>] [--novel]
 ```
 
 Build it with:
@@ -125,6 +130,32 @@ newf mechanism show <mechanism-id>
   project-authored Erdős–Straus fixtures live under `fixtures/`.
 
 See [`docs/normalization.md`](docs/normalization.md) for the full contract.
+
+## Mechanism canonicalization and comparison
+
+`newf mechanism signature` projects a normalized mechanism into a versioned,
+canonical **mechanism signature**: provider surface labels are deterministically
+resolved to stable, namespaced canonical IDs against a persisted **vocabulary**,
+and the signature gets an order-independent SHA-256 **fingerprint**. `newf
+mechanism compare` compares two signatures **component-wise** (per field:
+operators, assumptions, preserves, breaks, representations, boundaries, posture)
+and emits a mechanistic-vs-surface classification — never a single opaque scalar.
+
+The governing principle is *models discover candidate labels; software owns
+identity*: canonicalization never coerces an unmatched label to the nearest
+term (it stays `unknown`/`novel_candidate`/`ambiguous`), never upgrades a claim's
+epistemic status, and vocabulary evolution appends a new version rather than
+rewriting historical signatures. A system-owned invariant flags any vocabulary
+that collapses two different-outcome mechanisms — the abstraction-loss guard.
+
+```bash
+newf mechanism signature <mechanism-id> --json
+newf mechanism compare <mechanism-a> <mechanism-b> --json
+newf vocabulary resolve "works residue-by-residue" --field preserves
+```
+
+See [`docs/mechanism-canonicalization.md`](docs/mechanism-canonicalization.md)
+for the full contract.
 
 ## Core loop
 

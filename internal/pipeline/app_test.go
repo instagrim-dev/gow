@@ -278,3 +278,31 @@ func (f *fakeProblemStore) GetMechanismDetail(context.Context, string) (store.Ap
 func (f *fakeProblemStore) ListApproachRevisions(context.Context, string) (domain.Approach, []domain.ApproachRevision, error) {
 	return domain.Approach{}, nil, errors.New("unexpected call")
 }
+
+func (f *fakeProblemStore) SeedVocabulary(context.Context, store.VocabularySeedInput) error {
+	return nil
+}
+
+func (f *fakeProblemStore) ListVocabularies(context.Context) ([]store.VocabularyRecord, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListTerms(context.Context, string, string) ([]store.TermRecord, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetTerm(context.Context, string, string) (store.TermRecord, error) {
+	return store.TermRecord{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistSignature(context.Context, store.SignatureRecord) (store.PersistSignatureResult, error) {
+	return store.PersistSignatureResult{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetSignature(context.Context, string) (store.SignatureRecord, error) {
+	return store.SignatureRecord{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistComparison(context.Context, store.ComparisonRecord) error {
+	return errors.New("unexpected call")
+}
