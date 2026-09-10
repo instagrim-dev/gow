@@ -393,10 +393,10 @@ BEFORE INSERT ON invariant_state_transition
 BEGIN
   SELECT CASE
     WHEN NEW.transition_seq <> COALESCE((
-      SELECT MAX(t.transition_seq) + 1
-      FROM invariant_state_transition t
-      WHERE t.invariant_id = NEW.invariant_id
-    ), 1) THEN RAISE(ABORT, 'transition_seq must append exactly once per invariant')
+      SELECT itc.next_transition_seq - 1
+      FROM invariant_transition_counter itc
+      WHERE itc.invariant_id = NEW.invariant_id
+    ), -1) THEN RAISE(ABORT, 'transition_seq must match the atomically allocated invariant counter')
     WHEN NEW.from_state <> COALESCE((
       SELECT t.to_state
       FROM invariant_state_transition t
@@ -514,7 +514,7 @@ CREATE TABLE holdout_leakage_check (
   ),
   CHECK (
     (status = 'pending' AND (
-      (overlap_count = 0 AND failure_basis IN ('pending', 'no_overlap')) OR
+      (overlap_count = 0 AND failure_basis = 'pending') OR
       (overlap_count > 0 AND failure_basis IN ('source_overlap', 'evidence_overlap'))
     )) OR
     (status = 'passed' AND failure_basis = 'no_overlap' AND overlap_count = 0) OR
