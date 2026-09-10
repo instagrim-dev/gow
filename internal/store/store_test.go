@@ -183,6 +183,11 @@ func TestGettersRejectCrossClassIDs(t *testing.T) {
 	if _, err := store.GetProblem(ctx, runID); err == nil {
 		t.Fatal("GetProblem() succeeded for run ID")
 	}
+
+	problemID := domain.NewProblemID(time.Now().UTC())
+	if _, err := store.GetRun(ctx, problemID); err == nil {
+		t.Fatal("GetRun() succeeded for problem ID")
+	}
 }
 
 func openTestStore(t *testing.T, opts ...Option) *Store {

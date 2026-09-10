@@ -131,16 +131,17 @@ func (a *App) InitProblem(ctx context.Context, input InitProblemInput) (InitResp
 				return InitResponse{}, findErr
 			}
 			if found {
+				fallbackNow := a.now()
 				fallbackRun, createErr := repoStore.CreateRun(ctx, domain.NewRun{
-					ID:          domain.NewRunID(now),
+					ID:          domain.NewRunID(fallbackNow),
 					ProblemID:   existing.ID,
 					Operation:   "init",
 					Status:      domain.RunStatusSucceeded,
 					InputRef:    "problem_slug:" + slug,
 					ToolName:    "newf",
 					ToolVersion: a.version,
-					StartedAt:   now,
-					CompletedAt: now,
+					StartedAt:   fallbackNow,
+					CompletedAt: fallbackNow,
 				})
 				if createErr != nil {
 					return InitResponse{}, createErr
