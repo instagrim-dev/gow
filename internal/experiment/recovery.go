@@ -1,0 +1,132 @@
+// Package experiment owns the deterministic pieces of the M7 v0
+// blinded-benchmark experiment: the code-owned recovery rule (does a generated
+// proposal recover the held-out structural move?) and the arm-level rollup.
+//
+// Recovery is a comparison classification under the pinned profile — one rule
+// for every arm, versioned, never a per-arm knob and never a model vote
+// (BlindedRecovery != HistoricalPrediction is enforced upstream by mode; this
+// package only measures structure). Pure: no SQL, Cobra, provider.
+package experiment
+
+import (
+	"sort"
+
+	"github.com/instagrim-dev/newf/internal/canon"
+	"github.com/instagrim-dev/newf/internal/domain"
+)
+
+// RecoveryRuleV1 is the versioned recovery rule implemented here: a proposal
+// recovers the target family iff CompareWithProfile classifies the pair as
+// mechanism-near (including the surface-distinct variant). Changing the rule
+// is a NEW rule version and therefore a new experiment identity — never a
+// re-interpretation of an existing one.
+const RecoveryRuleV1 = "recovery-rule/v1"
+
+// ProposalContent is one generated proposal's persisted canonical content
+// (from the v17 frontier_proposal_signatures sidecar) plus its rank.
+type ProposalContent struct {
+	ProposalID string
+	Rank       int
+	Signature  canon.MechanismSignature
+}
+
+// RecoveryFact is the code-computed classification of one proposal against the
+// held-out target family.
+type RecoveryFact struct {
+	ProposalID     string
+	Rank           int
+	Classification canon.Classification
+	Recovered      bool
+}
+
+// ArmRecovery is the per-arm rollup.
+type ArmRecovery struct {
+	Facts                 []RecoveryFact
+	Recovered             bool
+	FirstRecoveryRank     int // -1 when no proposal recovered
+	NearestClassification canon.Classification
+}
+
+// recoveringClassifications is the recovery-rule/v1 membership set.
+var recoveringClassifications = map[canon.Classification]bool{
+	canon.ClassMechanismNear:           true,
+	canon.ClassSurfaceDistinctMechNear: true,
+}
+
+// classificationStrength orders classifications from nearest to farthest for
+// the "nearest" rollup (identical/near strongest; unknown weakest).
+var classificationStrength = map[canon.Classification]int{
+	canon.ClassMechanismNear:           4,
+	canon.ClassSurfaceDistinctMechNear: 3,
+	canon.ClassSurfaceNearMechDistinct: 2,
+	canon.ClassMechanismDistinct:       1,
+	canon.ClassUnknown:                 0,
+}
+
+// DetectRecovery applies recovery-rule/v1: every proposal's persisted content
+// is compared to the target family representative under the pinned profile.
+// Deterministic in proposal rank order.
+func DetectRecovery(proposals []ProposalContent, target canon.MechanismSignature, profile canon.ComparisonProfile) ArmRecovery {
+	ordered := append([]ProposalContent(nil), proposals...)
+	sort.Slice(ordered, func(i, j int) bool { return ordered[i].Rank < ordered[j].Rank })
+
+	out := ArmRecovery{FirstRecoveryRank: -1, NearestClassification: canon.ClassUnknown}
+	for _, p := range ordered {
+		cmp := canon.CompareWithProfile(p.Signature, target, profile)
+		fact := RecoveryFact{
+			ProposalID:     p.ProposalID,
+			Rank:           p.Rank,
+			Classification: cmp.Classification,
+			Recovered:      recoveringClassifications[cmp.Classification],
+		}
+		out.Facts = append(out.Facts, fact)
+		if fact.Recovered && !out.Recovered {
+			out.Recovered = true
+			out.FirstRecoveryRank = p.Rank
+		}
+		if classificationStrength[fact.Classification] > classificationStrength[out.NearestClassification] {
+			out.NearestClassification = fact.Classification
+		}
+	}
+	return out
+}
+
+// DiversityFacts are the code-computed per-arm diversity/redundancy counts:
+// distinct mechanisms by canonical fingerprint, and redundant proposals (same
+// fingerprint as an earlier proposal).
+type DiversityFacts struct {
+	DistinctMechanisms int
+	RedundantProposals int
+}
+
+// ComputeDiversity counts distinct canonical mechanisms among the proposals.
+func ComputeDiversity(proposals []ProposalContent) DiversityFacts {
+	seen := map[string]struct{}{}
+	out := DiversityFacts{}
+	for _, p := range proposals {
+		fp := canon.Fingerprint(p.Signature)
+		if _, dup := seen[fp]; dup {
+			out.RedundantProposals++
+			continue
+		}
+		seen[fp] = struct{}{}
+	}
+	out.DistinctMechanisms = len(seen)
+	return out
+}
+
+// MetricOrdinal derives the ordinal band from exact counts (den==0 -> unknown;
+// full -> high; >=half -> medium; else low) — the same banding discipline the
+// success layer uses; bands never replace the stored counts.
+func MetricOrdinal(num, den int) domain.Ordinal {
+	switch {
+	case den == 0:
+		return domain.OrdinalUnknown
+	case num == den:
+		return domain.OrdinalHigh
+	case num*2 >= den:
+		return domain.OrdinalMedium
+	default:
+		return domain.OrdinalLow
+	}
+}

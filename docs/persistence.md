@@ -1176,6 +1176,28 @@ directives, but each is re-verified against the code-built evidence before it
 counts (`ModelJudgment != Verification`); unresolved proposals are recorded
 `inert_proposals` and bias nothing. See [`search-policy.md`](search-policy.md).
 
+## Implemented experiment schema (#19, migration `v21`)
+
+Migration `v21` ships the M7 v0 blinded-benchmark layer: `holdout_sets`
+(TRAIN problem + QUARANTINED target problem, mode `blinded|historical` with a
+CHECK-required cutoff for historical), `holdout_set_sources` (+ problem-guard
+triggers: a withheld source must belong to the target problem),
+`holdout_source_dating` (the dated-evidence rows whose ABSENCE keeps historical
+execution refused), `leakage_checks` (the code-computed content-identity
+quarantine audit: sha256 overlap across snapshots / normalizations /
+signatures), and `experiment_runs` / `experiment_arms` / `experiment_metrics`
+with **mode-disjoint conclusion vocabularies** enforced by CHECK
+(BlindedRecovery != HistoricalPrediction). Experiments are idempotent on an
+identity hash over (holdout set, recovery rule, profile, budgets, arms,
+persisted proposal set) and immutable throughout.
+
+`v21` also REPLACES the M5.2 blanket holdout-refusal gate on `evaluation_runs`
+with the reserved leakage-keyed condition (holdout mode requires a passing
+`leakage_checks` row bound to the same holdout set — still refusing every
+pre-M7 caller, since a NULL check id never matches), and widens
+`provider_invocations.role` for the future baseline roles `'summarize-next'`
+and `'brainstorm'`. See [`experiment.md`](experiment.md).
+
 ## Immutable vs mutable/revisioned
 
 - Immutable: `source`, `evidence_record` (enforced with update/delete-rejecting

@@ -393,12 +393,20 @@ func TestIntegrationAttestationIsNotVerification(t *testing.T) {
 // seedOtherProblemSnapshot creates a SECOND problem with its own snapshot, for
 // asserting that establish-evidence is problem-scoped.
 func seedOtherProblemSnapshot(t *testing.T, ctx context.Context, dbPath string, now time.Time) string {
+	_, _, snap := seedOtherProblem(t, ctx, dbPath, now)
+	return snap
+}
+
+// seedOtherProblem creates a SECOND problem with its own snapshot and returns
+// all ids (used both for cross-problem evidence tests and as the quarantined
+// target problem in experiment tests).
+func seedOtherProblem(t *testing.T, ctx context.Context, dbPath string, now time.Time) (problemID, runID, snapshotID string) {
 	t.Helper()
 	repo := openTestStore(t, ctx, dbPath)
 	defer repo.Close()
 
-	runID := domain.NewRunID(now)
-	problemID := domain.NewProblemID(now)
+	runID = domain.NewRunID(now)
+	problemID = domain.NewProblemID(now)
 	problem, run, err := repo.CreateProblemWithRun(ctx, domain.NewProblem{
 		ID: problemID, Slug: "other-problem", Statement: "Other problem",
 		Status: domain.ProblemStatusActive, CreatedAt: now, CreatedByRunID: runID,
@@ -419,7 +427,7 @@ func seedOtherProblemSnapshot(t *testing.T, ctx context.Context, dbPath string, 
 	if err != nil {
 		t.Fatalf("seed other snapshot: %v", err)
 	}
-	return admission.Snapshot.ID
+	return problem.ID, run.ID, admission.Snapshot.ID
 }
 
 // TestIntegrationChallengeAllIsDeterministic runs --all twice on identical

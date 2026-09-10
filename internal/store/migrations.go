@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 20
+const currentSchemaVersion = 21
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -848,6 +848,23 @@ END;
 		// by the immutability triggers (they guard UPDATE/DELETE only). Idempotent:
 		// skip when the column already exists.
 		apply: migrateV20CohortEvaluationProvenance,
+	},
+	{
+		version: 21,
+		// M7 v0 blinded-benchmark experiment (#19). Additive: holdout_sets
+		// (mode blinded|historical; historical requires a cutoff and stays
+		// execution-refused without per-source dating evidence), withheld-source
+		// links with problem-guard triggers, holdout_source_dating,
+		// leakage_checks (the code-computed quarantine audit), and the
+		// experiment_runs / experiment_arms / experiment_metrics layer with
+		// mode-disjoint conclusion vocabularies (BlindedRecovery !=
+		// HistoricalPrediction, enforced by CHECK). Also REPLACES the M5.2
+		// blanket holdout-REFUSAL gate on evaluation_runs with the reserved
+		// leakage-keyed condition (holdout mode requires a passing leakage check
+		// bound to the same holdout set), and widens provider_invocations.role
+		// to admit the baseline roles 'summarize-next' and 'brainstorm'
+		// (guarded in-place writable_schema edit). Introspective + idempotent.
+		apply: migrateV21BlindedExperiment,
 	},
 }
 
@@ -2511,4 +2528,243 @@ func migrateV20CohortEvaluationProvenance(ctx context.Context, tx *sql.Tx) error
 	}
 	_, err = tx.ExecContext(ctx, `ALTER TABLE success_invariant_cohort_evaluations ADD COLUMN evaluation_id TEXT`)
 	return err
+}
+
+// blindedExperimentSQL is the additive DDL for M7 v0 (migration v21): the
+// holdout-set + leakage-audit layer and the experiment layer with
+// mode-disjoint conclusion vocabularies. All rows immutable by trigger.
+const blindedExperimentSQL = `
+CREATE TABLE IF NOT EXISTS holdout_sets (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  target_problem_id TEXT NOT NULL REFERENCES problems(id),
+  name TEXT NOT NULL,
+  mode TEXT NOT NULL CHECK (mode IN ('blinded','historical')),
+  cutoff_time TEXT,
+  created_at TEXT NOT NULL,
+  UNIQUE(problem_id, name),
+  CHECK (mode <> 'historical' OR cutoff_time IS NOT NULL),
+  CHECK (problem_id <> target_problem_id)
+);
+
+CREATE TABLE IF NOT EXISTS holdout_set_sources (
+  holdout_set_id TEXT NOT NULL REFERENCES holdout_sets(id),
+  source_id TEXT NOT NULL REFERENCES sources(id),
+  PRIMARY KEY(holdout_set_id, source_id)
+);
+
+CREATE TRIGGER IF NOT EXISTS holdout_set_sources_problem_guard_insert
+BEFORE INSERT ON holdout_set_sources
+BEGIN
+  SELECT CASE
+    WHEN (SELECT hs.target_problem_id FROM holdout_sets hs WHERE hs.id = NEW.holdout_set_id)
+      <> (SELECT s.problem_id FROM sources s WHERE s.id = NEW.source_id)
+    THEN RAISE(ABORT, 'withheld source must belong to the holdout set target problem')
+  END;
+END;
+
+CREATE TABLE IF NOT EXISTS holdout_source_dating (
+  holdout_set_id TEXT NOT NULL REFERENCES holdout_sets(id),
+  source_id TEXT NOT NULL REFERENCES sources(id),
+  dated_at TEXT NOT NULL,
+  evidence_locator TEXT NOT NULL,
+  provenance TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY(holdout_set_id, source_id)
+);
+
+CREATE TABLE IF NOT EXISTS leakage_checks (
+  id TEXT PRIMARY KEY,
+  holdout_set_id TEXT NOT NULL REFERENCES holdout_sets(id),
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  checker_version TEXT NOT NULL,
+  snapshot_leaks INTEGER NOT NULL,
+  normalization_leaks INTEGER NOT NULL,
+  signature_leaks INTEGER NOT NULL,
+  passed INTEGER NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS experiment_runs (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  holdout_set_id TEXT NOT NULL REFERENCES holdout_sets(id),
+  leakage_check_id TEXT NOT NULL REFERENCES leakage_checks(id),
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  mode TEXT NOT NULL CHECK (mode IN ('blinded','historical')),
+  recovery_rule_version TEXT NOT NULL,
+  profile_version TEXT NOT NULL,
+  proposal_budget_count INTEGER NOT NULL,
+  evaluation_budget_count INTEGER NOT NULL,
+  conclusion TEXT NOT NULL,
+  identity_hash TEXT NOT NULL,
+  revision INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(problem_id, identity_hash),
+  UNIQUE(problem_id, revision),
+  CHECK (
+    (mode = 'blinded' AND conclusion IN ('structural_recovery','no_recovery','inconclusive')) OR
+    (mode = 'historical' AND conclusion IN ('predicts_later_advance','fails_to_predict','inconclusive'))
+  )
+);
+
+CREATE TABLE IF NOT EXISTS experiment_arms (
+  experiment_id TEXT NOT NULL REFERENCES experiment_runs(id),
+  arm TEXT NOT NULL CHECK (arm IN ('b0_undirected','b1_semantic_summary','b2_brainstorm','b3_invariant_guided')),
+  frontier_generation_run_id TEXT REFERENCES frontier_generation_runs(id),
+  proposal_count INTEGER NOT NULL,
+  recovered INTEGER NOT NULL DEFAULT 0,
+  first_recovery_rank INTEGER,
+  nearest_classification TEXT NOT NULL DEFAULT '',
+  distinct_family_count INTEGER NOT NULL DEFAULT 0,
+  redundant_count INTEGER NOT NULL DEFAULT 0,
+  stopping_condition TEXT NOT NULL CHECK (stopping_condition IN ('completed','budget_exhausted','no_information_gain','verification_blocked')),
+  PRIMARY KEY(experiment_id, arm)
+);
+
+CREATE TABLE IF NOT EXISTS experiment_metrics (
+  experiment_id TEXT NOT NULL REFERENCES experiment_runs(id),
+  arm TEXT NOT NULL,
+  metric TEXT NOT NULL,
+  numerator INTEGER NOT NULL,
+  denominator INTEGER NOT NULL,
+  ordinal TEXT NOT NULL CHECK (ordinal IN ('low','medium','high','unknown')),
+  PRIMARY KEY(experiment_id, arm, metric)
+);
+
+CREATE INDEX IF NOT EXISTS idx_holdout_sets_problem ON holdout_sets(problem_id);
+CREATE INDEX IF NOT EXISTS idx_experiment_runs_problem ON experiment_runs(problem_id);
+
+CREATE TRIGGER IF NOT EXISTS holdout_sets_immutable_update
+BEFORE UPDATE ON holdout_sets
+BEGIN
+  SELECT RAISE(ABORT, 'holdout sets are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS holdout_sets_immutable_delete
+BEFORE DELETE ON holdout_sets
+BEGIN
+  SELECT RAISE(ABORT, 'holdout sets are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS holdout_set_sources_immutable_update
+BEFORE UPDATE ON holdout_set_sources
+BEGIN
+  SELECT RAISE(ABORT, 'holdout set sources are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS holdout_set_sources_immutable_delete
+BEFORE DELETE ON holdout_set_sources
+BEGIN
+  SELECT RAISE(ABORT, 'holdout set sources are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS holdout_source_dating_immutable_update
+BEFORE UPDATE ON holdout_source_dating
+BEGIN
+  SELECT RAISE(ABORT, 'holdout source dating are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS holdout_source_dating_immutable_delete
+BEFORE DELETE ON holdout_source_dating
+BEGIN
+  SELECT RAISE(ABORT, 'holdout source dating are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS leakage_checks_immutable_update
+BEFORE UPDATE ON leakage_checks
+BEGIN
+  SELECT RAISE(ABORT, 'leakage checks are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS leakage_checks_immutable_delete
+BEFORE DELETE ON leakage_checks
+BEGIN
+  SELECT RAISE(ABORT, 'leakage checks are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS experiment_runs_immutable_update
+BEFORE UPDATE ON experiment_runs
+BEGIN
+  SELECT RAISE(ABORT, 'experiment runs are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS experiment_runs_immutable_delete
+BEFORE DELETE ON experiment_runs
+BEGIN
+  SELECT RAISE(ABORT, 'experiment runs are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS experiment_arms_immutable_update
+BEFORE UPDATE ON experiment_arms
+BEGIN
+  SELECT RAISE(ABORT, 'experiment arms are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS experiment_arms_immutable_delete
+BEFORE DELETE ON experiment_arms
+BEGIN
+  SELECT RAISE(ABORT, 'experiment arms are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS experiment_metrics_immutable_update
+BEFORE UPDATE ON experiment_metrics
+BEGIN
+  SELECT RAISE(ABORT, 'experiment metrics are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS experiment_metrics_immutable_delete
+BEFORE DELETE ON experiment_metrics
+BEGIN
+  SELECT RAISE(ABORT, 'experiment metrics are immutable');
+END;
+`
+
+// migrateV21BlindedExperiment creates the M7 v0 layer, replaces the M5.2
+// blanket holdout-refusal gate with the reserved leakage-keyed condition, and
+// widens the role CHECK for the baseline provider roles. Guarded + idempotent.
+func migrateV21BlindedExperiment(ctx context.Context, tx *sql.Tx) error {
+	if _, err := tx.ExecContext(ctx, blindedExperimentSQL); err != nil {
+		return err
+	}
+	// Replace the blanket refusal with the leakage-keyed gate. Recreating the
+	// trigger is idempotent (drop + create), and the new condition still refuses
+	// every pre-M7 caller (a NULL holdout_leakage_check_id never matches a
+	// passing check), so nothing weakens for existing paths.
+	gate := []string{
+		`DROP TRIGGER IF EXISTS evaluation_runs_holdout_gate_insert`,
+		`DROP TRIGGER IF EXISTS evaluation_runs_holdout_gate_update`,
+		`CREATE TRIGGER IF NOT EXISTS evaluation_runs_holdout_gate_insert
+BEFORE INSERT ON evaluation_runs
+BEGIN
+  SELECT CASE WHEN NEW.mode = 'holdout' AND NOT EXISTS (
+    SELECT 1 FROM leakage_checks lc
+    WHERE lc.id = NEW.holdout_leakage_check_id
+      AND lc.holdout_set_id = NEW.holdout_set_id
+      AND lc.passed = 1
+  ) THEN RAISE(ABORT, 'holdout mode requires a passing leakage check bound to the holdout set')
+  END;
+END`,
+		`CREATE TRIGGER IF NOT EXISTS evaluation_runs_holdout_gate_update
+BEFORE UPDATE ON evaluation_runs
+BEGIN
+  SELECT CASE WHEN NEW.mode = 'holdout' AND NOT EXISTS (
+    SELECT 1 FROM leakage_checks lc
+    WHERE lc.id = NEW.holdout_leakage_check_id
+      AND lc.holdout_set_id = NEW.holdout_set_id
+      AND lc.passed = 1
+  ) THEN RAISE(ABORT, 'holdout mode requires a passing leakage check bound to the holdout set')
+  END;
+END`,
+	}
+	for _, s := range gate {
+		if _, err := tx.ExecContext(ctx, s); err != nil {
+			return err
+		}
+	}
+	for _, role := range []string{"summarize-next", "brainstorm"} {
+		allows, err := providerRoleAllows(ctx, tx, role)
+		if err != nil {
+			return err
+		}
+		if allows {
+			continue
+		}
+		var ddlText string
+		if err := tx.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type='table' AND name='provider_invocations'`).Scan(&ddlText); err != nil {
+			return err
+		}
+		// Widen by replacing the closing paren of the role CHECK enum.
+		const marker = "'policy-mutate'"
+		if err := editTableCheckInPlace(ctx, tx, "provider_invocations", marker, marker+",'"+role+"'"); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -72,6 +72,10 @@ newf evaluation failures --problem <problem-id>
 newf successes compress --problem <problem-id> [--min-support <n>]
 newf success-invariant list --problem <problem-id>
 newf success-invariant show [success-revision-id] [--problem <problem-id>]
+newf experiment define --problem <train-id> --target-problem <target-id> [--mode blinded]
+newf experiment run [--problem <train-id> | --holdout-set <id>] [--proposal-budget <n>]
+newf experiment show [experiment-id] [--problem <problem-id>]
+newf experiment list --problem <problem-id>
 newf policy mutate --problem <problem-id> [--no-provider]
 newf policy list --problem <problem-id>
 newf policy show [policy-revision-id] [--problem <problem-id>]

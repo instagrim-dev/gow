@@ -571,9 +571,14 @@ How it is delivered (offline, deterministic):
   Verification`); unresolved proposals are recorded `inert_proposals` and bias
   nothing.
 - **Typed directives.** `prefer | avoid | expand | penalize` over typed targets,
-  each with an ordinal weight and provenance. Preference strength for a success
-  invariant is weighted by the strongest verification class present in its
-  support (never promoted beyond the counts).
+  each with an ordinal weight and provenance. The *applied* levers (which change
+  the current rerank) are `prefer`, `avoid`, and `penalize`/`redundant_attack`;
+  `expand` and `penalize`/`repeated_failure` are generation-path levers that are
+  derived and persisted for provenance but not yet applied (the generation
+  request does not yet consume policy — see `docs/search-policy.md` "Applied vs.
+  deferred levers"). Preference strength for a success invariant is weighted by
+  the strongest verification class present in its support (never promoted beyond
+  the counts).
 - **Bounded ordinal bias with a falsifiability floor.** `policy.Apply`
   re-ranks already-ranked candidates: the code-verified violation gate is
   **inviolable** (a non-violating proposal can never outrank a violating one, no
@@ -635,6 +640,28 @@ better compression + worse prediction     = abstraction drift
 ```
 
 ## M7 — Historical holdout validation
+
+**Status: v0 delivered as a BLINDED-BENCHMARK harness; historical mode gated.**
+`newf experiment define/run/show/list` (schema `v21`) composes the whole loop
+into a measured, mode-stamped experiment: a quarantined target problem whose
+every source is withheld, a **code-computed leakage audit** (content-identity
+joins over snapshots/normalizations/signatures) that gates completion and lifts
+the M5.2 holdout evaluation gate, equal persisted budgets with
+`budget_exhausted` stopping conditions, and **one code-owned recovery rule**
+(`recovery-rule/v1`: `CompareWithProfile` mechanism-near against the target
+representatives, over the v17 persisted proposal content) applied identically
+to every arm. Conclusion vocabularies are mode-disjoint by CHECK —
+**BlindedRecovery != HistoricalPrediction** — so a benchmark result can never
+be cited as historical evidence (`corpus/README.md` documents why: the shipped
+corpus is a synthetic blinded benchmark, not a dated holdout). `mode=historical`
+remains execution-refused until every withheld source carries auditable dated
+evidence (`holdout_source_dating`) — lifting it needs data, not code. Arms:
+`b0_undirected` + `b3_invariant_guided` ship (offline B0 is honestly empty —
+a fixture cannot brainstorm); `b1`/`b2` are schema-supported and
+execution-refused until their baseline provider roles gain fixtures. The v0
+claim is the HARNESS, not a victory: the first live-model campaign and the
+first dated corpus drop in without schema or metric retrofit. See
+[`docs/experiment.md`](docs/experiment.md).
 
 This is the first scientifically meaningful end-to-end milestone.
 

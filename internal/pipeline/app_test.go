@@ -431,6 +431,10 @@ func (f *fakeProblemStore) LatestFrontierGeneration(context.Context, string) (st
 	return "", false, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) RedundantAttackKeys(context.Context, string, int) ([]string, error) {
+	return nil, errors.New("unexpected call")
+}
+
 func (f *fakeProblemStore) ListBreakCohortRows(context.Context, string) ([]store.BreakCohortRow, error) {
 	return nil, errors.New("unexpected call")
 }
@@ -449,6 +453,50 @@ func (f *fakeProblemStore) ListSuccessRevisions(context.Context, string) ([]stor
 
 func (f *fakeProblemStore) LatestSuccessRevision(context.Context, string) (string, bool, error) {
 	return "", false, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistHoldoutSet(context.Context, store.HoldoutSetRecord) (store.HoldoutSetRecord, bool, error) {
+	return store.HoldoutSetRecord{}, false, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetHoldoutSet(context.Context, string) (store.HoldoutSetRecord, error) {
+	return store.HoldoutSetRecord{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) LatestHoldoutSet(context.Context, string) (string, bool, error) {
+	return "", false, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) CountHoldoutSourceDating(context.Context, string) (int, int, error) {
+	return 0, 0, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) RunLeakageCheck(context.Context, string, string, string, string) (store.LeakageCheckRecord, error) {
+	return store.LeakageCheckRecord{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetLeakageCheck(context.Context, string) (store.LeakageCheckRecord, error) {
+	return store.LeakageCheckRecord{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListProposalContents(context.Context, string) ([]store.ProposalContentRow, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListProposalContentsForProblem(context.Context, string) ([]store.ProposalContentRow, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistExperiment(context.Context, store.ExperimentRecord) (store.PersistExperimentResult, error) {
+	return store.PersistExperimentResult{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetExperiment(context.Context, string) (store.ExperimentRecord, error) {
+	return store.ExperimentRecord{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListExperiments(context.Context, string) ([]store.ExperimentRecord, error) {
+	return nil, errors.New("unexpected call")
 }
 
 func (f *fakeProblemStore) PersistEvaluationRun(context.Context, store.EvaluationRunRecord) (store.EvaluationRunRecord, error) {

@@ -40,6 +40,9 @@ const (
 	EvaluationMetricIDPrefix      = "evm_"
 	SuccessRevisionIDPrefix       = "svr_"
 	SuccessInvariantIDPrefix      = "sinv_"
+	HoldoutSetIDPrefix            = "hset_"
+	LeakageCheckIDPrefix          = "lkc_"
+	ExperimentIDPrefix            = "exp_"
 	SearchPolicyRevisionIDPrefix  = "spr_"
 	SearchPolicyDirectiveIDPrefix = "spd_"
 )
@@ -72,6 +75,9 @@ var (
 	ErrInvalidEvaluationMetricID      = errors.New("invalid evaluation metric id")
 	ErrInvalidSuccessRevisionID       = errors.New("invalid success revision id")
 	ErrInvalidSuccessInvariantID      = errors.New("invalid success invariant id")
+	ErrInvalidHoldoutSetID            = errors.New("invalid holdout set id")
+	ErrInvalidLeakageCheckID          = errors.New("invalid leakage check id")
+	ErrInvalidExperimentID            = errors.New("invalid experiment id")
 	ErrInvalidSearchPolicyRevisionID  = errors.New("invalid search policy revision id")
 	ErrInvalidSearchPolicyDirectiveID = errors.New("invalid search policy directive id")
 
@@ -265,6 +271,30 @@ func ValidateSuccessRevisionID(id string) error {
 
 func ValidateSuccessInvariantID(id string) error {
 	return validateID(id, SuccessInvariantIDPrefix, ErrInvalidSuccessInvariantID)
+}
+
+func NewHoldoutSetID(now time.Time) string {
+	return newID(HoldoutSetIDPrefix, now)
+}
+
+func NewLeakageCheckID(now time.Time) string {
+	return newID(LeakageCheckIDPrefix, now)
+}
+
+func NewExperimentID(now time.Time) string {
+	return newID(ExperimentIDPrefix, now)
+}
+
+func ValidateHoldoutSetID(id string) error {
+	return validateID(id, HoldoutSetIDPrefix, ErrInvalidHoldoutSetID)
+}
+
+func ValidateLeakageCheckID(id string) error {
+	return validateID(id, LeakageCheckIDPrefix, ErrInvalidLeakageCheckID)
+}
+
+func ValidateExperimentID(id string) error {
+	return validateID(id, ExperimentIDPrefix, ErrInvalidExperimentID)
 }
 
 func NewSearchPolicyRevisionID(now time.Time) string {
