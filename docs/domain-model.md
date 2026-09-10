@@ -184,7 +184,8 @@ type CandidateInvariant struct {
     InvariantRevisionID ID
     Statement         string
     AbstractionLevel  string
-    State             InvariantState
+    InitialState      InvariantState
+    CurrentState      InvariantState
     ConfidenceOrdinal string
 }
 
@@ -193,9 +194,19 @@ type InvariantChallenge struct {
     InvariantID    ID
     RunID          ID
     ChallengeType  string
+    PreviousState  InvariantState
     ResultState    InvariantState
     ResultSummary  string
     CreatedAt      string
+}
+
+type InvariantStateTransition struct {
+    ID          ID
+    InvariantID ID
+    ChallengeID ID
+    FromState   InvariantState
+    ToState     InvariantState
+    CreatedAt   string
 }
 
 type FrontierProposal struct {

@@ -216,7 +216,7 @@ CREATE TABLE candidate_invariant (
   invariant_revision_id TEXT NOT NULL REFERENCES invariant_revision(id),
   statement TEXT NOT NULL,
   abstraction_level TEXT NOT NULL,
-  state TEXT NOT NULL,
+  initial_state TEXT NOT NULL, -- normally proposed
   confidence_ordinal TEXT
 );
 
@@ -249,6 +249,34 @@ CREATE TABLE invariant_challenge (
   result_summary TEXT,
   created_at TEXT NOT NULL
 );
+
+CREATE TABLE invariant_state_transition (
+  id TEXT PRIMARY KEY,
+  invariant_id TEXT NOT NULL REFERENCES candidate_invariant(id),
+  challenge_id TEXT NOT NULL REFERENCES invariant_challenge(id),
+  from_state TEXT NOT NULL,
+  to_state TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE VIEW invariant_current_state AS
+WITH latest AS (
+  SELECT t.invariant_id, t.to_state, t.created_at
+  FROM invariant_state_transition t
+  JOIN (
+    SELECT invariant_id, MAX(created_at) AS max_created_at
+    FROM invariant_state_transition
+    GROUP BY invariant_id
+  ) mx
+  ON mx.invariant_id = t.invariant_id
+  AND mx.max_created_at = t.created_at
+)
+SELECT ci.id AS invariant_id,
+       COALESCE(latest.to_state, ci.initial_state) AS state,
+       COALESCE(latest.created_at, ir.created_at) AS as_of
+FROM candidate_invariant ci
+JOIN invariant_revision ir ON ir.id = ci.invariant_revision_id
+LEFT JOIN latest ON latest.invariant_id = ci.id;
 
 CREATE TABLE invariant_challenge_source_evidence (
   challenge_id TEXT NOT NULL REFERENCES invariant_challenge(id),
@@ -395,7 +423,7 @@ CREATE TABLE success_invariant_failure_invariant (
 
 - Immutable: `source`, `evidence_record`.
 - Revisioned append-only views: normalization, clustering, invariant mining, success compression.
-- Mutable-by-transition (not overwrite): invariant state via appended `invariant_challenge` + optional lineage rows.
+- Mutable-by-transition (not overwrite): invariant state via appended `invariant_state_transition` (+ `invariant_current_state` view) and optional lineage rows.
 
 ## Re-normalization / re-clustering semantics
 

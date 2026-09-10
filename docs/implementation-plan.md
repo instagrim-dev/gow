@@ -78,7 +78,7 @@ Each slice must ship a usable CLI behavior, persisted artifacts, and tests.
   - proposal schema with novelty + falsification path + info gain + cost ordinals
   - invariant targeting + nearest cluster linkage
 - Tests:
-  - proposals must target surviving/challenged invariants only as configured
+  - proposals must target surviving invariants only
   - duplicate structural proposal handling
 
 ## Slice 8 — evaluate and record outcomes

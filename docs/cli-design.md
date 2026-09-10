@@ -126,7 +126,8 @@ Common machine envelope:
 - Optional flags: `--mode known-counterexample|synthetic-counterexample|success-preserving|split|merge|bias-critique|all`, `--provider`, `--budget`.
 - Persists:
   - `invariant_challenge`
-  - state transition in challenge result (`result_state`) + optional `invariant_lineage`
+  - `invariant_state_transition` + derived `invariant_current_state`
+  - optional `invariant_lineage`
   - optional child/sibling invariants for split/merge
 - Idempotency: always appends new challenge record; invariant state reflects latest accepted transition.
 - Failure semantics: unknown invariant, invalid transition, provider/evidence fetch failure.
@@ -137,14 +138,14 @@ Common machine envelope:
 ### `newf generate --against <invariant-id> --count <n>`
 
 - Purpose: produce frontier proposals explicitly violating surviving failure invariants.
-- Required input: target invariant ID(s), count.
+- Required input: target invariant ID, count.
 - Optional flags: `--cluster-rev`, `--provider`, `--max-cost`, `--novelty-threshold`.
 - Persists:
   - `frontier_generation_run`
   - `frontier_proposal`
   - targeted invariant links + nearest cluster links
 - Idempotency: new run each invocation; dedupe identical structural proposal hash within problem.
-- Failure semantics: non-surviving invariant target, generation schema violation.
+- Failure semantics: unknown invariant ID, target invariant not in `surviving`, generation schema violation.
 - Human output: ranked proposals with component scores (ordinal/component, not fake scalar precision).
 - Depends on: `challenge`/`invariants` output.
 - Downstream: `evaluate`, `compress`.
