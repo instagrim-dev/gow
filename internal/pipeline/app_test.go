@@ -226,3 +226,23 @@ func (f *fakeProblemStore) ListProblems(context.Context) ([]domain.Problem, erro
 func (f *fakeProblemStore) GetRun(context.Context, string) (domain.Run, error) {
 	return domain.Run{}, errors.New("unexpected call")
 }
+
+func (f *fakeProblemStore) CreateSourceSnapshot(context.Context, store.SnapshotAdmission) (store.SnapshotAdmissionResult, error) {
+	return store.SnapshotAdmissionResult{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListSourcesByProblem(context.Context, string) ([]domain.Source, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetSource(context.Context, string) (domain.Source, error) {
+	return domain.Source{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetSourceSnapshot(context.Context, string) (domain.SourceSnapshot, error) {
+	return domain.SourceSnapshot{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListSourceSnapshots(context.Context, string) ([]domain.SourceSnapshot, error) {
+	return nil, errors.New("unexpected call")
+}

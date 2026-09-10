@@ -280,6 +280,177 @@ func TestNextProblemSlugIgnoresNonNumericSuffixes(t *testing.T) {
 	}
 }
 
+func TestCreateSourceSnapshotIdempotentAndRevisioned(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	repo := openTestStore(t)
+	defer repo.Close()
+
+	problemID, runID := seedProblemForSourceTests(t, ctx, repo)
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	first, err := repo.CreateSourceSnapshot(ctx, SnapshotAdmission{
+		ProblemID:   problemID,
+		Kind:        domain.SourceKindLocalPath,
+		LogicalName: "paper.md",
+		Origin:      "/tmp/paper.md",
+		SHA256:      "aaa",
+		ByteLength:  3,
+		MediaType:   "text/markdown",
+		ObjectPath:  "sha256/aa/aaa",
+		IngestRunID: runID,
+		ObservedAt:  now,
+	})
+	if err != nil {
+		t.Fatalf("CreateSourceSnapshot(first) error = %v", err)
+	}
+	if first.Status != "created_snapshot" || !first.CreatedSource {
+		t.Fatalf("first admission = %+v", first)
+	}
+
+	second, err := repo.CreateSourceSnapshot(ctx, SnapshotAdmission{
+		ProblemID:   problemID,
+		Kind:        domain.SourceKindLocalPath,
+		LogicalName: "paper.md",
+		Origin:      "/tmp/paper.md",
+		SHA256:      "aaa",
+		ByteLength:  3,
+		MediaType:   "text/markdown",
+		ObjectPath:  "sha256/aa/aaa",
+		IngestRunID: runID,
+		ObservedAt:  now.Add(time.Second),
+	})
+	if err != nil {
+		t.Fatalf("CreateSourceSnapshot(second) error = %v", err)
+	}
+	if second.Status != "existing_snapshot" || second.Snapshot.ID != first.Snapshot.ID {
+		t.Fatalf("second admission = %+v", second)
+	}
+
+	third, err := repo.CreateSourceSnapshot(ctx, SnapshotAdmission{
+		ProblemID:   problemID,
+		Kind:        domain.SourceKindLocalPath,
+		LogicalName: "paper.md",
+		Origin:      "/tmp/paper.md",
+		SHA256:      "bbb",
+		ByteLength:  4,
+		MediaType:   "text/markdown",
+		ObjectPath:  "sha256/bb/bbb",
+		IngestRunID: runID,
+		ObservedAt:  now.Add(2 * time.Second),
+	})
+	if err != nil {
+		t.Fatalf("CreateSourceSnapshot(third) error = %v", err)
+	}
+	if third.Status != "new_revision" {
+		t.Fatalf("third status = %q, want new_revision", third.Status)
+	}
+	if third.Snapshot.SupersedesSnapshotID == nil || *third.Snapshot.SupersedesSnapshotID != first.Snapshot.ID {
+		t.Fatalf("third supersedes = %+v, want %s", third.Snapshot.SupersedesSnapshotID, first.Snapshot.ID)
+	}
+
+	snapshots, err := repo.ListSourceSnapshots(ctx, first.Source.ID)
+	if err != nil {
+		t.Fatalf("ListSourceSnapshots() error = %v", err)
+	}
+	if len(snapshots) != 2 {
+		t.Fatalf("len(snapshots) = %d, want 2", len(snapshots))
+	}
+}
+
+func TestCreateSourceSnapshotDedupesBytesButKeepsDistinctSources(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	repo := openTestStore(t)
+	defer repo.Close()
+
+	problemID, runID := seedProblemForSourceTests(t, ctx, repo)
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	first, err := repo.CreateSourceSnapshot(ctx, SnapshotAdmission{
+		ProblemID:   problemID,
+		Kind:        domain.SourceKindLocalPath,
+		LogicalName: "paper-a.md",
+		Origin:      "/tmp/a.md",
+		SHA256:      "same",
+		ByteLength:  42,
+		MediaType:   "text/markdown",
+		ObjectPath:  "sha256/sa/same",
+		IngestRunID: runID,
+		ObservedAt:  now,
+	})
+	if err != nil {
+		t.Fatalf("CreateSourceSnapshot(first) error = %v", err)
+	}
+	second, err := repo.CreateSourceSnapshot(ctx, SnapshotAdmission{
+		ProblemID:   problemID,
+		Kind:        domain.SourceKindLocalPath,
+		LogicalName: "paper-b.md",
+		Origin:      "/tmp/b.md",
+		SHA256:      "same",
+		ByteLength:  42,
+		MediaType:   "text/markdown",
+		ObjectPath:  "sha256/sa/same",
+		IngestRunID: runID,
+		ObservedAt:  now.Add(time.Second),
+	})
+	if err != nil {
+		t.Fatalf("CreateSourceSnapshot(second) error = %v", err)
+	}
+	if first.Source.ID == second.Source.ID {
+		t.Fatalf("source IDs unexpectedly match: %s", first.Source.ID)
+	}
+	if first.Snapshot.ObjectPath != second.Snapshot.ObjectPath {
+		t.Fatalf("object paths differ: %s vs %s", first.Snapshot.ObjectPath, second.Snapshot.ObjectPath)
+	}
+}
+
+func seedProblemForSourceTests(t *testing.T, ctx context.Context, repo *Store) (string, string) {
+	t.Helper()
+
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	problemID := domain.NewProblemID(now)
+	runID := domain.NewRunID(now)
+	_, _, err := repo.CreateProblemWithRun(ctx, domain.NewProblem{
+		ID:             problemID,
+		Slug:           "source-test-problem",
+		Statement:      "Source test problem",
+		Status:         domain.ProblemStatusActive,
+		CreatedAt:      now,
+		CreatedByRunID: runID,
+	}, domain.NewRun{
+		ID:          runID,
+		ProblemID:   problemID,
+		Operation:   "init",
+		Status:      domain.RunStatusInitialized,
+		InputRef:    "problem_slug:source-test-problem",
+		ToolName:    "newf",
+		ToolVersion: "dev",
+		StartedAt:   now,
+		CompletedAt: now,
+	})
+	if err != nil {
+		t.Fatalf("CreateProblemWithRun() error = %v", err)
+	}
+
+	ingestRunNow := now.Add(time.Second)
+	ingestRunID := domain.NewRunID(ingestRunNow)
+	if _, err := repo.CreateRun(ctx, domain.NewRun{
+		ID:          ingestRunID,
+		ProblemID:   problemID,
+		Operation:   "ingest",
+		Status:      domain.RunStatusCompleted,
+		InputRef:    "ingest",
+		ToolName:    "newf",
+		ToolVersion: "dev",
+		StartedAt:   ingestRunNow,
+		CompletedAt: ingestRunNow,
+	}); err != nil {
+		t.Fatalf("CreateRun() error = %v", err)
+	}
+	return problemID, ingestRunID
+}
+
 func openTestStore(t *testing.T, opts ...Option) *Store {
 	t.Helper()
 

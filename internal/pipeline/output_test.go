@@ -198,3 +198,36 @@ func decodeJSON(t *testing.T, raw []byte, target any) {
 		t.Fatalf("json.Unmarshal() error = %v", err)
 	}
 }
+
+func TestIngestResponseJSONContract(t *testing.T) {
+	t.Parallel()
+
+	raw, err := json.Marshal(IngestResponse{
+		OK:        true,
+		Command:   "ingest",
+		Store:     "/tmp/newf.db",
+		ProblemID: "prb_01K4Y8X6YJJ66Y5QY9G7DNE1H1",
+		RunID:     "run_01K4Y8X6YJJ66Y5QY9G7DNE1H2",
+		Results: []IngestItemResult{{
+			Input:      "./paper.pdf",
+			SourceID:   "src_01K4Y8X6YJJ66Y5QY9G7DNE1H3",
+			SnapshotID: "snap_01K4Y8X6YJJ66Y5QY9G7DNE1H4",
+			Status:     "created_snapshot",
+			SHA256:     "abc",
+			MediaType:  "application/pdf",
+			Bytes:      42,
+		}},
+		Summary: IngestSummary{Total: 1, Succeeded: 1},
+	})
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+
+	var decoded map[string]any
+	decodeJSON(t, raw, &decoded)
+	for _, key := range []string{"ok", "command", "store", "problem_id", "run_id", "results", "summary"} {
+		if _, ok := decoded[key]; !ok {
+			t.Fatalf("missing key %q in JSON contract", key)
+		}
+	}
+}

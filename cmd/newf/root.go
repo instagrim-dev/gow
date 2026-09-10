@@ -51,8 +51,10 @@ func newRootCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cob
 	cmd.PersistentFlags().BoolVar(&opts.jsonOutput, "json", false, "Emit machine-readable JSON output")
 
 	cmd.AddCommand(newInitCommand(stdout, app, opts))
+	cmd.AddCommand(newIngestCommand(stdout, app, opts))
 	cmd.AddCommand(newProblemCommand(stdout, app, opts))
 	cmd.AddCommand(newRunCommand(stdout, app, opts))
+	cmd.AddCommand(newSourceCommand(stdout, app, opts))
 
 	return cmd
 }
@@ -82,7 +84,8 @@ func writeCommandError(stdout, stderr io.Writer, jsonOutput bool, err *commandEr
 func classifyError(err error) string {
 	switch {
 	case errors.Is(err, domain.ErrInvalidProblemStatement), errors.Is(err, domain.ErrInvalidSlug),
-		errors.Is(err, domain.ErrInvalidProblemID), errors.Is(err, domain.ErrInvalidRunID):
+		errors.Is(err, domain.ErrInvalidProblemID), errors.Is(err, domain.ErrInvalidRunID),
+		errors.Is(err, domain.ErrInvalidSourceID), errors.Is(err, domain.ErrInvalidSnapshotID):
 		return "invalid_input"
 	case errors.Is(err, store.ErrNotFound):
 		return "not_found"

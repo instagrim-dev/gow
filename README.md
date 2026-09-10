@@ -17,9 +17,14 @@ The repository now ships the first provenance-heavy local CLI slice:
 
 ```text
 newf init <problem>
+newf ingest <path...> --problem <problem-id>
 newf problem list
 newf problem show <problem-id>
 newf run show <run-id>
+newf source list --problem <problem-id>
+newf source show <source-id>
+newf source snapshot show <snapshot-id>
+newf source snapshot verify <snapshot-id>
 ```
 
 Build it with:
@@ -40,10 +45,40 @@ Override the database location with `--db <path>` or `NEWF_DB=<path>`.
 
 ```bash
 newf init "Erdős-Straus conjecture"
+newf ingest ./papers/erdos-straus-survey.pdf --problem <problem-id>
+newf ingest ./notes --recursive --problem <problem-id>
 newf problem list
 newf problem show <problem-id>
 newf run show <run-id>
+newf source list --problem <problem-id>
+newf source snapshot verify <snapshot-id>
 ```
+
+## Source ingestion and immutable snapshots
+
+`newf ingest` admits local files and stdin into an immutable, content-addressed
+corpus rooted at:
+
+```text
+.newf/objects/sha256/<prefix>/<digest>
+```
+
+- `Source` = logical origin (`origin`, `logical_name`, `problem_id`).
+- `SourceSnapshot` = exact observed bytes (`sha256`, `byte_length`,
+  `media_type`, `observed_at`, `ingest_run_id`).
+- Re-ingesting unchanged bytes for the same source returns
+  `existing_snapshot` (idempotent).
+- Changed bytes for the same source create `new_revision` with
+  `supersedes_snapshot_id`.
+- Identical bytes across different sources deduplicate object storage while
+  preserving distinct source/snapshot provenance.
+
+Useful flags:
+
+- `--stdin` ingest one stdin payload.
+- `--name` logical source name override.
+- `--media-type` explicit media type override.
+- `--recursive` recursively ingest directory files.
 
 Use `--json` for stable machine-readable output:
 

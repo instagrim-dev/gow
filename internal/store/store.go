@@ -359,6 +359,333 @@ WHERE id = ?
 	return run, nil
 }
 
+type SnapshotAdmission struct {
+	ProblemID   string
+	Kind        domain.SourceKind
+	LogicalName string
+	Origin      string
+	SHA256      string
+	ByteLength  int64
+	MediaType   string
+	ObjectPath  string
+	IngestRunID string
+	ObservedAt  time.Time
+}
+
+type SnapshotAdmissionResult struct {
+	Source        domain.Source
+	Snapshot      domain.SourceSnapshot
+	Status        string
+	CreatedSource bool
+}
+
+func (s *Store) CreateSourceSnapshot(ctx context.Context, input SnapshotAdmission) (SnapshotAdmissionResult, error) {
+	if err := domain.ValidateProblemID(input.ProblemID); err != nil {
+		return SnapshotAdmissionResult{}, err
+	}
+	if strings.TrimSpace(input.Origin) == "" {
+		return SnapshotAdmissionResult{}, errors.New("source origin is required")
+	}
+	if strings.TrimSpace(input.LogicalName) == "" {
+		return SnapshotAdmissionResult{}, errors.New("source logical_name is required")
+	}
+	if strings.TrimSpace(input.SHA256) == "" {
+		return SnapshotAdmissionResult{}, errors.New("source snapshot sha256 is required")
+	}
+	if strings.TrimSpace(input.MediaType) == "" {
+		return SnapshotAdmissionResult{}, errors.New("source snapshot media_type is required")
+	}
+	if strings.TrimSpace(input.ObjectPath) == "" {
+		return SnapshotAdmissionResult{}, errors.New("source snapshot object_path is required")
+	}
+	if err := domain.ValidateRunID(input.IngestRunID); err != nil {
+		return SnapshotAdmissionResult{}, err
+	}
+	if input.ObservedAt.IsZero() {
+		return SnapshotAdmissionResult{}, errors.New("source snapshot observed_at is required")
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return SnapshotAdmissionResult{}, err
+	}
+	defer tx.Rollback()
+
+	source, createdSource, err := getOrCreateSourceTx(ctx, tx, input)
+	if err != nil {
+		return SnapshotAdmissionResult{}, err
+	}
+
+	existing, found, err := findSnapshotByHashTx(ctx, tx, source.ID, input.SHA256)
+	if err != nil {
+		return SnapshotAdmissionResult{}, err
+	}
+	if found {
+		if err := tx.Commit(); err != nil {
+			return SnapshotAdmissionResult{}, err
+		}
+		return SnapshotAdmissionResult{
+			Source:        source,
+			Snapshot:      existing,
+			Status:        "existing_snapshot",
+			CreatedSource: createdSource,
+		}, nil
+	}
+
+	latest, hasLatest, err := getLatestSnapshotTx(ctx, tx, source.ID)
+	if err != nil {
+		return SnapshotAdmissionResult{}, err
+	}
+
+	supersedesID := (*string)(nil)
+	status := "created_snapshot"
+	if hasLatest && latest.SHA256 != input.SHA256 {
+		supersedesID = &latest.ID
+		status = "new_revision"
+	}
+
+	newSnapshot := domain.NewSourceSnapshot{
+		ID:                   domain.NewSnapshotID(input.ObservedAt),
+		SourceID:             source.ID,
+		SHA256:               input.SHA256,
+		ByteLength:           input.ByteLength,
+		MediaType:            input.MediaType,
+		ObjectPath:           input.ObjectPath,
+		ObservedAt:           input.ObservedAt,
+		IngestRunID:          input.IngestRunID,
+		SupersedesSnapshotID: supersedesID,
+	}
+	if err := newSnapshot.Validate(); err != nil {
+		return SnapshotAdmissionResult{}, err
+	}
+
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO source_snapshots(id, source_id, sha256, byte_length, media_type, object_path, observed_at, ingest_run_id, supersedes_snapshot_id)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, newSnapshot.ID, newSnapshot.SourceID, newSnapshot.SHA256, newSnapshot.ByteLength, newSnapshot.MediaType, newSnapshot.ObjectPath, formatTime(newSnapshot.ObservedAt), newSnapshot.IngestRunID, newSnapshot.SupersedesSnapshotID); err != nil {
+		if isDuplicateSnapshotError(err) {
+			existing, found, findErr := findSnapshotByHashTx(ctx, tx, source.ID, input.SHA256)
+			if findErr != nil {
+				return SnapshotAdmissionResult{}, findErr
+			}
+			if found {
+				if err := tx.Commit(); err != nil {
+					return SnapshotAdmissionResult{}, err
+				}
+				return SnapshotAdmissionResult{
+					Source:        source,
+					Snapshot:      existing,
+					Status:        "existing_snapshot",
+					CreatedSource: createdSource,
+				}, nil
+			}
+		}
+		return SnapshotAdmissionResult{}, err
+	}
+
+	createdSnapshot := domain.SourceSnapshot{
+		ID:                   newSnapshot.ID,
+		SourceID:             newSnapshot.SourceID,
+		SHA256:               newSnapshot.SHA256,
+		ByteLength:           newSnapshot.ByteLength,
+		MediaType:            newSnapshot.MediaType,
+		ObjectPath:           newSnapshot.ObjectPath,
+		ObservedAt:           newSnapshot.ObservedAt.UTC(),
+		IngestRunID:          newSnapshot.IngestRunID,
+		SupersedesSnapshotID: newSnapshot.SupersedesSnapshotID,
+	}
+	if err := tx.Commit(); err != nil {
+		return SnapshotAdmissionResult{}, err
+	}
+	return SnapshotAdmissionResult{
+		Source:        source,
+		Snapshot:      createdSnapshot,
+		Status:        status,
+		CreatedSource: createdSource,
+	}, nil
+}
+
+func (s *Store) ListSourcesByProblem(ctx context.Context, problemID string) ([]domain.Source, error) {
+	if err := domain.ValidateProblemID(problemID); err != nil {
+		return nil, err
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT id, problem_id, kind, logical_name, origin, created_at
+FROM sources
+WHERE problem_id = ?
+ORDER BY created_at ASC, id ASC
+`, problemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []domain.Source
+	for rows.Next() {
+		source, err := scanSource(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, source)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (s *Store) GetSource(ctx context.Context, sourceID string) (domain.Source, error) {
+	if err := domain.ValidateSourceID(sourceID); err != nil {
+		return domain.Source{}, err
+	}
+	row := s.db.QueryRowContext(ctx, `
+SELECT id, problem_id, kind, logical_name, origin, created_at
+FROM sources
+WHERE id = ?
+`, sourceID)
+	source, err := scanSource(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.Source{}, fmt.Errorf("%w: source %s", ErrNotFound, sourceID)
+		}
+		return domain.Source{}, err
+	}
+	return source, nil
+}
+
+func (s *Store) GetSourceSnapshot(ctx context.Context, snapshotID string) (domain.SourceSnapshot, error) {
+	if err := domain.ValidateSnapshotID(snapshotID); err != nil {
+		return domain.SourceSnapshot{}, err
+	}
+	row := s.db.QueryRowContext(ctx, `
+SELECT id, source_id, sha256, byte_length, media_type, object_path, observed_at, ingest_run_id, supersedes_snapshot_id
+FROM source_snapshots
+WHERE id = ?
+`, snapshotID)
+	snapshot, err := scanSourceSnapshot(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.SourceSnapshot{}, fmt.Errorf("%w: source snapshot %s", ErrNotFound, snapshotID)
+		}
+		return domain.SourceSnapshot{}, err
+	}
+	return snapshot, nil
+}
+
+func (s *Store) ListSourceSnapshots(ctx context.Context, sourceID string) ([]domain.SourceSnapshot, error) {
+	if err := domain.ValidateSourceID(sourceID); err != nil {
+		return nil, err
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT id, source_id, sha256, byte_length, media_type, object_path, observed_at, ingest_run_id, supersedes_snapshot_id
+FROM source_snapshots
+WHERE source_id = ?
+ORDER BY observed_at DESC, id DESC
+`, sourceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var snapshots []domain.SourceSnapshot
+	for rows.Next() {
+		snapshot, err := scanSourceSnapshot(rows)
+		if err != nil {
+			return nil, err
+		}
+		snapshots = append(snapshots, snapshot)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return snapshots, nil
+}
+
+func getOrCreateSourceTx(ctx context.Context, tx *sql.Tx, input SnapshotAdmission) (domain.Source, bool, error) {
+	row := tx.QueryRowContext(ctx, `
+SELECT id, problem_id, kind, logical_name, origin, created_at
+FROM sources
+WHERE problem_id = ? AND origin = ?
+`, input.ProblemID, input.Origin)
+	source, err := scanSource(row)
+	if err == nil {
+		return source, false, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return domain.Source{}, false, err
+	}
+
+	newSource := domain.NewSource{
+		ID:          domain.NewSourceID(input.ObservedAt),
+		ProblemID:   input.ProblemID,
+		Kind:        input.Kind,
+		LogicalName: input.LogicalName,
+		Origin:      input.Origin,
+		CreatedAt:   input.ObservedAt,
+	}
+	if err := newSource.Validate(); err != nil {
+		return domain.Source{}, false, err
+	}
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO sources(id, problem_id, kind, logical_name, origin, created_at)
+VALUES(?, ?, ?, ?, ?, ?)
+`, newSource.ID, newSource.ProblemID, newSource.Kind, newSource.LogicalName, newSource.Origin, formatTime(newSource.CreatedAt)); err != nil {
+		if !isDuplicateSourceOriginError(err) {
+			return domain.Source{}, false, err
+		}
+		row := tx.QueryRowContext(ctx, `
+SELECT id, problem_id, kind, logical_name, origin, created_at
+FROM sources
+WHERE problem_id = ? AND origin = ?
+`, input.ProblemID, input.Origin)
+		source, scanErr := scanSource(row)
+		return source, false, scanErr
+	}
+
+	return domain.Source{
+		ID:          newSource.ID,
+		ProblemID:   newSource.ProblemID,
+		Kind:        newSource.Kind,
+		LogicalName: newSource.LogicalName,
+		Origin:      newSource.Origin,
+		CreatedAt:   newSource.CreatedAt.UTC(),
+	}, true, nil
+}
+
+func getLatestSnapshotTx(ctx context.Context, tx *sql.Tx, sourceID string) (domain.SourceSnapshot, bool, error) {
+	row := tx.QueryRowContext(ctx, `
+SELECT id, source_id, sha256, byte_length, media_type, object_path, observed_at, ingest_run_id, supersedes_snapshot_id
+FROM source_snapshots
+WHERE source_id = ?
+ORDER BY observed_at DESC, id DESC
+LIMIT 1
+`, sourceID)
+	snapshot, err := scanSourceSnapshot(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.SourceSnapshot{}, false, nil
+		}
+		return domain.SourceSnapshot{}, false, err
+	}
+	return snapshot, true, nil
+}
+
+func findSnapshotByHashTx(ctx context.Context, tx *sql.Tx, sourceID, hash string) (domain.SourceSnapshot, bool, error) {
+	row := tx.QueryRowContext(ctx, `
+SELECT id, source_id, sha256, byte_length, media_type, object_path, observed_at, ingest_run_id, supersedes_snapshot_id
+FROM source_snapshots
+WHERE source_id = ? AND sha256 = ?
+`, sourceID, hash)
+	snapshot, err := scanSourceSnapshot(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.SourceSnapshot{}, false, nil
+		}
+		return domain.SourceSnapshot{}, false, err
+	}
+	return snapshot, true, nil
+}
+
 type scanner interface {
 	Scan(dest ...any) error
 }
@@ -413,6 +740,40 @@ func scanRun(row scanner) (domain.Run, error) {
 	return run, nil
 }
 
+func scanSource(row scanner) (domain.Source, error) {
+	var source domain.Source
+	var kind string
+	var createdAt string
+	if err := row.Scan(&source.ID, &source.ProblemID, &kind, &source.LogicalName, &source.Origin, &createdAt); err != nil {
+		return domain.Source{}, err
+	}
+	parsedCreatedAt, err := parseTime(createdAt)
+	if err != nil {
+		return domain.Source{}, fmt.Errorf("%w: %v", ErrCorruptStore, err)
+	}
+	source.Kind = domain.SourceKind(kind)
+	source.CreatedAt = parsedCreatedAt
+	return source, nil
+}
+
+func scanSourceSnapshot(row scanner) (domain.SourceSnapshot, error) {
+	var snapshot domain.SourceSnapshot
+	var observedAt string
+	var supersedesID sql.NullString
+	if err := row.Scan(&snapshot.ID, &snapshot.SourceID, &snapshot.SHA256, &snapshot.ByteLength, &snapshot.MediaType, &snapshot.ObjectPath, &observedAt, &snapshot.IngestRunID, &supersedesID); err != nil {
+		return domain.SourceSnapshot{}, err
+	}
+	parsedObservedAt, err := parseTime(observedAt)
+	if err != nil {
+		return domain.SourceSnapshot{}, fmt.Errorf("%w: %v", ErrCorruptStore, err)
+	}
+	snapshot.ObservedAt = parsedObservedAt
+	if supersedesID.Valid {
+		snapshot.SupersedesSnapshotID = &supersedesID.String
+	}
+	return snapshot, nil
+}
+
 func formatTime(value time.Time) string {
 	return value.UTC().Format(time.RFC3339Nano)
 }
@@ -425,6 +786,14 @@ func isDuplicateSlugError(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed: problems.slug")
 }
 
+func isDuplicateSourceOriginError(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed: sources.problem_id, sources.origin")
+}
+
+func isDuplicateSnapshotError(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed: source_snapshots.source_id, source_snapshots.sha256")
+}
+
 func isKnownMigrationVersion(version int) bool {
 	for _, migration := range migrations {
 		if migration.version == version {
@@ -435,7 +804,7 @@ func isKnownMigrationVersion(version int) bool {
 }
 
 func validateSchemaTables(ctx context.Context, tx *sql.Tx) error {
-	for _, table := range []string{"problems", "runs"} {
+	for _, table := range []string{"problems", "runs", "sources", "source_snapshots"} {
 		row := tx.QueryRowContext(ctx, `
 SELECT EXISTS(
   SELECT 1
