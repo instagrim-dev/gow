@@ -199,7 +199,8 @@ Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statu
 ## Invariant lifecycle state machine
 
 ```text
-proposed -> challenged -> surviving | weaken | split | merge | falsified | established
+proposed -> challenged -> surviving | weaken | split | merge | falsified
+surviving -> challenged | weaken | split | merge | falsified | established
 ```
 
 - `established` requires external independent evidence (e.g., theorem/proof-check or independently replicated experiment), never model consensus alone.

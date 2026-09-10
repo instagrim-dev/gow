@@ -51,7 +51,9 @@ Source evidence is immutable and never overwritten. Model/provider interpretatio
 
 ## Invariant lifecycle
 
-`proposed -> challenged -> surviving | weaken | split | merge | falsified | established`
+`proposed -> challenged -> surviving | weaken | split | merge | falsified`
+
+`surviving -> challenged | weaken | split | merge | falsified | established`
 
 - `split`: one parent invariant to many children invariants.
 - `merge`: many parent invariants to one child invariant.
