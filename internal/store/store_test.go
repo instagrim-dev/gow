@@ -58,7 +58,7 @@ func TestCreateAndFetchProblemAndRun(t *testing.T) {
 		ID:          runID,
 		ProblemID:   problem.ID,
 		Operation:   "init",
-		Status:      domain.RunStatusSucceeded,
+		Status:      domain.RunStatusInitialized,
 		InputRef:    "problem_slug:erdos-straus-conjecture",
 		ToolName:    "newf",
 		ToolVersion: "dev",
@@ -119,7 +119,7 @@ func TestCreateProblemWithRunRollsBackOnFailure(t *testing.T) {
 		ID:          runID,
 		ProblemID:   problemID,
 		Operation:   "init",
-		Status:      domain.RunStatusSucceeded,
+		Status:      domain.RunStatusInitialized,
 		InputRef:    "problem_slug:rollback-case",
 		ToolName:    "newf",
 		ToolVersion: "dev",
@@ -160,7 +160,7 @@ func TestCreateProblemWithRunRejectsMismatchedLinkage(t *testing.T) {
 		ID:          runID,
 		ProblemID:   domain.NewProblemID(now.Add(time.Second)),
 		Operation:   "init",
-		Status:      domain.RunStatusSucceeded,
+		Status:      domain.RunStatusInitialized,
 		InputRef:    "problem_slug:bad-linkage",
 		ToolName:    "newf",
 		ToolVersion: "dev",
@@ -187,6 +187,96 @@ func TestGettersRejectCrossClassIDs(t *testing.T) {
 	problemID := domain.NewProblemID(time.Now().UTC())
 	if _, err := store.GetRun(ctx, problemID); err == nil {
 		t.Fatal("GetRun() succeeded for problem ID")
+	}
+}
+
+func TestMigrateRejectsUnknownSchemaVersion(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "newf.db")
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	defer store.Close()
+
+	if err := store.Migrate(ctx); err != nil {
+		t.Fatalf("Migrate() error = %v", err)
+	}
+	if _, err := store.db.ExecContext(ctx, `INSERT INTO schema_migrations(version, applied_at) VALUES(?, ?)`, currentSchemaVersion+1, time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
+		t.Fatalf("insert schema_migrations row error = %v", err)
+	}
+
+	if err := store.Migrate(ctx); !errors.Is(err, ErrCorruptStore) {
+		t.Fatalf("second Migrate() error = %v, want ErrCorruptStore", err)
+	}
+}
+
+func TestMigrateRejectsMissingSchemaTables(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "newf.db")
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	defer store.Close()
+
+	if _, err := store.db.ExecContext(ctx, `CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)`); err != nil {
+		t.Fatalf("create schema_migrations error = %v", err)
+	}
+	if _, err := store.db.ExecContext(ctx, `INSERT INTO schema_migrations(version, applied_at) VALUES(?, ?)`, currentSchemaVersion, time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
+		t.Fatalf("insert schema_migrations row error = %v", err)
+	}
+
+	if err := store.Migrate(ctx); !errors.Is(err, ErrCorruptStore) {
+		t.Fatalf("Migrate() error = %v, want ErrCorruptStore", err)
+	}
+}
+
+func TestNextProblemSlugIgnoresNonNumericSuffixes(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	store := openTestStore(t)
+	defer store.Close()
+
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	for i, slug := range []string{"topic", "topic-2abc"} {
+		start := now.Add(time.Duration(i) * time.Second)
+		runID := domain.NewRunID(start)
+		problemID := domain.NewProblemID(start)
+		_, _, err := store.CreateProblemWithRun(ctx, domain.NewProblem{
+			ID:             problemID,
+			Slug:           slug,
+			Statement:      slug,
+			Status:         domain.ProblemStatusActive,
+			CreatedAt:      start,
+			CreatedByRunID: runID,
+		}, domain.NewRun{
+			ID:          runID,
+			ProblemID:   problemID,
+			Operation:   "init",
+			Status:      domain.RunStatusInitialized,
+			InputRef:    "problem_slug:" + slug,
+			ToolName:    "newf",
+			ToolVersion: "dev",
+			StartedAt:   start,
+			CompletedAt: start,
+		})
+		if err != nil {
+			t.Fatalf("CreateProblemWithRun(%q) error = %v", slug, err)
+		}
+	}
+
+	next, err := store.NextProblemSlug(ctx, "topic")
+	if err != nil {
+		t.Fatalf("NextProblemSlug() error = %v", err)
+	}
+	if next != "topic-2" {
+		t.Fatalf("NextProblemSlug() = %q, want %q", next, "topic-2")
 	}
 }
 

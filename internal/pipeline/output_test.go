@@ -119,7 +119,7 @@ func TestRunShowResponseJSONContract(t *testing.T) {
 			ID:          "run_01K4Y8X6YJJ66Y5QY9G7DNE1H2",
 			ProblemID:   "prb_01K4Y8X6YJJ66Y5QY9G7DNE1H1",
 			Operation:   "init",
-			Status:      "succeeded",
+			Status:      "initialized",
 			InputRef:    "problem_slug:erdos-straus-conjecture",
 			ToolName:    "newf",
 			ToolVersion: "dev",

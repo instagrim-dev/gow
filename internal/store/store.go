@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -87,6 +88,9 @@ func (s *Store) Migrate(ctx context.Context) error {
 		if err := rows.Scan(&version); err != nil {
 			return fmt.Errorf("%w: %v", ErrCorruptStore, err)
 		}
+		if !isKnownMigrationVersion(version) {
+			return fmt.Errorf("%w: unknown schema migration version %d", ErrCorruptStore, version)
+		}
 		applied[version] = struct{}{}
 	}
 	if err := rows.Err(); err != nil {
@@ -104,6 +108,9 @@ func (s *Store) Migrate(ctx context.Context) error {
 		if _, err := tx.ExecContext(ctx, `INSERT INTO schema_migrations(version, applied_at) VALUES(?, ?)`, migration.version, now); err != nil {
 			return fmt.Errorf("%w: %v", ErrMigration, err)
 		}
+	}
+	if err := validateSchemaTables(ctx, tx); err != nil {
+		return err
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -141,28 +148,46 @@ WHERE slug = ?
 }
 
 func (s *Store) NextProblemSlug(ctx context.Context, base string) (string, error) {
-	row := s.db.QueryRowContext(ctx, `
-SELECT
-  EXISTS(SELECT 1 FROM problems WHERE slug = ?) AS base_used,
-  COALESCE(
-    MAX(
-      CASE
-        WHEN slug GLOB ? THEN CAST(substr(slug, length(?) + 2) AS INTEGER)
-        ELSE NULL
-      END
-    ),
-    1
-  ) AS max_suffix
+	rows, err := s.db.QueryContext(ctx, `
+SELECT slug
 FROM problems
 WHERE slug = ? OR slug GLOB ?
-`, base, base+"-[0-9]*", base, base, base+"-[0-9]*")
-
-	var baseUsed bool
-	var maxSuffix int
-	if err := row.Scan(&baseUsed, &maxSuffix); err != nil {
+`, base, base+"-*")
+	if err != nil {
 		return "", err
 	}
+	defer rows.Close()
 
+	baseUsed := false
+	maxSuffix := 1
+	prefix := base + "-"
+	for rows.Next() {
+		var slug string
+		if err := rows.Scan(&slug); err != nil {
+			return "", err
+		}
+		if slug == base {
+			baseUsed = true
+			continue
+		}
+		if !strings.HasPrefix(slug, prefix) {
+			continue
+		}
+		suffix := strings.TrimPrefix(slug, prefix)
+		if suffix == "" {
+			continue
+		}
+		number, convErr := strconv.Atoi(suffix)
+		if convErr != nil {
+			continue
+		}
+		if number > maxSuffix {
+			maxSuffix = number
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
 	if !baseUsed {
 		return base, nil
 	}
@@ -398,4 +423,33 @@ func parseTime(raw string) (time.Time, error) {
 
 func isDuplicateSlugError(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed: problems.slug")
+}
+
+func isKnownMigrationVersion(version int) bool {
+	for _, migration := range migrations {
+		if migration.version == version {
+			return true
+		}
+	}
+	return false
+}
+
+func validateSchemaTables(ctx context.Context, tx *sql.Tx) error {
+	for _, table := range []string{"problems", "runs"} {
+		row := tx.QueryRowContext(ctx, `
+SELECT EXISTS(
+  SELECT 1
+  FROM sqlite_master
+  WHERE type = 'table' AND name = ?
+)
+`, table)
+		var exists bool
+		if err := row.Scan(&exists); err != nil {
+			return fmt.Errorf("%w: %v", ErrCorruptStore, err)
+		}
+		if !exists {
+			return fmt.Errorf("%w: missing table %q for current schema", ErrCorruptStore, table)
+		}
+	}
+	return nil
 }

@@ -3,7 +3,6 @@ package pipeline
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"time"
 
@@ -82,7 +81,7 @@ func (a *App) InitProblem(ctx context.Context, input InitProblemInput) (InitResp
 				ID:          domain.NewRunID(runTime),
 				ProblemID:   existing.ID,
 				Operation:   "init",
-				Status:      domain.RunStatusSucceeded,
+				Status:      domain.RunStatusInitialized,
 				InputRef:    "problem_slug:" + slug,
 				ToolName:    "newf",
 				ToolVersion: a.version,
@@ -110,9 +109,6 @@ func (a *App) InitProblem(ctx context.Context, input InitProblemInput) (InitResp
 		if slugErr != nil {
 			return InitResponse{}, slugErr
 		}
-		if input.Slug != "" && nextSlug != slug {
-			return InitResponse{}, fmt.Errorf("%w: slug %q already exists", domain.ErrInvalidSlug, slug)
-		}
 		slug = nextSlug
 	}
 
@@ -130,7 +126,7 @@ func (a *App) InitProblem(ctx context.Context, input InitProblemInput) (InitResp
 		ID:          runID,
 		ProblemID:   problem.ID,
 		Operation:   "init",
-		Status:      domain.RunStatusSucceeded,
+		Status:      domain.RunStatusInitialized,
 		InputRef:    "problem_slug:" + slug,
 		ToolName:    "newf",
 		ToolVersion: a.version,
@@ -151,7 +147,7 @@ func (a *App) InitProblem(ctx context.Context, input InitProblemInput) (InitResp
 					ID:          domain.NewRunID(fallbackNow),
 					ProblemID:   existing.ID,
 					Operation:   "init",
-					Status:      domain.RunStatusSucceeded,
+					Status:      domain.RunStatusInitialized,
 					InputRef:    "problem_slug:" + slug,
 					ToolName:    "newf",
 					ToolVersion: a.version,

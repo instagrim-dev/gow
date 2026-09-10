@@ -8,8 +8,10 @@ import (
 type RunStatus string
 
 const (
-	RunStatusSucceeded RunStatus = "succeeded"
-	RunStatusFailed    RunStatus = "failed"
+	RunStatusInitialized RunStatus = "initialized"
+	RunStatusRunning     RunStatus = "running"
+	RunStatusCompleted   RunStatus = "completed"
+	RunStatusFailed      RunStatus = "failed"
 )
 
 type Run struct {

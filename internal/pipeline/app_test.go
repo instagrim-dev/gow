@@ -108,6 +108,45 @@ func TestInitProblemForceNewUsesNextAvailableSlug(t *testing.T) {
 	}
 }
 
+func TestInitProblemForceNewWithExplicitSlugUsesNextAvailableSlug(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	fake := &fakeProblemStore{
+		nextSlug: "custom-slug-2",
+	}
+
+	app := &App{
+		version: "dev",
+		now: func() time.Time {
+			return now
+		},
+		getwd: func() (string, error) {
+			return "/workspace/repo", nil
+		},
+		openStoreFn: func(context.Context, string) (string, problemStore, error) {
+			return "/workspace/repo/.newf/newf.db", fake, nil
+		},
+	}
+
+	result, err := app.InitProblem(context.Background(), InitProblemInput{
+		DBPath:    "/workspace/repo/.newf/newf.db",
+		Statement: "Erdos-Straus conjecture",
+		Slug:      "custom-slug",
+		ForceNew:  true,
+	})
+	if err != nil {
+		t.Fatalf("InitProblem() error = %v", err)
+	}
+
+	if !result.Created {
+		t.Fatal("InitProblem() created = false, want true")
+	}
+	if fake.createdProblem == nil || fake.createdProblem.Slug != "custom-slug-2" {
+		t.Fatalf("created problem slug = %#v, want custom-slug-2", fake.createdProblem)
+	}
+}
+
 type fakeProblemStore struct {
 	existingProblem         domain.Problem
 	findCalls               int
