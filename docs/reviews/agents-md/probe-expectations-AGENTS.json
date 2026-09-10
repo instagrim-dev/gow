@@ -1,0 +1,28 @@
+{
+  "target": "AGENTS.md",
+  "review_date": "2026-09-10",
+  "task_profile": [
+    {"rank": 1, "task": "Author/refine a docs/ contract file (persistence, evaluation, domain-model, plans)", "evidence": "docs/ = 96 dir-touches across 53 commits; dominant activity"},
+    {"rank": 2, "task": "Implement a vertical CLI slice in internal/pipeline + cmd/newf", "evidence": "internal/pipeline 31, cmd/newf 20 touches; commits #4 init, #8 ingestion"},
+    {"rank": 3, "task": "Add/extend a SQLite migration + store repository", "evidence": "internal/store 20 touches; migrations v1/v2 present"},
+    {"rank": 4, "task": "Add a domain type with Validate() + ID class", "evidence": "internal/domain 19 touches; source.go, id.go, normalize.go"},
+    {"rank": 5, "task": "Write a docs/plans/ implementation plan for a new issue", "evidence": "docs/plans/2026-09-10-001-...plan.md"},
+    {"rank": 6, "task": "Run the build/test gate before declaring work done", "evidence": "7 _test.go files; README shows go build ./cmd/newf"},
+    {"rank": 7, "task": "Recover from a broken/dirty tree (concurrent edits)", "evidence": "observed live: concurrent writers landing normalize/provider mid-review"}
+  ],
+  "probe_expectations": [
+    {"probe": "P1-first-contact", "task": "decide where a change goes from first 30 lines", "expected_at_open": "guesses", "reason": "first 30 lines are research philosophy; no agent-directed hard constraint or routing", "expected_after_fix": "resolves"},
+    {"probe": "P2-pre-edit-routing", "task": "implement CLI slice; where does code go?", "expected_at_open": "resolves-late", "reason": "package layout in docs/cli-design.md not AGENTS.md; 'Current repository direction' gives order not placement", "expected_after_fix": "resolves"},
+    {"probe": "P3-about-to-commit", "task": "compose the commit", "expected_at_open": "guesses", "reason": "no commit convention, no gate, no build/test command named anywhere in the contract", "expected_after_fix": "resolves"},
+    {"probe": "P4-doc-placement", "task": "write a new plan/topic", "expected_at_open": "resolves-late", "reason": "'Update docs only where behavior or contracts changed' exists but no placement map; docs/plans/ convention lives only in the plan frontmatter", "expected_after_fix": "resolves"},
+    {"probe": "P5-innocent-failing-test", "task": "unrelated task, suite already failing", "expected_at_open": "guesses", "reason": "no failure-path guidance (D8): fix-forward vs halt vs report is unstated", "expected_after_fix": "resolves"},
+    {"probe": "P6-conflicting-instruction", "task": "user asks to put SQL in a domain type", "expected_at_open": "resolves-late", "reason": "'keep domain types free of Cobra and SQL' is a soft list item under 'Unless an accepted design says otherwise' — weak supremacy language against a direct user request", "expected_after_fix": "resolves"},
+    {"probe": "P7-verification-before-done", "task": "agent believes it is finished", "expected_at_open": "guesses", "reason": "'Definition of good agent work' is qualitative; no closure gate fires from 'done' vocabulary and no command to run", "expected_after_fix": "resolves"}
+  ],
+  "verdict_at_open": "buries",
+  "ratchet": {
+    "red_probe_expectations_at_open": 4,
+    "resolves_late_at_open": 3,
+    "close_rule": "a future review round may not close with more than 4 guessing probes; validator EXPECTED_RED set (P1-verify-command, P1-first-contact, P1-compaction) must only shrink"
+  }
+}

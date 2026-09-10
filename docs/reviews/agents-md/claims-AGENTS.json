@@ -1,0 +1,30 @@
+{
+  "target": "AGENTS.md",
+  "review_date": "2026-09-10",
+  "skill": "agents-md-review",
+  "repo": "github.com/instagrim-dev/newf",
+  "commit_context": "feat/normalize-approaches (uncommitted working tree); 53 commits total",
+  "surface": {
+    "root_agents_md": "AGENTS.md (396 lines)",
+    "nested_agents_md": [],
+    "host_injected_in_repo": [],
+    "note": "Single-file contract. No nested AGENTS.md, no in-repo .cursor/rules, CLAUDE.md, or copilot-instructions.md. Host may inject user-level rules at runtime (e.g. cursor team-kit no-inline-imports, roi-commands); these are runtime siblings not controlled by this repo."
+  },
+  "claims": [
+    {"id": "C1", "type": "path", "quote": "Read `README.md`", "resolves_to": "README.md", "probe": "existence", "result": "true"},
+    {"id": "C2", "type": "path", "quote": "relevant material in `docs/`", "resolves_to": "docs/", "probe": "existence", "result": "true"},
+    {"id": "C3", "type": "path", "quote": "docs/toolbox-dsl.md", "resolves_to": "docs/toolbox-dsl.md", "probe": "existence", "result": "true"},
+    {"id": "C4", "type": "path", "quote": "See `docs/abstraction-safety.md` for the full contract.", "resolves_to": "docs/abstraction-safety.md", "probe": "existence", "result": "true"},
+    {"id": "C5", "type": "invariant", "quote": "keep domain types free of Cobra and SQL concerns", "probe": "grep internal/domain for cobra/database/sql/modernc", "result": "true"},
+    {"id": "C6", "type": "invariant", "quote": "Do not add provider coupling to domain packages.", "probe": "grep internal/domain for internal/provider import", "result": "true"},
+    {"id": "C7", "type": "invariant", "quote": "Add tests at the boundary where behavior is introduced.", "probe": "find *_test.go per package", "result": "true (7 test files across cmd/newf, config, domain, pipeline, store)"},
+    {"id": "C8", "type": "invariant", "quote": "put SQLite behind storage/repository boundaries", "probe": "grep modernc/sql outside internal/store", "result": "true (sql confined to internal/store)"},
+    {"id": "C9", "type": "command", "quote": "(none)", "probe": "grep AGENTS.md for go build/test/vet/gofmt/commit command", "result": "ABSENT — contract names no build/test/verify/commit command"}
+  ],
+  "noise_excluded": [
+    "map[string]any — vocabulary token, not a path",
+    "code-fence pseudo-operations (ingest -> normalize -> ...) — DSL sketch, not runnables",
+    "Evidence != Hypothesis and similar — epistemic type statements, not paths",
+    "compress/contrast/abstract/challenge/... — model operator names, not commands"
+  ]
+}
