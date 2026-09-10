@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/instagrim-dev/newf/internal/canon"
 	"github.com/instagrim-dev/newf/internal/domain"
 	"github.com/instagrim-dev/newf/internal/invariant"
 	"github.com/instagrim-dev/newf/internal/provider"
@@ -93,13 +94,23 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 		return EvaluateResponse{}, fmt.Errorf("proposal %s not found in latest frontier generation for problem %s", input.ProposalID, input.ProblemID)
 	}
 
-	// Target predicates + nearest-family verdicts are computed once per pass from
-	// the surviving invariants and the generation's cluster run.
+	// Target predicates are the parsed predicates of the CURRENTLY targetable
+	// invariants, keyed by id. A proposal's cached target verdict for a target
+	// that is no longer here (it became weaken/falsified since generation) is
+	// dropped consistently from BOTH the deterministic check input and the
+	// comparison population (G4): a proposal must not gain a better evaluation
+	// merely because a hypothesis it targeted became less credible, and its
+	// comparison evidence must not silently disappear while its claimed break
+	// stays. Stale targets are surfaced as an inapplicable/unknown result, not a
+	// free partial_success.
 	predicates, err := a.targetPredicates(ctx, repoStore, input.ProblemID)
 	if err != nil {
 		return EvaluateResponse{}, err
 	}
-	nearestVerdicts, err := a.nearestFamilyVerdicts(ctx, repoStore, gen.ClusterRunID, predicates)
+	// Representative signature per cluster in the generation's population, so each
+	// proposal's RECORDED nearest families (not every representative, G1) can be
+	// re-checked against the target predicates.
+	reps, err := a.clusterRepresentatives(ctx, repoStore, gen.ClusterRunID)
 	if err != nil {
 		return EvaluateResponse{}, err
 	}
@@ -133,7 +144,7 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 	}
 
 	for _, p := range selected {
-		vc := verificationContextForProposal(p, predicates, nearestVerdicts)
+		vc := verificationContextForProposal(p, predicates, reps)
 		decision, derr := verify.Route(ctx, verifiers, vc)
 		if derr != nil {
 			a.failRun(ctx, repoStore, run.ID, derr)
@@ -224,13 +235,14 @@ func (a *App) targetPredicates(ctx context.Context, repoStore problemStore, prob
 	return out, nil
 }
 
-// nearestFamilyVerdicts evaluates every cluster representative in the
-// generation's cluster run against each target predicate, so counterexample
-// search can find a family that STILL satisfies a claimed-broken target. Keyed
-// by invariant id -> list of family verdicts.
-func (a *App) nearestFamilyVerdicts(ctx context.Context, repoStore problemStore, clusterRunID string, predicates map[string]invariant.Predicate) (map[string][]invariant.Verdict, error) {
-	out := make(map[string][]invariant.Verdict, len(predicates))
-	if clusterRunID == "" || len(predicates) == 0 {
+// clusterRepresentatives loads the representative signature (with full epistemic
+// provenance) of every cluster in the generation's cluster run, keyed by cluster
+// id. Per-proposal nearest-family re-checks (G1) index into this map using the
+// proposal's OWN recorded nearest clusters, rather than scanning every
+// representative for every target.
+func (a *App) clusterRepresentatives(ctx context.Context, repoStore problemStore, clusterRunID string) (map[string]canon.MechanismSignature, error) {
+	out := map[string]canon.MechanismSignature{}
+	if clusterRunID == "" {
 		return out, nil
 	}
 	clusterRun, err := repoStore.GetClusterRun(ctx, clusterRunID)
@@ -241,25 +253,40 @@ func (a *App) nearestFamilyVerdicts(ctx context.Context, repoStore problemStore,
 	if err != nil {
 		return nil, err
 	}
-	for invID, pred := range predicates {
-		for _, fam := range families {
-			out[invID] = append(out[invID], invariant.Evaluate(pred, fam.Representative))
-		}
+	for _, fam := range families {
+		out[fam.ClusterID] = fam.Representative
 	}
 	return out, nil
 }
 
 // verificationContextForProposal assembles the code-owned context for one
-// proposal from its persisted per-target verdicts (M5.1) and the shared
-// nearest-family verdicts. The nearest verdicts are scoped to the proposal's own
-// targets so counterexample search only considers relevant refuters.
-func verificationContextForProposal(p store.FrontierProposalRow, predicates map[string]invariant.Predicate, nearestVerdicts map[string][]invariant.Verdict) verify.VerificationContext {
-	targets := make(map[string]invariant.Verdict, len(p.Targets))
-	nearest := make(map[string][]invariant.Verdict, len(p.Targets))
+// proposal. Two disciplines hold (G1 + G4):
+//
+//   - Target pinning: a cached per-target verdict is included ONLY when that
+//     target is still in `predicates` (currently targetable). A target that has
+//     since become weaken/falsified is dropped from the deterministic input, so
+//     the proposal cannot keep a `violates` verdict whose comparison evidence has
+//     disappeared. If EVERY claimed target became stale, the resulting empty
+//     TargetVerdicts routes to a non-decisive/unknown result — never a free
+//     partial_success.
+//   - Recorded nearest families: comparison verdicts come from re-evaluating the
+//     target predicate against the proposal's OWN recorded nearest cluster
+//     representatives, not every representative in the run.
+func verificationContextForProposal(p store.FrontierProposalRow, predicates map[string]invariant.Predicate, reps map[string]canon.MechanismSignature) verify.VerificationContext {
+	targets := make(map[string]invariant.Verdict)
+	nearest := make(map[string][]invariant.Verdict)
 	for _, t := range p.Targets {
+		pred, live := predicates[t.InvariantID]
+		if !live {
+			continue // stale target: drop verdict AND its comparison evidence together
+		}
 		targets[t.InvariantID] = invariant.Verdict(t.Verdict)
-		if v, ok := nearestVerdicts[t.InvariantID]; ok {
-			nearest[t.InvariantID] = v
+		for _, nc := range p.NearestClusters {
+			rep, ok := reps[nc.ClusterID]
+			if !ok {
+				continue
+			}
+			nearest[t.InvariantID] = append(nearest[t.InvariantID], invariant.Evaluate(pred, rep))
 		}
 	}
 	return verify.VerificationContext{

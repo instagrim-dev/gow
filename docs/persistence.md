@@ -446,7 +446,7 @@ CREATE TABLE invariant_state_transition (
   invariant_id TEXT NOT NULL REFERENCES candidate_invariant(id),
   challenge_id TEXT NOT NULL REFERENCES invariant_challenge(id),
   transition_seq INTEGER NOT NULL,
-  from_state TEXT NOT NULL CHECK (from_state IN ('proposed', 'challenged', 'surviving', 'weaken')),
+  from_state TEXT NOT NULL CHECK (from_state IN ('proposed', 'challenged', 'surviving', 'weaken', 'operator_attested')),
   to_state TEXT NOT NULL CHECK (to_state IN ('proposed', 'challenged', 'surviving', 'weaken', 'falsified', 'operator_attested')),
   created_at TEXT NOT NULL,
   UNIQUE(invariant_id, transition_seq)
@@ -479,9 +479,10 @@ BEGIN
     )) THEN RAISE(ABORT, 'from_state must match current invariant state')
     WHEN NOT (
       (NEW.from_state = 'proposed' AND NEW.to_state = 'challenged') OR
-      (NEW.from_state = 'challenged' AND NEW.to_state IN ('surviving', 'weaken', 'falsified')) OR
+      (NEW.from_state = 'challenged' AND NEW.to_state IN ('challenged', 'surviving', 'weaken', 'falsified')) OR
       (NEW.from_state = 'surviving' AND NEW.to_state IN ('challenged', 'weaken', 'falsified', 'operator_attested')) OR
-      (NEW.from_state = 'weaken' AND NEW.to_state IN ('challenged', 'surviving', 'falsified'))
+      (NEW.from_state = 'weaken' AND NEW.to_state IN ('challenged', 'surviving', 'falsified')) OR
+      (NEW.from_state = 'operator_attested' AND NEW.to_state IN ('challenged', 'weaken', 'falsified'))
     ) THEN RAISE(ABORT, 'invalid invariant state transition')
   END;
 END;

@@ -11,11 +11,20 @@ challenged, unfalsified structure (see `frontier-generation.md`).
 ## The lifecycle (state lives only in transitions)
 
 ```text
-proposed -> challenged -> {surviving | weaken | falsified}
-surviving -> {challenged | weaken | falsified | operator_attested}
-weaken    -> {challenged | surviving | falsified}
+proposed          -> challenged
+challenged        -> {challenged | surviving | weaken | falsified}
+surviving         -> {challenged | weaken | falsified | operator_attested}
+weaken            -> {challenged | surviving | falsified}
+operator_attested -> {challenged | weaken | falsified}
 falsified : terminal
 ```
+
+`challenged` is **resumable**, not a dead end (G2): a campaign that reaches no
+decisive outcome parks the invariant at `challenged`, and a later campaign
+(`challenged -> challenged` opens it again) can attack it with a stronger
+challenger or a new failure population. `operator_attested` is **challengeable**
+(G4): operator attestation records a human assertion, not machine verification,
+so it never makes a hypothesis immune to further challenge.
 
 There is **no state column**. The sole source of truth is the append-only
 `invariant_state_transitions` ledger, guarded by a validating trigger
@@ -35,20 +44,27 @@ strengthened nor weakened by a claim code cannot confirm.
 
 | Type | Confirmed when (code-verified) | Lifecycle force |
 |---|---|---|
-| `known-counterexample` | a failure-side member in the atlas evaluates to `violates` (ambiguity is not a counterexample) **and** the candidate is a `recurring` universal-regularity claim; a `contrast_observed` (association) claim is not refuted by an isolated counterexample and an `unknown`-kind claim is inconclusive (F3) | **falsified** (recurring only) |
-| `synthetic-counterexample` | a provider-constructed approach evaluates to `violates`. The construction is a PROPOSAL: its set fields are `unobserved`, so an omitted/empty description reads as `unknown` (inert), never a verified negative — it confirms only via a value actually PRESENT that contradicts the predicate (F3) | **weaken** — constructibility shows the invariant is not conserved by necessity; only an observed, in-atlas counterexample falsifies the empirical regularity |
+| `known-counterexample` | a failure-side member in the atlas evaluates to `violates` (ambiguity is not a counterexample) **and** the candidate is a verified-universal claim; recurrence is a *frequency label*, not a quantifier, so `recurring` grants the universal (falsifiable-by-one-counterexample) reading **only** when the corpus is actually universal over the eligible failure population (full failure coverage). A `recurring` candidate that is not fully covering, a `contrast_observed` (association) claim, or an `unknown`-kind claim is **not** refuted by an isolated counterexample (G3) | **falsified** (verified-universal only) |
+| `synthetic-counterexample` | a provider-constructed approach evaluates to `violates` **via admissibly supported structure**. The construction is a PROPOSAL: its set fields are `unobserved`, so an omitted/empty description reads as `unknown` (inert), and a violation resting on an **unsupported** present claim is likewise only a proposal — presence in a generated description is not stronger evidence of realizability than absence from it (G3) | **weaken** — constructibility (from supported structure) shows the invariant is not conserved by necessity; only an observed, in-atlas counterexample falsifies the empirical regularity |
 | `success-preserving` | a success/partial-success family's eligible members all satisfy the predicate (it does not discriminate outcome) | **weaken** |
 | `bias-critique` | the deterministically **recomputed** distinct-family support falls below the mining threshold; the recount is the evidence (KTD-6) and is retained for audit even when unconfirmed | **weaken** |
 | `split` | ≥2 **admissible** child predicates (shared failure-mechanism + pinned-vocabulary gate), each distinct from the parent, each a **refinement** (grounding only to families the parent supports), grounding to **nonempty, pairwise-disjoint** supporting failure families (abstraction safety: ground or reject) | **weaken** + children persisted |
 | `merge` | one **admissible** child predicate (same shared gate — this rejects an `outcome in [...]` child that would cover every failure family by definition) covering the **union** of the parents' support whose contrast violations are **not lower than any parent's** (a merge that erases the outcome-separating axis is rejected) | **weaken** + child persisted |
 | `independent-verification` | never provider-claimable; see the `operator_attested` gate below | surviving → **operator_attested** |
 
-Survival is **earned, not defaulted** (F2): a campaign transitions the invariant
-to **surviving** only when at least one **completed applicable** attack ran a
-real determination over an eligible population and did not land. A campaign made
-up entirely of inadmissible/inconclusive attempts (e.g. a lone synthetic with no
-construction) opens the campaign (`-> challenged`) and stops there — it does
-**not** earn `surviving`. Survival cannot be requested.
+Survival is **earned, not defaulted** (G2). Each attack now yields a typed
+`CheckOutcome` — `inadmissible`, `inconclusive`, `completed_negative`, or
+`confirmed` — instead of a default-true "applicable" flag. A campaign transitions
+the invariant to **surviving** only when at least one **`completed_negative`**
+attack ran a real determination over an eligible population and did not land (a
+decisive negative). Validation rejections (an `inadmissible` split with fewer
+than two children, a merge naming no partners, a synthetic with no construction,
+a provider over-claiming operator-only verification) and undecided attacks
+(`inconclusive`) count toward neither survival nor refutation. A campaign made up
+entirely of inadmissible/inconclusive attempts opens the campaign
+(`-> challenged`) and stops there — it does **not** earn `surviving`, and because
+`challenged` is resumable a later campaign can still decide it. Survival cannot be
+requested.
 
 Confirmed split/merge children are persisted as **real candidate invariants**
 in a new revision whose derivation identity (the `miner_version` reuse key)

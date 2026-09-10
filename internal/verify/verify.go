@@ -157,9 +157,11 @@ type VerificationContext struct {
 	// / unknown) of the proposed mechanism against each surviving invariant it
 	// claims to break, keyed by invariant id. Persisted by M5.1.
 	TargetVerdicts map[string]invariant.Verdict
-	// NearestVerdicts, per target invariant id, are the verdicts of the nearest
-	// known failure families against that same predicate: a family that still
-	// SATISFIES a target the proposal claims to break is a refuter.
+	// NearestVerdicts, per target invariant id, are the verdicts of the proposal's
+	// RECORDED nearest known failure families against that same predicate. A
+	// family that makes the SAME break (also violates a target the proposal broke)
+	// yet is a known failure is a refuter; a family that still SATISFIES the
+	// target is the intended structural contrast, not a refuter (G1).
 	NearestVerdicts map[string][]invariant.Verdict
 	// ClaimedViolation is the provider's structural-violation claim (prose),
 	// carried for the model tier; deterministic tiers ignore it.
@@ -204,10 +206,17 @@ func Route(ctx context.Context, verifiers []Verifier, vc VerificationContext) (D
 		}
 		lastKind = v.Kind()
 		if d.Verdict.Decisive() {
-			// Stamp kind+strength from the deciding verifier; never upgrade.
+			// Stamp kind from the deciding verifier and CLAMP strength to that
+			// verifier's registered tier. A verifier's self-reported strength is
+			// never trusted to EXCEED its registration: a model-kind adapter that
+			// (mistakenly or otherwise) returns a valid `deterministic` strength
+			// must still be recorded as single-model-judgment. We take the weaker
+			// of {reported, registered} so a verifier may under-report but never
+			// launder a stronger tier than the router registered it at (G5).
 			d.Kind = v.Kind()
-			if !d.Strength.Valid() {
-				d.Strength = StrengthForKind(v.Kind())
+			ceiling := StrengthForKind(v.Kind())
+			if !d.Strength.Valid() || d.Strength.Rank() > ceiling.Rank() {
+				d.Strength = ceiling
 			}
 			return d, nil
 		}

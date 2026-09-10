@@ -205,6 +205,45 @@ func TestVerifySplitRejectsChildOutsideParentSupport(t *testing.T) {
 	}
 }
 
+// TestVerifySyntheticUnsupportedPresenceIsProposalNotCounterexample is the G3
+// regression: a provider can assert an UNSUPPORTED present property that violates
+// a negated predicate (here `not contains(preserves, X)` with X present but
+// unsupported). Presence in a generated description is not stronger evidence of
+// realizability than absence from it, so the synthetic is a PROPOSAL — it must
+// not confirm a weakening without admissibly supported structure.
+func TestVerifySyntheticUnsupportedPresenceIsProposalNotCounterexample(t *testing.T) {
+	negated := Predicate{Schema: PredicateSchemaV1, Root: Node{
+		Op:       OpNot,
+		Children: []Node{{Op: OpContains, Field: FieldPreserves, CanonicalID: chIDSieve}},
+	}}
+	// X (sieve) is present but only as an UNSUPPORTED model assertion.
+	unsupported := canon.MechanismSignature{
+		SchemaVersion:     canon.SchemaMechanismV1,
+		VocabularyVersion: "mechanism/v1",
+		OutcomeClass:      domain.OutcomeFailure,
+		Preserves: []canon.FieldClaim{{
+			FieldKind:   domain.FieldPreserves,
+			State:       domain.ResolutionResolved,
+			CanonicalID: domain.CanonicalID(chIDSieve),
+			Status:      domain.ClaimUnsupported,
+		}},
+		SetFieldCompleteness: map[domain.FieldKind]domain.FieldCompleteness{
+			domain.FieldPreserves: domain.CompletenessComplete,
+		},
+	}
+	// Sanity: the construction really does violate the negated predicate.
+	if Evaluate(negated, unsupported) != VerdictViolates {
+		t.Fatalf("test setup: unsupported-present synthetic should violate the negated predicate")
+	}
+	res := VerifySyntheticCounterexample(negated, unsupported)
+	if res.Confirmed {
+		t.Fatalf("an unsupported present property must not confirm a synthetic counterexample (G3): %+v", res)
+	}
+	if res.Outcome != OutcomeInconclusive {
+		t.Fatalf("an unsupported-present synthetic should be inconclusive (a proposal), got %q", res.Outcome)
+	}
+}
+
 func TestVerifySuccessPreserving(t *testing.T) {
 	families := chAtlas()
 	// mcl_s1 (partial_success) preserves residue -> confirmed.

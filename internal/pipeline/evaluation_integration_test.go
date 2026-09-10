@@ -4,14 +4,25 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"github.com/instagrim-dev/newf/internal/canon"
+	"github.com/instagrim-dev/newf/internal/domain"
+	"github.com/instagrim-dev/newf/internal/invariant"
+	"github.com/instagrim-dev/newf/internal/store"
 )
 
 // TestIntegrationEvaluateEndToEnd runs the full offline M5.2 path on top of the
 // M5.1 substrate: seed -> cluster -> failure-space -> mine -> challenge
 // (-> surviving) -> frontier generate -> evaluate -> evaluation show. It asserts
 // the evaluation run completes, the proposal's result is populated, and every
-// evaluation carries BOTH a verdict AND its verification strength (R1) produced
-// by a deterministic tier (R3) — never a bare model opinion.
+// evaluation carries BOTH a verdict AND its verification strength (R1).
+//
+// The seeded proposal VIOLATES its target (`preserves contains <id>`) while the
+// nearest known failure families still SATISFY it — the intended structural
+// difference, not a refutation (G1). The bounded counterexample search therefore
+// finds no refuter and is NON-DECISIVE; realizability is a model judgment, so
+// the proposal is honestly routed to the model tier rather than being awarded a
+// deterministic `partial_success` for missing comparison evidence.
 func TestIntegrationEvaluateEndToEnd(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
@@ -52,13 +63,16 @@ func TestIntegrationEvaluateEndToEnd(t *testing.T) {
 	if ev.Verdict == "" || ev.VerificationStrength == "" || ev.VerifierKind == "" {
 		t.Fatalf("evaluation missing verdict/kind/strength: %+v", ev)
 	}
-	// R3: a code-verified break (violates on the proposed signature, confirmed by
-	// M5.1) is decided by a deterministic tier, not the model.
-	if ev.VerifierKind == "model-judgment" {
-		t.Fatalf("a code-verifiable proposal must not be decided by the model tier; got %q", ev.VerifierKind)
+	// G1: a confirmed break whose nearest known failures merely SATISFY the target
+	// (the intended structural difference) must NOT be awarded a deterministic
+	// partial_success for missing comparison evidence. The two deterministic tiers
+	// abstain and the decision is the model tier's — recorded honestly as a
+	// single-model judgment (here the conservative fixture abstains -> blocked).
+	if ev.VerifierKind == "counterexample-search" && ev.Verdict == "partial_success" {
+		t.Fatalf("bounded search must not award partial_success without a reproducing family (G1); got %+v", ev)
 	}
-	if ev.ProviderInvocationID != "" {
-		t.Fatalf("a deterministic-tier evaluation must not carry a provider invocation; got %q", ev.ProviderInvocationID)
+	if ev.VerifierKind == "model-judgment" && ev.VerificationStrength != "single-model-judgment" {
+		t.Fatalf("a model-tier decision must record single-model-judgment strength; got %q", ev.VerificationStrength)
 	}
 
 	// Run lifecycle reflects success.
@@ -144,4 +158,46 @@ func contains(s, sub string) bool {
 		}
 	}
 	return false
+}
+
+// TestVerificationContextDropsStaleTarget is the G4 regression: a proposal's
+// cached target verdict must NOT survive its target becoming stale. When a
+// targeted invariant is no longer currently targetable (it became
+// weaken/falsified since generation, so it is absent from `predicates`), its
+// cached `violates` verdict AND its comparison evidence are dropped together —
+// an unchanged proposal cannot gain a better evaluation merely because the
+// hypothesis it targeted became less credible. Here the ONLY target is stale, so
+// the resulting context is empty and routes to a non-decisive result rather than
+// a free partial_success.
+func TestVerificationContextDropsStaleTarget(t *testing.T) {
+	p := store.FrontierProposalRow{
+		ID: "prop_1",
+		Targets: []store.FrontierTargetRow{
+			{InvariantID: "inv_live", Verdict: "violates"},
+			{InvariantID: "inv_stale", Verdict: "violates"},
+		},
+		NearestClusters: []store.FrontierNearestRow{{ClusterID: "clu_1"}},
+	}
+	// inv_stale is absent from predicates (it became weaken/falsified). inv_live
+	// remains, with a predicate no representative satisfies -> no false refuter.
+	livePred := invariant.Predicate{Schema: invariant.PredicateSchemaV1, Root: invariant.Node{
+		Op: invariant.OpContains, Field: invariant.FieldPreserves, CanonicalID: "core.operator.absent",
+	}}
+	predicates := map[string]invariant.Predicate{"inv_live": livePred}
+	reps := map[string]canon.MechanismSignature{"clu_1": {
+		SchemaVersion: canon.SchemaMechanismV1, VocabularyVersion: "mechanism/v1",
+		OutcomeClass: domain.OutcomeFailure, Preserves: []canon.FieldClaim{},
+		SetFieldCompleteness: map[domain.FieldKind]domain.FieldCompleteness{domain.FieldPreserves: domain.CompletenessComplete},
+	}}
+
+	vc := verificationContextForProposal(p, predicates, reps)
+	if _, ok := vc.TargetVerdicts["inv_stale"]; ok {
+		t.Fatal("a stale target's cached verdict must be dropped (G4)")
+	}
+	if _, ok := vc.NearestVerdicts["inv_stale"]; ok {
+		t.Fatal("a stale target's comparison evidence must be dropped with its verdict (G4)")
+	}
+	if _, ok := vc.TargetVerdicts["inv_live"]; !ok {
+		t.Fatal("a live target must be retained")
+	}
 }

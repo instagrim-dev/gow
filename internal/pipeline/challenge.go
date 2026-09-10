@@ -18,8 +18,19 @@ import (
 )
 
 // challengeableStates are the lifecycle states a new campaign may attack.
-// falsified is terminal; established is not re-attacked here (M4.3 scope).
-var challengeableStates = map[string]bool{"proposed": true, "surviving": true, "weaken": true}
+// falsified is terminal. `challenged` IS re-attackable (G2): a campaign that
+// reaches no decisive outcome parks the invariant at `challenged`, and that must
+// not be a dead end — a later challenge (e.g. a stronger challenger, or a new
+// failure population) can resume it. `operator_attested` is also challengeable
+// (G4): operator attestation records a human assertion, not machine
+// verification, so it must not make the hypothesis immune to further challenge.
+var challengeableStates = map[string]bool{
+	"proposed":          true,
+	"surviving":         true,
+	"weaken":            true,
+	"challenged":        true,
+	"operator_attested": true,
+}
 
 // ChallengeInvariants runs a challenge campaign: one candidate (InvariantID)
 // or every challengeable candidate for the problem (All). Each candidate's
@@ -212,15 +223,15 @@ func (a *App) buildCampaign(ctx context.Context, repoStore problemStore, revisio
 	}
 
 	falsifyAt, weakenAt := -1, -1
-	completedApplicable := 0
+	completedNegatives := 0
 	for i, proposal := range provResp.Proposals {
-		ch, verdictClass, applicable, err := a.verifyProposal(ctx, repoStore, revision, invariantID, runID, pred, families, vocab, proposal, now, i)
+		ch, verdictClass, outcome, err := a.verifyProposal(ctx, repoStore, revision, invariantID, runID, pred, families, vocab, proposal, now, i)
 		if err != nil {
 			return store.ChallengeCampaignRecord{}, err
 		}
 		campaign.Challenges = append(campaign.Challenges, ch)
-		if applicable {
-			completedApplicable++
+		if outcome == invariant.OutcomeCompletedNegative {
+			completedNegatives++
 		}
 		if verdictClass == verdictFalsify && falsifyAt < 0 {
 			falsifyAt = i
@@ -234,24 +245,27 @@ func (a *App) buildCampaign(ctx context.Context, repoStore problemStore, revisio
 	}
 
 	// Transition plan: the first challenge opens the campaign
-	// (proposed|surviving|weaken -> challenged); the decisive challenge closes it.
-	// A decisive falsify/weaken always closes. Otherwise survival is granted ONLY
-	// when a completed applicable check actually ran (F2); a campaign of only
-	// inadmissible/inconclusive attempts opens the campaign as `challenged` and
-	// stops there — no unearned `surviving`.
+	// (proposed|surviving|weaken|challenged|operator_attested -> challenged); the
+	// decisive challenge closes it. A decisive falsify/weaken always closes.
+	// Otherwise survival is granted ONLY when a COMPLETED NEGATIVE search actually
+	// ran (G2) — a decisive attack over an eligible population that did not land.
+	// A campaign of only inadmissible/inconclusive attempts opens the campaign as
+	// `challenged` and stops there — no unearned `surviving`. `challenged` is now
+	// itself challengeable (v18), so this is a resumable park state, not a dead
+	// end.
 	campaign.Challenges[0].Transitions = append(campaign.Challenges[0].Transitions, "challenged")
 	switch {
 	case falsifyAt >= 0:
 		campaign.Challenges[falsifyAt].Transitions = append(campaign.Challenges[falsifyAt].Transitions, "falsified")
 	case weakenAt >= 0:
 		campaign.Challenges[weakenAt].Transitions = append(campaign.Challenges[weakenAt].Transitions, "weaken")
-	case completedApplicable > 0:
+	case completedNegatives > 0:
 		last := len(campaign.Challenges) - 1
 		campaign.Challenges[last].Transitions = append(campaign.Challenges[last].Transitions, "surviving")
 	default:
-		// No completed applicable negative search: the invariant is neither
-		// falsified, weakened, nor legitimately survived. It remains `challenged`
-		// (attacked but undecided) rather than earning `surviving` by fallback.
+		// No completed negative search: the invariant is neither falsified,
+		// weakened, nor legitimately survived. It remains `challenged` (attacked
+		// but undecided) and can be resumed by a later campaign.
 	}
 	return campaign, nil
 }
@@ -327,23 +341,40 @@ func mustJSONString(v any) string {
 	return string(raw)
 }
 
-// associationKindForCandidate resolves the candidate's stored association status
-// into the invariant.AssociationKind that governs the F3 refutation condition
-// for a known counterexample (a recurring/universal claim is falsified by one
-// counterexample; a contrast/association claim is not). An unrecognized or
-// missing status is treated as `unknown` (a lone counterexample is
-// inconclusive), never silently upgraded to the stronger refutation.
+// associationKindForCandidate resolves the candidate's stored, code-MEASURED
+// association status into the invariant.AssociationKind that governs the
+// known-counterexample refutation condition (G3). A frequency label is NOT a
+// logical quantifier: `recurring` means only "the predicate holds across
+// >=minSupport distinct failure families", which does not assert "every failure
+// satisfies it". A single violating failure family therefore does not, by
+// itself, refute a recurrence claim.
+//
+// The universal refutation (falsifiable-by-one-counterexample) is granted ONLY
+// when the corpus actually exhibits universality over the eligible failure
+// population: the candidate is `recurring` AND every eligible failure family
+// satisfies it (FailureCoverageNum == FailureCoverageDen, with a nonempty
+// denominator). Absent that, recurrence is treated as an association: a lone
+// counterexample is inconclusive, never a falsification. This keeps the
+// challenger from strengthening a claim (recurrence -> universality) before
+// refuting it. An explicitly authored claim_kind/quantifier is future work;
+// until the miner authors one, code refuses to invent universality.
 func associationKindForCandidate(revision store.InvariantRevisionRecord, invariantID string) invariant.AssociationKind {
 	for _, c := range revision.Candidates {
-		if c.ID == invariantID {
-			switch invariant.AssociationKind(c.AssociationStatus) {
-			case invariant.AssociationRecurring:
-				return invariant.AssociationRecurring
-			case invariant.AssociationContrastObserved:
-				return invariant.AssociationContrastObserved
-			}
-			return invariant.AssociationUnknown
+		if c.ID != invariantID {
+			continue
 		}
+		switch invariant.AssociationKind(c.AssociationStatus) {
+		case invariant.AssociationRecurring:
+			// Universal refutation only if the corpus is actually universal over
+			// the eligible failure families; otherwise recurrence is an association.
+			if c.FailureCoverageDen > 0 && c.FailureCoverageNum == c.FailureCoverageDen {
+				return invariant.AssociationRecurring
+			}
+			return invariant.AssociationContrastObserved
+		case invariant.AssociationContrastObserved:
+			return invariant.AssociationContrastObserved
+		}
+		return invariant.AssociationUnknown
 	}
 	return invariant.AssociationUnknown
 }
@@ -354,16 +385,14 @@ func associationKindForCandidate(revision store.InvariantRevisionRecord, invaria
 // synthetic constructions, code-evaluated) signatures. An unconfirmed challenge
 // carries no evidence links and drives no transition (KTD-3).
 //
-// It returns, in addition to the verdict class, whether the check was a
-// COMPLETED APPLICABLE attack (F2): an attack that ran its determination over an
-// eligible population and reached a definite outcome (confirmed, or a genuine
-// negative — e.g. "no known member violates", "support holds under
-// recomputation"). An INADMISSIBLE/INCONCLUSIVE attempt (a synthetic with no
-// construction, a merge naming no partners or child, a provider over-claiming
-// independent verification, an empty/unobserved synthetic) is NOT a completed
-// negative search: it returns applicable=false so it cannot, by itself, earn
-// the invariant `surviving`.
-func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revision store.InvariantRevisionRecord, invariantID, runID string, pred invariant.Predicate, families []invariant.Family, vocab *canon.Vocabulary, proposal provider.ChallengeProposal, now time.Time, ordinal int) (store.ChallengeRecord, verdictClass, bool, error) {
+// It returns, in addition to the verdict class, the explicit CheckOutcome (G2):
+// the verifiers now report inadmissible / inconclusive / completed_negative /
+// confirmed, and buildCampaign derives survival from those outcomes under a
+// required-check policy rather than a default-true "applicable" flag. Pipeline
+// gates that reject an attack before it reaches a verifier (a provider
+// over-claiming operator-only verification, a synthetic with no construction, a
+// merge naming no partners or child) return OutcomeInadmissible here.
+func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revision store.InvariantRevisionRecord, invariantID, runID string, pred invariant.Predicate, families []invariant.Family, vocab *canon.Vocabulary, proposal provider.ChallengeProposal, now time.Time, ordinal int) (store.ChallengeRecord, verdictClass, invariant.CheckOutcome, error) {
 	ch := store.ChallengeRecord{
 		ID:             domain.NewInvariantChallengeID(now),
 		InvariantID:    invariantID,
@@ -372,7 +401,7 @@ func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revisi
 		CreatedAt:      now.Format(timeLayout),
 	}
 	if !proposal.Type.Valid() {
-		return store.ChallengeRecord{}, verdictInert, false, fmt.Errorf("unknown challenge type %q", proposal.Type)
+		return store.ChallengeRecord{}, verdictInert, invariant.OutcomeInadmissible, fmt.Errorf("unknown challenge type %q", proposal.Type)
 	}
 	if proposal.Type == invariant.ChallengeIndependentVerification {
 		// The path toward attestation is operator-only (KTD-2); a provider
@@ -380,14 +409,11 @@ func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revisi
 		// (it is not a failure-search attack at all).
 		ch.ResultSummary = "unconfirmed"
 		ch.Detail = "independent verification cannot be provider-claimed; use `invariant establish` with snapshot evidence"
-		return ch, verdictInert, false, nil
+		return ch, verdictInert, invariant.OutcomeInadmissible, nil
 	}
 
 	var result invariant.ChallengeResult
 	class := verdictInert
-	// applicable defaults true: most attacks run a real determination. Branches
-	// that bail before evaluating an eligible population set it false.
-	applicable := true
 	switch proposal.Type {
 	case invariant.ChallengeKnownCounterexample:
 		result = invariant.VerifyKnownCounterexample(pred, families, associationKindForCandidate(revision, invariantID))
@@ -396,8 +422,7 @@ func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revisi
 		}
 	case invariant.ChallengeSyntheticCounterexample:
 		if proposal.Synthetic == nil {
-			result = invariant.ChallengeResult{Confirmed: false, Detail: "no synthetic construction supplied"}
-			applicable = false // no construction to evaluate: inadmissible, not a completed negative search
+			result = invariant.ChallengeResult{Outcome: invariant.OutcomeInadmissible, Detail: "no synthetic construction supplied"}
 			break
 		}
 		synth := syntheticSignature(*proposal.Synthetic)
@@ -413,12 +438,6 @@ func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revisi
 				Content:      mustJSONString(proposal.Synthetic),
 				CreatedAt:    now.Format(timeLayout),
 			}}
-		} else {
-			// The construction evaluated to unknown/satisfies (an unobserved or
-			// omitted field is a proposal, not a demonstrated counterexample, F3):
-			// this proves nothing negative about the invariant, so it does not
-			// count as a completed applicable check toward survival.
-			applicable = false
 		}
 	case invariant.ChallengeSuccessPreserving:
 		result = invariant.VerifySuccessPreserving(pred, families)
@@ -436,7 +455,7 @@ func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revisi
 			class = verdictWeaken
 			derived, err := a.buildDerivedChildren(revision, invariantID, runID, invariant.ChallengeSplit, proposal.Children, families, now)
 			if err != nil {
-				return store.ChallengeRecord{}, verdictInert, false, err
+				return store.ChallengeRecord{}, verdictInert, invariant.OutcomeInadmissible, err
 			}
 			ch.Derived = derived
 		}
@@ -444,14 +463,12 @@ func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revisi
 		parents := []invariant.Predicate{pred}
 		matched, err := a.mergeParents(revision, proposal.MergeParentFingerprints)
 		if err != nil {
-			result = invariant.ChallengeResult{Confirmed: false, Detail: err.Error()}
-			applicable = false // could not assemble the parent set: inadmissible
+			result = invariant.ChallengeResult{Outcome: invariant.OutcomeInadmissible, Detail: err.Error()}
 			break
 		}
 		parents = append(parents, matched...)
 		if proposal.MergeChild == nil {
-			result = invariant.ChallengeResult{Confirmed: false, Detail: "no merged child predicate supplied"}
-			applicable = false
+			result = invariant.ChallengeResult{Outcome: invariant.OutcomeInadmissible, Detail: "no merged child predicate supplied"}
 			break
 		}
 		result = invariant.VerifyMerge(parents, *proposal.MergeChild, families, vocab)
@@ -463,9 +480,19 @@ func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revisi
 			// double-count it.
 			derived, err := a.buildDerivedChildren(revision, invariantID, runID, invariant.ChallengeMerge, []invariant.Predicate{*proposal.MergeChild}, families, now, matched...)
 			if err != nil {
-				return store.ChallengeRecord{}, verdictInert, false, err
+				return store.ChallengeRecord{}, verdictInert, invariant.OutcomeInadmissible, err
 			}
 			ch.Derived = derived
+		}
+	}
+
+	// Default any unset outcome (defensive; verifiers set it explicitly).
+	outcome := result.Outcome
+	if outcome == "" {
+		if result.Confirmed {
+			outcome = invariant.OutcomeConfirmed
+		} else {
+			outcome = invariant.OutcomeInconclusive
 		}
 	}
 
@@ -475,15 +502,14 @@ func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revisi
 		ch.Evidence = append(ch.Evidence, mapEvidence(result.Evidence)...)
 	} else {
 		ch.ResultSummary = "unconfirmed"
-		// KTD-3: inert — with one deliberate exception: a bias-critique recount is
-		// itself deterministic audit evidence and is retained even when support held.
-		if proposal.Type == invariant.ChallengeBiasCritique {
-			ch.Evidence = append(ch.Evidence, mapEvidence(result.Evidence)...)
-		}
+		// KTD-3: unconfirmed attacks drive no transition. A completed-negative or
+		// bias-critique recount still carries deterministic audit evidence and is
+		// retained; inadmissible/inconclusive attacks with no evidence stay inert.
+		ch.Evidence = append(ch.Evidence, mapEvidence(result.Evidence)...)
 		class = verdictInert
 	}
 	_ = ordinal
-	return ch, class, applicable, nil
+	return ch, class, outcome, nil
 }
 
 // mergeParents resolves merge-partner fingerprints against the candidate's own

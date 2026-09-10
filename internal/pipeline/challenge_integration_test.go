@@ -139,6 +139,60 @@ func TestIntegrationInconclusiveCampaignDoesNotEarnSurviving(t *testing.T) {
 	if got := resp.Reports[0].StateAfter; got != "challenged" {
 		t.Fatalf("an all-inconclusive campaign should stop at challenged, got %q", got)
 	}
+
+	// G2 resumability: `challenged` must NOT be a dead end. A follow-up campaign
+	// with a completed-negative attack (bias recount that holds) resumes the
+	// undecided candidate and legitimately earns `surviving`.
+	app.challengerFn = biasOnlyChallenger{}
+	resume, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID})
+	if err != nil {
+		t.Fatalf("resume challenge on a challenged candidate must be allowed (G2), got error: %v", err)
+	}
+	if got := resume.Reports[0].StateAfter; got != "surviving" {
+		t.Fatalf("a resumed campaign with a completed-negative search should reach surviving, got %q", got)
+	}
+}
+
+// splitTooFewChildrenChallenger proposes a single split with ONE child. The
+// split verifier rejects it as INADMISSIBLE (a split requires >=2 children); the
+// pipeline must not count that rejected attack as a completed applicable check.
+type splitTooFewChildrenChallenger struct{}
+
+func (splitTooFewChildrenChallenger) Challenge(_ context.Context, req provider.ChallengeRequest) (provider.ChallengeResponse, error) {
+	pred, _ := invariant.ParsePredicate(req.PredicateJSON)
+	return provider.ChallengeResponse{
+		Proposals: []provider.ChallengeProposal{{
+			Type:           invariant.ChallengeSplit,
+			Rationale:      "one child is not a split",
+			ClaimedVerdict: "splits",
+			Children:       []invariant.Predicate{pred}, // <2 children: inadmissible
+		}},
+		Metadata:        provider.Metadata{ProviderName: "fixture", ProviderVersion: "test", ModelName: "split-1", SchemaVersion: invariant.PredicateSchemaV1},
+		RequestPayload:  "req",
+		ResponsePayload: "resp",
+	}, nil
+}
+
+// TestIntegrationInadmissibleSplitDoesNotEarnSurviving is the G2 regression for
+// the specific leak the review flagged: an inadmissible split (fewer than two
+// children) must not count as a completed applicable check. A campaign of only
+// that attack opens (-> challenged) and stops there — never `surviving`.
+func TestIntegrationInadmissibleSplitDoesNotEarnSurviving(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = dataDrivenMiner{}
+	app.challengerFn = splitTooFewChildrenChallenger{}
+
+	_, invID, _ := mineOneCandidate(t, ctx, app, dbPath)
+
+	resp, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID})
+	if err != nil {
+		t.Fatalf("challenge: %v", err)
+	}
+	if got := resp.Reports[0].StateAfter; got != "challenged" {
+		t.Fatalf("an inadmissible-split-only campaign must stop at challenged (G2), got %q", got)
+	}
 }
 
 // TestIntegrationChallengeCampaign runs the deriving challenger against a mined
@@ -319,6 +373,20 @@ func TestIntegrationAttestationIsNotVerification(t *testing.T) {
 	}
 	if est.Invariant.State != "operator_attested" {
 		t.Fatalf("state = %q, want operator_attested", est.Invariant.State)
+	}
+
+	// G4: attestation must NOT make the hypothesis immune to further challenge.
+	// A campaign against an operator_attested invariant is accepted (not rejected
+	// as unchallengeable) and drives a legitimate transition.
+	postAttest, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID})
+	if err != nil {
+		t.Fatalf("operator_attested must remain challengeable (G4), got error: %v", err)
+	}
+	switch postAttest.Reports[0].StateAfter {
+	case "surviving", "challenged", "weaken", "falsified":
+		// any legitimate post-challenge state is fine; the point is it was attackable
+	default:
+		t.Fatalf("challenge of operator_attested produced unexpected state %q", postAttest.Reports[0].StateAfter)
 	}
 }
 

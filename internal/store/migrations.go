@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 16
+const currentSchemaVersion = 18
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -796,6 +796,32 @@ END;
 		// `established` transition rows to `operator_attested`. Introspective +
 		// idempotent: a fresh v16 database already uses the new name.
 		apply: migrateV16RenameEstablishedToOperatorAttested,
+	},
+	{
+		version: 17,
+		// M6.1 success compression (#16). Additive: (1) frontier_proposal_signatures
+		// closes the verified substrate gap that a proposal's canonical CONTENT was
+		// never persisted (only its hash) — success compression must evaluate
+		// condition predicates against successful proposals; (2) the immutable,
+		// revisioned success-invariant layer (revisions, invariants, predicates,
+		// broken-target links, cohort evaluations). One guarded non-additive step:
+		// widens provider_invocations.role to admit 'success-compress' via the
+		// established in-place writable_schema CHECK edit (FK-safe; v11/v13/v14/v15
+		// precedent). Introspective + idempotent: a fresh v17 database already has
+		// the target shape.
+		apply: migrateV17SuccessCompression,
+	},
+	{
+		version: 18,
+		// M4.3 lifecycle hardening (G2/G4). Widens the transition-validating
+		// trigger's legal-edge set so undecided campaigns are resumable and
+		// operator attestation stays challengeable:
+		//   challenged        -> challenged   (re-open an undecided campaign)
+		//   operator_attested -> challenged   (attestation is not immune to challenge)
+		//   operator_attested -> weaken|falsified (a challenge can overturn it)
+		// DROP + CREATE the trigger (immutable-by-convention). Introspective +
+		// idempotent: recreating with the wider rule is safe on a fresh v18 DB.
+		apply: migrateV18ChallengeableAttestationAndResume,
 	},
 }
 
@@ -2089,6 +2115,241 @@ BEGIN
   SELECT RAISE(ABORT, 'invariant state transitions are immutable');
 END;`); err != nil {
 		return err
+	}
+	return nil
+}
+
+// migrateV18ChallengeableAttestationAndResume widens the transition-validating
+// trigger's legal-edge set (G2/G4). Two lifecycle defects are closed:
+//
+//   - Retry dead end (G2): a campaign that reaches no decisive outcome parks the
+//     invariant at `challenged`. Without a `challenged -> challenged` edge the
+//     opening transition of a resuming campaign is rejected, so `challenged`
+//     candidates could never be re-attacked. The edge makes undecided campaigns
+//     resumable.
+//   - Attestation immunity (G4): `operator_attested` had NO outgoing edge, so an
+//     operator assertion (which is NOT machine verification) became permanently
+//     immune to challenge. It now admits `-> challenged` (open a campaign) and
+//     `-> weaken | falsified` (a decisive challenge can overturn it).
+//
+// The trigger is immutable-by-convention (not by trigger), so DROP + CREATE is
+// the supported reshape. Recreated verbatim from v16 except the widened
+// legality block. Idempotent: a fresh v18 DB simply gets the wider rule.
+func migrateV18ChallengeableAttestationAndResume(ctx context.Context, tx *sql.Tx) error {
+	// The from_state CHECK never admitted operator_attested (establishment was
+	// terminal). Attestation is now challengeable, so operator_attested must be a
+	// legal from_state. Guarded in-place CHECK edit (v11/v13/v14/v16 precedent),
+	// idempotent: skip when already widened.
+	var ddl string
+	if err := tx.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type='table' AND name='invariant_state_transitions'`).Scan(&ddl); err != nil {
+		return err
+	}
+	if !strings.Contains(ddl, "from_state IN ('proposed', 'challenged', 'surviving', 'weaken', 'operator_attested')") {
+		if err := editTableCheckInPlace(ctx, tx, "invariant_state_transitions",
+			"from_state IN ('proposed', 'challenged', 'surviving', 'weaken')",
+			"from_state IN ('proposed', 'challenged', 'surviving', 'weaken', 'operator_attested')"); err != nil {
+			return err
+		}
+	}
+
+	if _, err := tx.ExecContext(ctx, `DROP TRIGGER IF EXISTS invariant_state_transitions_validate_insert`); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `
+CREATE TRIGGER invariant_state_transitions_validate_insert
+BEFORE INSERT ON invariant_state_transitions
+BEGIN
+  SELECT CASE
+    WHEN COALESCE((
+      SELECT itc.last_transition_seq
+      FROM invariant_transition_counters itc
+      WHERE itc.invariant_id = NEW.invariant_id
+    ), 0) = 0 THEN RAISE(ABORT, 'transition_seq requires a prior counter allocation')
+    WHEN NEW.transition_seq <> (
+      SELECT itc.last_transition_seq
+      FROM invariant_transition_counters itc
+      WHERE itc.invariant_id = NEW.invariant_id
+    ) THEN RAISE(ABORT, 'transition_seq must match the atomically allocated invariant counter')
+    WHEN NEW.from_state <> COALESCE((
+      SELECT t.to_state
+      FROM invariant_state_transitions t
+      WHERE t.invariant_id = NEW.invariant_id
+      ORDER BY t.transition_seq DESC
+      LIMIT 1
+    ), (
+      SELECT ci.initial_state
+      FROM candidate_invariants ci
+      WHERE ci.id = NEW.invariant_id
+    )) THEN RAISE(ABORT, 'from_state must match current invariant state')
+    WHEN NOT (
+      (NEW.from_state = 'proposed' AND NEW.to_state = 'challenged') OR
+      (NEW.from_state = 'challenged' AND NEW.to_state IN ('challenged', 'surviving', 'weaken', 'falsified')) OR
+      (NEW.from_state = 'surviving' AND NEW.to_state IN ('challenged', 'weaken', 'falsified', 'operator_attested')) OR
+      (NEW.from_state = 'weaken' AND NEW.to_state IN ('challenged', 'surviving', 'falsified')) OR
+      (NEW.from_state = 'operator_attested' AND NEW.to_state IN ('challenged', 'weaken', 'falsified'))
+    ) THEN RAISE(ABORT, 'invalid invariant state transition')
+  END;
+END;`); err != nil {
+		return err
+	}
+	return nil
+}
+
+// successCompressionSQL is the additive DDL for M6.1 (migration v17): the
+// proposed-signature content sidecar plus the immutable, revisioned
+// success-invariant layer. Counts are exact numerators/denominators; ordinal
+// bands are derived, never stored in place of the counts.
+const successCompressionSQL = `
+CREATE TABLE IF NOT EXISTS frontier_proposal_signatures (
+  proposal_id TEXT PRIMARY KEY REFERENCES frontier_proposals(id),
+  canonical_fingerprint TEXT NOT NULL,
+  signature_json TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS success_invariant_revisions (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  provider_invocation_id TEXT NOT NULL REFERENCES provider_invocations(id),
+  compressor_version TEXT NOT NULL,
+  predicate_schema TEXT NOT NULL,
+  min_support INTEGER NOT NULL,
+  cohort_hash TEXT NOT NULL,
+  ineligible_unpersisted INTEGER NOT NULL DEFAULT 0,
+  ambiguous_members INTEGER NOT NULL DEFAULT 0,
+  revision INTEGER NOT NULL,
+  invariant_count INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(problem_id, cohort_hash, compressor_version, predicate_schema, min_support),
+  UNIQUE(problem_id, revision)
+);
+
+CREATE TABLE IF NOT EXISTS success_invariants (
+  id TEXT PRIMARY KEY,
+  success_revision_id TEXT NOT NULL REFERENCES success_invariant_revisions(id),
+  predicate_fingerprint TEXT NOT NULL,
+  statement TEXT NOT NULL,
+  abstraction_level TEXT NOT NULL,
+  initial_state TEXT NOT NULL DEFAULT 'proposed' CHECK (initial_state = 'proposed'),
+  progress_coverage_num INTEGER NOT NULL,
+  progress_coverage_den INTEGER NOT NULL,
+  nonprogressor_exclusion_num INTEGER NOT NULL,
+  nonprogressor_exclusion_den INTEGER NOT NULL,
+  coverage_ordinal TEXT NOT NULL CHECK (coverage_ordinal IN ('low','medium','high','unknown')),
+  exclusion_ordinal TEXT NOT NULL CHECK (exclusion_ordinal IN ('low','medium','high','unknown')),
+  distinct_mechanism_support INTEGER NOT NULL,
+  strength_deterministic INTEGER NOT NULL DEFAULT 0,
+  strength_reproducible INTEGER NOT NULL DEFAULT 0,
+  strength_independent_evidence INTEGER NOT NULL DEFAULT 0,
+  strength_independent_critic INTEGER NOT NULL DEFAULT 0,
+  strength_model_judgment INTEGER NOT NULL DEFAULT 0,
+  ordinal INTEGER NOT NULL,
+  UNIQUE(success_revision_id, predicate_fingerprint)
+);
+
+CREATE TABLE IF NOT EXISTS success_invariant_predicates (
+  success_invariant_id TEXT PRIMARY KEY REFERENCES success_invariants(id),
+  predicate_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS success_invariant_broken_targets (
+  success_invariant_id TEXT NOT NULL REFERENCES success_invariants(id),
+  invariant_id TEXT NOT NULL REFERENCES candidate_invariants(id),
+  PRIMARY KEY(success_invariant_id, invariant_id)
+);
+
+CREATE TABLE IF NOT EXISTS success_invariant_cohort_evaluations (
+  success_invariant_id TEXT NOT NULL REFERENCES success_invariants(id),
+  proposal_id TEXT NOT NULL REFERENCES frontier_proposals(id),
+  cohort_role TEXT NOT NULL CHECK (cohort_role IN ('progressor','non_progressor')),
+  verdict TEXT NOT NULL CHECK (verdict IN ('satisfies','violates','unknown')),
+  verification_strength TEXT NOT NULL CHECK (verification_strength IN ('deterministic','reproducible','independent-evidence','independent-critic','single-model-judgment')),
+  PRIMARY KEY(success_invariant_id, proposal_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_success_revisions_problem ON success_invariant_revisions(problem_id);
+CREATE INDEX IF NOT EXISTS idx_success_invariants_revision ON success_invariants(success_revision_id);
+
+CREATE TRIGGER IF NOT EXISTS frontier_proposal_signatures_immutable_update
+BEFORE UPDATE ON frontier_proposal_signatures
+BEGIN
+  SELECT RAISE(ABORT, 'frontier proposal signatures are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS frontier_proposal_signatures_immutable_delete
+BEFORE DELETE ON frontier_proposal_signatures
+BEGIN
+  SELECT RAISE(ABORT, 'frontier proposal signatures are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS success_invariant_revisions_immutable_update
+BEFORE UPDATE ON success_invariant_revisions
+BEGIN
+  SELECT RAISE(ABORT, 'success invariant revisions are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS success_invariant_revisions_immutable_delete
+BEFORE DELETE ON success_invariant_revisions
+BEGIN
+  SELECT RAISE(ABORT, 'success invariant revisions are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS success_invariants_immutable_update
+BEFORE UPDATE ON success_invariants
+BEGIN
+  SELECT RAISE(ABORT, 'success invariants are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS success_invariants_immutable_delete
+BEFORE DELETE ON success_invariants
+BEGIN
+  SELECT RAISE(ABORT, 'success invariants are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS success_invariant_predicates_immutable_update
+BEFORE UPDATE ON success_invariant_predicates
+BEGIN
+  SELECT RAISE(ABORT, 'success invariant predicates are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS success_invariant_predicates_immutable_delete
+BEFORE DELETE ON success_invariant_predicates
+BEGIN
+  SELECT RAISE(ABORT, 'success invariant predicates are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS success_invariant_broken_targets_immutable_update
+BEFORE UPDATE ON success_invariant_broken_targets
+BEGIN
+  SELECT RAISE(ABORT, 'success invariant broken targets are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS success_invariant_broken_targets_immutable_delete
+BEFORE DELETE ON success_invariant_broken_targets
+BEGIN
+  SELECT RAISE(ABORT, 'success invariant broken targets are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS success_invariant_cohort_evaluations_immutable_update
+BEFORE UPDATE ON success_invariant_cohort_evaluations
+BEGIN
+  SELECT RAISE(ABORT, 'success invariant cohort evaluations are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS success_invariant_cohort_evaluations_immutable_delete
+BEFORE DELETE ON success_invariant_cohort_evaluations
+BEGIN
+  SELECT RAISE(ABORT, 'success invariant cohort evaluations are immutable');
+END;
+`
+
+// migrateV17SuccessCompression creates the M6.1 tables and widens the
+// provider_invocations.role CHECK to admit 'success-compress'. Guarded and
+// idempotent throughout.
+func migrateV17SuccessCompression(ctx context.Context, tx *sql.Tx) error {
+	if _, err := tx.ExecContext(ctx, successCompressionSQL); err != nil {
+		return err
+	}
+	allows, err := providerRoleAllows(ctx, tx, "success-compress")
+	if err != nil {
+		return err
+	}
+	if !allows {
+		if err := editTableCheckInPlace(ctx, tx, "provider_invocations",
+			"role IN ('normalize','invariant','challenge','generate','evaluate')",
+			"role IN ('normalize','invariant','challenge','generate','evaluate','success-compress')"); err != nil {
+			return err
+		}
 	}
 	return nil
 }

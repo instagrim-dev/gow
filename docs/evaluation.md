@@ -41,10 +41,17 @@ the same interface):
    (necessary but not sufficient for success), deferring the positive verdict to
    the next tier.
 2. **`counterexample-search`** (reproducible) — a bounded, deterministic scan of
-   the nearest known failure families for a *refuter*: a family that still
-   satisfies a target the proposal claims to break (evidence the break is not
-   structural) → `failure` / `counterexample-search`. A confirmed break with no
-   refuter → `partial_success`.
+   the proposal's **recorded nearest** known failure families for a genuine
+   *refuter*. A refuter must contradict a claim about the **proposed mechanism
+   itself**, not merely differ from it: a known failure family that makes the
+   **same** break (also *violates* a target the proposal broke) yet still failed
+   is a refuter → `failure` / `counterexample-search`. The intended structural
+   difference — the proposal *violates* a target that old failure families
+   *satisfy* — is exactly the signal frontier generation seeks, **never** a
+   refutation. A bounded search that finds no refuter is a **negative search
+   result**, not progress: it returns a non-decisive verdict (deferring
+   realizability to the model tier) rather than rewarding missing or `unknown`
+   comparison evidence with `partial_success` (G1).
 3. **`model-judgment`** (weakest, last resort) — a provider `Verifier` (a
    deterministic `FixtureVerifier` in CI, role `'evaluate'`). Consulted only when
    no stronger tier decides, and always stamped `single-model-judgment`.
@@ -55,9 +62,25 @@ the same interface):
 until one returns a *decisive* verdict (not `unknown`/`verification_blocked`).
 Ordering by strength first is the anti-laundering guard: a confident model
 `success` can never preempt a deterministic check that is also able to decide,
-even if the model tier declares a cheaper cost. If nothing decides, the stored
+even if the model tier declares a cheaper cost. The deciding verdict's strength
+is **clamped to the verifier's registered tier** (`StrengthForKind`): a verifier
+may under-report its strength but can never launder a stronger one than its
+registration — a model-kind adapter returning a valid `deterministic` strength is
+still recorded as `single-model-judgment` (G5). If nothing decides, the stored
 verdict is `verification_blocked` stamped with the weakest tier tried — an honest
 "we could not verify", never a guess.
+
+### Pinned evaluation context
+
+A proposal is evaluated against the **currently targetable** invariants. A cached
+per-target verdict from generation time is included only when its target is still
+targetable; if a targeted invariant has since become `weaken`/`falsified` it is
+dropped from **both** the deterministic input and the comparison population
+together (G4). An unchanged proposal therefore cannot gain a *better* evaluation
+merely because a hypothesis it targeted became less credible, and its comparison
+evidence cannot silently disappear while its claimed break persists. If every
+claimed target is stale the context is empty and routes to a non-decisive result,
+never a free `partial_success`.
 
 ### Verdict vocabulary
 

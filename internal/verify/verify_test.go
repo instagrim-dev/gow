@@ -44,10 +44,14 @@ func TestDeterministicCheckDefersOnConfirmedBreak(t *testing.T) {
 	}
 }
 
-func TestCounterexampleSearchRefutesBreak(t *testing.T) {
+func TestCounterexampleSearchRefutesWhenKnownFailureMakesSameBreak(t *testing.T) {
+	// G1: a refuter must contradict a claim about the PROPOSED mechanism itself.
+	// A known failure family that makes the SAME break (also violates the target)
+	// yet still failed refutes the proposal's implicit claim that breaking the
+	// target is what distinguishes it -> deterministic (reproducible) failure.
 	vc := VerificationContext{
 		TargetVerdicts:  map[string]invariant.Verdict{"inv_1": invariant.VerdictViolates},
-		NearestVerdicts: map[string][]invariant.Verdict{"inv_1": {invariant.VerdictSatisfies}},
+		NearestVerdicts: map[string][]invariant.Verdict{"inv_1": {invariant.VerdictViolates}},
 	}
 	d, _ := CounterexampleSearch{}.Verify(context.Background(), vc)
 	if d.Verdict != VerdictFailure || d.Kind != KindCounterexampleSearch {
@@ -55,14 +59,43 @@ func TestCounterexampleSearchRefutesBreak(t *testing.T) {
 	}
 }
 
-func TestCounterexampleSearchPartialSuccessWhenNoRefuter(t *testing.T) {
+func TestCounterexampleSearchDoesNotRefuteIntendedStructuralDifference(t *testing.T) {
+	// G1 (the reversed test, corrected): the proposal VIOLATES a target that an
+	// old failure family SATISFIES. That is exactly the structural difference
+	// frontier generation is trying to produce — NOT a refutation. The search
+	// finds no refuter and must return a NON-DECISIVE bounded-search result, never
+	// `failure` and never a free `partial_success`.
 	vc := VerificationContext{
 		TargetVerdicts:  map[string]invariant.Verdict{"inv_1": invariant.VerdictViolates},
-		NearestVerdicts: map[string][]invariant.Verdict{"inv_1": {invariant.VerdictViolates}},
+		NearestVerdicts: map[string][]invariant.Verdict{"inv_1": {invariant.VerdictSatisfies}},
 	}
 	d, _ := CounterexampleSearch{}.Verify(context.Background(), vc)
-	if d.Verdict != VerdictPartialSuccess || d.Strength != StrengthReproducible {
-		t.Fatalf("got %q/%q, want partial_success/reproducible", d.Verdict, d.Strength)
+	if d.Verdict.Decisive() {
+		t.Fatalf("an old family preserving a property must not refute a new mechanism that breaks it; got decisive %q", d.Verdict)
+	}
+	if d.Verdict != VerdictUnknown {
+		t.Fatalf("got %q, want unknown (bounded-search negative)", d.Verdict)
+	}
+}
+
+func TestCounterexampleSearchNoComparisonEvidenceIsNotProgress(t *testing.T) {
+	// G1: a confirmed break with NO comparison evidence (or only unknown verdicts)
+	// establishes neither refutation nor realizability. The bounded search must
+	// NOT reward missing evidence with partial_success; it stays non-decisive so
+	// the model tier judges realizability.
+	for name, nearest := range map[string]map[string][]invariant.Verdict{
+		"no evidence":   {},
+		"unknown only":  {"inv_1": {invariant.VerdictUnknown}},
+		"empty for tgt": {"inv_1": {}},
+	} {
+		vc := VerificationContext{
+			TargetVerdicts:  map[string]invariant.Verdict{"inv_1": invariant.VerdictViolates},
+			NearestVerdicts: nearest,
+		}
+		d, _ := CounterexampleSearch{}.Verify(context.Background(), vc)
+		if d.Verdict != VerdictUnknown {
+			t.Fatalf("%s: got %q, want unknown (missing/unknown comparison evidence is not progress)", name, d.Verdict)
+		}
 	}
 }
 
@@ -86,14 +119,43 @@ func TestRouteDeterministicFailureOverridesModelSuccess(t *testing.T) {
 }
 
 func TestRouteCheapestFirstStrongestDecisive(t *testing.T) {
+	// A refuter is present (a known failure makes the same break), so the
+	// counterexample-search tier decides `failure` and preempts a cheaper model
+	// `success`: strength ordering before cost prevents strength laundering.
 	vc := VerificationContext{
 		TargetVerdicts:  map[string]invariant.Verdict{"inv_1": invariant.VerdictViolates},
 		NearestVerdicts: map[string][]invariant.Verdict{"inv_1": {invariant.VerdictViolates}},
 	}
 	verifiers := []Verifier{DeterministicCheck{}, CounterexampleSearch{}, alwaysVerifier{verdict: VerdictSuccess, cost: 99}}
 	d, _ := Route(context.Background(), verifiers, vc)
-	if d.Verdict != VerdictPartialSuccess || d.Kind != KindCounterexampleSearch {
-		t.Fatalf("got %q/%q, want partial_success/counterexample-search", d.Verdict, d.Kind)
+	if d.Verdict != VerdictFailure || d.Kind != KindCounterexampleSearch {
+		t.Fatalf("got %q/%q, want failure/counterexample-search", d.Verdict, d.Kind)
+	}
+}
+
+// overreportingVerifier is a model tier that returns a VALID but too-strong
+// strength, to exercise the router's ceiling clamp (G5).
+type overreportingVerifier struct{ verdict Verdict }
+
+func (overreportingVerifier) Kind() VerifierKind { return KindModelJudgment }
+func (overreportingVerifier) Cost() int          { return 1 }
+func (o overreportingVerifier) Verify(_ context.Context, _ VerificationContext) (Decision, error) {
+	// A model-judgment verifier claiming deterministic strength: the router must
+	// clamp it to the verifier's registered tier, never store the laundered value.
+	return Decision{Verdict: o.verdict, Kind: KindModelJudgment, Strength: StrengthDeterministic}, nil
+}
+
+func TestRouteClampsStrengthToRegisteredCeiling(t *testing.T) {
+	// G5: a model-kind verifier returning the VALID enum `deterministic` must be
+	// recorded as single-model-judgment; a verifier's self-reported strength can
+	// never exceed its registered tier.
+	vc := VerificationContext{}
+	d, err := Route(context.Background(), []Verifier{overreportingVerifier{verdict: VerdictSuccess}}, vc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Kind != KindModelJudgment || d.Strength != StrengthSingleModelJudgment {
+		t.Fatalf("got %q/%q, want model-judgment/single-model-judgment (strength must not exceed registered ceiling)", d.Kind, d.Strength)
 	}
 }
 

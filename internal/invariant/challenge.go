@@ -12,6 +12,7 @@ import (
 	"sort"
 
 	"github.com/instagrim-dev/newf/internal/canon"
+	"github.com/instagrim-dev/newf/internal/domain"
 )
 
 // ChallengeType enumerates the attack families (docs/persistence.md blueprint;
@@ -58,28 +59,76 @@ const (
 	EvidenceIndependentSource    = "independent_source"
 )
 
-// ChallengeResult is the deterministic verdict on one proposed challenge.
+// CheckOutcome is the explicit disposition of one attempted challenge (G2). It
+// separates admissibility, decisiveness, and confirmation so the campaign
+// verdict is derived from typed outcomes under a required-check policy — not
+// from a default-true "applicable" flag. Only a `CompletedNegative` counts as a
+// completed applicable negative search toward survival; an `Inadmissible` or
+// `Inconclusive` attempt does neither strengthens nor weakens (KTD-3).
+type CheckOutcome string
+
+const (
+	// OutcomeInadmissible: the attack could not be evaluated at all (validation
+	// rejected it — e.g. a split with <2 children, a merge naming no partners, a
+	// synthetic with no construction, a provider over-claiming operator-only
+	// verification). It is not a search over any population.
+	OutcomeInadmissible CheckOutcome = "inadmissible"
+	// OutcomeInconclusive: the attack ran but reached no definite result over its
+	// eligible population (unknown-only evidence, an unsupported synthetic
+	// proposal). It neither confirms nor completes a negative search.
+	OutcomeInconclusive CheckOutcome = "inconclusive"
+	// OutcomeCompletedNegative: a decisive negative — the attack ran a real
+	// determination over an eligible population and the claim did not land (e.g.
+	// no known member violates; support holds under recomputation). This is what
+	// legitimately earns `surviving`.
+	OutcomeCompletedNegative CheckOutcome = "completed_negative"
+	// OutcomeConfirmed: the attack landed (a confirmed counterexample / weakening).
+	OutcomeConfirmed CheckOutcome = "confirmed"
+)
+
+// ChallengeResult is the deterministic verdict on one proposed challenge. Outcome
+// is the typed disposition (G2); Confirmed is retained as the boolean shorthand
+// for Outcome == OutcomeConfirmed.
 type ChallengeResult struct {
 	Confirmed bool
+	Outcome   CheckOutcome
 	Evidence  []ChallengeEvidence
 	Detail    string
 }
 
-// unconfirmed builds the inert result (KTD-3): persisted for audit, linked to
-// no evidence, driving no state transition.
+// unconfirmed builds an INCONCLUSIVE inert result (KTD-3): persisted for audit,
+// linked to no evidence, driving no transition. Callers that mean a decisive
+// negative search use completedNegative; callers rejecting an inadmissible
+// attack use inadmissible.
 func unconfirmed(reason string) ChallengeResult {
-	return ChallengeResult{Confirmed: false, Detail: reason}
+	return ChallengeResult{Confirmed: false, Outcome: OutcomeInconclusive, Detail: reason}
 }
 
-// AssociationKind is the coarse claim class a candidate asserts, mirroring the
-// engine's code-visible AssociationStatus. Its refutation condition differs
-// (F3): a `recurring` candidate claims a universal regularity over the failure
-// cohort and is falsified by ONE known in-atlas counterexample; a
-// `contrast_observed` candidate claims only that the predicate DISCRIMINATES
-// outcomes (an association), which a single failure-side violation does not
-// refute — it needs the discrimination itself to collapse. An `unknown`
-// candidate makes no confirmed regularity claim, so a single counterexample is
-// treated as inconclusive, not a falsification.
+// completedNegative builds a decisive-negative result: the attack ran over an
+// eligible population and the claim did not land. It carries any audit evidence
+// (e.g. a support recount) and counts toward survival.
+func completedNegative(reason string, ev ...ChallengeEvidence) ChallengeResult {
+	return ChallengeResult{Confirmed: false, Outcome: OutcomeCompletedNegative, Detail: reason, Evidence: ev}
+}
+
+// inadmissible builds a rejected-attack result: the attack could not be
+// evaluated over any population (validation failure). It never counts toward
+// survival and drives no transition.
+func inadmissible(reason string) ChallengeResult {
+	return ChallengeResult{Confirmed: false, Outcome: OutcomeInadmissible, Detail: reason}
+}
+
+// AssociationKind is the refutation-governing claim class the CALLER derives for
+// a candidate. It is deliberately distinct from the engine's measured
+// association_status: recurrence is a frequency label, not a logical quantifier
+// (G3). The pipeline passes `recurring` here ONLY when the corpus actually
+// exhibits universality over the eligible failure families (full failure
+// coverage); a recurrence that is not universal is passed as
+// `contrast_observed`. Refutation conditions differ: a `recurring` (verified
+// universal) claim is falsified by ONE known in-atlas counterexample; a
+// `contrast_observed` (association) claim is not refuted by an isolated
+// counterexample; an `unknown` claim makes no confirmed regularity assertion, so
+// a lone counterexample is inconclusive.
 type AssociationKind string
 
 const (
@@ -116,7 +165,7 @@ func VerifyKnownCounterexample(pred Predicate, families []Family, kind Associati
 		}
 	}
 	if len(ev) == 0 {
-		return unconfirmed("no known failure-side member violates the predicate")
+		return completedNegative("no known failure-side member violates the predicate")
 	}
 	sort.Slice(ev, func(i, j int) bool {
 		if ev[i].ClusterID != ev[j].ClusterID {
@@ -133,25 +182,60 @@ func VerifyKnownCounterexample(pred Predicate, families []Family, kind Associati
 		r.Evidence = ev
 		return r
 	}
-	return ChallengeResult{Confirmed: true, Evidence: ev,
+	return ChallengeResult{Confirmed: true, Outcome: OutcomeConfirmed, Evidence: ev,
 		Detail: fmt.Sprintf("%d known counterexample member(s) refute the universal claim", len(ev))}
 }
 
-// VerifySyntheticCounterexample confirms a CONSTRUCTED failed approach violates
-// the predicate. The synthetic signature is provider-authored and its claims are
-// UNSUPPORTED; confirmation is code-owned and requires Evaluate to return
-// `violates`. Crucially, a synthetic construction is a PROPOSAL, not a
-// demonstrated construction: its set fields are `unobserved` (see
-// syntheticSignature), so `contains(field, X)` on a description that merely
-// omits X evaluates to `unknown`, not `violates` — omitting X from a
-// description does not prove an admissible failed approach WITHOUT X exists
-// (F3). A synthetic therefore weakens only when the queried structure is
-// explicitly, exhaustively supplied AND the construction genuinely violates.
+// VerifySyntheticCounterexample evaluates a provider-authored CONSTRUCTED
+// approach against the predicate. A synthetic construction is a PROPOSAL, never
+// a demonstrated construction, and confirmation is code-owned (G3):
+//
+//   - Its set fields are `unobserved` (see syntheticSignature), so
+//     `contains(field, X)` on a description that merely omits X evaluates to
+//     `unknown`, not `violates` — omitting X does not prove an admissible failed
+//     approach WITHOUT X exists.
+//   - Its present claims are `unsupported` model assertions. Presence in a
+//     generated description is not stronger evidence of realizability than
+//     absence from it, so a violation that rests on unsupported present claims
+//     is still only a proposal: it is recorded inert and does NOT weaken the
+//     invariant. A synthetic can confirm a weakening only when the violation is
+//     driven by admissibly SUPPORTED structure (a value whose claim status is
+//     explicit/inferred, not unsupported) — which the current fixture path never
+//     supplies, so today no synthetic weakens by fiat.
+//
+// This keeps description-omission and unsupported-description-presence as
+// proposals, not confirmed grounds for weakening.
 func VerifySyntheticCounterexample(pred Predicate, synthetic canon.MechanismSignature) ChallengeResult {
 	if Evaluate(pred, synthetic) != VerdictViolates {
 		return unconfirmed("synthetic construction does not violate the predicate (an omitted or unobserved field is a proposal, not a demonstrated counterexample)")
 	}
-	return ChallengeResult{Confirmed: true, Detail: "synthetic construction violates the predicate"}
+	if !hasSupportedClaim(synthetic) {
+		return unconfirmed("synthetic construction violates only via unsupported model-asserted structure; a proposal, not a demonstrated admissible failed approach (G3)")
+	}
+	return ChallengeResult{Confirmed: true, Outcome: OutcomeConfirmed, Detail: "synthetic construction violates the predicate via supported structure"}
+}
+
+// hasSupportedClaim reports whether any resolved set-field claim in the
+// signature carries an admissible support status (explicit or inferred), i.e.
+// evidence beyond a bare unsupported model assertion. Used to gate synthetic
+// confirmation (G3): a construction whose violating structure is entirely
+// unsupported is a proposal, not a demonstrated counterexample.
+func hasSupportedClaim(sig canon.MechanismSignature) bool {
+	sets := [][]canon.FieldClaim{
+		sig.Representations, sig.Operators, sig.Assumptions,
+		sig.Preserves, sig.Breaks, sig.AuxiliaryObjects,
+	}
+	for _, claims := range sets {
+		for _, c := range claims {
+			if c.State != domain.ResolutionResolved {
+				continue
+			}
+			if c.Status == domain.ClaimExplicit || c.Status == domain.ClaimInferred {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // VerifySuccessPreserving confirms that a success/partial-success family
@@ -182,10 +266,10 @@ func VerifySuccessPreserving(pred Predicate, families []Family) ChallengeResult 
 		}
 	}
 	if len(ev) == 0 {
-		return unconfirmed("no success-side family preserves the predicate")
+		return completedNegative("no success-side family preserves the predicate")
 	}
 	sort.Slice(ev, func(i, j int) bool { return ev[i].ClusterID < ev[j].ClusterID })
-	return ChallengeResult{Confirmed: true, Evidence: ev,
+	return ChallengeResult{Confirmed: true, Outcome: OutcomeConfirmed, Evidence: ev,
 		Detail: fmt.Sprintf("%d success-preserving family(ies)", len(ev))}
 }
 
@@ -198,11 +282,10 @@ func VerifyBiasCritique(pred Predicate, families []Family, minSupport int) Chall
 	detail := fmt.Sprintf("recomputed distinct-family support = %d (threshold %d)", len(support), minSupport)
 	ev := []ChallengeEvidence{{Kind: EvidenceSupportRecount, Detail: detail}}
 	if len(support) >= minSupport {
-		r := unconfirmed("support holds under recomputation: " + detail)
-		r.Evidence = ev // the recount is still recorded for audit
+		r := completedNegative("support holds under recomputation: "+detail, ev...)
 		return r
 	}
-	return ChallengeResult{Confirmed: true, Evidence: ev, Detail: detail}
+	return ChallengeResult{Confirmed: true, Outcome: OutcomeConfirmed, Evidence: ev, Detail: detail}
 }
 
 // VerifySplit confirms that the parent predicate is two-or-more invariants
@@ -216,7 +299,7 @@ func VerifyBiasCritique(pred Predicate, families []Family, minSupport int) Chall
 // distinct concrete cases is rejected).
 func VerifySplit(parent Predicate, children []Predicate, families []Family, vocab *canon.Vocabulary) ChallengeResult {
 	if len(children) < 2 {
-		return unconfirmed("a split requires >=2 child predicates")
+		return inadmissible("a split requires >=2 child predicates")
 	}
 	parentFP := Fingerprint(parent)
 	parentSupport := supportingFamilies(parent, families)
@@ -225,19 +308,19 @@ func VerifySplit(parent Predicate, children []Predicate, families []Family, voca
 	var ev []ChallengeEvidence
 	for i, child := range children {
 		if err := AdmitCandidate(child, vocab); err != nil {
-			return unconfirmed(fmt.Sprintf("child %d not admissible: %v", i, err))
+			return inadmissible(fmt.Sprintf("child %d not admissible: %v", i, err))
 		}
 		fp := Fingerprint(child)
 		if fp == parentFP {
-			return unconfirmed(fmt.Sprintf("child %d is semantically identical to the parent", i))
+			return inadmissible(fmt.Sprintf("child %d is semantically identical to the parent", i))
 		}
 		if _, dup := seen[fp]; dup {
-			return unconfirmed(fmt.Sprintf("child %d duplicates another child", i))
+			return inadmissible(fmt.Sprintf("child %d duplicates another child", i))
 		}
 		seen[fp] = struct{}{}
 		sup := supportingFamilies(child, families)
 		if len(sup) == 0 {
-			return unconfirmed(fmt.Sprintf("child %d grounds to no supporting failure family", i))
+			return inadmissible(fmt.Sprintf("child %d grounds to no supporting failure family", i))
 		}
 		// Refinement: a split partitions the PARENT's support, so every family a
 		// child grounds to must be a family the parent also supports. A child
@@ -245,7 +328,7 @@ func VerifySplit(parent Predicate, children []Predicate, families []Family, voca
 		// not a refinement of this one (docs/abstraction-safety.md).
 		for fam := range sup {
 			if _, ok := parentSupport[fam]; !ok {
-				return unconfirmed(fmt.Sprintf("child %d grounds to family %s outside the parent's support (not a refinement)", i, fam))
+				return inadmissible(fmt.Sprintf("child %d grounds to family %s outside the parent's support (not a refinement)", i, fam))
 			}
 		}
 		supports = append(supports, sup)
@@ -254,7 +337,7 @@ func VerifySplit(parent Predicate, children []Predicate, families []Family, voca
 		for j := i + 1; j < len(supports); j++ {
 			for fam := range supports[i] {
 				if _, overlap := supports[j][fam]; overlap {
-					return unconfirmed(fmt.Sprintf("children %d and %d share supporting family %s (not disjoint)", i, j, fam))
+					return inadmissible(fmt.Sprintf("children %d and %d share supporting family %s (not disjoint)", i, j, fam))
 				}
 			}
 		}
@@ -268,7 +351,7 @@ func VerifySplit(parent Predicate, children []Predicate, families []Family, voca
 			})
 		}
 	}
-	return ChallengeResult{Confirmed: true, Evidence: ev,
+	return ChallengeResult{Confirmed: true, Outcome: OutcomeConfirmed, Evidence: ev,
 		Detail: fmt.Sprintf("split grounds %d children to disjoint support", len(children))}
 }
 
@@ -282,28 +365,28 @@ func VerifySplit(parent Predicate, children []Predicate, families []Family, voca
 // merge that erases the axis separating outcomes is rejected).
 func VerifyMerge(parents []Predicate, child Predicate, families []Family, vocab *canon.Vocabulary) ChallengeResult {
 	if len(parents) < 2 {
-		return unconfirmed("a merge requires >=2 parent predicates")
+		return inadmissible("a merge requires >=2 parent predicates")
 	}
 	if err := AdmitCandidate(child, vocab); err != nil {
-		return unconfirmed(fmt.Sprintf("child not admissible: %v", err))
+		return inadmissible(fmt.Sprintf("child not admissible: %v", err))
 	}
 	childSupport := supportingFamilies(child, families)
 	childContrast := contrastViolations(child, families)
 	union := map[string]struct{}{}
 	for i, p := range parents {
 		if err := AdmitCandidate(p, vocab); err != nil {
-			return unconfirmed(fmt.Sprintf("parent %d not admissible: %v", i, err))
+			return inadmissible(fmt.Sprintf("parent %d not admissible: %v", i, err))
 		}
 		for fam := range supportingFamilies(p, families) {
 			union[fam] = struct{}{}
 		}
 		if pc := contrastViolations(p, families); childContrast < pc {
-			return unconfirmed(fmt.Sprintf("merge loses discrimination: child contrast %d < parent %d contrast %d", childContrast, i, pc))
+			return inadmissible(fmt.Sprintf("merge loses discrimination: child contrast %d < parent %d contrast %d", childContrast, i, pc))
 		}
 	}
 	for fam := range union {
 		if _, ok := childSupport[fam]; !ok {
-			return unconfirmed(fmt.Sprintf("child support does not cover parent-supported family %s", fam))
+			return inadmissible(fmt.Sprintf("child support does not cover parent-supported family %s", fam))
 		}
 	}
 	var ev []ChallengeEvidence
@@ -311,7 +394,7 @@ func VerifyMerge(parents []Predicate, child Predicate, families []Family, vocab 
 		ev = append(ev, ChallengeEvidence{Kind: EvidenceGrounding, ClusterID: fam,
 			Detail: "merged child grounds to family " + fam})
 	}
-	return ChallengeResult{Confirmed: true, Evidence: ev,
+	return ChallengeResult{Confirmed: true, Outcome: OutcomeConfirmed, Evidence: ev,
 		Detail: fmt.Sprintf("merge covers %d united support families without discrimination loss", len(union))}
 }
 
