@@ -393,6 +393,7 @@ type PostureComparisonView struct {
 type ComparisonView struct {
 	WeightsVersion  string                `json:"weights_version"`
 	ClassifyVersion string                `json:"classify_version"`
+	ProfileHash     string                `json:"profile_hash"`
 	Classification  string                `json:"classification"`
 	OutcomeEqual    bool                  `json:"outcome_equal"`
 	Posture         PostureComparisonView `json:"posture"`
@@ -421,4 +422,149 @@ type SeedFixtureResponse struct {
 	RevisionID   string   `json:"normalization_revision_id"`
 	ApproachIDs  []string `json:"approach_ids"`
 	MechanismIDs []string `json:"mechanism_ids"`
+}
+
+// ClusterMemberView is one signature in a cluster.
+type ClusterMemberView struct {
+	SignatureID string `json:"signature_id"`
+	MechanismID string `json:"mechanism_id"`
+	Redundant   bool   `json:"redundant"`
+}
+
+// ClusterView is one mechanism family.
+type ClusterView struct {
+	ID                        string              `json:"id"`
+	Fingerprint               string              `json:"fingerprint"`
+	RepresentativeSignatureID string              `json:"representative_signature_id"`
+	MemberCount               int                 `json:"member_count"`
+	Isolate                   bool                `json:"isolate"`
+	IntraVariation            string              `json:"intra_variation"`
+	Members                   []ClusterMemberView `json:"members"`
+}
+
+// ClusterDistanceView is one representative-vs-representative distance.
+type ClusterDistanceView struct {
+	ClusterAID     string `json:"cluster_a_id"`
+	ClusterBID     string `json:"cluster_b_id"`
+	Classification string `json:"classification"`
+}
+
+// ClusterCoverageAxisView is one coverage axis.
+type ClusterCoverageAxisView struct {
+	Axis               string `json:"axis"`
+	DistinctValueCount int    `json:"distinct_value_count"`
+	UnderSampled       bool   `json:"under_sampled"`
+}
+
+// DiscriminationLossView is one abstraction-loss finding.
+type DiscriminationLossView struct {
+	MechanismAID string `json:"mechanism_a_id"`
+	MechanismBID string `json:"mechanism_b_id"`
+	OutcomeA     string `json:"outcome_a"`
+	OutcomeB     string `json:"outcome_b"`
+}
+
+// ClusterRunView is the full clustering pass.
+type ClusterRunView struct {
+	ID                 string                    `json:"id"`
+	ProblemID          string                    `json:"problem_id"`
+	RunID              string                    `json:"run_id"`
+	SchemaVersion      string                    `json:"schema_version"`
+	VocabularyVersion  string                    `json:"vocabulary_version"`
+	ProfileVersion     string                    `json:"profile_version"`
+	ClusterAlgoVersion string                    `json:"cluster_algo_version"`
+	ThresholdsHash     string                    `json:"thresholds_hash"`
+	SignatureCount     int                       `json:"signature_count"`
+	FamilyCount        int                       `json:"family_count"`
+	Status             string                    `json:"status"`
+	Clusters           []ClusterView             `json:"clusters"`
+	Distances          []ClusterDistanceView     `json:"distances"`
+	CoverageAxes       []ClusterCoverageAxisView `json:"coverage_axes"`
+	DiscriminationLoss []DiscriminationLossView  `json:"discrimination_loss,omitempty"`
+}
+
+// ClusterBuildResponse is returned by `newf cluster build`.
+type ClusterBuildResponse struct {
+	OK         bool           `json:"ok"`
+	Command    string         `json:"command"`
+	Store      string         `json:"store"`
+	Created    bool           `json:"created"`
+	ClusterRun ClusterRunView `json:"cluster_run"`
+}
+
+// ClusterShowResponse is returned by `newf cluster show`.
+type ClusterShowResponse struct {
+	OK         bool           `json:"ok"`
+	Command    string         `json:"command"`
+	Store      string         `json:"store"`
+	ClusterRun ClusterRunView `json:"cluster_run"`
+}
+
+// ClusterRunSummaryView is a cluster-run header for list output.
+type ClusterRunSummaryView struct {
+	ID             string `json:"id"`
+	ProfileVersion string `json:"profile_version"`
+	SignatureCount int    `json:"signature_count"`
+	FamilyCount    int    `json:"family_count"`
+	Status         string `json:"status"`
+	CreatedAt      string `json:"created_at"`
+}
+
+// ClusterListResponse is returned by `newf cluster list`.
+type ClusterListResponse struct {
+	OK          bool                    `json:"ok"`
+	Command     string                  `json:"command"`
+	Store       string                  `json:"store"`
+	ClusterRuns []ClusterRunSummaryView `json:"cluster_runs"`
+}
+
+// FailureSpaceOutcomeView is the family count for one outcome class.
+type FailureSpaceOutcomeView struct {
+	OutcomeClass string `json:"outcome_class"`
+	FamilyCount  int    `json:"family_count"`
+}
+
+// FailureSpaceAxisView is one coverage axis of a failure space.
+type FailureSpaceAxisView struct {
+	AxisKind           string `json:"axis_kind"`
+	DistinctValueCount int    `json:"distinct_value_count"`
+	UnderSampled       bool   `json:"under_sampled"`
+}
+
+// FailureSpaceView is a materialized failure-space revision.
+type FailureSpaceView struct {
+	ID                   string                    `json:"id"`
+	ProblemID            string                    `json:"problem_id"`
+	ClusterRunID         string                    `json:"cluster_run_id"`
+	Revision             int                       `json:"revision"`
+	DistinctFamilyCount  int                       `json:"distinct_family_count"`
+	RedundantMemberCount int                       `json:"redundant_member_count"`
+	Outcomes             []FailureSpaceOutcomeView `json:"outcomes"`
+	Axes                 []FailureSpaceAxisView    `json:"axes"`
+}
+
+// FailureSpaceBuildResponse is returned by `newf failure-space build`.
+type FailureSpaceBuildResponse struct {
+	OK           bool             `json:"ok"`
+	Command      string           `json:"command"`
+	Store        string           `json:"store"`
+	Created      bool             `json:"created"`
+	FailureSpace FailureSpaceView `json:"failure_space"`
+}
+
+// FailureSpaceShowResponse is returned by `newf failure-space show`.
+type FailureSpaceShowResponse struct {
+	OK           bool             `json:"ok"`
+	Command      string           `json:"command"`
+	Store        string           `json:"store"`
+	FailureSpace FailureSpaceView `json:"failure_space"`
+}
+
+// FailureSpaceCoverageResponse is returned by `newf failure-space coverage`.
+type FailureSpaceCoverageResponse struct {
+	OK           bool                   `json:"ok"`
+	Command      string                 `json:"command"`
+	Store        string                 `json:"store"`
+	FailureSpace string                 `json:"failure_space_id"`
+	Axes         []FailureSpaceAxisView `json:"axes"`
 }

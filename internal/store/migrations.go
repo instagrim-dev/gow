@@ -1,10 +1,22 @@
 package store
 
-const currentSchemaVersion = 6
+import (
+	"context"
+	"database/sql"
+	"fmt"
+)
 
+const currentSchemaVersion = 9
+
+// migration is one ordered schema step. Most steps are a static SQL blob run as
+// one statement batch. A step may instead supply an `apply` func when the change
+// must inspect the live schema (e.g. an in-place repair that must be a no-op on
+// databases already created with the corrected schema). Exactly one of sql or
+// apply is set.
 type migration struct {
 	version int
 	sql     string
+	apply   func(ctx context.Context, tx *sql.Tx) error
 }
 
 var migrations = []migration{
@@ -490,4 +502,344 @@ BEGIN
 END;
 `,
 	},
+	{
+		version: 7,
+		sql: `
+-- Mechanism clustering (#11): a deterministic, version-keyed grouping pass over
+-- the signatures of one problem under one (schema_version, vocabulary_version).
+-- Immutable + idempotent on the full version tuple: re-running the same pass
+-- returns the existing run rather than rewriting history. No embeddings: the
+-- grouping is reproducible from comparison verdicts + the recorded profile.
+CREATE TABLE IF NOT EXISTS cluster_runs (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  schema_version TEXT NOT NULL,
+  vocabulary_version TEXT NOT NULL REFERENCES canonical_vocabulary(version),
+  profile_version TEXT NOT NULL,
+  cluster_algo_version TEXT NOT NULL,
+  thresholds_hash TEXT NOT NULL,
+  signature_count INTEGER NOT NULL,
+  family_count INTEGER NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('clean', 'degraded')),
+  created_at TEXT NOT NULL,
+  UNIQUE(problem_id, schema_version, vocabulary_version, profile_version, cluster_algo_version, thresholds_hash)
+);
+
+CREATE TABLE IF NOT EXISTS mechanism_clusters (
+  id TEXT PRIMARY KEY,
+  cluster_run_id TEXT NOT NULL REFERENCES cluster_runs(id),
+  cluster_fingerprint TEXT NOT NULL,
+  representative_signature_id TEXT NOT NULL REFERENCES mechanism_signatures(id),
+  member_count INTEGER NOT NULL,
+  intra_variation TEXT NOT NULL,
+  isolate INTEGER NOT NULL DEFAULT 0,
+  ordinal INTEGER NOT NULL,
+  UNIQUE(cluster_run_id, cluster_fingerprint)
+);
+
+CREATE TABLE IF NOT EXISTS cluster_members (
+  cluster_id TEXT NOT NULL REFERENCES mechanism_clusters(id),
+  signature_id TEXT NOT NULL REFERENCES mechanism_signatures(id),
+  mechanism_id TEXT NOT NULL REFERENCES mechanisms(id),
+  redundant INTEGER NOT NULL DEFAULT 0,
+  ordinal INTEGER NOT NULL,
+  PRIMARY KEY(cluster_id, signature_id)
+);
+
+CREATE TABLE IF NOT EXISTS cluster_distances (
+  cluster_run_id TEXT NOT NULL REFERENCES cluster_runs(id),
+  cluster_a_id TEXT NOT NULL REFERENCES mechanism_clusters(id),
+  cluster_b_id TEXT NOT NULL REFERENCES mechanism_clusters(id),
+  classification TEXT NOT NULL,
+  PRIMARY KEY(cluster_run_id, cluster_a_id, cluster_b_id)
+);
+
+CREATE TABLE IF NOT EXISTS cluster_coverage_axes (
+  cluster_run_id TEXT NOT NULL REFERENCES cluster_runs(id),
+  axis TEXT NOT NULL,
+  distinct_value_count INTEGER NOT NULL,
+  under_sampled INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY(cluster_run_id, axis)
+);
+
+CREATE TABLE IF NOT EXISTS cluster_discrimination_losses (
+  cluster_run_id TEXT NOT NULL REFERENCES cluster_runs(id),
+  mechanism_a_id TEXT NOT NULL,
+  mechanism_b_id TEXT NOT NULL,
+  outcome_a TEXT NOT NULL,
+  outcome_b TEXT NOT NULL,
+  ordinal INTEGER NOT NULL,
+  PRIMARY KEY(cluster_run_id, ordinal)
+);
+
+CREATE INDEX IF NOT EXISTS idx_cluster_runs_problem ON cluster_runs(problem_id);
+CREATE INDEX IF NOT EXISTS idx_mechanism_clusters_run ON mechanism_clusters(cluster_run_id);
+
+CREATE TRIGGER IF NOT EXISTS cluster_runs_immutable_update
+BEFORE UPDATE ON cluster_runs
+BEGIN
+  SELECT RAISE(ABORT, 'cluster runs are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS cluster_runs_immutable_delete
+BEFORE DELETE ON cluster_runs
+BEGIN
+  SELECT RAISE(ABORT, 'cluster runs are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS mechanism_clusters_immutable_update
+BEFORE UPDATE ON mechanism_clusters
+BEGIN
+  SELECT RAISE(ABORT, 'mechanism clusters are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS mechanism_clusters_immutable_delete
+BEFORE DELETE ON mechanism_clusters
+BEGIN
+  SELECT RAISE(ABORT, 'mechanism clusters are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS cluster_members_immutable_update
+BEFORE UPDATE ON cluster_members
+BEGIN
+  SELECT RAISE(ABORT, 'cluster members are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS cluster_members_immutable_delete
+BEFORE DELETE ON cluster_members
+BEGIN
+  SELECT RAISE(ABORT, 'cluster members are immutable');
+END;
+`,
+	},
+	{
+		version: 8,
+		sql: `
+-- FailureSpace (#11 / EPIC M3): the first explicit, versioned failure-space
+-- artifact materialized from a cluster run. Partitioned by the outcome class
+-- already carried on signatures; preserves cluster coverage and provenance.
+-- Immutable, revisioned per problem: a new cluster run yields a new revision,
+-- never a rewrite.
+CREATE TABLE IF NOT EXISTS failure_spaces (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  cluster_run_id TEXT NOT NULL REFERENCES cluster_runs(id),
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  revision INTEGER NOT NULL,
+  distinct_family_count INTEGER NOT NULL,
+  redundant_member_count INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(problem_id, cluster_run_id),
+  UNIQUE(problem_id, revision)
+);
+
+CREATE TABLE IF NOT EXISTS failure_space_outcomes (
+  failure_space_id TEXT NOT NULL REFERENCES failure_spaces(id),
+  outcome_class TEXT NOT NULL,
+  family_count INTEGER NOT NULL,
+  PRIMARY KEY(failure_space_id, outcome_class)
+);
+
+CREATE TABLE IF NOT EXISTS failure_space_axes (
+  failure_space_id TEXT NOT NULL REFERENCES failure_spaces(id),
+  axis_kind TEXT NOT NULL,
+  distinct_value_count INTEGER NOT NULL,
+  under_sampled INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY(failure_space_id, axis_kind)
+);
+
+CREATE INDEX IF NOT EXISTS idx_failure_spaces_problem ON failure_spaces(problem_id);
+
+CREATE TRIGGER IF NOT EXISTS failure_spaces_immutable_update
+BEFORE UPDATE ON failure_spaces
+BEGIN
+  SELECT RAISE(ABORT, 'failure spaces are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS failure_spaces_immutable_delete
+BEFORE DELETE ON failure_spaces
+BEGIN
+  SELECT RAISE(ABORT, 'failure spaces are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS failure_space_outcomes_immutable_update
+BEFORE UPDATE ON failure_space_outcomes
+BEGIN
+  SELECT RAISE(ABORT, 'failure space outcomes are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS failure_space_outcomes_immutable_delete
+BEFORE DELETE ON failure_space_outcomes
+BEGIN
+  SELECT RAISE(ABORT, 'failure space outcomes are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS failure_space_axes_immutable_update
+BEFORE UPDATE ON failure_space_axes
+BEGIN
+  SELECT RAISE(ABORT, 'failure space axes are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS failure_space_axes_immutable_delete
+BEFORE DELETE ON failure_space_axes
+BEGIN
+  SELECT RAISE(ABORT, 'failure space axes are immutable');
+END;
+`,
+	},
+	{
+		version: 9,
+		// In-place repair for databases created under the earlier v6 schema.
+		// Migrations 4 and 5 were corrected in place (alias PK gained
+		// canonical_id; signature posture/boundary/outcome tables gained
+		// claim_status/support columns). A database that already recorded
+		// migrations 1-6 as applied will never re-run 4/5, so it retains the
+		// pre-fix schema. This step upgrades such a database and also adds the
+		// durable rejected-terms table. It is introspective and idempotent: on a
+		// fresh database (already correct via 4/5) every check finds the target
+		// state already present and does nothing.
+		apply: migrateV9RepairAndRejected,
+	},
+}
+
+// migrateV9RepairAndRejected upgrades a pre-fix v6-era schema and adds durable
+// rejected-term storage, doing nothing on an already-correct (fresh) database.
+func migrateV9RepairAndRejected(ctx context.Context, tx *sql.Tx) error {
+	// 1. Provenance columns added when migrations 4/5 were corrected in place.
+	//    Add only if absent so a fresh v5 table (which already has them) is
+	//    untouched.
+	provenanceCols := []struct {
+		table, column, ddl string
+	}{
+		{"signature_postures", "claim_status", "ALTER TABLE signature_postures ADD COLUMN claim_status TEXT NOT NULL DEFAULT 'unknown'"},
+		{"signature_boundaries", "claim_status", "ALTER TABLE signature_boundaries ADD COLUMN claim_status TEXT NOT NULL DEFAULT 'unknown'"},
+		{"signature_boundaries", "support_snapshot_id", "ALTER TABLE signature_boundaries ADD COLUMN support_snapshot_id TEXT NOT NULL DEFAULT ''"},
+		{"signature_boundaries", "support_locator", "ALTER TABLE signature_boundaries ADD COLUMN support_locator TEXT NOT NULL DEFAULT ''"},
+		{"signature_outcomes", "claim_status", "ALTER TABLE signature_outcomes ADD COLUMN claim_status TEXT NOT NULL DEFAULT 'unknown'"},
+	}
+	for _, c := range provenanceCols {
+		has, err := columnExists(ctx, tx, c.table, c.column)
+		if err != nil {
+			return err
+		}
+		if has {
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, c.ddl); err != nil {
+			return err
+		}
+	}
+
+	// 2. Alias uniqueness key. The corrected PK includes canonical_id so a phrase
+	//    may legitimately bind to more than one canonical id within a field kind.
+	//    Rebuild only when canonical_id is absent from the primary key (i.e. the
+	//    pre-fix 3-column PK). SQLite cannot ALTER a PK, so rebuild the table.
+	aliasHasCanonicalPK, err := columnInPrimaryKey(ctx, tx, "canonical_term_aliases", "canonical_id")
+	if err != nil {
+		return err
+	}
+	if !aliasHasCanonicalPK {
+		if err := rebuildAliasTableWithCanonicalPK(ctx, tx); err != nil {
+			return err
+		}
+	}
+
+	// 3. Durable rejected terms (previously in-memory only, silently lost on
+	//    reload). CREATE IF NOT EXISTS + immutable triggers; idempotent.
+	if _, err := tx.ExecContext(ctx, `
+CREATE TABLE IF NOT EXISTS canonical_rejected_terms (
+  vocabulary_version TEXT NOT NULL REFERENCES canonical_vocabulary(version),
+  rejected_normalized TEXT NOT NULL,
+  PRIMARY KEY(vocabulary_version, rejected_normalized)
+);
+CREATE TRIGGER IF NOT EXISTS canonical_rejected_terms_immutable_update
+BEFORE UPDATE ON canonical_rejected_terms
+BEGIN
+  SELECT RAISE(ABORT, 'canonical rejected terms are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS canonical_rejected_terms_immutable_delete
+BEFORE DELETE ON canonical_rejected_terms
+BEGIN
+  SELECT RAISE(ABORT, 'canonical rejected terms are immutable');
+END;
+`); err != nil {
+		return err
+	}
+	return nil
+}
+
+// columnExists reports whether table has a column of the given name.
+func columnExists(ctx context.Context, tx *sql.Tx, table, column string) (bool, error) {
+	rows, err := tx.QueryContext(ctx, fmt.Sprintf("PRAGMA table_info(%s)", table))
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull, pk int
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			return false, err
+		}
+		if name == column {
+			return true, nil
+		}
+	}
+	return false, rows.Err()
+}
+
+// columnInPrimaryKey reports whether the named column participates in table's
+// primary key (pk > 0 in PRAGMA table_info).
+func columnInPrimaryKey(ctx context.Context, tx *sql.Tx, table, column string) (bool, error) {
+	rows, err := tx.QueryContext(ctx, fmt.Sprintf("PRAGMA table_info(%s)", table))
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull, pk int
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			return false, err
+		}
+		if name == column && pk > 0 {
+			return true, nil
+		}
+	}
+	return false, rows.Err()
+}
+
+// rebuildAliasTableWithCanonicalPK migrates canonical_term_aliases from the
+// pre-fix 3-column PK to the corrected 4-column PK that includes canonical_id.
+// It drops the immutability triggers, rebuilds via a temp table preserving all
+// rows, and reinstates the triggers. Because SQLite cannot ALTER a primary key
+// this is the standard create-copy-drop-rename rebuild.
+func rebuildAliasTableWithCanonicalPK(ctx context.Context, tx *sql.Tx) error {
+	stmts := []string{
+		`DROP TRIGGER IF EXISTS canonical_term_aliases_immutable_update`,
+		`DROP TRIGGER IF EXISTS canonical_term_aliases_immutable_delete`,
+		`CREATE TABLE canonical_term_aliases__v9 (
+  vocabulary_version TEXT NOT NULL REFERENCES canonical_vocabulary(version),
+  canonical_id TEXT NOT NULL,
+  field_kind TEXT NOT NULL CHECK (field_kind IN ('representation', 'assumption', 'operator', 'preserves', 'breaks', 'auxiliary_object', 'outcome', 'boundary', 'posture')),
+  alias_normalized TEXT NOT NULL,
+  PRIMARY KEY(vocabulary_version, field_kind, alias_normalized, canonical_id)
+)`,
+		`INSERT OR IGNORE INTO canonical_term_aliases__v9(vocabulary_version, canonical_id, field_kind, alias_normalized)
+  SELECT vocabulary_version, canonical_id, field_kind, alias_normalized FROM canonical_term_aliases`,
+		`DROP TABLE canonical_term_aliases`,
+		`ALTER TABLE canonical_term_aliases__v9 RENAME TO canonical_term_aliases`,
+		`CREATE INDEX IF NOT EXISTS idx_canonical_term_aliases_id ON canonical_term_aliases(vocabulary_version, canonical_id)`,
+		`CREATE TRIGGER IF NOT EXISTS canonical_term_aliases_immutable_update
+BEFORE UPDATE ON canonical_term_aliases
+BEGIN
+  SELECT RAISE(ABORT, 'canonical term aliases are immutable');
+END`,
+		`CREATE TRIGGER IF NOT EXISTS canonical_term_aliases_immutable_delete
+BEFORE DELETE ON canonical_term_aliases
+BEGIN
+  SELECT RAISE(ABORT, 'canonical term aliases are immutable');
+END`,
+	}
+	for _, s := range stmts {
+		if _, err := tx.ExecContext(ctx, s); err != nil {
+			return err
+		}
+	}
+	return nil
 }

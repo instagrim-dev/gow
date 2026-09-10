@@ -45,6 +45,7 @@ func (a *App) seedVocabularies(ctx context.Context, repoStore problemStore) erro
 			Version:   v.Version(),
 			Notes:     "seeded from in-repo definition",
 			CreatedAt: now,
+			Rejected:  v.RejectedKeys(),
 		}
 		for _, term := range v.Terms("") {
 			aliases := make([]string, 0, len(term.Aliases))
@@ -198,5 +199,9 @@ func (a *App) loadVocabulary(ctx context.Context, repoStore problemStore, versio
 			Aliases:     t.Aliases,
 		})
 	}
-	return canon.BuildVocabulary(version, defs)
+	rejected, err := repoStore.ListRejected(ctx, version)
+	if err != nil {
+		return nil, err
+	}
+	return canon.BuildVocabularyWithRejected(version, defs, rejected)
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"text/tabwriter"
 
@@ -253,11 +254,67 @@ func writeApproachShowHuman(stdout io.Writer, response pipeline.ApproachShowResp
 	if len(response.Support) == 0 {
 		_, _ = fmt.Fprintln(stdout, "  (none recorded)")
 	} else {
+		support := make([]pipeline.FieldSupportView, len(response.Support))
+		copy(support, response.Support)
+		sort.SliceStable(support, func(i, j int) bool {
+			ri, rj := supportStatusRank(support[i].SupportKind), supportStatusRank(support[j].SupportKind)
+			if ri != rj {
+				return ri < rj
+			}
+			return support[i].FieldPath < support[j].FieldPath
+		})
 		tw := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
-		for _, support := range response.Support {
-			_, _ = fmt.Fprintf(tw, "  %s\t%s\t%s\n", support.FieldPath, support.SupportKind, support.Locator)
+		_, _ = fmt.Fprintln(tw, "  STATUS\tFIELD\tLOCATOR")
+		for _, s := range support {
+			_, _ = fmt.Fprintf(tw, "  %s\t%s\t%s\n", supportStatusTag(s.SupportKind), s.FieldPath, fallback(s.Locator, "-"))
 		}
 		_ = tw.Flush()
+	}
+}
+
+// supportStatusRank orders epistemic support so the weakest (least trustworthy)
+// claims sort first. The doctrine is that unsupported/inferred status must never
+// be visually promoted to look like source-stated fact; surfacing the weaker
+// claims at the top of the list is the render-side expression of that rule.
+func supportStatusRank(kind string) int {
+	switch kind {
+	case "unsupported":
+		return 0
+	case "unknown", "ambiguous":
+		return 1
+	case "novel_candidate":
+		return 2
+	case "inferred":
+		return 3
+	case "explicit":
+		return 4
+	default:
+		return 5
+	}
+}
+
+// supportStatusTag renders an epistemic support/claim status as a fixed-width,
+// glance-distinguishable tag. It keeps the exact domain vocabulary (no coercion)
+// but marks anything weaker than source-stated evidence with a leading "!" so a
+// reader never mistakes a model-derived or unsupported claim for a fact.
+func supportStatusTag(kind string) string {
+	switch kind {
+	case "explicit":
+		return "[ explicit ]"
+	case "inferred":
+		return "[! inferred]"
+	case "novel_candidate":
+		return "[! novel   ]"
+	case "ambiguous":
+		return "[! ambig   ]"
+	case "unknown":
+		return "[! unknown ]"
+	case "unsupported":
+		return "[!UNSUPPORT]"
+	case "":
+		return "[! -       ]"
+	default:
+		return "[! " + kind + "]"
 	}
 }
 
@@ -314,10 +371,19 @@ func writeSignatureHuman(stdout io.Writer, resp pipeline.SignatureResponse) {
 		sig.Posture["locality"], sig.Posture["construction"], sig.Posture["uncertainty"])
 	if len(sig.FieldClaims) > 0 {
 		_, _ = fmt.Fprintln(stdout, "  fields:")
+		claims := make([]pipeline.SignatureFieldClaimView, len(sig.FieldClaims))
+		copy(claims, sig.FieldClaims)
+		sort.SliceStable(claims, func(i, j int) bool {
+			ri, rj := supportStatusRank(claims[i].ClaimStatus), supportStatusRank(claims[j].ClaimStatus)
+			if ri != rj {
+				return ri < rj
+			}
+			return claims[i].FieldKind < claims[j].FieldKind
+		})
 		tw := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
-		_, _ = fmt.Fprintln(tw, "    FIELD\tSURFACE\tSTATE\tCANONICAL\tSTATUS")
-		for _, c := range sig.FieldClaims {
-			_, _ = fmt.Fprintf(tw, "    %s\t%s\t%s\t%s\t%s\n", c.FieldKind, c.SurfaceLabel, c.ResolutionState, fallback(c.CanonicalID, "-"), c.ClaimStatus)
+		_, _ = fmt.Fprintln(tw, "    STATUS\tFIELD\tSURFACE\tRESOLUTION\tCANONICAL")
+		for _, c := range claims {
+			_, _ = fmt.Fprintf(tw, "    %s\t%s\t%s\t%s\t%s\n", supportStatusTag(c.ClaimStatus), c.FieldKind, c.SurfaceLabel, c.ResolutionState, fallback(c.CanonicalID, "-"))
 		}
 		_ = tw.Flush()
 	}

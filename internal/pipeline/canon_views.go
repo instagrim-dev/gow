@@ -66,6 +66,7 @@ func comparisonView(cmp canon.Comparison) ComparisonView {
 	view := ComparisonView{
 		WeightsVersion:  cmp.WeightsVersion,
 		ClassifyVersion: cmp.ClassifyVersion,
+		ProfileHash:     cmp.ProfileHash,
 		Classification:  string(cmp.Classification),
 		OutcomeEqual:    cmp.OutcomeEqual,
 		Posture: PostureComparisonView{

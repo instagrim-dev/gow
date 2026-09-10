@@ -291,6 +291,10 @@ func (f *fakeProblemStore) ListTerms(context.Context, string, string) ([]store.T
 	return nil, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) ListRejected(context.Context, string) ([]string, error) {
+	return nil, errors.New("unexpected call")
+}
+
 func (f *fakeProblemStore) GetTerm(context.Context, string, string) (store.TermRecord, error) {
 	return store.TermRecord{}, errors.New("unexpected call")
 }
@@ -305,4 +309,36 @@ func (f *fakeProblemStore) GetSignature(context.Context, string) (store.Signatur
 
 func (f *fakeProblemStore) PersistComparison(context.Context, store.ComparisonRecord) error {
 	return errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListSignaturesForProblem(context.Context, string, string, string) ([]string, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistClusterRun(context.Context, store.ClusterRunRecord) (store.PersistClusterRunResult, error) {
+	return store.PersistClusterRunResult{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetClusterRun(context.Context, string) (store.ClusterRunRecord, error) {
+	return store.ClusterRunRecord{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListClusterRuns(context.Context, string) ([]store.ClusterRunRecord, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) LatestClusterRun(context.Context, string) (string, bool, error) {
+	return "", false, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistFailureSpace(context.Context, store.FailureSpaceRecord) (store.PersistFailureSpaceResult, error) {
+	return store.PersistFailureSpaceResult{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetFailureSpace(context.Context, string) (store.FailureSpaceRecord, error) {
+	return store.FailureSpaceRecord{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) LatestFailureSpace(context.Context, string) (store.FailureSpaceRecord, bool, error) {
+	return store.FailureSpaceRecord{}, false, errors.New("unexpected call")
 }

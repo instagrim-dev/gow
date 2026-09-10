@@ -32,6 +32,11 @@ type VocabularySeedInput struct {
 	Notes     string
 	CreatedAt string
 	Terms     []TermRecord
+	// Rejected are normalized keys the vocabulary explicitly disallows. They are
+	// persisted so rejection semantics survive a reload from SQLite (runtime
+	// resolution rehydrates the vocabulary from the store, so an in-memory-only
+	// rejected set would silently vanish after persistence).
+	Rejected []string
 }
 
 // SeedVocabulary inserts a vocabulary version + terms + aliases if absent. It is
@@ -83,7 +88,33 @@ VALUES(?, ?, ?, ?)
 			}
 		}
 	}
+	for _, rejected := range input.Rejected {
+		if _, err := tx.ExecContext(ctx, `
+INSERT OR IGNORE INTO canonical_rejected_terms(vocabulary_version, rejected_normalized)
+VALUES(?, ?)
+`, input.Version, rejected); err != nil {
+			return err
+		}
+	}
 	return tx.Commit()
+}
+
+// ListRejected returns the persisted rejected keys for a vocabulary version.
+func (s *Store) ListRejected(ctx context.Context, version string) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT rejected_normalized FROM canonical_rejected_terms WHERE vocabulary_version = ? ORDER BY rejected_normalized`, version)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var key string
+		if err := rows.Scan(&key); err != nil {
+			return nil, err
+		}
+		out = append(out, key)
+	}
+	return out, rows.Err()
 }
 
 func (s *Store) vocabularyExists(ctx context.Context, version string) (bool, error) {
@@ -425,6 +456,43 @@ FROM signature_boundaries WHERE signature_id = ? ORDER BY ordinal
 		return SignatureRecord{}, err
 	}
 	return rec, nil
+}
+
+// ListSignaturesForProblem returns the persisted signature ids for a problem
+// under one (schema_version, vocabulary_version), newest-mechanism first is not
+// meaningful here so results are ordered by signature id for determinism. It
+// joins signatures back to their owning problem through
+// mechanism -> approach_revision -> approach.
+//
+// Clustering keys on a single version tuple (KTD-1), so callers pass the exact
+// schema + vocabulary version; a signature under a different version is a
+// different clustering run and is excluded here.
+func (s *Store) ListSignaturesForProblem(ctx context.Context, problemID, schemaVersion, vocabVersion string) ([]string, error) {
+	if err := domain.ValidateProblemID(problemID); err != nil {
+		return nil, err
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT sig.id
+FROM mechanism_signatures sig
+JOIN mechanisms m ON m.id = sig.mechanism_id
+JOIN approach_revisions ar ON ar.id = m.approach_revision_id
+JOIN approaches a ON a.id = ar.approach_id
+WHERE a.problem_id = ? AND sig.schema_version = ? AND sig.vocabulary_version = ?
+ORDER BY sig.id
+`, problemID, schemaVersion, vocabVersion)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
 }
 
 // ComparisonFieldResultRow is one persisted per-field comparison result.

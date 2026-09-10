@@ -86,6 +86,17 @@ func (v *Vocabulary) Term(id domain.CanonicalID) (Term, bool) {
 	return t, ok
 }
 
+// RejectedKeys returns the normalized keys this vocabulary explicitly disallows,
+// sorted. These must be persisted so rejection survives a reload from storage.
+func (v *Vocabulary) RejectedKeys() []string {
+	out := make([]string, 0, len(v.rejected))
+	for k := range v.rejected {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+
 func aliasIndexKey(fieldKind domain.FieldKind, normalizedKey string) string {
 	return string(fieldKind) + "\x00" + normalizedKey
 }
@@ -157,9 +168,18 @@ type TermDef struct {
 
 // BuildVocabulary constructs a Vocabulary from a version and term definitions,
 // used to rehydrate a persisted vocabulary so resolution runs against exactly
-// the stored version. Rejected terms are not persisted in v0, so none are added.
+// the stored version. Rejected keys are supplied separately via
+// BuildVocabularyWithRejected; this convenience form adds none.
 func BuildVocabulary(version string, defs []TermDef) (*Vocabulary, error) {
-	b := vocabularyBuilder{version: version}
+	return BuildVocabularyWithRejected(version, defs, nil)
+}
+
+// BuildVocabularyWithRejected constructs a Vocabulary from a version, term
+// definitions, and the explicit rejected keys (normalized or not; Normalize is
+// idempotent). Rehydrating a persisted vocabulary passes the stored rejected
+// keys here so ResolutionRejected survives a reload from SQLite.
+func BuildVocabularyWithRejected(version string, defs []TermDef, rejected []string) (*Vocabulary, error) {
+	b := vocabularyBuilder{version: version, rejected: rejected}
 	for _, d := range defs {
 		b.terms = append(b.terms, Term{
 			CanonicalID: d.CanonicalID,

@@ -323,6 +323,89 @@ func fieldByKind(fields []FieldResult, kind domain.FieldKind) FieldResult {
 	return FieldResult{}
 }
 
+func TestBoundaryRelationIsDecisiveInComparison(t *testing.T) {
+	t.Parallel()
+	// Two signatures whose boundaries share a canonical ID but differ in the
+	// typed relation must NOT compare as identical boundaries: stops_at(X) is a
+	// different failure structure than requires(X). This guards the prior defect
+	// where boundaryClaims reduced boundaries to canonical ID only, dropping the
+	// relation the fingerprint already encodes as "canonicalID|relation".
+	base := MechanismSignature{
+		SchemaVersion:     "mechanism/v1",
+		VocabularyVersion: "mechanism/v1",
+	}
+	stopsAt := base
+	stopsAt.MechanismID = "mech_stops"
+	stopsAt.Boundaries = []Boundary{{
+		SurfaceLabel: "composite modulus",
+		State:        domain.ResolutionResolved,
+		CanonicalID:  domain.CanonicalID("core.boundary.composite_modulus"),
+		Relation:     "stops_at",
+	}}
+	requires := base
+	requires.MechanismID = "mech_requires"
+	requires.Boundaries = []Boundary{{
+		SurfaceLabel: "composite modulus",
+		State:        domain.ResolutionResolved,
+		CanonicalID:  domain.CanonicalID("core.boundary.composite_modulus"),
+		Relation:     "requires",
+	}}
+
+	cmp := CompareWithProfile(stopsAt, requires, ProfileMechanismV1())
+	if cmp.Boundary.Incomparable {
+		t.Fatalf("boundary comparison incomparable, want a resolved-set result: %+v", cmp.Boundary)
+	}
+	if cmp.Boundary.Ordinal == OrdinalIdentical || cmp.Boundary.OverlapCount != 0 {
+		t.Fatalf("stops_at(X) vs requires(X) compared identical (overlap=%d, ordinal=%q); the typed relation must be decisive", cmp.Boundary.OverlapCount, cmp.Boundary.Ordinal)
+	}
+
+	// Same relation + same canonical ID must still compare identical (the
+	// composite key does not spuriously distinguish equal boundaries).
+	same := CompareWithProfile(stopsAt, stopsAt, ProfileMechanismV1())
+	if same.Boundary.Ordinal != OrdinalIdentical {
+		t.Fatalf("identical boundaries compared non-identical: %+v", same.Boundary)
+	}
+}
+
+func TestComparisonProfileHashStableAndContentSensitive(t *testing.T) {
+	t.Parallel()
+	p := ProfileMechanismV1()
+
+	// Stable: two calls to the default profile hash equal, and independent of the
+	// declared decisive-field ordering.
+	if p.Hash() != ProfileMechanismV1().Hash() {
+		t.Fatal("default profile hash is not stable across calls")
+	}
+	reordered := ProfileMechanismV1()
+	reordered.DecisiveSetFields = []domain.FieldKind{
+		domain.FieldAuxiliaryObject, domain.FieldBreaks, domain.FieldAssumption,
+		domain.FieldOperator, domain.FieldPreserves,
+	}
+	if reordered.Hash() != p.Hash() {
+		t.Fatal("profile hash changed under decisive-field reordering; must be order-independent")
+	}
+
+	// Content-sensitive: promoting representation to decisive changes the hash,
+	// even if the human-authored Version string is left identical (the exact
+	// silent-drift the hash exists to catch).
+	promoted := ProfileMechanismV1()
+	promoted.DecisiveSetFields = append(promoted.DecisiveSetFields, domain.FieldRepresentation)
+	if promoted.Hash() == p.Hash() {
+		t.Fatal("adding a decisive field did not change the profile hash")
+	}
+	posture := ProfileMechanismV1()
+	posture.DecisivePosture = true
+	if posture.Hash() == p.Hash() {
+		t.Fatal("flipping DecisivePosture did not change the profile hash")
+	}
+
+	// The hash flows onto the comparison verdict for #11 to persist.
+	cmp := CompareWithProfile(MechanismSignature{}, MechanismSignature{}, p)
+	if cmp.ProfileHash != p.Hash() {
+		t.Fatalf("comparison profile hash = %q, want %q", cmp.ProfileHash, p.Hash())
+	}
+}
+
 func TestCompareUnknownWeightsVersionErrors(t *testing.T) {
 	t.Parallel()
 	v := MechanismV1()

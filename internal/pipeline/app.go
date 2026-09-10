@@ -47,10 +47,19 @@ type problemStore interface {
 	SeedVocabulary(context.Context, store.VocabularySeedInput) error
 	ListVocabularies(context.Context) ([]store.VocabularyRecord, error)
 	ListTerms(context.Context, string, string) ([]store.TermRecord, error)
+	ListRejected(context.Context, string) ([]string, error)
 	GetTerm(context.Context, string, string) (store.TermRecord, error)
 	PersistSignature(context.Context, store.SignatureRecord) (store.PersistSignatureResult, error)
 	GetSignature(context.Context, string) (store.SignatureRecord, error)
 	PersistComparison(context.Context, store.ComparisonRecord) error
+	ListSignaturesForProblem(context.Context, string, string, string) ([]string, error)
+	PersistClusterRun(context.Context, store.ClusterRunRecord) (store.PersistClusterRunResult, error)
+	GetClusterRun(context.Context, string) (store.ClusterRunRecord, error)
+	ListClusterRuns(context.Context, string) ([]store.ClusterRunRecord, error)
+	LatestClusterRun(context.Context, string) (string, bool, error)
+	PersistFailureSpace(context.Context, store.FailureSpaceRecord) (store.PersistFailureSpaceResult, error)
+	GetFailureSpace(context.Context, string) (store.FailureSpaceRecord, error)
+	LatestFailureSpace(context.Context, string) (store.FailureSpaceRecord, bool, error)
 }
 
 type InitProblemInput struct {

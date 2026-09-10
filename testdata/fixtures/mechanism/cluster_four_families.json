@@ -1,0 +1,48 @@
+{
+  "approaches": [
+    {
+      "logical_identity": "modular-descent-congruence",
+      "label": "Modular descent via congruence classes",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "representations": ["congruence classes"],
+      "operators": ["modular decomposition"],
+      "preserves": ["residue locality"],
+      "outcome": { "class": "partial_success" }
+    },
+    {
+      "logical_identity": "modular-descent-affine",
+      "label": "Modular descent via affine lattice (surface variant)",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "representations": ["affine lattice"],
+      "operators": ["modular decomposition"],
+      "preserves": ["residue locality"],
+      "outcome": { "class": "partial_success" }
+    },
+    {
+      "logical_identity": "global-averaging",
+      "label": "Global averaging bound",
+      "locality": "global",
+      "construction_mode": "existential",
+      "uncertainty_mode": "probabilistic",
+      "representations": ["congruence classes"],
+      "operators": ["density averaging"],
+      "preserves": ["mean growth rate"],
+      "outcome": { "class": "failure" }
+    },
+    {
+      "logical_identity": "novel-operator-isolate",
+      "label": "Approach with an unresolved novel operator",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "representations": ["congruence classes"],
+      "operators": ["a totally unknown operator phrase for isolation"],
+      "preserves": ["residue locality"],
+      "outcome": { "class": "partial_failure" }
+    }
+  ]
+}

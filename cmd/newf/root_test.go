@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/instagrim-dev/newf/internal/domain"
+	"github.com/instagrim-dev/newf/internal/pipeline"
 )
 
 func TestCLIProblemLifecycle(t *testing.T) {
@@ -531,4 +532,94 @@ func TestCLIVocabularyShowNotFound(t *testing.T) {
 	if response.Error.Code != "not_found" {
 		t.Fatalf("error code = %q, want not_found", response.Error.Code)
 	}
+}
+
+// TestApproachShowHumanSurfacesEpistemicStatus locks the render-side expression
+// of the doctrine "never silently promote epistemic status": the human field-
+// support table must (a) carry a STATUS column, (b) tag weaker-than-explicit
+// claims with a "!" marker, and (c) order the weakest claim first so unsupported
+// and inferred claims cannot hide below source-stated facts.
+func TestApproachShowHumanSurfacesEpistemicStatus(t *testing.T) {
+	t.Parallel()
+
+	stdout := &bytes.Buffer{}
+	writeApproachShowHuman(stdout, pipeline.ApproachShowResponse{
+		ApproachID: "app_1",
+		Provider:   pipeline.ProviderInvocationView{ProviderName: "fixture"},
+		Mechanism:  pipeline.MechanismView{ID: "mech_1"},
+		Outcome:    pipeline.OutcomeView{Class: "partial_failure"},
+		Support: []pipeline.FieldSupportView{
+			{FieldPath: "mechanism.operators", SupportKind: "explicit", Locator: "L1"},
+			{FieldPath: "outcome.boundary", SupportKind: "unsupported"},
+			{FieldPath: "mechanism.preserves", SupportKind: "inferred"},
+		},
+	})
+	out := stdout.String()
+
+	if !strings.Contains(out, "STATUS\t") && !strings.Contains(out, "STATUS ") {
+		t.Fatalf("field support table missing STATUS header:\n%s", out)
+	}
+	unsupportedAt := strings.Index(out, "outcome.boundary")
+	inferredAt := strings.Index(out, "mechanism.preserves")
+	explicitAt := strings.Index(out, "mechanism.operators")
+	if unsupportedAt < 0 || inferredAt < 0 || explicitAt < 0 {
+		t.Fatalf("missing a support row:\n%s", out)
+	}
+	if !(unsupportedAt < inferredAt && inferredAt < explicitAt) {
+		t.Fatalf("support rows not ordered weakest-first (unsupported<inferred<explicit):\n%s", out)
+	}
+	// The weaker claims must carry the "!" promotion guard; explicit must not.
+	explicitLine := lineContaining(out, "mechanism.operators")
+	unsupportedLine := lineContaining(out, "outcome.boundary")
+	if strings.Contains(explicitLine, "!") {
+		t.Fatalf("explicit support must not be marked as weak: %q", explicitLine)
+	}
+	if !strings.Contains(unsupportedLine, "!") {
+		t.Fatalf("unsupported support must be marked with '!': %q", unsupportedLine)
+	}
+}
+
+// TestClusterRunHumanLeadsWithDiscriminationLoss locks that the abstraction-loss
+// alarm leads cluster output (above the family/coverage tables) whenever present,
+// and that idempotency state is a leading tag rather than a trailing parenthetical.
+func TestClusterRunHumanLeadsWithDiscriminationLoss(t *testing.T) {
+	t.Parallel()
+
+	stdout := &bytes.Buffer{}
+	writeClusterRunHuman(stdout, pipeline.ClusterRunView{
+		ID:        "clr_1",
+		ProblemID: "prb_1",
+		Clusters: []pipeline.ClusterView{
+			{Fingerprint: "abcdef0123456789", MemberCount: 2},
+		},
+		DiscriminationLoss: []pipeline.DiscriminationLossView{
+			{MechanismAID: "mech_a", OutcomeA: "failure", MechanismBID: "mech_b", OutcomeB: "partial_success"},
+		},
+	}, true)
+	out := stdout.String()
+
+	alarmAt := strings.Index(out, "DISCRIMINATION LOSS")
+	headerAt := strings.Index(out, "Cluster run")
+	familiesAt := strings.Index(out, "families:")
+	if alarmAt < 0 || headerAt < 0 {
+		t.Fatalf("missing alarm or header:\n%s", out)
+	}
+	if alarmAt > headerAt {
+		t.Fatalf("discrimination-loss alarm must precede the cluster header:\n%s", out)
+	}
+	if familiesAt >= 0 && alarmAt > familiesAt {
+		t.Fatalf("discrimination-loss alarm must precede family tables:\n%s", out)
+	}
+	if !strings.Contains(lineContaining(out, "Cluster run"), "[created]") {
+		t.Fatalf("created state must render as a leading tag:\n%s", out)
+	}
+}
+
+func lineContaining(s, needle string) string {
+	for _, line := range strings.Split(s, "\n") {
+		if strings.Contains(line, needle) {
+			return line
+		}
+	}
+	return ""
 }

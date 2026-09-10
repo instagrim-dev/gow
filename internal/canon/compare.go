@@ -1,6 +1,9 @@
 package canon
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"sort"
 
@@ -77,6 +80,36 @@ func ProfileMechanismV1() ComparisonProfile {
 	}
 }
 
+// Hash returns a stable, content-addressed digest of the profile's decisive
+// axis selection (the semantics that actually determine a verdict): the sorted
+// decisive set fields, the surface field, and the posture/outcome decisiveness
+// flags. It deliberately does NOT include Version, so a hash pins the *meaning*
+// independent of the (mutable, human-authored) version string. Clustering (#11)
+// persists this hash alongside a cluster run so a verdict stays reproducible
+// even if someone later edits what "classify/v1" means: a changed profile yields
+// a changed hash, making the drift tamper-evident instead of silent.
+func (p ComparisonProfile) Hash() string {
+	fields := make([]string, 0, len(p.DecisiveSetFields))
+	for _, f := range p.DecisiveSetFields {
+		fields = append(fields, string(f))
+	}
+	sort.Strings(fields)
+	body := struct {
+		DecisiveSetFields []string `json:"decisive_set_fields"`
+		SurfaceField      string   `json:"surface_field"`
+		DecisivePosture   bool     `json:"decisive_posture"`
+		DecisiveOutcome   bool     `json:"decisive_outcome"`
+	}{
+		DecisiveSetFields: fields,
+		SurfaceField:      string(p.SurfaceField),
+		DecisivePosture:   p.DecisivePosture,
+		DecisiveOutcome:   p.DecisiveOutcome,
+	}
+	raw, _ := json.Marshal(body)
+	sum := sha256.Sum256(raw)
+	return "profile-sha256:" + hex.EncodeToString(sum[:])
+}
+
 // Ordinal is the per-field similarity ordinal. No single scalar is emitted.
 type Ordinal string
 
@@ -124,7 +157,12 @@ type PostureResult struct {
 type Comparison struct {
 	WeightsVersion  string
 	ClassifyVersion string
-	Fields          []FieldResult
+	// ProfileHash is the content hash of the ComparisonProfile that produced this
+	// verdict (see ComparisonProfile.Hash). Persisting it alongside a comparison
+	// or cluster run makes the axis selection tamper-evident independent of the
+	// mutable ClassifyVersion string.
+	ProfileHash string
+	Fields      []FieldResult
 	// Boundary is the measured (non-decisive by default) boundary-set result.
 	Boundary       FieldResult
 	Posture        PostureResult
@@ -167,6 +205,7 @@ func CompareWithProfile(a, b MechanismSignature, profile ComparisonProfile) Comp
 	cmp := Comparison{
 		WeightsVersion:  profile.Version,
 		ClassifyVersion: profile.Version,
+		ProfileHash:     profile.Hash(),
 		OutcomeEqual:    a.OutcomeClass == b.OutcomeClass,
 		Posture: PostureResult{
 			LocalityEqual:     a.Posture.Locality == b.Posture.Locality,
@@ -202,13 +241,25 @@ func CompareWithProfile(a, b MechanismSignature, profile ComparisonProfile) Comp
 
 // boundaryClaims adapts a signature's boundaries into the FieldClaim shape so
 // they can be compared with the same set machinery as the other fields.
+// boundaryClaims projects boundaries into comparable FieldClaims. The comparison
+// identity is the same "canonicalID|relation" composite the fingerprint uses
+// (see canonicalBoundaryStrings), so the typed relation is decisive: stops_at(X)
+// and requires(X) resolve to distinct comparison identities even though they
+// share a canonical ID. Comparing on canonical ID alone would let a boundary the
+// signature/fingerprint treats as different compare as identical. The composite
+// is a comparison-only key (never a persisted CanonicalID); resolvedIDs only
+// checks state+non-empty, so it participates in the set math unchanged.
 func boundaryClaims(bs []Boundary) []FieldClaim {
 	out := make([]FieldClaim, 0, len(bs))
 	for _, b := range bs {
+		id := b.CanonicalID
+		if b.State == domain.ResolutionResolved && id != "" {
+			id = domain.CanonicalID(string(b.CanonicalID) + "|" + b.Relation)
+		}
 		out = append(out, FieldClaim{
 			FieldKind:   domain.FieldBoundary,
 			State:       b.State,
-			CanonicalID: b.CanonicalID,
+			CanonicalID: id,
 		})
 	}
 	return out

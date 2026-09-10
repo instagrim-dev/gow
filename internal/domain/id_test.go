@@ -56,6 +56,20 @@ func TestGeneratedIDsValidate(t *testing.T) {
 	if err := ValidateFailureBoundaryID(failureBoundaryID); err != nil {
 		t.Fatalf("ValidateFailureBoundaryID() error = %v", err)
 	}
+
+	clusterRunID := NewClusterRunID(now)
+	mechanismClusterID := NewMechanismClusterID(now)
+	failureSpaceID := NewFailureSpaceID(now)
+
+	if err := ValidateClusterRunID(clusterRunID); err != nil {
+		t.Fatalf("ValidateClusterRunID() error = %v", err)
+	}
+	if err := ValidateMechanismClusterID(mechanismClusterID); err != nil {
+		t.Fatalf("ValidateMechanismClusterID() error = %v", err)
+	}
+	if err := ValidateFailureSpaceID(failureSpaceID); err != nil {
+		t.Fatalf("ValidateFailureSpaceID() error = %v", err)
+	}
 }
 
 func TestValidateRejectsCrossClassIDs(t *testing.T) {
@@ -77,5 +91,13 @@ func TestValidateRejectsCrossClassIDs(t *testing.T) {
 	snapshotID := NewSnapshotID(time.Now().UTC())
 	if err := ValidateNormalizationRevisionID(snapshotID); err == nil {
 		t.Fatal("ValidateNormalizationRevisionID() succeeded for snapshot ID")
+	}
+
+	clusterRunID := NewClusterRunID(time.Now().UTC())
+	if err := ValidateMechanismClusterID(clusterRunID); err == nil {
+		t.Fatal("ValidateMechanismClusterID() succeeded for cluster run ID")
+	}
+	if err := ValidateFailureSpaceID(clusterRunID); err == nil {
+		t.Fatal("ValidateFailureSpaceID() succeeded for cluster run ID")
 	}
 }

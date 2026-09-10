@@ -63,6 +63,13 @@ type MechanismSignature struct {
 	VocabularyVersion string
 	MechanismID       string
 
+	// SignatureID is the persisted store id (msig_...) when the signature was
+	// rehydrated from the store. It is empty for freshly built or in-memory
+	// fixture signatures and is excluded from the fingerprint (identity is
+	// structural, not row-based). Clustering uses it to key members back to
+	// persisted rows.
+	SignatureID string
+
 	Representations  []FieldClaim
 	Operators        []FieldClaim
 	Assumptions      []FieldClaim

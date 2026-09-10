@@ -26,6 +26,9 @@ const (
 	FailureBoundaryIDPrefix       = "fbnd_"
 	MechanismSignatureIDPrefix    = "msig_"
 	ComparisonRunIDPrefix         = "cmp_"
+	ClusterRunIDPrefix            = "clr_"
+	MechanismClusterIDPrefix      = "mcl_"
+	FailureSpaceIDPrefix          = "fsp_"
 )
 
 var (
@@ -42,6 +45,9 @@ var (
 	ErrInvalidFailureBoundaryID       = errors.New("invalid failure boundary id")
 	ErrInvalidMechanismSignatureID    = errors.New("invalid mechanism signature id")
 	ErrInvalidComparisonRunID         = errors.New("invalid comparison run id")
+	ErrInvalidClusterRunID            = errors.New("invalid cluster run id")
+	ErrInvalidMechanismClusterID      = errors.New("invalid mechanism cluster id")
+	ErrInvalidFailureSpaceID          = errors.New("invalid failure space id")
 
 	entropyMu sync.Mutex
 	entropy   = ulid.Monotonic(defaultEntropy(), 0)
@@ -121,6 +127,30 @@ func ValidateMechanismSignatureID(id string) error {
 
 func ValidateComparisonRunID(id string) error {
 	return validateID(id, ComparisonRunIDPrefix, ErrInvalidComparisonRunID)
+}
+
+func NewClusterRunID(now time.Time) string {
+	return newID(ClusterRunIDPrefix, now)
+}
+
+func NewMechanismClusterID(now time.Time) string {
+	return newID(MechanismClusterIDPrefix, now)
+}
+
+func NewFailureSpaceID(now time.Time) string {
+	return newID(FailureSpaceIDPrefix, now)
+}
+
+func ValidateClusterRunID(id string) error {
+	return validateID(id, ClusterRunIDPrefix, ErrInvalidClusterRunID)
+}
+
+func ValidateMechanismClusterID(id string) error {
+	return validateID(id, MechanismClusterIDPrefix, ErrInvalidMechanismClusterID)
+}
+
+func ValidateFailureSpaceID(id string) error {
+	return validateID(id, FailureSpaceIDPrefix, ErrInvalidFailureSpaceID)
 }
 
 func ValidateNormalizationRevisionID(id string) error {

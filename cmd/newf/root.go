@@ -61,6 +61,8 @@ func newRootCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cob
 	cmd.AddCommand(newApproachCommand(stdout, app, opts))
 	cmd.AddCommand(newMechanismCommand(stdout, app, opts))
 	cmd.AddCommand(newVocabularyCommand(stdout, app, opts))
+	cmd.AddCommand(newClusterCommand(stdout, app, opts))
+	cmd.AddCommand(newFailureSpaceCommand(stdout, app, opts))
 
 	return cmd
 }

@@ -863,6 +863,34 @@ CREATE TABLE success_invariant_failure_invariant (
 );
 ```
 
+## Implemented clustering + failure-space schema (#11)
+
+The `## Core schema` blueprint above (`cluster_revision`, `mechanism_cluster`,
+`cluster_membership`) is the forward-looking design. The tables that actually
+ship for issue #11 are the migration `v7`/`v8` schema below (see
+`internal/store/migrations.go` and
+[`mechanism-clustering.md`](mechanism-clustering.md)). They are all immutable by
+trigger.
+
+- `cluster_runs` — one deterministic clustering pass. Unique on
+  `(problem_id, schema_version, vocabulary_version, profile_version,
+  cluster_algo_version, thresholds_hash)`, so a re-run under the identical
+  version tuple is idempotent and a run under a different decisive set (profile)
+  is a distinct row. Carries `signature_count`, `family_count`, and
+  `status IN ('clean','degraded')`.
+- `mechanism_clusters` — one family per row, with `cluster_fingerprint`,
+  `representative_signature_id`, `member_count`, `isolate`, and a summarized
+  `intra_variation`. Unique on `(cluster_run_id, cluster_fingerprint)`.
+- `cluster_members` — signatures assigned to a family, with a `redundant` flag.
+- `cluster_distances` — representative-vs-representative comparison verdicts.
+- `cluster_coverage_axes` — per-axis distinct-value counts + `under_sampled`.
+- `cluster_discrimination_losses` — recorded abstraction-loss pairs when the run
+  is `degraded`.
+- `failure_spaces` — a materialized failure-space revision. Unique on
+  `(problem_id, cluster_run_id)` and `(problem_id, revision)`.
+- `failure_space_outcomes` — family count per outcome class.
+- `failure_space_axes` — coverage axes inherited from the cluster run.
+
 ## Immutable vs mutable/revisioned
 
 - Immutable: `source`, `evidence_record` (enforced with update/delete-rejecting

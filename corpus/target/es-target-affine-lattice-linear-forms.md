@@ -1,15 +1,20 @@
-# HELD-OUT TARGET — Affine-lattice / geometry-of-numbers linear forms
+# BLINDED TARGET — Affine-lattice / geometry-of-numbers linear forms
 
-**Status: HELD OUT for the historical-holdout experiment. Do NOT ingest into the
-pre-cutoff problem/workspace.** Staged as the later-productive mechanism the
-invariant-guided search must try to recover from pre-cutoff failure structure alone.
+**Status: BLINDED TARGET for the synthetic benchmark. Do NOT ingest into the
+train problem/workspace.** Staged as the mechanism family the invariant-guided
+search must try to recover from the train failure structure alone.
 
-**Era:** modern constructive program (post-cutoff relative to `2026-09-07` for the
-purposes of this experiment).
+**Not a historical claim.** This family is *withheld* from the train atlas, not
+*later* than it. The affine-lattice / linear-forms formulation of Erdős–Straus
+is not post-dated relative to the train families — conditions linear in `n`
+describing the solution set as an affine class in `Z³` appear in the literature
+well before any cutoff this repo once claimed (see the ED2 write-up
+arXiv:2511.07465 §4.3, which cites *earlier* work for exactly this move). The
+benchmark value here is **blinding**, not chronology.
 
 ## The structural move
 
-Every pre-cutoff family that stalls (es-01, es-02, es-08, es-10, es-12) preserves the
+Every train family that stalls (es-01, es-02, es-08, es-10, es-12) preserves the
 same invariant: it reasons through **residue-class locality** and congruence
 identities, and is therefore confined by the quadratic-reciprocity wall to the
 non-residue side. The candidate failure invariant across the atlas is:
@@ -17,7 +22,7 @@ non-residue side. The candidate failure invariant across the atlas is:
 > Methods built from residue-class congruence identities cannot cross the
 > quadratic-residue boundary.
 
-The held-out family **deliberately breaks that invariant.** Instead of covering `n`
+The target family **deliberately breaks that invariant.** Instead of covering `n`
 by residue classes, it recasts the problem as **conditions linear in `n`** and reads
 the solution set as an **affine class in `Z³`** (an affine lattice / affine
 sublattice). A representative linear form is
@@ -32,7 +37,7 @@ affine class contain a lattice point in the positive cone? — attacked with lat
 enumeration, convex-body / Minkowski-style arguments, and proofs of convergence,
 rather than with per-class polynomial identities.
 
-The mechanistic distinctions from the pre-cutoff atlas:
+The mechanistic distinctions from the train atlas:
 
 - locality: **global-geometric**, not residue-local;
 - representation: **affine lattice in `Z³`**, not congruence classes;
@@ -40,7 +45,7 @@ The mechanistic distinctions from the pre-cutoff atlas:
 - it *breaks* residue-locality and the confinement-to-non-residues invariant instead
   of preserving it;
 - it introduces an auxiliary object — the affine lattice and its convex body — that
-  no pre-cutoff family used.
+  no train family used.
 
 This is the "recover the structural move" target: the point is not the exact
 identity, but that the productive direction **abandons residue-class locality for an
@@ -71,7 +76,7 @@ the failure families all conserved.
         "class": "partial_success",
         "boundary_statement": "lattice organization reaches the residue-protected classes the congruence program could not",
         "boundary_conditions": ["global convergence of the lattice enumeration must be established"],
-        "notes": "Held-out productive direction; breaks the shared failure invariant."
+        "notes": "Blinded benchmark target; breaks the shared failure invariant."
       },
       "support": [
         {"field_path": "mechanism.representations", "support_kind": "explicit", "locator": "structural move"},

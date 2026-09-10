@@ -163,6 +163,14 @@ fixture and seeds mechanism records, giving you real mechanism IDs to run
 See [`docs/mechanism-canonicalization.md`](docs/mechanism-canonicalization.md)
 for the full contract.
 
+Once signatures exist for a problem, `newf cluster build --problem <id>` groups
+them into deterministic mechanism families via profile-driven connected
+components (no embeddings), and `newf failure-space build --problem <id>`
+materializes the first-class, versioned failure-space artifact (families
+partitioned by outcome, with coverage and discrimination-loss reporting). See
+[`docs/mechanism-clustering.md`](docs/mechanism-clustering.md) for the full
+contract.
+
 ## Core loop
 
 ```text

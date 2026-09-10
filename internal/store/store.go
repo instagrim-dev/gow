@@ -102,7 +102,11 @@ func (s *Store) Migrate(ctx context.Context) error {
 		if _, ok := applied[migration.version]; ok {
 			continue
 		}
-		if _, err := tx.ExecContext(ctx, migration.sql); err != nil {
+		if migration.apply != nil {
+			if err := migration.apply(ctx, tx); err != nil {
+				return fmt.Errorf("%w: %v", ErrMigration, err)
+			}
+		} else if _, err := tx.ExecContext(ctx, migration.sql); err != nil {
 			return fmt.Errorf("%w: %v", ErrMigration, err)
 		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO schema_migrations(version, applied_at) VALUES(?, ?)`, migration.version, now); err != nil {
@@ -880,9 +884,13 @@ func validateSchemaTables(ctx context.Context, tx *sql.Tx) error {
 		"approach_revisions", "mechanisms", "mechanism_attributes",
 		"outcomes", "failure_boundaries", "source_supports",
 		"canonical_vocabulary", "canonical_terms", "canonical_term_aliases",
+		"canonical_rejected_terms",
 		"classification_rubrics", "mechanism_signatures", "signature_field_claims",
 		"signature_postures", "signature_boundaries", "signature_outcomes",
 		"comparison_runs", "comparison_field_results",
+		"cluster_runs", "mechanism_clusters", "cluster_members",
+		"cluster_distances", "cluster_coverage_axes", "cluster_discrimination_losses",
+		"failure_spaces", "failure_space_outcomes", "failure_space_axes",
 	} {
 		row := tx.QueryRowContext(ctx, `
 SELECT EXISTS(
