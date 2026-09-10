@@ -136,6 +136,7 @@ type SyntheticArtifact struct {
     RunID       ID
     ArtifactType string // synthetic_attempt|synthetic_counterexample
     Content     string
+    CreatedAt   string
 }
 
 type NormalizationRevision struct {
@@ -145,6 +146,7 @@ type NormalizationRevision struct {
     ParentID    *ID
     ConfigHash  string
     Status      string
+    CreatedAt   string
 }
 
 type Approach struct {

@@ -146,7 +146,7 @@ Duplicate/skip cases are reported in `artifacts` or `warnings` with stable statu
   - `frontier_generation_run`
   - `frontier_proposal`
   - targeted invariant links + nearest cluster links
-- Idempotency: new run each invocation; duplicate proposal hashes are not re-inserted (reported as `duplicate_existing` with existing `proposal_id`), while new hashes create new proposals.
+- Idempotency: new run each invocation; duplicate proposal hashes are deduped globally per problem (reported as `duplicate_existing` with existing `proposal_id`), while new hashes create new proposals.
 - Failure semantics: unknown invariant ID, target invariant not in `surviving`, generation schema violation.
 - Human output: ranked proposals with component scores (ordinal/component, not fake scalar precision).
 - Depends on: `challenge`/`invariants` output.

@@ -180,6 +180,7 @@ CREATE TABLE cluster_revision (
   config_hash TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+-- Invariant: when parent_cluster_revision_id is set, parent and child must share normalization_revision_id (enforced in application logic in v0).
 
 CREATE TABLE mechanism_cluster (
   id TEXT PRIMARY KEY,
@@ -260,7 +261,6 @@ CREATE TABLE invariant_state_transition (
   from_state TEXT NOT NULL,
   to_state TEXT NOT NULL,
   created_at TEXT NOT NULL,
-  UNIQUE(challenge_id),
   UNIQUE(invariant_id, transition_seq)
 );
 
