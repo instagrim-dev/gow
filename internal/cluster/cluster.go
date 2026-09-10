@@ -86,7 +86,9 @@ type Member struct {
 // Cluster is one mechanism family: a connected component of the linkage graph.
 type Cluster struct {
 	// Fingerprint is a deterministic, order-independent identity over the sorted
-	// member fingerprints plus the version tuple (KTD-3).
+	// member fingerprints AND sorted member signature IDs plus the version tuple
+	// (KTD-3). Signature IDs are included so ambiguity-separated singletons that
+	// share a resolved-only fingerprint remain distinct (see clusterFingerprint).
 	Fingerprint string
 	// RepresentativeSignatureID is the member with the lexicographically smallest
 	// signature fingerprint (KTD-3): a stable, provenance-independent choice.
@@ -98,6 +100,27 @@ type Cluster struct {
 	// classifications among members (empty for singletons).
 	IntraVariation IntraVariation
 	Members        []Member
+	// OutcomeClasses is the sorted set of distinct outcome classes carried by the
+	// family's members. Outcome is deliberately NON-decisive for mechanism
+	// identity (a family is one mechanism regardless of how its instances turned
+	// out), but the family's outcome must be reported truthfully: a family that
+	// contains both failure and partial-success instances is Mixed, never
+	// compressed to whichever class its representative happened to own (KTD-9).
+	OutcomeClasses []domain.OutcomeClass
+	// Mixed is true when the family spans more than one distinct outcome class.
+	Mixed bool
+}
+
+// PrimaryOutcome returns the family's single outcome class, or "mixed" when the
+// family spans more than one. Empty only for an outcome-less family.
+func (c Cluster) PrimaryOutcome() domain.OutcomeClass {
+	if c.Mixed {
+		return domain.OutcomeMixed
+	}
+	if len(c.OutcomeClasses) == 1 {
+		return c.OutcomeClasses[0]
+	}
+	return ""
 }
 
 // IntraVariation is a deterministic summary of within-family pairwise verdicts.
@@ -106,6 +129,12 @@ type IntraVariation struct {
 	MechanismNear       int // mechanism-near / surface-distinct+mechanism-near
 	SurfaceDistinctNear int // subset of the above that is surface-distinct
 	IncomparablePairs   int
+	// MechanismDistinct counts pairs INSIDE this family that compared as
+	// mechanism-distinct. The coherence guard (see BuildClustering) makes this 0
+	// by construction for cluster/v1: no two members of a family may be
+	// mechanism-distinct. It is recorded so any future linkage rule that relaxes
+	// the guard cannot silently hide an incoherent family in the summary (KTD-10).
+	MechanismDistinct int
 }
 
 // Distance is a representative-vs-representative comparison between two clusters.
@@ -132,9 +161,18 @@ type Coverage struct {
 
 // Clustering is the full deterministic result of a pass.
 type Clustering struct {
-	AlgoVersion       string
-	ProfileVersion    string
-	ThresholdsHash    string
+	AlgoVersion    string
+	ProfileVersion string
+	ThresholdsHash string
+	// InputSetHash is a deterministic, order-independent sha256 over the exact
+	// signatures that were clustered (each member's signature id + fingerprint).
+	// It is part of cluster-run identity so that adding, removing, or changing a
+	// signature and re-clustering produces a NEW run rather than colliding with a
+	// stale run under the same version tuple. Without it, the recursive
+	// failure -> atlas -> recluster loop cannot learn from newly added failures
+	// (KTD-1). signature_count alone is insufficient: two different populations
+	// of equal size would collide.
+	InputSetHash      string
 	SchemaVersion     string
 	VocabularyVersion string
 	Clusters          []Cluster
@@ -195,6 +233,7 @@ func BuildClustering(signatures []canon.MechanismSignature, params Params) Clust
 		AlgoVersion:    params.AlgoVersion,
 		ProfileVersion: params.Profile.Version,
 		ThresholdsHash: params.ThresholdsHash(),
+		InputSetHash:   inputSetHash(ordered, orderedFP),
 		Status:         StatusClean,
 	}
 	if n > 0 {
@@ -202,24 +241,68 @@ func BuildClustering(signatures []canon.MechanismSignature, params Params) Clust
 		result.VocabularyVersion = ordered[0].VocabularyVersion
 	}
 
-	// Union-find over the deterministic order.
-	uf := newUnionFind(n)
-	// linked[i][j] records the pairwise verdict for coverage/variation reuse.
+	// Pairwise verdicts up front so linkage, coherence, and variation all read
+	// the same recorded classification.
 	verdict := make(map[[2]int]canon.Classification, n*n/2)
 	comparableNeighbor := make([]bool, n)
+	// distinctPair[i][j] (i<j) records a mechanism-distinct verdict, used by the
+	// coherence guard to forbid merges that would put a distinct pair in one
+	// family.
+	distinctPair := make(map[[2]int]bool, n)
+	linkCand := make([][2]int, 0, n)
 	for i := 0; i < n; i++ {
 		for j := i + 1; j < n; j++ {
 			cmp := canon.CompareWithProfile(ordered[i], ordered[j], params.Profile)
 			verdict[[2]int{i, j}] = cmp.Classification
+			if isDistinct(cmp.Classification) {
+				distinctPair[[2]int{i, j}] = true
+			}
 			if incomparableOnDecisive(cmp, params.Profile) {
 				continue
 			}
 			comparableNeighbor[i] = true
 			comparableNeighbor[j] = true
 			if isLink(cmp.Classification) {
-				uf.union(i, j)
+				linkCand = append(linkCand, [2]int{i, j})
 			}
 		}
+	}
+
+	// Coherence-guarded union (KTD-2). The underlying mechanism-near relation is
+	// NOT transitive (Jaccard/ordinal): A~B and B~C does not imply A~C. Plain
+	// single-linkage connected components would therefore manufacture a family
+	// {A,B,C} even when A is mechanism-distinct from C. We enforce the family
+	// coherence invariant by construction:
+	//
+	//     forall a,b in C:  not mechanism-distinct(a,b)
+	//
+	// A near-edge (i,j) is applied only if no member of i's current component is
+	// mechanism-distinct from any member of j's current component. Edges are
+	// processed in deterministic (fingerprint) order, and the guard is symmetric
+	// over whole components, so the result is order-independent for a fixed input.
+	uf := newUnionFind(n)
+	members := make([][]int, n) // component members keyed by current root
+	for i := 0; i < n; i++ {
+		members[i] = []int{i}
+	}
+	for _, e := range linkCand {
+		ri, rj := uf.find(e[0]), uf.find(e[1])
+		if ri == rj {
+			continue
+		}
+		if componentsConflict(members[ri], members[rj], distinctPair) {
+			// Merging would violate family coherence; skip this edge. The pair
+			// remains near, but the components stay separate (KTD-2).
+			continue
+		}
+		uf.union(e[0], e[1])
+		root := uf.find(e[0])
+		other := ri
+		if root == ri {
+			other = rj
+		}
+		members[root] = append(members[root], members[other]...)
+		members[other] = nil
 	}
 
 	// Group by union-find root, preserving deterministic member order.
@@ -271,6 +354,10 @@ func BuildClustering(signatures []canon.MechanismSignature, params Params) Clust
 					if orderedFP[i] == orderedFP[j] {
 						c.IntraVariation.Identical++
 					}
+				case canon.ClassMechanismDistinct, canon.ClassSurfaceNearMechDistinct:
+					// Should be impossible inside a coherent family; recorded so a
+					// relaxed future linkage rule cannot hide the contradiction.
+					c.IntraVariation.MechanismDistinct++
 				case canon.ClassUnknown:
 					c.IntraVariation.IncomparablePairs++
 				}
@@ -282,6 +369,21 @@ func BuildClustering(signatures []canon.MechanismSignature, params Params) Clust
 				result.Coverage.RedundantMemberCount++
 			}
 		}
+		// Per-family outcome distribution (KTD-9): collect the distinct member
+		// outcome classes rather than inheriting the representative's class.
+		outcomeSeen := map[domain.OutcomeClass]struct{}{}
+		for _, i := range idxs {
+			oc := ordered[i].OutcomeClass
+			if oc == "" {
+				oc = domain.OutcomeUnknown
+			}
+			outcomeSeen[oc] = struct{}{}
+		}
+		for oc := range outcomeSeen {
+			c.OutcomeClasses = append(c.OutcomeClasses, oc)
+		}
+		sort.Slice(c.OutcomeClasses, func(x, y int) bool { return c.OutcomeClasses[x] < c.OutcomeClasses[y] })
+		c.Mixed = len(c.OutcomeClasses) > 1
 		c.Fingerprint = clusterFingerprint(c.Members, result.AlgoVersion, result.ProfileVersion, result.SchemaVersion, result.VocabularyVersion, result.ThresholdsHash)
 		result.Clusters = append(result.Clusters, c)
 	}
@@ -330,6 +432,52 @@ func incomparableOnDecisive(cmp canon.Comparison, profile canon.ComparisonProfil
 
 func isLink(c canon.Classification) bool {
 	return c == canon.ClassMechanismNear || c == canon.ClassSurfaceDistinctMechNear
+}
+
+// isDistinct reports whether the classification asserts the two mechanisms are
+// distinct (either purely, or surface-near but mechanism-distinct). Such a pair
+// must never share a family (family coherence, KTD-2).
+func isDistinct(c canon.Classification) bool {
+	return c == canon.ClassMechanismDistinct || c == canon.ClassSurfaceNearMechDistinct
+}
+
+// componentsConflict reports whether merging two components would place a
+// mechanism-distinct pair in one family. It checks every cross pair against the
+// recorded distinct set (symmetric; indices normalized to i<j).
+func componentsConflict(a, b []int, distinctPair map[[2]int]bool) bool {
+	for _, i := range a {
+		for _, j := range b {
+			lo, hi := i, j
+			if lo > hi {
+				lo, hi = hi, lo
+			}
+			if distinctPair[[2]int{lo, hi}] {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// inputSetHash is a deterministic, order-independent sha256 over the exact
+// clustered population: each member's signature id + resolved fingerprint. It is
+// part of cluster-run identity so re-clustering after the population changes
+// yields a new run (KTD-1).
+func inputSetHash(ordered []canon.MechanismSignature, orderedFP []string) string {
+	if len(ordered) == 0 {
+		return ""
+	}
+	entries := make([]string, len(ordered))
+	for i := range ordered {
+		entries[i] = signatureID(ordered[i]) + "|" + orderedFP[i]
+	}
+	sort.Strings(entries)
+	encoded, err := json.Marshal(entries)
+	if err != nil {
+		panic("cluster: input set hash marshal failed: " + err.Error())
+	}
+	sum := sha256.Sum256(encoded)
+	return hex.EncodeToString(sum[:])
 }
 
 // representativeDistances compares each pair of cluster representatives so the
@@ -408,21 +556,36 @@ func axisCoverage(sigs []canon.MechanismSignature) []AxisCoverage {
 }
 
 // clusterFingerprint is a deterministic, order-independent identity over the
-// sorted member fingerprints plus the version tuple (KTD-3).
+// cluster's members plus the version tuple (KTD-3).
+//
+// Identity is keyed on BOTH the sorted member signature fingerprints AND the
+// sorted member signature IDs. The signature IDs are required for injectivity:
+// a signature fingerprint excludes non-resolved (ambiguous/unknown) claims, so
+// two signatures with identical resolved structure but a differing ambiguous
+// decisive claim hash to the SAME fingerprint yet are incomparable-on-decisive
+// and therefore land in DISTINCT singleton clusters. Keying on fingerprints
+// alone would give those distinct clusters the same identity and collide under
+// UNIQUE(cluster_run_id, cluster_fingerprint) at persist. The signature ID set
+// is provenance-stable (one persisted msig_ row per member) and order-sorted,
+// so it restores injectivity without breaking determinism or order-independence.
 func clusterFingerprint(members []Member, algo, profile, schema, vocab, thresholds string) string {
 	fps := make([]string, 0, len(members))
+	sigIDs := make([]string, 0, len(members))
 	for _, m := range members {
 		fps = append(fps, m.Fingerprint)
+		sigIDs = append(sigIDs, m.SignatureID)
 	}
 	sort.Strings(fps)
+	sort.Strings(sigIDs)
 	body := struct {
-		Algo       string   `json:"algo"`
-		Profile    string   `json:"profile"`
-		Schema     string   `json:"schema"`
-		Vocabulary string   `json:"vocab"`
-		Thresholds string   `json:"thresholds"`
-		Members    []string `json:"members"`
-	}{algo, profile, schema, vocab, thresholds, fps}
+		Algo         string   `json:"algo"`
+		Profile      string   `json:"profile"`
+		Schema       string   `json:"schema"`
+		Vocabulary   string   `json:"vocab"`
+		Thresholds   string   `json:"thresholds"`
+		Members      []string `json:"members"`
+		MemberSigIDs []string `json:"member_sig_ids"`
+	}{algo, profile, schema, vocab, thresholds, fps, sigIDs}
 	encoded, err := json.Marshal(body)
 	if err != nil {
 		panic("cluster: cluster fingerprint marshal failed: " + err.Error())

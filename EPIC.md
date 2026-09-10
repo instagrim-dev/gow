@@ -220,14 +220,22 @@ Exit condition:
 
 - `newf` can state how many genuinely distinct mechanism families are represented, where coverage is weak, and which failures are redundant.
 
-**Status: delivered.** `newf cluster build/show/list` groups signatures into
-deterministic, profile-driven mechanism families (connected components over
-`canon.CompareWithProfile`, no embeddings), and `newf failure-space
-build/show/coverage` materializes the first-class, versioned failure-space
-artifact (outcome partition + coverage + population-level discrimination-loss
-guard). Schema `v7`/`v8`; see
+**Status: delivered (hardened).** `newf cluster build/show/list` groups
+signatures into deterministic, profile-driven mechanism families
+(coherence-guarded connected components over `canon.CompareWithProfile`, no
+embeddings), and `newf failure-space build/show/coverage` materializes the
+first-class, versioned failure-space artifact (per-family outcome partition +
+coverage + population-level discrimination-loss guard). Review hardening (schema
+`v10`): cluster-run identity now includes an `input_set_hash` so re-clustering a
+changed signature population produces a new run (the `failure → atlas →
+recluster` loop can learn from newly added failures, KTD-1); linkage enforces a
+family-coherence invariant so the non-transitive near relation can never
+manufacture a family containing a `mechanism-distinct` pair (KTD-2); and a family
+spanning multiple member outcomes is reported as `mixed` rather than compressed
+to its representative's outcome (KTD-9). Schema `v7`/`v8`/`v10`; see
 [`docs/mechanism-clustering.md`](docs/mechanism-clustering.md). This also
-delivers the M4.1 FailureSpace slice below.
+delivers the M4.1 FailureSpace slice below. Invariant mining (M4.2) remains
+not-started.
 
 ## Planned slices
 

@@ -221,16 +221,20 @@ func writeClusterRunHuman(stdout io.Writer, run pipeline.ClusterRunView, created
 			_, _ = fmt.Fprintf(stdout, "    %s (%s) <-> %s (%s)\n", dl.MechanismAID, dl.OutcomeA, dl.MechanismBID, dl.OutcomeB)
 		}
 	}
-	_, _ = fmt.Fprintf(stdout, "%s Cluster run %s\n  problem:     %s\n  schema:      %s\n  vocabulary:  %s\n  profile:     %s\n  algo:        %s\n  thresholds:  %s\n  signatures:  %d\n  families:    %d\n  status:      %s\n",
+	_, _ = fmt.Fprintf(stdout, "%s Cluster run %s\n  problem:     %s\n  schema:      %s\n  vocabulary:  %s\n  profile:     %s\n  algo:        %s\n  thresholds:  %s\n  input_set:   %s\n  signatures:  %d\n  families:    %d\n  status:      %s\n",
 		idempotencyTag(created), run.ID, run.ProblemID, run.SchemaVersion, run.VocabularyVersion, run.ProfileVersion,
-		run.ClusterAlgoVersion, run.ThresholdsHash, run.SignatureCount, run.FamilyCount, run.Status)
+		run.ClusterAlgoVersion, run.ThresholdsHash, short(run.InputSetHash), run.SignatureCount, run.FamilyCount, run.Status)
 
 	if len(run.Clusters) > 0 {
 		_, _ = fmt.Fprintln(stdout, "  families:")
 		tw := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
-		_, _ = fmt.Fprintln(tw, "    FINGERPRINT\tMEMBERS\tISOLATE\tREPRESENTATIVE")
+		_, _ = fmt.Fprintln(tw, "    FINGERPRINT\tMEMBERS\tISOLATE\tOUTCOME\tREPRESENTATIVE")
 		for _, c := range run.Clusters {
-			_, _ = fmt.Fprintf(tw, "    %s\t%d\t%t\t%s\n", short(c.Fingerprint), c.MemberCount, c.Isolate, c.RepresentativeSignatureID)
+			outcome := c.OutcomeClass
+			if c.OutcomeMixed {
+				outcome = "mixed"
+			}
+			_, _ = fmt.Fprintf(tw, "    %s\t%d\t%t\t%s\t%s\n", short(c.Fingerprint), c.MemberCount, c.Isolate, outcome, c.RepresentativeSignatureID)
 		}
 		_ = tw.Flush()
 	}

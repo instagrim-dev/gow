@@ -1,0 +1,26 @@
+{
+  "approaches": [
+    {
+      "logical_identity": "mixed-outcome-congruence",
+      "label": "Modular descent (congruence surface, failed)",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "representations": ["congruence classes"],
+      "operators": ["modular decomposition"],
+      "preserves": ["residue locality"],
+      "outcome": { "class": "failure" }
+    },
+    {
+      "logical_identity": "mixed-outcome-affine",
+      "label": "Modular descent (affine surface, partial success)",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "representations": ["affine lattice"],
+      "operators": ["modular decomposition"],
+      "preserves": ["residue locality"],
+      "outcome": { "class": "partial_success" }
+    }
+  ]
+}

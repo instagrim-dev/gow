@@ -1,0 +1,24 @@
+{
+  "approaches": [
+    {
+      "logical_identity": "collision-resolved-twin",
+      "label": "Fully resolved mechanism",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "operators": ["modular decomposition"],
+      "preserves": ["residue locality"],
+      "outcome": { "class": "failure" }
+    },
+    {
+      "logical_identity": "collision-ambiguous-twin",
+      "label": "Same resolved structure plus one unresolved operator",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "operators": ["modular decomposition", "a totally unknown operator phrase for isolation"],
+      "preserves": ["residue locality"],
+      "outcome": { "class": "failure" }
+    }
+  ]
+}

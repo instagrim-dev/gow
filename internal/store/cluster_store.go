@@ -25,6 +25,8 @@ type ClusterRow struct {
 	MemberCount               int
 	IntraVariation            string
 	Isolate                   bool
+	OutcomeClass              string
+	OutcomeMixed              bool
 	Ordinal                   int
 	Members                   []ClusterMemberRow
 }
@@ -61,6 +63,7 @@ type ClusterRunRecord struct {
 	ProfileVersion     string
 	ClusterAlgoVersion string
 	ThresholdsHash     string
+	InputSetHash       string
 	SignatureCount     int
 	FamilyCount        int
 	Status             string
@@ -78,9 +81,10 @@ type PersistClusterRunResult struct {
 }
 
 // PersistClusterRun writes a clustering pass transactionally. It is idempotent
-// on the full version tuple (problem, schema, vocabulary, profile, algo,
-// thresholds): an existing run is returned unchanged with Created=false, never
-// rewritten (the tables are immutable by trigger).
+// on the full identity tuple (problem, schema, vocabulary, profile, algo,
+// thresholds, input_set_hash): an existing run is returned unchanged with
+// Created=false, never rewritten (the tables are immutable by trigger). The
+// input_set_hash makes re-clustering a changed signature population a new run.
 func (s *Store) PersistClusterRun(ctx context.Context, record ClusterRunRecord) (PersistClusterRunResult, error) {
 	if err := domain.ValidateClusterRunID(record.ID); err != nil {
 		return PersistClusterRunResult{}, err
@@ -108,17 +112,17 @@ func (s *Store) PersistClusterRun(ctx context.Context, record ClusterRunRecord) 
 	defer tx.Rollback()
 
 	if _, err := tx.ExecContext(ctx, `
-INSERT INTO cluster_runs(id, problem_id, run_id, schema_version, vocabulary_version, profile_version, cluster_algo_version, thresholds_hash, signature_count, family_count, status, created_at)
-VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`, record.ID, record.ProblemID, record.RunID, record.SchemaVersion, record.VocabularyVersion, record.ProfileVersion, record.ClusterAlgoVersion, record.ThresholdsHash, record.SignatureCount, record.FamilyCount, record.Status, record.CreatedAt); err != nil {
+INSERT INTO cluster_runs(id, problem_id, run_id, schema_version, vocabulary_version, profile_version, cluster_algo_version, thresholds_hash, input_set_hash, signature_count, family_count, status, created_at)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, record.ID, record.ProblemID, record.RunID, record.SchemaVersion, record.VocabularyVersion, record.ProfileVersion, record.ClusterAlgoVersion, record.ThresholdsHash, record.InputSetHash, record.SignatureCount, record.FamilyCount, record.Status, record.CreatedAt); err != nil {
 		return PersistClusterRunResult{}, err
 	}
 
 	for _, c := range record.Clusters {
 		if _, err := tx.ExecContext(ctx, `
-INSERT INTO mechanism_clusters(id, cluster_run_id, cluster_fingerprint, representative_signature_id, member_count, intra_variation, isolate, ordinal)
-VALUES(?, ?, ?, ?, ?, ?, ?, ?)
-`, c.ID, record.ID, c.Fingerprint, c.RepresentativeSignatureID, c.MemberCount, c.IntraVariation, boolToInt(c.Isolate), c.Ordinal); err != nil {
+INSERT INTO mechanism_clusters(id, cluster_run_id, cluster_fingerprint, representative_signature_id, member_count, intra_variation, isolate, outcome_class, outcome_mixed, ordinal)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, c.ID, record.ID, c.Fingerprint, c.RepresentativeSignatureID, c.MemberCount, c.IntraVariation, boolToInt(c.Isolate), c.OutcomeClass, boolToInt(c.OutcomeMixed), c.Ordinal); err != nil {
 			return PersistClusterRunResult{}, err
 		}
 		for _, m := range c.Members {
@@ -164,8 +168,8 @@ VALUES(?, ?, ?, ?, ?, ?)
 func (s *Store) findClusterRun(ctx context.Context, record ClusterRunRecord) (string, bool, error) {
 	row := s.db.QueryRowContext(ctx, `
 SELECT id FROM cluster_runs
-WHERE problem_id = ? AND schema_version = ? AND vocabulary_version = ? AND profile_version = ? AND cluster_algo_version = ? AND thresholds_hash = ?
-`, record.ProblemID, record.SchemaVersion, record.VocabularyVersion, record.ProfileVersion, record.ClusterAlgoVersion, record.ThresholdsHash)
+WHERE problem_id = ? AND schema_version = ? AND vocabulary_version = ? AND profile_version = ? AND cluster_algo_version = ? AND thresholds_hash = ? AND input_set_hash = ?
+`, record.ProblemID, record.SchemaVersion, record.VocabularyVersion, record.ProfileVersion, record.ClusterAlgoVersion, record.ThresholdsHash, record.InputSetHash)
 	var id string
 	if err := row.Scan(&id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -186,11 +190,11 @@ func (s *Store) GetClusterRun(ctx context.Context, id string) (ClusterRunRecord,
 
 func (s *Store) loadClusterRun(ctx context.Context, id string) (ClusterRunRecord, error) {
 	row := s.db.QueryRowContext(ctx, `
-SELECT id, problem_id, run_id, schema_version, vocabulary_version, profile_version, cluster_algo_version, thresholds_hash, signature_count, family_count, status, created_at
+SELECT id, problem_id, run_id, schema_version, vocabulary_version, profile_version, cluster_algo_version, thresholds_hash, input_set_hash, signature_count, family_count, status, created_at
 FROM cluster_runs WHERE id = ?
 `, id)
 	var rec ClusterRunRecord
-	if err := row.Scan(&rec.ID, &rec.ProblemID, &rec.RunID, &rec.SchemaVersion, &rec.VocabularyVersion, &rec.ProfileVersion, &rec.ClusterAlgoVersion, &rec.ThresholdsHash, &rec.SignatureCount, &rec.FamilyCount, &rec.Status, &rec.CreatedAt); err != nil {
+	if err := row.Scan(&rec.ID, &rec.ProblemID, &rec.RunID, &rec.SchemaVersion, &rec.VocabularyVersion, &rec.ProfileVersion, &rec.ClusterAlgoVersion, &rec.ThresholdsHash, &rec.InputSetHash, &rec.SignatureCount, &rec.FamilyCount, &rec.Status, &rec.CreatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ClusterRunRecord{}, fmt.Errorf("%w: cluster run %s", ErrNotFound, id)
 		}
@@ -198,7 +202,7 @@ FROM cluster_runs WHERE id = ?
 	}
 
 	clusterRows, err := s.db.QueryContext(ctx, `
-SELECT id, cluster_fingerprint, representative_signature_id, member_count, intra_variation, isolate, ordinal
+SELECT id, cluster_fingerprint, representative_signature_id, member_count, intra_variation, isolate, outcome_class, outcome_mixed, ordinal
 FROM mechanism_clusters WHERE cluster_run_id = ? ORDER BY ordinal
 `, id)
 	if err != nil {
@@ -207,11 +211,12 @@ FROM mechanism_clusters WHERE cluster_run_id = ? ORDER BY ordinal
 	defer clusterRows.Close()
 	for clusterRows.Next() {
 		var c ClusterRow
-		var isolate int
-		if err := clusterRows.Scan(&c.ID, &c.Fingerprint, &c.RepresentativeSignatureID, &c.MemberCount, &c.IntraVariation, &isolate, &c.Ordinal); err != nil {
+		var isolate, mixed int
+		if err := clusterRows.Scan(&c.ID, &c.Fingerprint, &c.RepresentativeSignatureID, &c.MemberCount, &c.IntraVariation, &isolate, &c.OutcomeClass, &mixed, &c.Ordinal); err != nil {
 			return ClusterRunRecord{}, err
 		}
 		c.Isolate = isolate != 0
+		c.OutcomeMixed = mixed != 0
 		rec.Clusters = append(rec.Clusters, c)
 	}
 	if err := clusterRows.Err(); err != nil {
@@ -306,7 +311,7 @@ func (s *Store) ListClusterRuns(ctx context.Context, problemID string) ([]Cluste
 		return nil, err
 	}
 	rows, err := s.db.QueryContext(ctx, `
-SELECT id, problem_id, run_id, schema_version, vocabulary_version, profile_version, cluster_algo_version, thresholds_hash, signature_count, family_count, status, created_at
+SELECT id, problem_id, run_id, schema_version, vocabulary_version, profile_version, cluster_algo_version, thresholds_hash, input_set_hash, signature_count, family_count, status, created_at
 FROM cluster_runs WHERE problem_id = ? ORDER BY created_at DESC, id DESC
 `, problemID)
 	if err != nil {
@@ -316,7 +321,7 @@ FROM cluster_runs WHERE problem_id = ? ORDER BY created_at DESC, id DESC
 	var out []ClusterRunRecord
 	for rows.Next() {
 		var rec ClusterRunRecord
-		if err := rows.Scan(&rec.ID, &rec.ProblemID, &rec.RunID, &rec.SchemaVersion, &rec.VocabularyVersion, &rec.ProfileVersion, &rec.ClusterAlgoVersion, &rec.ThresholdsHash, &rec.SignatureCount, &rec.FamilyCount, &rec.Status, &rec.CreatedAt); err != nil {
+		if err := rows.Scan(&rec.ID, &rec.ProblemID, &rec.RunID, &rec.SchemaVersion, &rec.VocabularyVersion, &rec.ProfileVersion, &rec.ClusterAlgoVersion, &rec.ThresholdsHash, &rec.InputSetHash, &rec.SignatureCount, &rec.FamilyCount, &rec.Status, &rec.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, rec)

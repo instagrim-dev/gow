@@ -939,5 +939,23 @@ SELECT EXISTS(
 			return fmt.Errorf("%w: missing table %q for current schema", ErrCorruptStore, table)
 		}
 	}
+	// Column-level checks for the newest schema shape. A table can exist while a
+	// later migration that only ADDs columns (rather than a new table) was
+	// skipped, leaving an incomplete upgrade that a table-existence check alone
+	// would miss. Assert the columns owned by the most recent migration so a
+	// partial upgrade is reported as corrupt rather than silently accepted.
+	for _, c := range []struct{ table, column string }{
+		{"cluster_runs", "input_set_hash"},      // migration v10 (KTD-1)
+		{"mechanism_clusters", "outcome_class"}, // migration v10 (KTD-9)
+		{"mechanism_clusters", "outcome_mixed"}, // migration v10 (KTD-9)
+	} {
+		has, err := columnExists(ctx, tx, c.table, c.column)
+		if err != nil {
+			return fmt.Errorf("%w: %v", ErrCorruptStore, err)
+		}
+		if !has {
+			return fmt.Errorf("%w: missing column %q on %q for current schema", ErrCorruptStore, c.column, c.table)
+		}
+	}
 	return nil
 }

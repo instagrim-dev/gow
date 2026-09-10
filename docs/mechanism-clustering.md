@@ -11,18 +11,22 @@ The governing principle is:
 > never an opaque embedding.
 
 `newf` must never persist a model's "these belong together" answer as truth.
-Clustering here is the connected-components of a linkage graph whose edges are
-exactly `canon.CompareWithProfile` verdicts. Every family, representative, and
-count is replayable from the persisted signatures plus the recorded profile and
-algorithm version.
+Clustering here is the coherence-guarded connected-components of a linkage graph
+whose edges are exactly `canon.CompareWithProfile` verdicts (the guard is
+defined in [Family coherence](#family-coherence-non-transitive-linkage)). Every
+family, representative, and count is replayable from the persisted signatures
+plus the recorded profile and algorithm version.
 
 ## What clustering is (and is not)
 
 Clustering partitions the mechanism signatures of one problem, under one
 `(schema_version, vocabulary_version)`, into **mechanism families**. Two
-signatures share a family iff the comparator classifies them as `mechanism-near`
+signatures are *linked* iff the comparator classifies them as `mechanism-near`
 or `surface-distinct+mechanism-near` **and** no profile-decisive field was
-incomparable. Grouping is transitive (connected components).
+incomparable. Families are the connected components of these links **subject to
+the family-coherence guard**: because the near relation is not transitive, a
+link is applied only when it does not place a `mechanism-distinct` pair in one
+family (see [Family coherence](#family-coherence-non-transitive-linkage)).
 
 Clustering is **not**:
 
@@ -53,11 +57,45 @@ byte-identical clusters, representatives, and cluster fingerprints.
 
 - **Representative**: the member with the lexicographically smallest signature
   fingerprint — a provenance-independent, stable choice.
-- **Cluster fingerprint**: a `sha256` over the sorted member fingerprints plus
-  the version tuple `(algo, profile, schema, vocabulary, thresholds)`.
+- **Cluster fingerprint**: a `sha256` over the sorted member fingerprints, the
+  sorted member signature IDs, and the version tuple `(algo, profile, schema,
+  vocabulary, thresholds)`. The signature IDs are included so two distinct
+  families whose members happen to share resolved-only fingerprints (reachable
+  when one member has an ambiguous decisive claim excluded from its fingerprint)
+  cannot collide under the persistence UNIQUE constraint.
+- **Input-set hash**: a `sha256` over the exact clustered population — each
+  member's `signature_id | fingerprint`, sorted. It is part of cluster-run
+  identity so that adding, removing, or changing a signature and re-clustering
+  produces a **new run** rather than replaying a stale one. `signature_count`
+  alone is insufficient: two different populations of equal size would collide,
+  and the recursive `failure → atlas → recluster` loop could never learn from a
+  newly added failure.
 - **Thresholds hash**: a `sha256` over the algorithm identity and the profile's
   decisive-axis selection, so a run under a different decisive set is a distinct,
   non-colliding run.
+
+## Family coherence (non-transitive linkage)
+
+The `mechanism-near` relation is **not transitive**. With a set-overlap
+(Jaccard/ordinal) measure you can have, on a single decisive axis:
+
+    A = {a, b}         J(A,B) = 2/3 → near
+    B = {a, b, c}      J(B,C) = 2/3 → near
+    C = {b, c}         J(A,C) = 1/3 → distinct
+
+Naive single-linkage connected components would merge `{A, B, C}` into one
+family even though `A` is `mechanism-distinct` from `C`. `newf` forbids this by
+enforcing a **family-coherence invariant** by construction:
+
+> ∀ a, b ∈ family C:  ¬ mechanism-distinct(a, b)
+
+A near-edge `(i, j)` is applied only when no member of `i`'s current component is
+`mechanism-distinct` from any member of `j`'s current component. Edges are
+processed in deterministic (fingerprint) order and the guard is symmetric over
+whole components, so the result is order-independent for a fixed input. Any
+`mechanism-distinct` pair that survives *inside* a family (which cannot happen
+under `cluster/v1`) is counted in `IntraVariation.mechanism_distinct` so a future
+relaxed linkage rule can never silently hide an incoherent family.
 
 ## Isolates and incomparability
 
@@ -94,8 +132,13 @@ vocabulary that cannot tell successes from failures.
 A `FailureSpace` is the first explicit, versioned failure-space artifact,
 materialized from a cluster run. It:
 
-- partitions families by the outcome class carried on their representative
-  signature (never re-inferred);
+- partitions families by their **per-family outcome distribution**: a family
+  whose members all carry one outcome class is counted under that class; a family
+  whose members span more than one class is counted as **`mixed`**. Outcome is
+  read from the signatures (never re-inferred), and — critically — is never
+  compressed to whichever class the family's representative signature happened to
+  own. Outcome remains non-decisive for mechanism *identity*; this only makes the
+  family's reported outcome truthful.
 - preserves the cluster's coverage / under-sampled report;
 - carries `distinct_family_count` and `redundant_member_count`.
 
@@ -110,7 +153,8 @@ failure-space tables are immutable by trigger. Runs are idempotent on their full
 version tuple:
 
 - `cluster_runs` is unique on
-  `(problem, schema, vocabulary, profile, algo, thresholds)`;
+  `(problem, schema, vocabulary, profile, algo, thresholds, input_set_hash)` —
+  a changed signature population re-clusters into a new run;
 - `failure_spaces` is unique on `(problem, cluster_run)` and `(problem, revision)`.
 
 ## CLI

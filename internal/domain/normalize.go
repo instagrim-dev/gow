@@ -20,6 +20,13 @@ const (
 	OutcomePartialFailure OutcomeClass = "partial_failure"
 	OutcomePartialSuccess OutcomeClass = "partial_success"
 	OutcomeSuccess        OutcomeClass = "success"
+	// OutcomeMixed is an AGGREGATE-ONLY outcome class: it is never carried by a
+	// single mechanism/signature (see Valid, which rejects it), but a mechanism
+	// family or failure-space partition that spans more than one distinct member
+	// outcome is reported as mixed rather than being compressed to the outcome of
+	// a single representative. This preserves the truth that a family can contain
+	// both failures and partial successes.
+	OutcomeMixed OutcomeClass = "mixed"
 )
 
 func (c OutcomeClass) Valid() bool {
@@ -29,6 +36,13 @@ func (c OutcomeClass) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// ValidFamilyOutcome reports whether c is a valid AGGREGATE outcome for a
+// mechanism family or failure-space partition: any signature-level class plus
+// the aggregate-only "mixed".
+func (c OutcomeClass) ValidFamilyOutcome() bool {
+	return c.Valid() || c == OutcomeMixed
 }
 
 // Locality captures whether an approach reasons locally, globally, or a mix.

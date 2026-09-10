@@ -137,6 +137,162 @@ func TestIncomparableDecisiveFieldStaysIsolate(t *testing.T) {
 	}
 }
 
+// Regression: two signatures with byte-identical resolved fingerprints where
+// exactly one carries an ADDITIONAL ambiguous decisive claim. The ambiguous
+// claim makes the pair incomparable-on-decisive, so they do NOT link -> two
+// singleton clusters. Because the ambiguous claim is excluded from the
+// signature fingerprint, both members share the same fingerprint; keying the
+// cluster fingerprint on member fingerprints alone would collide and violate
+// UNIQUE(cluster_run_id, cluster_fingerprint) at persist. Cluster fingerprints
+// must stay distinct because signature IDs are folded into the identity.
+func TestClusterFingerprintDistinctForAmbiguitySeparatedIsolates(t *testing.T) {
+	t.Parallel()
+	a := sig("a", []string{"op.x"}, []string{"p.1"}, nil, domain.OutcomeFailure)
+	b := sig("b", []string{"op.x"}, []string{"p.1"}, nil, domain.OutcomeFailure)
+	b.Operators = append(b.Operators, unresolved(domain.FieldOperator, "mystery op"))
+
+	// Precondition: the two signatures share a resolved fingerprint, so the
+	// collision is reachable and this test is exercising the real hazard.
+	if canon.Fingerprint(a) != canon.Fingerprint(b) {
+		t.Fatalf("precondition failed: fingerprints differ, collision not reachable")
+	}
+
+	got := BuildClustering([]canon.MechanismSignature{a, b}, Params{})
+	if got.Coverage.DistinctFamilyCount != 2 {
+		t.Fatalf("distinct families = %d, want 2", got.Coverage.DistinctFamilyCount)
+	}
+	if got.Clusters[0].Fingerprint == got.Clusters[1].Fingerprint {
+		t.Fatalf("distinct clusters share cluster fingerprint %q (collision -> UNIQUE violation at persist)", got.Clusters[0].Fingerprint)
+	}
+}
+
+// TestNonTransitiveChainStaysCoherent is the KTD-2 regression: the mechanism-near
+// relation is NOT transitive. With A~B and B~C but A mechanism-distinct from C,
+// naive single-linkage connected components would manufacture one family {A,B,C}
+// containing a mechanism-distinct pair. The coherence guard must keep them
+// coherent: no family may contain a mechanism-distinct pair.
+//
+// Operator Jaccard on a single decisive axis (the user's counterexample):
+//
+//	A = {op.a, op.b}        J(A,B) = 2/3 -> near
+//	B = {op.a, op.b, op.c}  J(B,C) = 2/3 -> near
+//	C = {op.b, op.c}        J(A,C) = 1/3 -> distinct
+func TestNonTransitiveChainStaysCoherent(t *testing.T) {
+	t.Parallel()
+	a := sig("a", []string{"op.a", "op.b"}, nil, nil, domain.OutcomeFailure)
+	b := sig("b", []string{"op.a", "op.b", "op.c"}, nil, nil, domain.OutcomeFailure)
+	c := sig("c", []string{"op.b", "op.c"}, nil, nil, domain.OutcomeFailure)
+
+	// Precondition: confirm the intended non-transitive relation actually holds
+	// under the comparator, so the test exercises the real hazard.
+	prof := canon.ProfileMechanismV1()
+	nearAB := isLink(canon.CompareWithProfile(a, b, prof).Classification)
+	nearBC := isLink(canon.CompareWithProfile(b, c, prof).Classification)
+	distinctAC := isDistinct(canon.CompareWithProfile(a, c, prof).Classification)
+	if !nearAB || !nearBC || !distinctAC {
+		t.Fatalf("precondition failed: nearAB=%t nearBC=%t distinctAC=%t (need true,true,true)", nearAB, nearBC, distinctAC)
+	}
+
+	got := BuildClustering([]canon.MechanismSignature{a, b, c}, Params{})
+
+	// Family coherence invariant: no family contains a mechanism-distinct pair.
+	for i, cl := range got.Clusters {
+		if cl.IntraVariation.MechanismDistinct != 0 {
+			t.Fatalf("family %d contains %d mechanism-distinct pairs; coherence violated", i, cl.IntraVariation.MechanismDistinct)
+		}
+	}
+	// A and C must NOT share a family (they are mechanism-distinct).
+	if clusterOf(got, "msig_a") == clusterOf(got, "msig_c") {
+		t.Fatal("mechanism-distinct A and C were merged into one family (single-linkage transitivity bug)")
+	}
+	// Determinism: reversed input yields the identical family partition.
+	rev := BuildClustering([]canon.MechanismSignature{c, b, a}, Params{})
+	if len(rev.Clusters) != len(got.Clusters) {
+		t.Fatalf("coherent clustering not order-independent: %d vs %d families", len(rev.Clusters), len(got.Clusters))
+	}
+	for i := range got.Clusters {
+		if got.Clusters[i].Fingerprint != rev.Clusters[i].Fingerprint {
+			t.Fatalf("family %d fingerprint differs across input order", i)
+		}
+	}
+}
+
+// TestInputSetHashChangesWithPopulation is the KTD-1 regression: the cluster-run
+// identity must depend on WHICH signatures were clustered, not just their count.
+// Adding a signature (or swapping one for another of equal count) must change the
+// input-set hash so re-clustering produces a new run instead of colliding with a
+// stale run under the same version tuple.
+func TestInputSetHashChangesWithPopulation(t *testing.T) {
+	t.Parallel()
+	a := sig("a", []string{"op.a"}, nil, nil, domain.OutcomeFailure)
+	b := sig("b", []string{"op.b"}, nil, nil, domain.OutcomeFailure)
+	c := sig("c", []string{"op.c"}, nil, nil, domain.OutcomeFailure)
+
+	twelveA := BuildClustering([]canon.MechanismSignature{a, b}, Params{})
+	plusC := BuildClustering([]canon.MechanismSignature{a, b, c}, Params{})
+	if twelveA.InputSetHash == "" {
+		t.Fatal("input set hash is empty for a non-empty population")
+	}
+	if twelveA.InputSetHash == plusC.InputSetHash {
+		t.Fatal("adding a signature did not change the input-set hash (stale-run collision, KTD-1)")
+	}
+
+	// Same-count, different population must also differ.
+	swap := BuildClustering([]canon.MechanismSignature{a, c}, Params{})
+	if twelveA.InputSetHash == swap.InputSetHash {
+		t.Fatal("different population of equal size shares an input-set hash (signature_count insufficient)")
+	}
+
+	// Order-independent for a fixed population.
+	if BuildClustering([]canon.MechanismSignature{b, a}, Params{}).InputSetHash != twelveA.InputSetHash {
+		t.Fatal("input-set hash is not order-independent")
+	}
+}
+
+// TestFamilyOutcomeDistributionIsMixed is the KTD-9 regression: a family that
+// spans more than one member outcome class must be reported as mixed, not
+// compressed to the outcome of its representative signature.
+func TestFamilyOutcomeDistributionIsMixed(t *testing.T) {
+	t.Parallel()
+	// a and b are the same mechanism (surface-distinct only) but carry DIFFERENT
+	// outcome classes. Outcome is non-decisive for identity, so they form one
+	// family; that family must be mixed.
+	a := sig("a", []string{"op.x"}, []string{"p.1"}, []string{"r.1"}, domain.OutcomeFailure)
+	b := sig("b", []string{"op.x"}, []string{"p.1"}, []string{"r.2"}, domain.OutcomePartialSuccess)
+
+	got := BuildClustering([]canon.MechanismSignature{a, b}, Params{})
+	if got.Coverage.DistinctFamilyCount != 1 {
+		t.Fatalf("distinct families = %d, want 1 (same mechanism)", got.Coverage.DistinctFamilyCount)
+	}
+	fam := got.Clusters[0]
+	if !fam.Mixed {
+		t.Fatalf("family spanning failure+partial_success not marked mixed; outcomes=%v", fam.OutcomeClasses)
+	}
+	if fam.PrimaryOutcome() != domain.OutcomeMixed {
+		t.Fatalf("PrimaryOutcome() = %q, want mixed", fam.PrimaryOutcome())
+	}
+	if len(fam.OutcomeClasses) != 2 {
+		t.Fatalf("outcome distribution = %v, want 2 distinct classes", fam.OutcomeClasses)
+	}
+}
+
+// TestSingleOutcomeFamilyIsNotMixed guards the boundary: a homogeneous family
+// keeps its single outcome class and is not spuriously marked mixed.
+func TestSingleOutcomeFamilyIsNotMixed(t *testing.T) {
+	t.Parallel()
+	a := sig("a", []string{"op.x"}, []string{"p.1"}, []string{"r.1"}, domain.OutcomeFailure)
+	b := sig("b", []string{"op.x"}, []string{"p.1"}, []string{"r.2"}, domain.OutcomeFailure)
+
+	got := BuildClustering([]canon.MechanismSignature{a, b}, Params{})
+	fam := got.Clusters[0]
+	if fam.Mixed {
+		t.Fatal("homogeneous family incorrectly marked mixed")
+	}
+	if fam.PrimaryOutcome() != domain.OutcomeFailure {
+		t.Fatalf("PrimaryOutcome() = %q, want failure", fam.PrimaryOutcome())
+	}
+}
+
 func TestOrderIndependence(t *testing.T) {
 	t.Parallel()
 	a := sig("a", []string{"op.x"}, []string{"p.1"}, []string{"r.1"}, domain.OutcomeFailure)

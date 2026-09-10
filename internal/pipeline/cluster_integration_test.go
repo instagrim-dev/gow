@@ -217,7 +217,194 @@ func TestIntegrationFailureSpaceFromClusterRun(t *testing.T) {
 	}
 }
 
-// TestIntegrationClusterDegradedUnderLossyVocabulary is the R9/KTD-8 regression
+// TestIntegrationClusterFingerprintCollisionPersists is the end-to-end
+// regression for the cluster-fingerprint collision: two mechanisms with
+// identical resolved structure where one carries an extra unresolved
+// (incomparable-on-decisive) operator become two singleton clusters whose
+// signature fingerprints are equal. Before the fix, both clusters received the
+// same cluster fingerprint and the second INSERT violated
+// UNIQUE(cluster_run_id, cluster_fingerprint), so PersistClusterRun failed. The
+// build must now succeed and produce two distinct families.
+func TestIntegrationClusterFingerprintCollisionPersists(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	problemID, runID, snapshotID := seedProblemAndSnapshot(t, ctx, dbPath, now)
+
+	seed, err := app.SeedMechanismFixture(ctx, MechanismFixtureSeedInput{
+		DBPath:     dbPath,
+		ProblemID:  problemID,
+		RunID:      runID,
+		SnapshotID: snapshotID,
+		Path:       fixturePath("cluster_fingerprint_collision.json"),
+	})
+	if err != nil {
+		t.Fatalf("seed collision corpus: %v", err)
+	}
+	if len(seed.MechanismIDs) != 2 {
+		t.Fatalf("fixture produced %d mechanisms, want 2", len(seed.MechanismIDs))
+	}
+	for _, mechID := range seed.MechanismIDs {
+		if _, err := app.SignatureMechanism(ctx, SignatureInput{DBPath: dbPath, MechanismID: mechID, VocabVersion: canon.VocabularyMechanismV1}); err != nil {
+			t.Fatalf("signature %s: %v", mechID, err)
+		}
+	}
+
+	built, err := app.BuildClustering(ctx, ClusterBuildInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("BuildClustering must persist without a UNIQUE collision: %v", err)
+	}
+	if !built.Created {
+		t.Fatal("first cluster build should be created")
+	}
+	if built.ClusterRun.FamilyCount != 2 {
+		t.Fatalf("family_count = %d, want 2 (resolved twin + incomparable isolate)", built.ClusterRun.FamilyCount)
+	}
+	if len(built.ClusterRun.Clusters) == 2 &&
+		built.ClusterRun.Clusters[0].Fingerprint == built.ClusterRun.Clusters[1].Fingerprint {
+		t.Fatalf("distinct clusters share cluster fingerprint %q", built.ClusterRun.Clusters[0].Fingerprint)
+	}
+}
+
+// TestIntegrationReclusterAfterAddingSignatureIsNewRun is the KTD-1 regression
+// for the recursive failure -> atlas -> recluster loop: after clustering a
+// population, ingesting/signing an additional mechanism and re-clustering must
+// produce a NEW cluster run (Created=true) with a different input-set hash,
+// never a stale run keyed only on the version tuple + signature count.
+func TestIntegrationReclusterAfterAddingSignatureIsNewRun(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	problemID, runID, snapshotID := seedProblemAndSnapshot(t, ctx, dbPath, now)
+
+	// Seed and sign an initial population.
+	seed1, err := app.SeedMechanismFixture(ctx, MechanismFixtureSeedInput{
+		DBPath: dbPath, ProblemID: problemID, RunID: runID, SnapshotID: snapshotID,
+		Path: fixturePath("cluster_four_families.json"),
+	})
+	if err != nil {
+		t.Fatalf("seed 1: %v", err)
+	}
+	for _, mechID := range seed1.MechanismIDs {
+		if _, err := app.SignatureMechanism(ctx, SignatureInput{DBPath: dbPath, MechanismID: mechID, VocabVersion: canon.VocabularyMechanismV1}); err != nil {
+			t.Fatalf("signature %s: %v", mechID, err)
+		}
+	}
+
+	first, err := app.BuildClustering(ctx, ClusterBuildInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("first cluster build: %v", err)
+	}
+	if !first.Created {
+		t.Fatal("first build should be created")
+	}
+
+	// Ingest + sign an additional mechanism (the newly discovered failure).
+	seed2, err := app.SeedMechanismFixture(ctx, MechanismFixtureSeedInput{
+		DBPath: dbPath, ProblemID: problemID, RunID: runID, SnapshotID: snapshotID,
+		Path: fixturePath("single_modular_descent.json"),
+	})
+	if err != nil {
+		t.Fatalf("seed 2: %v", err)
+	}
+	for _, mechID := range seed2.MechanismIDs {
+		if _, err := app.SignatureMechanism(ctx, SignatureInput{DBPath: dbPath, MechanismID: mechID, VocabVersion: canon.VocabularyMechanismV1}); err != nil {
+			t.Fatalf("signature %s: %v", mechID, err)
+		}
+	}
+
+	second, err := app.BuildClustering(ctx, ClusterBuildInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("re-cluster after adding signature: %v", err)
+	}
+	if !second.Created {
+		t.Fatal("re-clustering a changed population must create a NEW run, not replay the stale run (KTD-1)")
+	}
+	if second.ClusterRun.ID == first.ClusterRun.ID {
+		t.Fatal("re-cluster returned the same run id despite a changed population")
+	}
+	if second.ClusterRun.InputSetHash == first.ClusterRun.InputSetHash {
+		t.Fatalf("input-set hash unchanged after adding a signature: %q", second.ClusterRun.InputSetHash)
+	}
+	if second.ClusterRun.SignatureCount != first.ClusterRun.SignatureCount+1 {
+		t.Fatalf("signature_count = %d, want %d", second.ClusterRun.SignatureCount, first.ClusterRun.SignatureCount+1)
+	}
+
+	// A re-run with NO further change is still idempotent (same input set).
+	third, err := app.BuildClustering(ctx, ClusterBuildInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("idempotent re-cluster: %v", err)
+	}
+	if third.Created {
+		t.Fatal("re-clustering an unchanged population must be idempotent")
+	}
+	if third.ClusterRun.ID != second.ClusterRun.ID {
+		t.Fatal("idempotent re-cluster produced a different run id")
+	}
+}
+
+// TestIntegrationMixedOutcomeFamilyPersistsAsMixed is the KTD-9 regression: a
+// family whose members carry different outcome classes must be reported as
+// "mixed" in both the cluster row and the failure-space outcome partition, not
+// compressed to whichever outcome the representative signature happened to own.
+func TestIntegrationMixedOutcomeFamilyPersistsAsMixed(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	problemID, runID, snapshotID := seedProblemAndSnapshot(t, ctx, dbPath, now)
+
+	seed, err := app.SeedMechanismFixture(ctx, MechanismFixtureSeedInput{
+		DBPath: dbPath, ProblemID: problemID, RunID: runID, SnapshotID: snapshotID,
+		Path: fixturePath("cluster_mixed_outcome_family.json"),
+	})
+	if err != nil {
+		t.Fatalf("seed mixed corpus: %v", err)
+	}
+	if len(seed.MechanismIDs) != 2 {
+		t.Fatalf("fixture produced %d mechanisms, want 2", len(seed.MechanismIDs))
+	}
+	for _, mechID := range seed.MechanismIDs {
+		if _, err := app.SignatureMechanism(ctx, SignatureInput{DBPath: dbPath, MechanismID: mechID, VocabVersion: canon.VocabularyMechanismV1}); err != nil {
+			t.Fatalf("signature %s: %v", mechID, err)
+		}
+	}
+
+	built, err := app.BuildClustering(ctx, ClusterBuildInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("cluster build: %v", err)
+	}
+	if built.ClusterRun.FamilyCount != 1 {
+		t.Fatalf("family_count = %d, want 1 (same mechanism, surface variant)", built.ClusterRun.FamilyCount)
+	}
+	fam := built.ClusterRun.Clusters[0]
+	if !fam.OutcomeMixed {
+		t.Fatalf("mixed family not marked mixed; outcome_class=%q", fam.OutcomeClass)
+	}
+	if fam.OutcomeClass != "mixed" {
+		t.Fatalf("family outcome_class = %q, want mixed", fam.OutcomeClass)
+	}
+
+	// Failure space must count the family under "mixed", not failure or
+	// partial_success alone.
+	fs, err := app.BuildFailureSpace(ctx, FailureSpaceBuildInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("failure-space build: %v", err)
+	}
+	byClass := map[string]int{}
+	for _, o := range fs.FailureSpace.Outcomes {
+		byClass[o.OutcomeClass] = o.FamilyCount
+	}
+	if byClass["mixed"] != 1 {
+		t.Fatalf("failure-space outcome partition = %+v, want mixed:1 (not compressed to representative)", byClass)
+	}
+	if byClass["failure"] != 0 || byClass["partial_success"] != 0 {
+		t.Fatalf("mixed family leaked into a single-outcome bucket: %+v", byClass)
+	}
+}
+
 // at the population level: the same corpus clustered under the lossy vocabulary
 // collapses outcome-predictive structure and the run is marked degraded with a
 // recorded discrimination-loss finding.

@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-const currentSchemaVersion = 9
+const currentSchemaVersion = 10
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -691,6 +691,108 @@ END;
 		// state already present and does nothing.
 		apply: migrateV9RepairAndRejected,
 	},
+	{
+		version: 10,
+		// Cluster-run identity hardening (#11 review): (1) add input_set_hash to
+		// cluster_runs and fold it into the idempotency UNIQUE so re-clustering a
+		// changed signature population produces a new run instead of colliding
+		// with a stale run (KTD-1); (2) add per-family outcome_class + outcome_mixed
+		// to mechanism_clusters so a family's outcome is reported as its member
+		// distribution ("mixed" when heterogeneous) rather than compressed through
+		// the representative signature (KTD-9). Introspective + idempotent: a fresh
+		// database created at this version already has the target shape and the
+		// checks are no-ops.
+		apply: migrateV10ClusterIdentityAndOutcome,
+	},
+}
+
+// migrateV10ClusterIdentityAndOutcome adds input_set_hash to cluster_runs (and
+// the corresponding idempotency UNIQUE) plus per-family outcome columns on
+// mechanism_clusters. Both changes are guarded so a fresh v10 schema is
+// untouched.
+func migrateV10ClusterIdentityAndOutcome(ctx context.Context, tx *sql.Tx) error {
+	// 1. mechanism_clusters per-family outcome columns (plain ADD COLUMN; no PK
+	//    or UNIQUE change, so no rebuild needed).
+	clusterCols := []struct {
+		table, column, ddl string
+	}{
+		{"mechanism_clusters", "outcome_class", "ALTER TABLE mechanism_clusters ADD COLUMN outcome_class TEXT NOT NULL DEFAULT 'unknown'"},
+		{"mechanism_clusters", "outcome_mixed", "ALTER TABLE mechanism_clusters ADD COLUMN outcome_mixed INTEGER NOT NULL DEFAULT 0"},
+	}
+	for _, c := range clusterCols {
+		has, err := columnExists(ctx, tx, c.table, c.column)
+		if err != nil {
+			return err
+		}
+		if has {
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, c.ddl); err != nil {
+			return err
+		}
+	}
+
+	// 2. cluster_runs.input_set_hash + UNIQUE rebuild. The UNIQUE key must gain
+	//    input_set_hash; SQLite cannot ALTER a UNIQUE, so when the column is
+	//    absent we rebuild via create-copy-drop-rename (preserving any rows and
+	//    the immutable triggers).
+	has, err := columnExists(ctx, tx, "cluster_runs", "input_set_hash")
+	if err != nil {
+		return err
+	}
+	if !has {
+		if err := rebuildClusterRunsWithInputSetHash(ctx, tx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// rebuildClusterRunsWithInputSetHash rebuilds cluster_runs to add input_set_hash
+// and include it in the idempotency UNIQUE. Existing rows (if any) receive an
+// empty input_set_hash, which is a distinct identity from any real population.
+func rebuildClusterRunsWithInputSetHash(ctx context.Context, tx *sql.Tx) error {
+	stmts := []string{
+		`DROP TRIGGER IF EXISTS cluster_runs_immutable_update`,
+		`DROP TRIGGER IF EXISTS cluster_runs_immutable_delete`,
+		`CREATE TABLE cluster_runs__v10 (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  schema_version TEXT NOT NULL,
+  vocabulary_version TEXT NOT NULL REFERENCES canonical_vocabulary(version),
+  profile_version TEXT NOT NULL,
+  cluster_algo_version TEXT NOT NULL,
+  thresholds_hash TEXT NOT NULL,
+  input_set_hash TEXT NOT NULL DEFAULT '',
+  signature_count INTEGER NOT NULL,
+  family_count INTEGER NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('clean', 'degraded')),
+  created_at TEXT NOT NULL,
+  UNIQUE(problem_id, schema_version, vocabulary_version, profile_version, cluster_algo_version, thresholds_hash, input_set_hash)
+)`,
+		`INSERT INTO cluster_runs__v10(id, problem_id, run_id, schema_version, vocabulary_version, profile_version, cluster_algo_version, thresholds_hash, input_set_hash, signature_count, family_count, status, created_at)
+  SELECT id, problem_id, run_id, schema_version, vocabulary_version, profile_version, cluster_algo_version, thresholds_hash, '', signature_count, family_count, status, created_at FROM cluster_runs`,
+		`DROP TABLE cluster_runs`,
+		`ALTER TABLE cluster_runs__v10 RENAME TO cluster_runs`,
+		`CREATE INDEX IF NOT EXISTS idx_cluster_runs_problem ON cluster_runs(problem_id)`,
+		`CREATE TRIGGER IF NOT EXISTS cluster_runs_immutable_update
+BEFORE UPDATE ON cluster_runs
+BEGIN
+  SELECT RAISE(ABORT, 'cluster runs are immutable');
+END`,
+		`CREATE TRIGGER IF NOT EXISTS cluster_runs_immutable_delete
+BEFORE DELETE ON cluster_runs
+BEGIN
+  SELECT RAISE(ABORT, 'cluster runs are immutable');
+END`,
+	}
+	for _, s := range stmts {
+		if _, err := tx.ExecContext(ctx, s); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // migrateV9RepairAndRejected upgrades a pre-fix v6-era schema and adds durable

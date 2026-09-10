@@ -1,5 +1,7 @@
 package pipeline
 
+// --- problem / run views ---
+
 type ErrorDetail struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
@@ -64,6 +66,8 @@ type RunShowResponse struct {
 	Store   string  `json:"store"`
 	Run     RunView `json:"run"`
 }
+
+// --- source / ingest views ---
 
 type IngestItemResult struct {
 	Input         string `json:"input"`
@@ -179,6 +183,8 @@ type NormalizeResponse struct {
 	Results   []NormalizeResult `json:"results"`
 }
 
+// --- approach / mechanism views ---
+
 type FieldSupportView struct {
 	FieldPath   string `json:"field_path"`
 	SupportKind string `json:"support_kind"`
@@ -285,7 +291,7 @@ type MechanismShowResponse struct {
 	Outcome     OutcomeView   `json:"outcome"`
 }
 
-// --- #9 canonicalization / signature / comparison views ---
+// --- canonicalization / signature / comparison views (#9) ---
 
 type VocabularyView struct {
 	Version   string `json:"version"`
@@ -424,6 +430,8 @@ type SeedFixtureResponse struct {
 	MechanismIDs []string `json:"mechanism_ids"`
 }
 
+// --- cluster / failure-space views ---
+
 // ClusterMemberView is one signature in a cluster.
 type ClusterMemberView struct {
 	SignatureID string `json:"signature_id"`
@@ -438,6 +446,8 @@ type ClusterView struct {
 	RepresentativeSignatureID string              `json:"representative_signature_id"`
 	MemberCount               int                 `json:"member_count"`
 	Isolate                   bool                `json:"isolate"`
+	OutcomeClass              string              `json:"outcome_class"`
+	OutcomeMixed              bool                `json:"outcome_mixed"`
 	IntraVariation            string              `json:"intra_variation"`
 	Members                   []ClusterMemberView `json:"members"`
 }
@@ -474,6 +484,7 @@ type ClusterRunView struct {
 	ProfileVersion     string                    `json:"profile_version"`
 	ClusterAlgoVersion string                    `json:"cluster_algo_version"`
 	ThresholdsHash     string                    `json:"thresholds_hash"`
+	InputSetHash       string                    `json:"input_set_hash"`
 	SignatureCount     int                       `json:"signature_count"`
 	FamilyCount        int                       `json:"family_count"`
 	Status             string                    `json:"status"`
@@ -504,6 +515,7 @@ type ClusterShowResponse struct {
 type ClusterRunSummaryView struct {
 	ID             string `json:"id"`
 	ProfileVersion string `json:"profile_version"`
+	InputSetHash   string `json:"input_set_hash"`
 	SignatureCount int    `json:"signature_count"`
 	FamilyCount    int    `json:"family_count"`
 	Status         string `json:"status"`

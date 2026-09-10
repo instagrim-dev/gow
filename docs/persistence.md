@@ -21,6 +21,28 @@
   migration/bootstrap path includes a failing orphan-insert self-test so
   relational guarantees do not silently disappear.
 
+## Migrations advance; they are never rewritten
+
+Migrations are an append-only, version-numbered list applied in a single
+transaction; each unapplied version runs once and is recorded in
+`schema_migrations`. **Editing an already-shipped migration in place is a bug**:
+a database that already recorded that version will never re-run it, so a
+corrected DDL silently never reaches existing databases (fresh installs look
+fine; existing ones retain the old schema). To change a shipped schema, add a
+*new* migration.
+
+Most migrations are a static SQL blob. When a change must repair databases that
+were created under an earlier (since-corrected) schema, a migration may instead
+supply a Go `apply(ctx, tx)` func that inspects the live schema via `PRAGMA`
+(e.g. `columnExists`, `columnInPrimaryKey`) and mutates only what is missing.
+Such a repair must be **idempotent and a no-op on a fresh database** (which
+already has the corrected schema). Migration `v9` is the reference example: it
+adds absent signature-provenance columns, rebuilds `canonical_term_aliases` only
+when its primary key still lacks `canonical_id`, and creates the durable
+`canonical_rejected_terms` table — each guarded so a freshly-migrated database
+is untouched. `TestMigrateV9RepairsPreFixV6Schema` reconstructs the actual
+pre-fix v6 shapes and asserts the repair.
+
 ## ID strategy
 
 - Stable textual IDs with prefixes (e.g., `prob_`, `src_`, `evd_`, `inv_`, `prop_`).
@@ -867,20 +889,29 @@ CREATE TABLE success_invariant_failure_invariant (
 
 The `## Core schema` blueprint above (`cluster_revision`, `mechanism_cluster`,
 `cluster_membership`) is the forward-looking design. The tables that actually
-ship for issue #11 are the migration `v7`/`v8` schema below (see
-`internal/store/migrations.go` and
+ship for issue #11 are the migration `v7`/`v8` schema below, hardened by `v10`
+(see `internal/store/migrations.go` and
 [`mechanism-clustering.md`](mechanism-clustering.md)). They are all immutable by
 trigger.
 
 - `cluster_runs` — one deterministic clustering pass. Unique on
   `(problem_id, schema_version, vocabulary_version, profile_version,
-  cluster_algo_version, thresholds_hash)`, so a re-run under the identical
-  version tuple is idempotent and a run under a different decisive set (profile)
-  is a distinct row. Carries `signature_count`, `family_count`, and
+  cluster_algo_version, thresholds_hash, input_set_hash)`, so a re-run under the
+  identical version tuple **and identical signature population** is idempotent,
+  a run under a different decisive set (profile) is a distinct row, and a re-run
+  after the population changes (a newly ingested/signed mechanism) is a **new
+  run** rather than a stale replay. `input_set_hash` is a `sha256` over the
+  sorted `signature_id | fingerprint` of the clustered signatures (added in
+  `v10`, KTD-1). Carries `signature_count`, `family_count`, and
   `status IN ('clean','degraded')`.
 - `mechanism_clusters` — one family per row, with `cluster_fingerprint`,
-  `representative_signature_id`, `member_count`, `isolate`, and a summarized
-  `intra_variation`. Unique on `(cluster_run_id, cluster_fingerprint)`.
+  `representative_signature_id`, `member_count`, `isolate`, a summarized
+  `intra_variation` (now including a `mechanism_distinct` pair count), and the
+  per-family `outcome_class` + `outcome_mixed` flag (added in `v10`, KTD-9): a
+  family spanning more than one member outcome is `mixed`, never compressed to
+  the representative's outcome. Unique on `(cluster_run_id, cluster_fingerprint)`
+  — the fingerprint now folds in member signature IDs so ambiguity-separated
+  singletons cannot collide.
 - `cluster_members` — signatures assigned to a family, with a `redundant` flag.
 - `cluster_distances` — representative-vs-representative comparison verdicts.
 - `cluster_coverage_axes` — per-axis distinct-value counts + `under_sampled`.
@@ -888,8 +919,17 @@ trigger.
   is `degraded`.
 - `failure_spaces` — a materialized failure-space revision. Unique on
   `(problem_id, cluster_run_id)` and `(problem_id, revision)`.
-- `failure_space_outcomes` — family count per outcome class.
+- `failure_space_outcomes` — family count per family-outcome class, including the
+  aggregate `mixed` class for heterogeneous families.
 - `failure_space_axes` — coverage axes inherited from the cluster run.
+
+Migration `v10` is introspective and idempotent: it adds `input_set_hash` to
+`cluster_runs` (rebuilding the table to widen the idempotency UNIQUE, since
+SQLite cannot alter a UNIQUE in place) and `outcome_class`/`outcome_mixed` to
+`mechanism_clusters`. A fresh database already at `v10` finds the target shape
+present and does nothing. The post-migration integrity check now asserts these
+columns exist, so an incomplete upgrade (tables present but the `v10` columns
+absent) is reported as a corrupt store rather than silently accepted.
 
 ## Immutable vs mutable/revisioned
 

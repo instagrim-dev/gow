@@ -174,6 +174,7 @@ func (a *App) ListClusterRuns(ctx context.Context, input ClusterListInput) (Clus
 		resp.ClusterRuns = append(resp.ClusterRuns, ClusterRunSummaryView{
 			ID:             r.ID,
 			ProfileVersion: r.ProfileVersion,
+			InputSetHash:   r.InputSetHash,
 			SignatureCount: r.SignatureCount,
 			FamilyCount:    r.FamilyCount,
 			Status:         r.Status,
@@ -196,6 +197,7 @@ func clusterRunRecord(c cluster.Clustering, problemID, runID string, now time.Ti
 		ProfileVersion:     c.ProfileVersion,
 		ClusterAlgoVersion: c.AlgoVersion,
 		ThresholdsHash:     c.ThresholdsHash,
+		InputSetHash:       c.InputSetHash,
 		SignatureCount:     signatureCount(c),
 		FamilyCount:        len(c.Clusters),
 		Status:             c.Status,
@@ -212,6 +214,8 @@ func clusterRunRecord(c cluster.Clustering, problemID, runID string, now time.Ti
 			MemberCount:               len(cl.Members),
 			IntraVariation:            intraVariationString(cl.IntraVariation),
 			Isolate:                   cl.Isolate,
+			OutcomeClass:              string(cl.PrimaryOutcome()),
+			OutcomeMixed:              cl.Mixed,
 			Ordinal:                   i,
 		}
 		for j, m := range cl.Members {
@@ -258,8 +262,8 @@ func signatureCount(c cluster.Clustering) int {
 }
 
 func intraVariationString(v cluster.IntraVariation) string {
-	return fmt.Sprintf("identical=%d;mechanism_near=%d;surface_distinct=%d;incomparable=%d",
-		v.Identical, v.MechanismNear, v.SurfaceDistinctNear, v.IncomparablePairs)
+	return fmt.Sprintf("identical=%d;mechanism_near=%d;surface_distinct=%d;incomparable=%d;mechanism_distinct=%d",
+		v.Identical, v.MechanismNear, v.SurfaceDistinctNear, v.IncomparablePairs, v.MechanismDistinct)
 }
 
 func clusterRunView(rec store.ClusterRunRecord) ClusterRunView {
@@ -272,6 +276,7 @@ func clusterRunView(rec store.ClusterRunRecord) ClusterRunView {
 		ProfileVersion:     rec.ProfileVersion,
 		ClusterAlgoVersion: rec.ClusterAlgoVersion,
 		ThresholdsHash:     rec.ThresholdsHash,
+		InputSetHash:       rec.InputSetHash,
 		SignatureCount:     rec.SignatureCount,
 		FamilyCount:        rec.FamilyCount,
 		Status:             rec.Status,
@@ -283,6 +288,8 @@ func clusterRunView(rec store.ClusterRunRecord) ClusterRunView {
 			RepresentativeSignatureID: c.RepresentativeSignatureID,
 			MemberCount:               c.MemberCount,
 			Isolate:                   c.Isolate,
+			OutcomeClass:              c.OutcomeClass,
+			OutcomeMixed:              c.OutcomeMixed,
 			IntraVariation:            c.IntraVariation,
 		}
 		for _, m := range c.Members {
@@ -346,9 +353,10 @@ type FailureSpaceCoverageInput struct {
 }
 
 // BuildFailureSpace materializes the first-class failure-space artifact from a
-// cluster run: it partitions families by the outcome class carried on their
-// representative signature and preserves the cluster coverage report. It is
-// idempotent per cluster run; a new cluster run produces the next revision.
+// cluster run: it partitions families by their per-family outcome distribution
+// (a heterogeneous family is "mixed", never compressed to the representative's
+// class) and preserves the cluster coverage report. It is idempotent per cluster
+// run; a new cluster run produces the next revision.
 func (a *App) BuildFailureSpace(ctx context.Context, input FailureSpaceBuildInput) (FailureSpaceBuildResponse, error) {
 	dbPath, repoStore, err := a.openStoreFn(ctx, input.DBPath)
 	if err != nil {
@@ -380,7 +388,7 @@ func (a *App) BuildFailureSpace(ctx context.Context, input FailureSpaceBuildInpu
 		return FailureSpaceBuildResponse{}, fmt.Errorf("cluster run %s does not belong to problem %s", clusterRunID, input.ProblemID)
 	}
 
-	// Partition families by the outcome class of their representative signature.
+	// Partition families by their per-family outcome distribution (mixed-aware).
 	outcomeCounts, err := a.familyOutcomeCounts(ctx, repoStore, clusterRun)
 	if err != nil {
 		return FailureSpaceBuildResponse{}, err
@@ -514,17 +522,21 @@ type outcomeCount struct {
 	count int
 }
 
-// familyOutcomeCounts partitions families by the outcome class of their
-// representative signature. This uses the outcome already carried on each
-// signature (never re-inferred), preserving epistemic provenance.
+// familyOutcomeCounts partitions families by their per-family outcome class as
+// computed by the clustering engine and persisted on each cluster row. A family
+// whose members span more than one distinct outcome class is counted as "mixed"
+// rather than compressed to the outcome of its representative signature (KTD-9).
+// Outcome is read from the persisted rows (never re-inferred), preserving
+// epistemic provenance.
 func (a *App) familyOutcomeCounts(ctx context.Context, repoStore problemStore, run store.ClusterRunRecord) ([]outcomeCount, error) {
+	_ = ctx
+	_ = repoStore
 	counts := map[string]int{}
 	for _, c := range run.Clusters {
-		rec, err := repoStore.GetSignature(ctx, c.RepresentativeSignatureID)
-		if err != nil {
-			return nil, err
+		class := c.OutcomeClass
+		if c.OutcomeMixed {
+			class = string(domain.OutcomeMixed)
 		}
-		class := rec.OutcomeClass
 		if class == "" {
 			class = string(domain.OutcomeUnknown)
 		}
