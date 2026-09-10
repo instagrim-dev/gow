@@ -3,6 +3,7 @@
 ## Boundary rule
 
 Source evidence is immutable and never overwritten. Model/provider interpretation is stored in separate revisioned records linked by provenance. Generated claims cannot be promoted to source evidence without an explicit independent evidence record.
+`ingest` therefore accepts only independent source-backed material; generated artifacts are stored separately as `SyntheticArtifact`.
 
 ## Core entities
 
@@ -317,7 +318,7 @@ type SuccessCompressor interface {
 ## Mechanistic diversity vocabulary
 
 - Axis definitions are versioned (`mechanism_axis_vocabulary` + `vocabulary_version` refs).
-- v0 treats each axis as single-valued per mechanism (`axis_key -> one value_key`).
+- v0 treats each axis as single-valued per mechanism per vocabulary version.
 - Historical normalized records keep original axis key/value IDs to preserve comparability over time.
 - New axes can be added without rewriting old mechanism rows.
 
