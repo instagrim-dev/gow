@@ -19,8 +19,9 @@ func newFrontierCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) 
 	}
 
 	var (
-		genProblem string
-		genCount   int
+		genProblem  string
+		genCount    int
+		genNoPolicy bool
 	)
 	genCmd := &cobra.Command{
 		Use:   "generate",
@@ -40,6 +41,7 @@ func newFrontierCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) 
 				DBPath:     opts.dbPath,
 				ProblemID:  genProblem,
 				Count:      genCount,
+				NoPolicy:   genNoPolicy,
 				JSONOutput: opts.jsonOutput,
 			})
 			if err != nil {
@@ -54,6 +56,7 @@ func newFrontierCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) 
 	}
 	genCmd.Flags().StringVar(&genProblem, "problem", "", "Problem ID")
 	genCmd.Flags().IntVar(&genCount, "count", 0, "Proposal budget (default 8)")
+	genCmd.Flags().BoolVar(&genNoPolicy, "no-policy", false, "Ignore the persisted search policy (unbiased baseline run)")
 	cmd.AddCommand(genCmd)
 
 	var listProblem string

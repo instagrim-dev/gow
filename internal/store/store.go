@@ -967,6 +967,8 @@ func validateSchemaTables(ctx context.Context, tx *sql.Tx) error {
 		"frontier_proposal_signatures", "success_invariant_revisions",
 		"success_invariants", "success_invariant_predicates",
 		"success_invariant_broken_targets", "success_invariant_cohort_evaluations",
+		"search_policy_revisions", "search_policy_directives",
+		"search_policy_provenance", "frontier_generation_policy",
 	} {
 		row := tx.QueryRowContext(ctx, `
 SELECT EXISTS(
@@ -1004,9 +1006,10 @@ SELECT EXISTS(
 	// A column probe cannot see a CHECK constraint, so a database left on the
 	// v3 normalize-only provider_invocations.role CHECK would pass the checks
 	// above while silently rejecting invariant-mining or challenge invocations.
-	// Assert the v11 ('invariant'), v13 ('challenge'), v14 ('generate'), and v15
-	// ('evaluate') role generalizations by reading the table DDL directly.
-	for _, role := range []string{"invariant", "challenge", "generate", "evaluate", "success-compress"} {
+	// Assert the v11 ('invariant'), v13 ('challenge'), v14 ('generate'), v15
+	// ('evaluate'), v17 ('success-compress'), and v19 ('policy-mutate') role
+	// generalizations by reading the table DDL directly.
+	for _, role := range []string{"invariant", "challenge", "generate", "evaluate", "success-compress", "policy-mutate"} {
 		allows, err := providerRoleAllows(ctx, tx, role)
 		if err != nil {
 			return fmt.Errorf("%w: %v", ErrCorruptStore, err)

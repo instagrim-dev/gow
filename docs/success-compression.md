@@ -73,14 +73,24 @@ promoted. M6.2 can weight policy by strength; this slice only reports honestly.
 - A success invariant's identity is the **semantic predicate fingerprint**
   (same canonicalization as M4.2); paraphrases collapse.
 - The same condition confirmed against multiple broken targets is **one**
-  invariant carrying every P link (`success_invariant_broken_targets`); its
-  counts come from the first cohort in deterministic target order, and the
-  per-member verdicts persist per cohort evaluation.
+  invariant carrying every P link (`success_invariant_broken_targets`). The
+  merge **never discards a cohort's evidence** (H2): the condition is evaluated
+  against *every* contributing target's cohort, and the merged counts, support,
+  and per-member verdicts are aggregated over the **union of all contributing
+  cohorts' members, deduplicated by (role, proposal)**. A contradictory member
+  present only in a later target's cohort is retained, and an overlapping member
+  is counted once — never the first cohort's assessment attributed to both
+  targets.
+- Each cohort member's outcome carries the provenance of the **single evaluation**
+  it came from (`evaluation_id`) — verdict, strength, and id are taken **together**
+  from one evaluation record (the earliest, which set the sticky proposal result),
+  so a re-evaluation can never splice the first verdict onto a later evaluation's
+  strength (H1).
 - Revisions are immutable and idempotent on
   `(problem, cohort_hash, compressor_version, predicate_schema, min_support)`,
   where `cohort_hash` is a content hash over the sorted
-  (target, proposal, result, strength) tuples — a new evaluation changes the
-  hash and yields the next revision, never a rewrite.
+  (target, proposal, **evaluation_id**, result, strength) tuples — a new
+  evaluation changes the hash and yields the next revision, never a rewrite.
 - Candidates enter and stay **`proposed`** (`CHECK`-enforced); the challenge
   lifecycle for success invariants is a follow-up slice.
 - v17 also closes a substrate gap: `frontier_proposal_signatures` persists each

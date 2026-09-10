@@ -190,7 +190,10 @@ func TestVerificationContextDropsStaleTarget(t *testing.T) {
 		SetFieldCompleteness: map[domain.FieldKind]domain.FieldCompleteness{domain.FieldPreserves: domain.CompletenessComplete},
 	}}
 
-	vc := verificationContextForProposal(p, predicates, reps)
+	vc, staleTarget := verificationContextForProposal(p, predicates, reps)
+	if !staleTarget {
+		t.Fatal("a proposal with a no-longer-targetable target must be flagged stale (H5)")
+	}
 	if _, ok := vc.TargetVerdicts["inv_stale"]; ok {
 		t.Fatal("a stale target's cached verdict must be dropped (G4)")
 	}

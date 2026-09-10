@@ -62,7 +62,7 @@ newf invariant show [invariant-revision-id] [--problem <problem-id>]
 newf invariant state <invariant-id>
 newf invariant establish <invariant-id> --snapshot <snap-id> --locator <loc>
 newf challenge <invariant-id> | --problem <problem-id> --all
-newf frontier generate --problem <problem-id> [--count <n>]
+newf frontier generate --problem <problem-id> [--count <n>] [--no-policy]
 newf frontier list --problem <problem-id>
 newf frontier show [frontier-generation-id] [--problem <problem-id>]
 newf evaluate <proposal-id> --problem <problem-id> | --problem <problem-id> [--all]
@@ -72,6 +72,9 @@ newf evaluation failures --problem <problem-id>
 newf successes compress --problem <problem-id> [--min-support <n>]
 newf success-invariant list --problem <problem-id>
 newf success-invariant show [success-revision-id] [--problem <problem-id>]
+newf policy mutate --problem <problem-id> [--no-provider]
+newf policy list --problem <problem-id>
+newf policy show [policy-revision-id] [--problem <problem-id>]
 ```
 
 Build it with:
@@ -506,11 +509,17 @@ The shipped surface above already covers `init` → `ingest` → `normalize` →
 mine`/`invariant list`/`invariant show` → `challenge` → `frontier
 generate`/`frontier list`/`frontier show` → `evaluate`/`evaluation
 list`/`evaluation show`/`evaluation failures` (verifier routing with recorded
-verification strength, see [`docs/evaluation.md`](docs/evaluation.md)). The
-remaining loop stages are **planned, not yet shipped**:
+verification strength, see [`docs/evaluation.md`](docs/evaluation.md)) →
+`successes compress`/`success-invariant list`/`success-invariant show`
+(symmetric success-invariant compression, see
+[`docs/success-compression.md`](docs/success-compression.md)) →
+`policy mutate`/`policy list`/`policy show` (explicit, versioned search-policy
+mutation that biases the next `frontier generate`, see
+[`docs/search-policy.md`](docs/search-policy.md)). The remaining loop stage is
+**planned, not yet shipped**:
 
 ```text
-newf compress                                     # planned: success-invariant compression
+newf holdout                                      # planned: historical-holdout experiment (M7)
 ```
 
 Do not treat the planned commands as available; they are the next stages of the
@@ -527,6 +536,8 @@ Design details for implementation:
 - [`docs/normalization.md`](docs/normalization.md)
 - [`docs/persistence.md`](docs/persistence.md)
 - [`docs/evaluation.md`](docs/evaluation.md)
+- [`docs/success-compression.md`](docs/success-compression.md)
+- [`docs/search-policy.md`](docs/search-policy.md)
 - [`docs/implementation-plan.md`](docs/implementation-plan.md)
 
 ## v0 exit criteria

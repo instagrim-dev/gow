@@ -28,6 +28,7 @@ type App struct {
 	successCompressorFn provider.SuccessCompressor
 	generatorFn         provider.Generator
 	modelVerifierFn     provider.ModelVerifier
+	policyMutatorFn     provider.PolicyMutator
 }
 
 type problemStore interface {
@@ -88,6 +89,12 @@ type problemStore interface {
 	GetSuccessRevision(context.Context, string) (store.SuccessRevisionRecord, error)
 	ListSuccessRevisions(context.Context, string) ([]store.SuccessRevisionRecord, error)
 	LatestSuccessRevision(context.Context, string) (string, bool, error)
+	PersistPolicyRevision(context.Context, store.PolicyRevisionRecord) (store.PolicyRevisionRecord, bool, error)
+	GetPolicyRevision(context.Context, string) (store.PolicyRevisionRecord, error)
+	ListPolicyRevisions(context.Context, string) ([]store.PolicyRevisionRecord, error)
+	LatestPolicyRevision(context.Context, string) (string, bool, error)
+	PersistFrontierGenerationPolicy(context.Context, string, string, []store.FrontierGenerationPolicyRow) error
+	GetFrontierGenerationPolicy(context.Context, string) (string, []store.FrontierGenerationPolicyRow, error)
 	PersistEvaluationRun(context.Context, store.EvaluationRunRecord) (store.EvaluationRunRecord, error)
 	GetEvaluationRun(context.Context, string) (store.EvaluationRunRecord, error)
 	GetEvaluation(context.Context, string) (store.EvaluationRow, error)

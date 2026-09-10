@@ -10,33 +10,47 @@ import (
 )
 
 // BreakCohortRow is one (broken target, evaluated proposal) pair: the raw
-// material of success compression. SignatureJSON is empty for pre-v17
-// proposals whose canonical content was never persisted (they are ineligible
-// for compression and must be COUNTED, never silently dropped).
+// material of success compression. Verdict, Strength, and EvaluationID all come
+// from ONE explicit evaluation record (the earliest evaluation for the proposal,
+// which is the one that set the sticky frontier_proposals.result). This keeps
+// the outcome and its strength coherent — a re-evaluation cannot combine the
+// first verdict with a later evaluation's strength (H1). SignatureJSON is empty
+// for pre-v17 proposals whose canonical content was never persisted (they are
+// ineligible for compression and must be COUNTED, never silently dropped).
 type BreakCohortRow struct {
 	TargetInvariantID string
 	ProposalID        string
-	Result            string // frontier_proposals.result (one-time set by M5.2)
-	Strength          string // latest evaluation's verification_strength
+	EvaluationID      string // the single evaluation this (verdict, strength) came from
+	Result            string // that evaluation's verdict
+	Strength          string // that evaluation's verification_strength
 	SignatureJSON     string
 	Fingerprint       string
 }
 
 // ListBreakCohortRows returns every code-verified break (violated=1) whose
-// proposal has been evaluated (result set), joined with the persisted
-// canonical content and the latest evaluation's verification strength.
+// proposal has been evaluated, joined with the persisted canonical content and
+// a SINGLE evaluation record's verdict + strength + id. The evaluation selected
+// is the earliest for the proposal (the one that set the immutable
+// frontier_proposals.result), so verdict and strength are always a coherent pair
+// from one evaluation — never the first verdict spliced onto a later
+// evaluation's strength (H1).
 func (s *Store) ListBreakCohortRows(ctx context.Context, problemID string) ([]BreakCohortRow, error) {
 	if err := domain.ValidateProblemID(problemID); err != nil {
 		return nil, err
 	}
 	rows, err := s.db.QueryContext(ctx, `
-SELECT t.invariant_id, p.id, p.result,
-       COALESCE((SELECT e.verification_strength FROM evaluations e WHERE e.proposal_id = p.id ORDER BY e.created_at DESC, e.id DESC LIMIT 1), ''),
+WITH first_eval AS (
+  SELECT e.proposal_id, e.id AS evaluation_id, e.verdict, e.verification_strength,
+         ROW_NUMBER() OVER (PARTITION BY e.proposal_id ORDER BY e.created_at ASC, e.id ASC) AS rn
+  FROM evaluations e
+)
+SELECT t.invariant_id, p.id, fe.evaluation_id, fe.verdict, COALESCE(fe.verification_strength, ''),
        COALESCE(fps.signature_json, ''), COALESCE(fps.canonical_fingerprint, '')
 FROM frontier_target_invariants t
 JOIN frontier_proposals p ON p.id = t.proposal_id
+JOIN first_eval fe ON fe.proposal_id = p.id AND fe.rn = 1
 LEFT JOIN frontier_proposal_signatures fps ON fps.proposal_id = p.id
-WHERE p.problem_id = ? AND t.violated = 1 AND p.result IS NOT NULL
+WHERE p.problem_id = ? AND t.violated = 1
 ORDER BY t.invariant_id, p.id
 `, problemID)
 	if err != nil {
@@ -46,7 +60,7 @@ ORDER BY t.invariant_id, p.id
 	var out []BreakCohortRow
 	for rows.Next() {
 		var r BreakCohortRow
-		if err := rows.Scan(&r.TargetInvariantID, &r.ProposalID, &r.Result, &r.Strength, &r.SignatureJSON, &r.Fingerprint); err != nil {
+		if err := rows.Scan(&r.TargetInvariantID, &r.ProposalID, &r.EvaluationID, &r.Result, &r.Strength, &r.SignatureJSON, &r.Fingerprint); err != nil {
 			return nil, err
 		}
 		out = append(out, r)
@@ -56,10 +70,11 @@ ORDER BY t.invariant_id, p.id
 
 // SuccessCohortEvaluationRow is one persisted member verdict under a condition.
 type SuccessCohortEvaluationRow struct {
-	ProposalID string
-	CohortRole string // progressor|non_progressor
-	Verdict    string // satisfies|violates|unknown
-	Strength   string
+	ProposalID   string
+	EvaluationID string // provenance: the evaluation the (verdict,strength) came from (H1)
+	CohortRole   string // progressor|non_progressor
+	Verdict      string // satisfies|violates|unknown
+	Strength     string
 }
 
 // SuccessInvariantRow is one persisted success invariant (proposed only).
@@ -190,9 +205,9 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		}
 		for _, ce := range si.CohortEvaluations {
 			if _, err := tx.ExecContext(ctx, `
-INSERT INTO success_invariant_cohort_evaluations(success_invariant_id, proposal_id, cohort_role, verdict, verification_strength)
-VALUES(?, ?, ?, ?, ?)
-`, si.ID, ce.ProposalID, ce.CohortRole, ce.Verdict, ce.Strength); err != nil {
+INSERT INTO success_invariant_cohort_evaluations(success_invariant_id, proposal_id, evaluation_id, cohort_role, verdict, verification_strength)
+VALUES(?, ?, ?, ?, ?, ?)
+`, si.ID, ce.ProposalID, nullIfEmpty(ce.EvaluationID), ce.CohortRole, ce.Verdict, ce.Strength); err != nil {
 				return PersistSuccessRevisionResult{}, err
 			}
 		}
@@ -263,7 +278,7 @@ WHERE si.success_revision_id = ? ORDER BY si.ordinal
 		}
 		tRows.Close()
 		ceRows, err := s.db.QueryContext(ctx, `
-SELECT proposal_id, cohort_role, verdict, verification_strength FROM success_invariant_cohort_evaluations
+SELECT proposal_id, COALESCE(evaluation_id,''), cohort_role, verdict, verification_strength FROM success_invariant_cohort_evaluations
 WHERE success_invariant_id = ? ORDER BY proposal_id
 `, rec.Invariants[i].ID)
 		if err != nil {
@@ -271,7 +286,7 @@ WHERE success_invariant_id = ? ORDER BY proposal_id
 		}
 		for ceRows.Next() {
 			var ce SuccessCohortEvaluationRow
-			if err := ceRows.Scan(&ce.ProposalID, &ce.CohortRole, &ce.Verdict, &ce.Strength); err != nil {
+			if err := ceRows.Scan(&ce.ProposalID, &ce.EvaluationID, &ce.CohortRole, &ce.Verdict, &ce.Strength); err != nil {
 				ceRows.Close()
 				return SuccessRevisionRecord{}, err
 			}

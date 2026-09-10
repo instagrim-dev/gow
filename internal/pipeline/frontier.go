@@ -11,6 +11,7 @@ import (
 	"github.com/instagrim-dev/newf/internal/domain"
 	"github.com/instagrim-dev/newf/internal/frontier"
 	"github.com/instagrim-dev/newf/internal/invariant"
+	"github.com/instagrim-dev/newf/internal/policy"
 	"github.com/instagrim-dev/newf/internal/provider"
 	"github.com/instagrim-dev/newf/internal/store"
 )
@@ -33,6 +34,7 @@ type FrontierGenerateInput struct {
 	DBPath     string
 	ProblemID  string
 	Count      int
+	NoPolicy   bool
 	JSONOutput bool
 }
 
@@ -154,11 +156,34 @@ func (a *App) GenerateFrontier(ctx context.Context, input FrontierGenerateInput)
 	}
 	candidates := frontier.Rank(frontier.EvaluateProposals(enginePropos, engineFamilies, targets, canon.ProfileMechanismV1()))
 
+	// M6.2: apply the latest persisted search policy as a bounded ordinal bias
+	// over the ranked candidates (unless suppressed). The violation gate and the
+	// falsifiability floor are enforced inside policy.Apply; a proposal is never
+	// dropped, only reordered. The applied bias is logged after persistence so a
+	// reader can reproduce why a proposal was favored or suppressed.
+	var appliedBias []policy.AppliedBias
+	var policyRevisionID string
+	if !input.NoPolicy {
+		candidates, appliedBias, policyRevisionID, err = a.applySearchPolicy(ctx, repoStore, input.ProblemID, survivors, candidates)
+		if err != nil {
+			a.failRun(ctx, repoStore, run.ID, err)
+			return FrontierGenerateResponse{}, err
+		}
+	}
+
 	record := frontierGenerationRecord(input.ProblemID, clusterRun.ID, run.ID, count, req.Fingerprint(), resp, candidates, now)
 	result, err := repoStore.PersistFrontierGeneration(ctx, record)
 	if err != nil {
 		a.failRun(ctx, repoStore, run.ID, err)
 		return FrontierGenerateResponse{}, err
+	}
+	// Persist the applied-bias log keyed on the PERSISTED proposal ids (immutable
+	// insert; a generation with no policy writes nothing).
+	if policyRevisionID != "" && len(appliedBias) > 0 {
+		if perr := a.persistPolicyBias(ctx, repoStore, result.Record, policyRevisionID, appliedBias); perr != nil {
+			a.failRun(ctx, repoStore, run.ID, perr)
+			return FrontierGenerateResponse{}, perr
+		}
 	}
 	if err := a.finalizeRun(ctx, repoStore, run.ID, nil); err != nil {
 		return FrontierGenerateResponse{}, err

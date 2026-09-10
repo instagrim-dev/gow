@@ -49,21 +49,30 @@ func (DeterministicCheck) Verify(_ context.Context, vc VerificationContext) (Dec
 }
 
 // CounterexampleSearch is a bounded, deterministic search over the proposal's
-// recorded nearest known failure families for a genuine REFUTER of the
-// proposal's claimed break. A refuter must contradict a claim about the PROPOSED
-// mechanism itself — not merely differ from it.
+// recorded nearest known failure families. Its role is DELIBERATELY LIMITED: the
+// persisted verification context carries only per-target predicate verdicts, not
+// a candidate-specific refutation witness, so this verifier cannot soundly
+// decide a proposal failure and is NON-DECISIVE by construction (H3).
 //
-// The structural difference the proposal was generated to produce (it VIOLATES
-// a target that old failure families SATISFY) is exactly the intended signal,
-// never a refutation: an old mechanism preserving a property does not refute a
-// new mechanism that breaks it. The only code-owned refuter available from the
-// persisted context is a known failure family that makes the SAME structural
-// move as the proposal (it too VIOLATES the target) and still failed — evidence
-// the break alone does not constitute progress on the problem. Finding one is a
-// reproducible failure. Finding none is a BOUNDED-SEARCH NEGATIVE, not success:
-// the search cannot itself establish that the proposal is realizable, so it
-// returns a non-decisive verdict and defers the positive judgment to the model
-// tier. It sits one band below the direct deterministic check.
+// Two facts it must never conflate with refutation:
+//
+//   - The structural difference the proposal was generated to produce (it
+//     VIOLATES a target that old failure families SATISFY) is the intended
+//     signal, never a refutation: an old mechanism preserving a property does not
+//     refute a new mechanism that breaks it.
+//   - A known failure family that ALSO violates a target the proposal broke
+//     merely SHARES A PREDICATE BIT. Sharing a predicate verdict does not
+//     establish a shared MECHANISM or that the known failure transfers to the
+//     proposal (two different global constructions can both violate "local
+//     reasoning only"; one failing does not make the other fail). This is at most
+//     a "break previously observed" novelty/sufficiency signal.
+//
+// A decisive proposal failure requires contradicting an EXPLICIT claim about the
+// proposal itself — the job of a future mechanism-level refuter, not this
+// predicate-bit scan. Until then this tier confirms the break is real, records
+// any prior-observation signal, and returns a non-decisive verdict so the model
+// tier judges realizability (R2/R3). It never rewards missing/unknown comparison
+// evidence with partial_success. It sits one band below the direct check.
 type CounterexampleSearch struct{}
 
 // Kind identifies the counterexample-search tier.
@@ -91,33 +100,39 @@ func (CounterexampleSearch) Verify(_ context.Context, vc VerificationContext) (D
 	if !confirmedBreak {
 		return Decision{Verdict: VerdictUnknown, Kind: KindCounterexampleSearch}, nil
 	}
-	// A refuter is a known failure family that makes the SAME structural move the
-	// proposal claims is decisive — it also VIOLATES a target the proposal broke —
-	// yet is itself a recorded failure. That contradicts the proposal's implicit
-	// claim that breaking the target is what distinguishes it from known failures.
-	// A family that SATISFIES the target is the intended contrast, not a refuter.
+	// The persisted context carries only per-target PREDICATE verdicts, not a
+	// candidate-specific refutation witness. A known failure family that ALSO
+	// violates a target the proposal broke shares a predicate bit with the
+	// proposal — but sharing a predicate verdict does NOT establish that the two
+	// use the same mechanism, nor that the known family's failure transfers to the
+	// proposed construction (two structurally different global constructions can
+	// both violate "uses only local reasoning"; one failing does not make the
+	// other fail). So this signal is at most "this break has been observed among
+	// failures before" — a NOVELTY / sufficiency concern, never a decisive
+	// refutation of THIS proposal (H3). A decisive proposal failure requires
+	// evidence contradicting an explicit claim about the proposal itself, which no
+	// deterministic verifier in the current context can supply. We therefore stay
+	// NON-DECISIVE and record the observation, deferring realizability to the
+	// model tier (R2/R3). We also do not reward missing/unknown comparison
+	// evidence with partial_success.
+	priorBreakObserved := false
 	for target, verdicts := range vc.NearestVerdicts {
 		if vc.TargetVerdicts[target] != invariant.VerdictViolates {
-			continue // only targets this proposal actually broke can be refuted
+			continue // only targets this proposal actually broke are relevant
 		}
 		for _, v := range verdicts {
 			if v == invariant.VerdictViolates {
-				return Decision{
-					Verdict:  VerdictFailure,
-					Kind:     KindCounterexampleSearch,
-					Strength: StrengthForKind(KindCounterexampleSearch),
-					Notes:    "a known failure family makes the same structural break yet still failed; the claimed break is not by itself progress",
-				}, nil
+				priorBreakObserved = true
 			}
 		}
 	}
-	// No refuter among the nearest known failures. This is a BOUNDED-SEARCH
-	// NEGATIVE — the search establishes neither refutation nor realizability, and
-	// must not reward missing or unknown comparison evidence with partial_success.
-	// Stay non-decisive so the model tier judges realizability (R2/R3).
+	notes := "bounded search found no known failure family reproducing the proposed break; realizability undecided (deferred to model tier)"
+	if priorBreakObserved {
+		notes = "a known failure family shares this predicate break, but a shared predicate verdict is not a mechanism-level refutation of this proposal; non-decisive (break previously observed), realizability deferred to model tier"
+	}
 	return Decision{
 		Verdict: VerdictUnknown,
 		Kind:    KindCounterexampleSearch,
-		Notes:   "bounded search found no known failure family reproducing the proposed break; realizability undecided (deferred to model tier)",
+		Notes:   notes,
 	}, nil
 }

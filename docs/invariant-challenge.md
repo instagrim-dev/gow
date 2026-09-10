@@ -52,16 +52,28 @@ strengthened nor weakened by a claim code cannot confirm.
 | `merge` | one **admissible** child predicate (same shared gate — this rejects an `outcome in [...]` child that would cover every failure family by definition) covering the **union** of the parents' support whose contrast violations are **not lower than any parent's** (a merge that erases the outcome-separating axis is rejected) | **weaken** + child persisted |
 | `independent-verification` | never provider-claimable; see the `operator_attested` gate below | surviving → **operator_attested** |
 
-Survival is **earned, not defaulted** (G2). Each attack now yields a typed
-`CheckOutcome` — `inadmissible`, `inconclusive`, `completed_negative`, or
-`confirmed` — instead of a default-true "applicable" flag. A campaign transitions
-the invariant to **surviving** only when at least one **`completed_negative`**
-attack ran a real determination over an eligible population and did not land (a
-decisive negative). Validation rejections (an `inadmissible` split with fewer
-than two children, a merge naming no partners, a synthetic with no construction,
-a provider over-claiming operator-only verification) and undecided attacks
-(`inconclusive`) count toward neither survival nor refutation. A campaign made up
-entirely of inadmissible/inconclusive attempts opens the campaign
+Survival is **earned, not defaulted** (G2/H4). Each attack yields a typed
+`CheckOutcome` — `inadmissible`, `inapplicable`, `inconclusive`,
+`completed_negative`, or `confirmed` — instead of a default-true "applicable"
+flag. A campaign transitions the invariant to **surviving** only when at least one
+**`completed_negative`** attack ran a real determination over a **nonempty**
+eligible population, **decisively resolved every applicable case**, and did not
+land (a decisive negative). The three ways an attack can fail to confirm are held
+distinct and none of them strengthen the hypothesis:
+
+- **`inadmissible`** — the attack could not be evaluated at all (an `inadmissible`
+  split with fewer than two children, a merge naming no partners, a synthetic with
+  no construction, a provider over-claiming operator-only verification).
+- **`inapplicable`** — the attack was well-formed but its eligible population was
+  **empty** (zero known failure-side members to check; zero success-side contrast
+  members). Zero eligible cases decide nothing.
+- **`inconclusive`** — the attack ran but one or more eligible cases evaluated
+  `unknown`, so the negative was never fully resolved (an unsupported synthetic
+  proposal is also inconclusive).
+
+An empty population and an unknown-only population are therefore **never** silently
+counted as a completed negative. A campaign made up entirely of
+inadmissible/inapplicable/inconclusive attempts opens the campaign
 (`-> challenged`) and stops there — it does **not** earn `surviving`, and because
 `challenged` is resumable a later campaign can still decide it. Survival cannot be
 requested.

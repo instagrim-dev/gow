@@ -44,18 +44,23 @@ func TestDeterministicCheckDefersOnConfirmedBreak(t *testing.T) {
 	}
 }
 
-func TestCounterexampleSearchRefutesWhenKnownFailureMakesSameBreak(t *testing.T) {
-	// G1: a refuter must contradict a claim about the PROPOSED mechanism itself.
-	// A known failure family that makes the SAME break (also violates the target)
-	// yet still failed refutes the proposal's implicit claim that breaking the
-	// target is what distinguishes it -> deterministic (reproducible) failure.
+func TestCounterexampleSearchSharedBreakIsNonDecisive(t *testing.T) {
+	// H3: a known failure family that ALSO violates the target merely shares a
+	// PREDICATE bit with the proposal. A shared predicate verdict is not a
+	// mechanism-level refutation (two different constructions can both violate the
+	// same predicate; one failing does not make the other fail). This branch must
+	// therefore be NON-DECISIVE — at most a "break previously observed" novelty
+	// signal — never a decisive proposal failure.
 	vc := VerificationContext{
 		TargetVerdicts:  map[string]invariant.Verdict{"inv_1": invariant.VerdictViolates},
 		NearestVerdicts: map[string][]invariant.Verdict{"inv_1": {invariant.VerdictViolates}},
 	}
 	d, _ := CounterexampleSearch{}.Verify(context.Background(), vc)
-	if d.Verdict != VerdictFailure || d.Kind != KindCounterexampleSearch {
-		t.Fatalf("got %q/%q, want failure/counterexample-search", d.Verdict, d.Kind)
+	if d.Verdict != VerdictUnknown || d.Kind != KindCounterexampleSearch {
+		t.Fatalf("got %q/%q, want unknown/counterexample-search", d.Verdict, d.Kind)
+	}
+	if d.Verdict.Decisive() {
+		t.Fatalf("a shared predicate verdict must not decide a proposal failure; got decisive %q", d.Verdict)
 	}
 }
 
@@ -118,18 +123,19 @@ func TestRouteDeterministicFailureOverridesModelSuccess(t *testing.T) {
 	}
 }
 
-func TestRouteCheapestFirstStrongestDecisive(t *testing.T) {
-	// A refuter is present (a known failure makes the same break), so the
-	// counterexample-search tier decides `failure` and preempts a cheaper model
-	// `success`: strength ordering before cost prevents strength laundering.
+func TestRouteFallsThroughNonDecisiveCounterexampleToModelTier(t *testing.T) {
+	// H3: the counterexample-search tier is non-decisive on a shared predicate
+	// break, so the router must fall through to the model tier for the
+	// realizability judgment rather than laundering a deterministic `failure` out
+	// of a shared predicate bit. The model tier's verdict/kind is what survives.
 	vc := VerificationContext{
 		TargetVerdicts:  map[string]invariant.Verdict{"inv_1": invariant.VerdictViolates},
 		NearestVerdicts: map[string][]invariant.Verdict{"inv_1": {invariant.VerdictViolates}},
 	}
 	verifiers := []Verifier{DeterministicCheck{}, CounterexampleSearch{}, alwaysVerifier{verdict: VerdictSuccess, cost: 99}}
 	d, _ := Route(context.Background(), verifiers, vc)
-	if d.Verdict != VerdictFailure || d.Kind != KindCounterexampleSearch {
-		t.Fatalf("got %q/%q, want failure/counterexample-search", d.Verdict, d.Kind)
+	if d.Verdict != VerdictSuccess || d.Kind != KindModelJudgment {
+		t.Fatalf("got %q/%q, want success/model-judgment (counterexample search must not decide a shared-break failure)", d.Verdict, d.Kind)
 	}
 }
 

@@ -1140,6 +1140,42 @@ trigger. The one non-additive step widens `provider_invocations.role` to admit
 `'success-compress'` via the established guarded in-place `writable_schema`
 CHECK edit. See [`success-compression.md`](success-compression.md).
 
+## Implemented search-policy schema (#008, migration `v19`)
+
+Migration `v19` ships the M6.2 search-policy layer as an **additive**,
+immutable, revisioned set of tables plus one guarded CHECK widen:
+
+- `search_policy_revisions` — one full mutation pass. Idempotent on
+  `(problem_id, evidence_cohort_hash, mutator_version, policy_schema)`: unchanged
+  evidence returns the existing revision; new evidence changes the
+  order-independent `evidence_cohort_hash` and yields the next `revision` (never
+  a rewrite). Carries `inert_proposals` (provider directives that failed code
+  re-verification against the resolvable evidence set) and `directive_count`.
+- `search_policy_directives` — the typed bias. `kind CHECK` in
+  `('prefer','avoid','expand','penalize')`, `target_kind CHECK` in
+  `('success_invariant','surviving_invariant','mechanism_family',
+  'redundant_attack','repeated_failure')`, an ordinal `weight`, an
+  `epistemic_source`, and a stable `ordinal` for deterministic replay.
+- `search_policy_provenance` — every directive's justifying evidence
+  references, so a reader can trace *why* each bias exists back to a persisted
+  row.
+- `frontier_generation_policy` — the **applied-bias log**. It records which
+  policy revision biased a `frontier generate` run and, per newly-persisted
+  proposal, the net ordinal bias and whether it was preferred / avoided /
+  penalized / **floor-protected** (the cheapest-falsification proposal for each
+  target is protected from net suppression, so policy can never render a run
+  unfalsifiable). A generation with no policy writes nothing — *unbiased ==
+  absence* — and `--no-policy` is a first-class unbiased baseline. Writes are
+  immutable inserts keyed on the already-persisted generation + proposal ids.
+
+All four tables are immutable by trigger. The one non-additive step widens
+`provider_invocations.role` to admit `'policy-mutate'` via the same guarded
+in-place `writable_schema` CHECK edit used for `'evaluate'` and
+`'success-compress'`. Code owns policy identity: a provider MAY propose
+directives, but each is re-verified against the code-built evidence before it
+counts (`ModelJudgment != Verification`); unresolved proposals are recorded
+`inert_proposals` and bias nothing. See [`search-policy.md`](search-policy.md).
+
 ## Immutable vs mutable/revisioned
 
 - Immutable: `source`, `evidence_record` (enforced with update/delete-rejecting

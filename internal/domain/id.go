@@ -40,6 +40,8 @@ const (
 	EvaluationMetricIDPrefix      = "evm_"
 	SuccessRevisionIDPrefix       = "svr_"
 	SuccessInvariantIDPrefix      = "sinv_"
+	SearchPolicyRevisionIDPrefix  = "spr_"
+	SearchPolicyDirectiveIDPrefix = "spd_"
 )
 
 var (
@@ -70,6 +72,8 @@ var (
 	ErrInvalidEvaluationMetricID      = errors.New("invalid evaluation metric id")
 	ErrInvalidSuccessRevisionID       = errors.New("invalid success revision id")
 	ErrInvalidSuccessInvariantID      = errors.New("invalid success invariant id")
+	ErrInvalidSearchPolicyRevisionID  = errors.New("invalid search policy revision id")
+	ErrInvalidSearchPolicyDirectiveID = errors.New("invalid search policy directive id")
 
 	entropyMu sync.Mutex
 	entropy   = ulid.Monotonic(defaultEntropy(), 0)
@@ -261,6 +265,22 @@ func ValidateSuccessRevisionID(id string) error {
 
 func ValidateSuccessInvariantID(id string) error {
 	return validateID(id, SuccessInvariantIDPrefix, ErrInvalidSuccessInvariantID)
+}
+
+func NewSearchPolicyRevisionID(now time.Time) string {
+	return newID(SearchPolicyRevisionIDPrefix, now)
+}
+
+func NewSearchPolicyDirectiveID(now time.Time) string {
+	return newID(SearchPolicyDirectiveIDPrefix, now)
+}
+
+func ValidateSearchPolicyRevisionID(id string) error {
+	return validateID(id, SearchPolicyRevisionIDPrefix, ErrInvalidSearchPolicyRevisionID)
+}
+
+func ValidateSearchPolicyDirectiveID(id string) error {
+	return validateID(id, SearchPolicyDirectiveIDPrefix, ErrInvalidSearchPolicyDirectiveID)
 }
 
 func ValidateNormalizationRevisionID(id string) error {

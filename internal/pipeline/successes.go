@@ -149,7 +149,7 @@ func buildBreakCohorts(rows []store.BreakCohortRow) (builtCohorts, error) {
 	var targetOrder []string
 	var hashLines []string
 	for _, r := range rows {
-		hashLines = append(hashLines, r.TargetInvariantID+"|"+r.ProposalID+"|"+r.Result+"|"+r.Strength)
+		hashLines = append(hashLines, r.TargetInvariantID+"|"+r.ProposalID+"|"+r.EvaluationID+"|"+r.Result+"|"+r.Strength)
 		if r.SignatureJSON == "" {
 			out.IneligibleUnpersisted++
 			continue
@@ -159,7 +159,7 @@ func buildBreakCohorts(rows []store.BreakCohortRow) (builtCohorts, error) {
 		if err := json.Unmarshal([]byte(r.SignatureJSON), &sig); err != nil {
 			return builtCohorts{}, fmt.Errorf("proposal %s: corrupt persisted signature: %w", r.ProposalID, err)
 		}
-		member = success.Member{ProposalID: r.ProposalID, Signature: sig, Result: domain.OutcomeClass(r.Result), Strength: r.Strength}
+		member = success.Member{ProposalID: r.ProposalID, EvaluationID: r.EvaluationID, Signature: sig, Result: domain.OutcomeClass(r.Result), Strength: r.Strength}
 		cohort, ok := byTarget[r.TargetInvariantID]
 		if !ok {
 			cohort = &success.BreakCohort{TargetInvariantID: r.TargetInvariantID}
@@ -438,10 +438,11 @@ func successRevisionRecord(problemID, runID string, minSupport int, built builtC
 		}
 		for _, ce := range c.CohortEvaluations {
 			row.CohortEvaluations = append(row.CohortEvaluations, store.SuccessCohortEvaluationRow{
-				ProposalID: ce.ProposalID,
-				CohortRole: ce.Role,
-				Verdict:    string(ce.Verdict),
-				Strength:   normalizeStrength(ce.Strength),
+				ProposalID:   ce.ProposalID,
+				EvaluationID: ce.EvaluationID,
+				CohortRole:   ce.Role,
+				Verdict:      string(ce.Verdict),
+				Strength:     normalizeStrength(ce.Strength),
 			})
 		}
 		rec.Invariants = append(rec.Invariants, row)

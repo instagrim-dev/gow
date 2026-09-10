@@ -395,6 +395,30 @@ func (f *fakeProblemStore) GetFrontierGeneration(context.Context, string) (store
 	return store.FrontierGenerationRecord{}, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) GetFrontierGenerationPolicy(context.Context, string) (string, []store.FrontierGenerationPolicyRow, error) {
+	return "", nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistPolicyRevision(context.Context, store.PolicyRevisionRecord) (store.PolicyRevisionRecord, bool, error) {
+	return store.PolicyRevisionRecord{}, false, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetPolicyRevision(context.Context, string) (store.PolicyRevisionRecord, error) {
+	return store.PolicyRevisionRecord{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListPolicyRevisions(context.Context, string) ([]store.PolicyRevisionRecord, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) LatestPolicyRevision(context.Context, string) (string, bool, error) {
+	return "", false, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistFrontierGenerationPolicy(context.Context, string, string, []store.FrontierGenerationPolicyRow) error {
+	return errors.New("unexpected call")
+}
+
 func (f *fakeProblemStore) PersistFrontierGeneration(context.Context, store.FrontierGenerationRecord) (store.PersistFrontierGenerationResult, error) {
 	return store.PersistFrontierGenerationResult{}, errors.New("unexpected call")
 }

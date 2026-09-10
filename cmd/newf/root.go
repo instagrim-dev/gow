@@ -71,6 +71,7 @@ func newRootCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cob
 	cmd.AddCommand(newSuccessInvariantCommand(stdout, app, opts))
 	cmd.AddCommand(newEvaluateCommand(stdout, app, opts))
 	cmd.AddCommand(newEvaluationCommand(stdout, app, opts))
+	cmd.AddCommand(newPolicyCommand(stdout, app, opts))
 
 	return cmd
 }

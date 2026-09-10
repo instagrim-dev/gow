@@ -111,6 +111,74 @@ func TestSuccessInvariantRowsImmutable(t *testing.T) {
 	}
 }
 
+// H1 regression: ListBreakCohortRows must return a COHERENT (verdict, strength,
+// evaluation_id) triple from ONE evaluation. A re-evaluation must not let the
+// cohort query splice the first (sticky) verdict onto a later evaluation's
+// strength. We persist E1 (partial_success / single-model-judgment) which sets
+// the sticky result, then insert a later E2 (failure / deterministic). The
+// cohort row must reflect E1 entirely — never partial_success + deterministic.
+func TestListBreakCohortRowsSelectsOneEvaluationRecord(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+
+	rec := sampleFrontier(t, st)
+	res, err := st.PersistFrontierGeneration(ctx, rec)
+	if err != nil {
+		t.Fatalf("persist frontier: %v", err)
+	}
+	problemID := res.Record.ProblemID
+	proposalID := res.Record.Proposals[0].ID
+
+	// Persist canonical content so the proposal is cohort-eligible.
+	if _, err := st.db.ExecContext(ctx, `
+INSERT INTO frontier_proposal_signatures(proposal_id, signature_json, canonical_fingerprint, created_at)
+VALUES(?, ?, ?, ?)`, proposalID, `{"schema_version":"mechanism/v1"}`, "cfp-1", formatTime(time.Now().UTC())); err != nil {
+		t.Fatalf("insert signature: %v", err)
+	}
+
+	// E1: the earliest evaluation. partial_success / single-model-judgment. This
+	// sets the sticky frontier_proposals.result via PersistEvaluationRun.
+	now := time.Now().UTC()
+	e1ID := domain.NewEvaluationID(now)
+	run := EvaluationRunRecord{
+		ID:          domain.NewEvaluationRunID(now),
+		ProblemID:   problemID,
+		RunID:       res.Record.RunID,
+		Mode:        "proposal",
+		CreatedAt:   formatTime(now.Add(-time.Hour)), // earlier
+		Evaluations: []EvaluationRow{{ID: e1ID, ProposalID: proposalID, Verdict: "partial_success", VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment", ConfidenceOrdinal: "medium", ToolName: "m", ToolVersion: "v1"}},
+	}
+	if _, err := st.PersistEvaluationRun(ctx, run); err != nil {
+		t.Fatalf("persist E1: %v", err)
+	}
+
+	// E2: a LATER re-evaluation. failure / deterministic. Inserted directly with a
+	// strictly later created_at into the same run (a real re-evaluation would be a
+	// new run; the direct insert keeps the fixture small).
+	e2ID := domain.NewEvaluationID(now.Add(time.Second))
+	if _, err := st.db.ExecContext(ctx, `
+INSERT INTO evaluations(id, evaluation_run_id, proposal_id, verdict, verifier_kind, verification_strength, confidence_ordinal, tool_name, tool_version, created_at)
+VALUES(?, ?, ?, 'failure', 'deterministic-check', 'deterministic', 'high', 'd', 'v1', ?)`,
+		e2ID, run.ID, proposalID, formatTime(now)); err != nil {
+		t.Fatalf("insert E2: %v", err)
+	}
+
+	rows, err := st.ListBreakCohortRows(ctx, problemID)
+	if err != nil {
+		t.Fatalf("list cohort rows: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("want 1 cohort row, got %d", len(rows))
+	}
+	r := rows[0]
+	// The triple must be coherent and come from E1 (the earliest / result-setting
+	// evaluation): partial_success / single-model-judgment / e1. NEVER the
+	// impossible partial_success + deterministic.
+	if r.Result != "partial_success" || r.Strength != "single-model-judgment" || r.EvaluationID != e1ID {
+		t.Fatalf("cohort row must be a coherent E1 triple; got result=%q strength=%q eval=%q (want partial_success/single-model-judgment/%s)", r.Result, r.Strength, r.EvaluationID, e1ID)
+	}
+}
+
 func TestSuccessInvariantRejectsNonProposedState(t *testing.T) {
 	st := openMigratedStore(t)
 	ctx := context.Background()

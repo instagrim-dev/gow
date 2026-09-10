@@ -144,11 +144,27 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 	}
 
 	for _, p := range selected {
-		vc := verificationContextForProposal(p, predicates, reps)
-		decision, derr := verify.Route(ctx, verifiers, vc)
-		if derr != nil {
-			a.failRun(ctx, repoStore, run.ID, derr)
-			return EvaluateResponse{}, derr
+		vc, staleTarget := verificationContextForProposal(p, predicates, reps)
+		var decision verify.Decision
+		if staleTarget {
+			// H5: a claimed target is no longer targetable (weaken/falsified). We do
+			// NOT erase it and route the reduced context — that would silently change
+			// the question and let a decisive model adapter award a better verdict to
+			// an unchanged proposal. The proposal requires explicit reassessment
+			// against a fresh context; record a non-decisive, non-routed result.
+			decision = verify.Decision{
+				Verdict:  verify.VerdictVerificationBlocked,
+				Kind:     verify.KindDeterministicCheck,
+				Strength: verify.StrengthForKind(verify.KindDeterministicCheck),
+				Notes:    "a targeted invariant is no longer targetable (weaken/falsified); evaluation requires reassessment against a fresh context (H5)",
+			}
+		} else {
+			d, derr := verify.Route(ctx, verifiers, vc)
+			if derr != nil {
+				a.failRun(ctx, repoStore, run.ID, derr)
+				return EvaluateResponse{}, derr
+			}
+			decision = d
 		}
 		row := store.EvaluationRow{
 			ID:                   domain.NewEvaluationID(now),
@@ -260,25 +276,28 @@ func (a *App) clusterRepresentatives(ctx context.Context, repoStore problemStore
 }
 
 // verificationContextForProposal assembles the code-owned context for one
-// proposal. Two disciplines hold (G1 + G4):
+// proposal and reports whether any of its claimed targets is STALE (no longer
+// currently targetable — it became weaken/falsified since generation).
 //
-//   - Target pinning: a cached per-target verdict is included ONLY when that
-//     target is still in `predicates` (currently targetable). A target that has
-//     since become weaken/falsified is dropped from the deterministic input, so
-//     the proposal cannot keep a `violates` verdict whose comparison evidence has
-//     disappeared. If EVERY claimed target became stale, the resulting empty
-//     TargetVerdicts routes to a non-decisive/unknown result — never a free
-//     partial_success.
-//   - Recorded nearest families: comparison verdicts come from re-evaluating the
-//     target predicate against the proposal's OWN recorded nearest cluster
-//     representatives, not every representative in the run.
-func verificationContextForProposal(p store.FrontierProposalRow, predicates map[string]invariant.Predicate, reps map[string]canon.MechanismSignature) verify.VerificationContext {
+//   - Target pinning (G4): a cached per-target verdict is included only when its
+//     target is still in `predicates`. A stale target is NOT silently dropped so
+//     the remainder can seek a favorable fallback (H5): the caller treats a
+//     proposal with any stale target as requiring reassessment and does not route
+//     it, because erasing a target changes the question being evaluated and an
+//     unchanged proposal must not gain a better verdict merely because a
+//     hypothesis it targeted lost credibility.
+//   - Recorded nearest families (G1): comparison verdicts come from re-evaluating
+//     the live target predicate against the proposal's OWN recorded nearest
+//     cluster representatives, not every representative in the run.
+func verificationContextForProposal(p store.FrontierProposalRow, predicates map[string]invariant.Predicate, reps map[string]canon.MechanismSignature) (verify.VerificationContext, bool) {
 	targets := make(map[string]invariant.Verdict)
 	nearest := make(map[string][]invariant.Verdict)
+	staleTarget := false
 	for _, t := range p.Targets {
 		pred, live := predicates[t.InvariantID]
 		if !live {
-			continue // stale target: drop verdict AND its comparison evidence together
+			staleTarget = true
+			continue
 		}
 		targets[t.InvariantID] = invariant.Verdict(t.Verdict)
 		for _, nc := range p.NearestClusters {
@@ -294,7 +313,7 @@ func verificationContextForProposal(p store.FrontierProposalRow, predicates map[
 		TargetVerdicts:   targets,
 		NearestVerdicts:  nearest,
 		ClaimedViolation: p.StructuralViolationClaim,
-	}
+	}, staleTarget
 }
 
 // ListEvaluations lists a problem's evaluation runs.

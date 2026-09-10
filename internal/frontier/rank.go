@@ -74,6 +74,13 @@ func Rank(candidates []Candidate) []Candidate {
 	return ranked
 }
 
+// RedundancyKey exposes the directed-attack redundancy key for a candidate so
+// other packages (e.g. search-policy application) can key penalize directives
+// on the same notion of "same directed attack" that Rank uses internally.
+func RedundancyKey(c Candidate) string {
+	return redundancyKey(c)
+}
+
 // redundancyKey identifies proposals that are the "same directed attack": the
 // same set of targeted invariants against the same nearest family set. Two such
 // proposals differ only cosmetically for search purposes and the second is

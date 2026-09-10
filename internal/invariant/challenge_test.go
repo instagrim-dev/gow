@@ -118,6 +118,70 @@ func TestVerifyKnownCounterexampleUnknownIsNotACounterexample(t *testing.T) {
 	}
 }
 
+// TestVerifyKnownCounterexampleDispositionsSeparated is the H4 regression: an
+// empty eligible population, an unknown-only population, and a fully-decided
+// negative must NOT collapse to the same completed_negative outcome. Only the
+// last is a completed negative that can earn survival.
+func TestVerifyKnownCounterexampleDispositionsSeparated(t *testing.T) {
+	pred := chPredicate(chIDResidue)
+
+	// (a) No failure-side members at all -> inapplicable (empty population).
+	empty := VerifyKnownCounterexample(pred, nil, AssociationRecurring)
+	if empty.Confirmed || empty.Outcome != OutcomeInapplicable {
+		t.Fatalf("empty population must be inapplicable, got outcome=%q confirmed=%v", empty.Outcome, empty.Confirmed)
+	}
+
+	// (b) Only an unknown-evaluating eligible member -> inconclusive.
+	amb := chSignature("msig_amb", domain.OutcomeFailure)
+	amb.Preserves = append(amb.Preserves, canon.FieldClaim{
+		FieldKind: domain.FieldPreserves, State: domain.ResolutionAmbiguous, Status: domain.ClaimAmbiguous,
+	})
+	unknownOnly := VerifyKnownCounterexample(pred, []Family{chFamily("mcl_amb", domain.OutcomeFailure, amb)}, AssociationRecurring)
+	if unknownOnly.Confirmed || unknownOnly.Outcome != OutcomeInconclusive {
+		t.Fatalf("unknown-only population must be inconclusive, got outcome=%q confirmed=%v", unknownOnly.Outcome, unknownOnly.Confirmed)
+	}
+
+	// (c) A nonempty, fully-decided negative (every eligible member decisively
+	// SATISFIES the predicate, none violates) -> completed_negative.
+	sat := chSignature("msig_sat", domain.OutcomeFailure, chIDResidue) // satisfies preserves(residue)
+	decided := VerifyKnownCounterexample(pred, []Family{chFamily("mcl_sat", domain.OutcomeFailure, sat)}, AssociationRecurring)
+	if decided.Confirmed || decided.Outcome != OutcomeCompletedNegative {
+		t.Fatalf("fully-decided negative must be completed_negative, got outcome=%q confirmed=%v", decided.Outcome, decided.Confirmed)
+	}
+}
+
+// TestVerifySuccessPreservingDispositionsSeparated is the H4 regression for the
+// success-preserving verifier: empty contrast population is inapplicable, an
+// unknown-evaluating contrast member leaves the negative inconclusive, and only
+// a fully-decided non-preserving contrast population is a completed negative.
+func TestVerifySuccessPreservingDispositionsSeparated(t *testing.T) {
+	pred := chPredicate(chIDResidue)
+
+	// (a) No contrast (success-side) members -> inapplicable.
+	empty := VerifySuccessPreserving(pred, nil)
+	if empty.Confirmed || empty.Outcome != OutcomeInapplicable {
+		t.Fatalf("empty contrast population must be inapplicable, got outcome=%q confirmed=%v", empty.Outcome, empty.Confirmed)
+	}
+
+	// (b) A success-side member that evaluates unknown -> inconclusive.
+	amb := chSignature("msig_amb_s", domain.OutcomePartialSuccess)
+	amb.Preserves = append(amb.Preserves, canon.FieldClaim{
+		FieldKind: domain.FieldPreserves, State: domain.ResolutionAmbiguous, Status: domain.ClaimAmbiguous,
+	})
+	unknownOnly := VerifySuccessPreserving(pred, []Family{chFamily("mcl_s_amb", domain.OutcomePartialSuccess, amb)})
+	if unknownOnly.Confirmed || unknownOnly.Outcome != OutcomeInconclusive {
+		t.Fatalf("unknown contrast member must be inconclusive, got outcome=%q confirmed=%v", unknownOnly.Outcome, unknownOnly.Confirmed)
+	}
+
+	// (c) A decisively non-preserving contrast family (violates the predicate) ->
+	// completed_negative.
+	nonPreserving := chSignature("msig_s_np", domain.OutcomePartialSuccess, chIDSieve) // does NOT preserve residue
+	decided := VerifySuccessPreserving(pred, []Family{chFamily("mcl_s_np", domain.OutcomePartialSuccess, nonPreserving)})
+	if decided.Confirmed || decided.Outcome != OutcomeCompletedNegative {
+		t.Fatalf("decisively non-preserving contrast must be completed_negative, got outcome=%q confirmed=%v", decided.Outcome, decided.Confirmed)
+	}
+}
+
 func TestVerifySyntheticCounterexample(t *testing.T) {
 	violating := chSignature("", domain.OutcomeFailure, chIDSieve)
 	if res := VerifySyntheticCounterexample(chPredicate(chIDResidue), violating); !res.Confirmed {

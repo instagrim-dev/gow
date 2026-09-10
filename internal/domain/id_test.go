@@ -104,6 +104,24 @@ func TestGeneratedIDsValidate(t *testing.T) {
 	if err := ValidateEvaluationMetricID(evaluationMetricID); err != nil {
 		t.Fatalf("ValidateEvaluationMetricID() error = %v", err)
 	}
+
+	successRevisionID := NewSuccessRevisionID(now)
+	successInvariantID := NewSuccessInvariantID(now)
+	searchPolicyRevisionID := NewSearchPolicyRevisionID(now)
+	searchPolicyDirectiveID := NewSearchPolicyDirectiveID(now)
+
+	if err := ValidateSuccessRevisionID(successRevisionID); err != nil {
+		t.Fatalf("ValidateSuccessRevisionID() error = %v", err)
+	}
+	if err := ValidateSuccessInvariantID(successInvariantID); err != nil {
+		t.Fatalf("ValidateSuccessInvariantID() error = %v", err)
+	}
+	if err := ValidateSearchPolicyRevisionID(searchPolicyRevisionID); err != nil {
+		t.Fatalf("ValidateSearchPolicyRevisionID() error = %v", err)
+	}
+	if err := ValidateSearchPolicyDirectiveID(searchPolicyDirectiveID); err != nil {
+		t.Fatalf("ValidateSearchPolicyDirectiveID() error = %v", err)
+	}
 }
 
 func TestValidateRejectsCrossClassIDs(t *testing.T) {
@@ -157,5 +175,13 @@ func TestValidateRejectsCrossClassIDs(t *testing.T) {
 	}
 	if err := ValidateEvaluationRunID(clusterRunID); err == nil {
 		t.Fatal("ValidateEvaluationRunID() succeeded for cluster run ID")
+	}
+
+	searchPolicyRevisionID := NewSearchPolicyRevisionID(time.Now().UTC())
+	if err := ValidateSearchPolicyDirectiveID(searchPolicyRevisionID); err == nil {
+		t.Fatal("ValidateSearchPolicyDirectiveID() succeeded for search policy revision ID")
+	}
+	if err := ValidateSearchPolicyRevisionID(clusterRunID); err == nil {
+		t.Fatal("ValidateSearchPolicyRevisionID() succeeded for cluster run ID")
 	}
 }

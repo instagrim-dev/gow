@@ -40,18 +40,25 @@ the same interface):
    happen → deterministic `failure`. A confirmed break is left non-decisive here
    (necessary but not sufficient for success), deferring the positive verdict to
    the next tier.
-2. **`counterexample-search`** (reproducible) — a bounded, deterministic scan of
-   the proposal's **recorded nearest** known failure families for a genuine
-   *refuter*. A refuter must contradict a claim about the **proposed mechanism
-   itself**, not merely differ from it: a known failure family that makes the
-   **same** break (also *violates* a target the proposal broke) yet still failed
-   is a refuter → `failure` / `counterexample-search`. The intended structural
-   difference — the proposal *violates* a target that old failure families
-   *satisfy* — is exactly the signal frontier generation seeks, **never** a
-   refutation. A bounded search that finds no refuter is a **negative search
-   result**, not progress: it returns a non-decisive verdict (deferring
-   realizability to the model tier) rather than rewarding missing or `unknown`
-   comparison evidence with `partial_success` (G1).
+2. **`counterexample-search`** (reproducible tier, **non-decisive by
+   construction**) — a bounded, deterministic scan of the proposal's **recorded
+   nearest** known failure families. The persisted verification context carries
+   only per-target **predicate verdicts**, not a candidate-specific refutation
+   witness, so this tier **cannot soundly decide a proposal failure** and never
+   returns `failure` (H3). Two facts it must never conflate with refutation:
+   the intended structural difference (the proposal *violates* a target that old
+   failure families *satisfy*) is the signal frontier generation seeks, not a
+   refutation; and a known failure family that *also* violates a broken target
+   merely **shares a predicate bit** — a shared predicate verdict does not
+   establish a shared mechanism or that the known failure transfers to the
+   proposal (two different global constructions can both violate "local reasoning
+   only"; one failing does not make the other fail). That signal is at most
+   **"break previously observed"** (a novelty/sufficiency note), recorded but not
+   decided. This tier confirms the break is real and otherwise returns a
+   non-decisive verdict, deferring realizability to the model tier and never
+   rewarding missing/`unknown` comparison evidence with `partial_success`. A
+   decisive proposal failure awaits a future mechanism-level refuter that
+   contradicts an **explicit claim about the proposal itself**.
 3. **`model-judgment`** (weakest, last resort) — a provider `Verifier` (a
    deterministic `FixtureVerifier` in CI, role `'evaluate'`). Consulted only when
    no stronger tier decides, and always stamped `single-model-judgment`.
@@ -74,13 +81,17 @@ verdict is `verification_blocked` stamped with the weakest tier tried — an hon
 
 A proposal is evaluated against the **currently targetable** invariants. A cached
 per-target verdict from generation time is included only when its target is still
-targetable; if a targeted invariant has since become `weaken`/`falsified` it is
-dropped from **both** the deterministic input and the comparison population
-together (G4). An unchanged proposal therefore cannot gain a *better* evaluation
-merely because a hypothesis it targeted became less credible, and its comparison
-evidence cannot silently disappear while its claimed break persists. If every
-claimed target is stale the context is empty and routes to a non-decisive result,
-never a free `partial_success`.
+targetable. If **any** targeted invariant has since become `weaken`/`falsified`,
+the proposal is treated as **requiring reassessment**: it is recorded as
+`verification_blocked` (deterministic tier) and is **not routed** at all (H5).
+Erasing a stale target and then routing the reduced context would silently change
+the question being evaluated and could let a decisive model adapter award an
+unchanged proposal a *better* verdict merely because a hypothesis it targeted lost
+credibility. Pinning the assessment to the exact targets — and refusing to answer
+a different question in place of the original — is the guarantee: target
+invalidation can never improve an unchanged proposal's evaluation. A fresh
+challenge assessment may explicitly select newer evidence while retaining the
+original discovery lineage.
 
 ### Verdict vocabulary
 

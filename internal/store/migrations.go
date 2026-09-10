@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 18
+const currentSchemaVersion = 20
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -822,6 +822,32 @@ END;
 		// DROP + CREATE the trigger (immutable-by-convention). Introspective +
 		// idempotent: recreating with the wider rule is safe on a fresh v18 DB.
 		apply: migrateV18ChallengeableAttestationAndResume,
+	},
+	{
+		version: 19,
+		// M6.2 search-policy mutation (#18). Additive, immutable, revisioned
+		// search_policy_revisions / search_policy_directives / search_policy_provenance:
+		// a per-problem SearchPolicy derived by code from persisted evidence
+		// (success invariants, surviving failure invariants, coverage gaps,
+		// redundancy / repeated-failure) that biases the NEXT frontier generation
+		// as a bounded ordinal transform (never crossing the code-verified
+		// violation gate). Also a frontier_generation_policy child recording which
+		// policy revision biased a generation and the per-proposal applied bias
+		// (the reproducible "why favored/suppressed" surface). One guarded
+		// non-additive step: widens provider_invocations.role to admit
+		// 'policy-mutate' via the established in-place writable_schema CHECK edit
+		// (FK-safe; v11/v13/v14/v15/v17 precedent). Introspective + idempotent.
+		apply: migrateV19SearchPolicy,
+	},
+	{
+		version: 20,
+		// M6.1 hardening (H1): success-compression cohort evaluations record the
+		// EVALUATION_ID their (verdict, strength) pair came from, so provenance is a
+		// single coherent evaluation record rather than a result-cache spliced onto
+		// a later evaluation's strength. Additive nullable column; INSERT is allowed
+		// by the immutability triggers (they guard UPDATE/DELETE only). Idempotent:
+		// skip when the column already exists.
+		apply: migrateV20CohortEvaluationProvenance,
 	},
 }
 
@@ -2353,4 +2379,136 @@ func migrateV17SuccessCompression(ctx context.Context, tx *sql.Tx) error {
 		}
 	}
 	return nil
+}
+
+const searchPolicySQL = `
+CREATE TABLE IF NOT EXISTS search_policy_revisions (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  provider_invocation_id TEXT REFERENCES provider_invocations(id),
+  mutator_version TEXT NOT NULL,
+  policy_schema TEXT NOT NULL,
+  evidence_cohort_hash TEXT NOT NULL,
+  inert_proposals INTEGER NOT NULL DEFAULT 0,
+  revision INTEGER NOT NULL,
+  directive_count INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(problem_id, evidence_cohort_hash, mutator_version, policy_schema),
+  UNIQUE(problem_id, revision)
+);
+
+CREATE TABLE IF NOT EXISTS search_policy_directives (
+  id TEXT PRIMARY KEY,
+  policy_revision_id TEXT NOT NULL REFERENCES search_policy_revisions(id),
+  kind TEXT NOT NULL CHECK (kind IN ('prefer','avoid','expand','penalize')),
+  target_kind TEXT NOT NULL CHECK (target_kind IN ('success_invariant','surviving_invariant','mechanism_family','redundant_attack','repeated_failure')),
+  target_id TEXT NOT NULL,
+  weight TEXT NOT NULL CHECK (weight IN ('low','medium','high','unknown')),
+  epistemic_source TEXT NOT NULL DEFAULT '',
+  ordinal INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS search_policy_provenance (
+  policy_directive_id TEXT NOT NULL REFERENCES search_policy_directives(id),
+  evidence_kind TEXT NOT NULL,
+  evidence_ref TEXT NOT NULL,
+  PRIMARY KEY(policy_directive_id, evidence_kind, evidence_ref)
+);
+
+-- Records which policy revision biased a frontier generation and the net
+-- per-proposal bias applied (the reproducible "why favored/suppressed"). A
+-- generation with no policy writes no rows here (unbiased == absence).
+CREATE TABLE IF NOT EXISTS frontier_generation_policy (
+  frontier_generation_run_id TEXT NOT NULL REFERENCES frontier_generation_runs(id),
+  proposal_id TEXT NOT NULL REFERENCES frontier_proposals(id),
+  policy_revision_id TEXT NOT NULL REFERENCES search_policy_revisions(id),
+  net_bias INTEGER NOT NULL,
+  preferred INTEGER NOT NULL DEFAULT 0,
+  avoided INTEGER NOT NULL DEFAULT 0,
+  penalized INTEGER NOT NULL DEFAULT 0,
+  floor_protected INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY(frontier_generation_run_id, proposal_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_search_policy_revisions_problem ON search_policy_revisions(problem_id);
+CREATE INDEX IF NOT EXISTS idx_search_policy_directives_revision ON search_policy_directives(policy_revision_id);
+
+CREATE TRIGGER IF NOT EXISTS search_policy_revisions_immutable_update
+BEFORE UPDATE ON search_policy_revisions
+BEGIN
+  SELECT RAISE(ABORT, 'search policy revisions are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS search_policy_revisions_immutable_delete
+BEFORE DELETE ON search_policy_revisions
+BEGIN
+  SELECT RAISE(ABORT, 'search policy revisions are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS search_policy_directives_immutable_update
+BEFORE UPDATE ON search_policy_directives
+BEGIN
+  SELECT RAISE(ABORT, 'search policy directives are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS search_policy_directives_immutable_delete
+BEFORE DELETE ON search_policy_directives
+BEGIN
+  SELECT RAISE(ABORT, 'search policy directives are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS search_policy_provenance_immutable_update
+BEFORE UPDATE ON search_policy_provenance
+BEGIN
+  SELECT RAISE(ABORT, 'search policy provenance is immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS search_policy_provenance_immutable_delete
+BEFORE DELETE ON search_policy_provenance
+BEGIN
+  SELECT RAISE(ABORT, 'search policy provenance is immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS frontier_generation_policy_immutable_update
+BEFORE UPDATE ON frontier_generation_policy
+BEGIN
+  SELECT RAISE(ABORT, 'frontier generation policy log is immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS frontier_generation_policy_immutable_delete
+BEFORE DELETE ON frontier_generation_policy
+BEGIN
+  SELECT RAISE(ABORT, 'frontier generation policy log is immutable');
+END;
+`
+
+// migrateV19SearchPolicy creates the M6.2 search-policy tables and widens the
+// provider_invocations.role CHECK to admit 'policy-mutate'. Guarded and
+// idempotent throughout.
+func migrateV19SearchPolicy(ctx context.Context, tx *sql.Tx) error {
+	if _, err := tx.ExecContext(ctx, searchPolicySQL); err != nil {
+		return err
+	}
+	allows, err := providerRoleAllows(ctx, tx, "policy-mutate")
+	if err != nil {
+		return err
+	}
+	if !allows {
+		if err := editTableCheckInPlace(ctx, tx, "provider_invocations",
+			"role IN ('normalize','invariant','challenge','generate','evaluate','success-compress')",
+			"role IN ('normalize','invariant','challenge','generate','evaluate','success-compress','policy-mutate')"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// migrateV20CohortEvaluationProvenance adds the evaluation_id provenance column
+// to success_invariant_cohort_evaluations (H1). Additive nullable column;
+// idempotent (skip when present). ADD COLUMN does not trip the table's
+// UPDATE/DELETE immutability triggers.
+func migrateV20CohortEvaluationProvenance(ctx context.Context, tx *sql.Tx) error {
+	has, err := columnExists(ctx, tx, "success_invariant_cohort_evaluations", "evaluation_id")
+	if err != nil {
+		return err
+	}
+	if has {
+		return nil
+	}
+	_, err = tx.ExecContext(ctx, `ALTER TABLE success_invariant_cohort_evaluations ADD COLUMN evaluation_id TEXT`)
+	return err
 }

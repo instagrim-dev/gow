@@ -20,10 +20,11 @@ import (
 
 // Member is one evaluated P-breaking proposal rehydrated for evaluation.
 type Member struct {
-	ProposalID string
-	Signature  canon.MechanismSignature
-	Result     domain.OutcomeClass // failure|partial_failure|partial_success|success
-	Strength   string              // M5.2 verification_strength of the verdict
+	ProposalID   string
+	EvaluationID string // the single evaluation the (Result, Strength) pair came from
+	Signature    canon.MechanismSignature
+	Result       domain.OutcomeClass // failure|partial_failure|partial_success|success
+	Strength     string              // M5.2 verification_strength of the verdict
 }
 
 // BreakCohort is one broken failure invariant P plus its evaluated cohort,
@@ -76,10 +77,11 @@ func (s *StrengthComposition) add(strength string) {
 
 // CohortEvaluation is one member's code-computed verdict under a condition.
 type CohortEvaluation struct {
-	ProposalID string
-	Role       string // progressor|non_progressor
-	Verdict    invariant.Verdict
-	Strength   string
+	ProposalID   string
+	EvaluationID string // provenance: the evaluation the member's outcome came from
+	Role         string // progressor|non_progressor
+	Verdict      invariant.Verdict
+	Strength     string
 }
 
 // Candidate is one fully-evaluated success-invariant candidate: a condition C
@@ -108,18 +110,20 @@ type Candidate struct {
 
 // Compress evaluates every admitted condition against its cohort and returns
 // deterministic, fingerprint-identified candidates. Conditions sharing one
-// semantic fingerprint across multiple cohorts merge into one candidate: the
-// broken-target set is the union, while counts/evaluations come from the FIRST
-// cohort in deterministic target order (cohorts overlap, so summing would
-// double-count; the per-cohort counts remain derivable from the persisted
-// cohort evaluations). Candidates are ordered by fingerprint.
+// semantic fingerprint across multiple cohorts merge into ONE candidate whose
+// broken-target set is the union — but the merge NEVER discards the additional
+// cohorts' evidence (H2). Each contributing cohort is evaluated, and the merged
+// candidate's counts, support, and per-member evaluations are aggregated over
+// the UNION of all contributing cohorts' members, deduplicated by (role,
+// proposal) so overlapping members are counted once and a contradictory member
+// present only in a later target's cohort is retained. Candidates are ordered by
+// fingerprint.
 func Compress(conditions []Condition, cohorts []BreakCohort) []Candidate {
 	byTarget := map[string]*BreakCohort{}
 	for i := range cohorts {
 		byTarget[cohorts[i].TargetInvariantID] = &cohorts[i]
 	}
-	// Deterministic condition order: by target id, then statement, preserving
-	// intra-provider order only where truly equal.
+	// Deterministic condition order: by target id, then predicate fingerprint.
 	ordered := append([]Condition(nil), conditions...)
 	sort.SliceStable(ordered, func(i, j int) bool {
 		if ordered[i].TargetInvariantID != ordered[j].TargetInvariantID {
@@ -128,7 +132,17 @@ func Compress(conditions []Condition, cohorts []BreakCohort) []Candidate {
 		return invariant.Fingerprint(ordered[i].Predicate) < invariant.Fingerprint(ordered[j].Predicate)
 	})
 
-	merged := map[string]*Candidate{}
+	// Group admitted conditions by predicate fingerprint, preserving the first
+	// condition's descriptive fields and collecting every (condition, cohort) pair
+	// that contributes evidence.
+	type group struct {
+		first        Condition
+		contributing []struct {
+			cond   Condition
+			cohort *BreakCohort
+		}
+	}
+	groups := map[string]*group{}
 	var order []string
 	for _, cond := range ordered {
 		cohort, ok := byTarget[cond.TargetInvariantID]
@@ -136,59 +150,92 @@ func Compress(conditions []Condition, cohorts []BreakCohort) []Candidate {
 			continue // a condition for a target with no cohort earns nothing
 		}
 		fp := invariant.Fingerprint(cond.Predicate)
-		if existing, dup := merged[fp]; dup {
-			existing.TargetInvariantIDs = mergeSorted(existing.TargetInvariantIDs, cond.TargetInvariantID)
-			continue
+		g, seen := groups[fp]
+		if !seen {
+			g = &group{first: cond}
+			groups[fp] = g
+			order = append(order, fp)
 		}
-		cand := evaluateCondition(cond, cohort)
-		cand.PredicateFingerprint = fp
-		merged[fp] = &cand
-		order = append(order, fp)
+		g.contributing = append(g.contributing, struct {
+			cond   Condition
+			cohort *BreakCohort
+		}{cond, cohort})
 	}
 
 	sort.Strings(order)
 	out := make([]Candidate, 0, len(order))
 	for _, fp := range order {
-		out = append(out, *merged[fp])
+		g := groups[fp]
+		cand := evaluateAcrossCohorts(g.first, fp, g.contributing)
+		out = append(out, cand)
 	}
 	return out
 }
 
-func evaluateCondition(cond Condition, cohort *BreakCohort) Candidate {
+// evaluateAcrossCohorts evaluates one condition (by fingerprint) against every
+// contributing cohort and aggregates the discrimination over the deduplicated
+// union of members. Deduplication key is (role, proposal id): the SAME proposal
+// appearing as a progressor across overlapping cohorts is one member; the same
+// predicate identity is preserved while every cohort's assessment is retained.
+func evaluateAcrossCohorts(first Condition, fp string, contributing []struct {
+	cond   Condition
+	cohort *BreakCohort
+}) Candidate {
 	cand := Candidate{
-		TargetInvariantIDs: []string{cond.TargetInvariantID},
-		Predicate:          cond.Predicate,
-		Statement:          cond.Statement,
-		AbstractionLevel:   cond.AbstractionLevel,
-		CoverageDen:        len(cohort.Progressors),
-		ExclusionDen:       len(cohort.NonProgressors),
+		Predicate:            first.Predicate,
+		PredicateFingerprint: fp,
+		Statement:            first.Statement,
+		AbstractionLevel:     first.AbstractionLevel,
 	}
+	targets := map[string]struct{}{}
+	seenProgressor := map[string]struct{}{}
+	seenNonProgressor := map[string]struct{}{}
 	supporters := map[string]struct{}{}
-	for _, m := range cohort.Progressors {
-		v := invariant.Evaluate(cond.Predicate, m.Signature)
-		cand.CohortEvaluations = append(cand.CohortEvaluations, CohortEvaluation{
-			ProposalID: m.ProposalID, Role: "progressor", Verdict: v, Strength: m.Strength,
-		})
-		if v == invariant.VerdictSatisfies {
-			cand.CoverageNum++
-			cand.Support.add(m.Strength)
-			supporters[canon.Fingerprint(m.Signature)] = struct{}{}
+	for _, c := range contributing {
+		targets[c.cond.TargetInvariantID] = struct{}{}
+		for _, m := range c.cohort.Progressors {
+			if _, dup := seenProgressor[m.ProposalID]; dup {
+				continue
+			}
+			seenProgressor[m.ProposalID] = struct{}{}
+			cand.CoverageDen++
+			v := invariant.Evaluate(first.Predicate, m.Signature)
+			cand.CohortEvaluations = append(cand.CohortEvaluations, CohortEvaluation{
+				ProposalID: m.ProposalID, EvaluationID: m.EvaluationID, Role: "progressor", Verdict: v, Strength: m.Strength,
+			})
+			if v == invariant.VerdictSatisfies {
+				cand.CoverageNum++
+				cand.Support.add(m.Strength)
+				supporters[canon.Fingerprint(m.Signature)] = struct{}{}
+			}
+		}
+		for _, m := range c.cohort.NonProgressors {
+			if _, dup := seenNonProgressor[m.ProposalID]; dup {
+				continue
+			}
+			seenNonProgressor[m.ProposalID] = struct{}{}
+			cand.ExclusionDen++
+			v := invariant.Evaluate(first.Predicate, m.Signature)
+			cand.CohortEvaluations = append(cand.CohortEvaluations, CohortEvaluation{
+				ProposalID: m.ProposalID, EvaluationID: m.EvaluationID, Role: "non_progressor", Verdict: v, Strength: m.Strength,
+			})
+			if v == invariant.VerdictViolates {
+				cand.ExclusionNum++
+			}
 		}
 	}
-	for _, m := range cohort.NonProgressors {
-		v := invariant.Evaluate(cond.Predicate, m.Signature)
-		cand.CohortEvaluations = append(cand.CohortEvaluations, CohortEvaluation{
-			ProposalID: m.ProposalID, Role: "non_progressor", Verdict: v, Strength: m.Strength,
-		})
-		if v == invariant.VerdictViolates {
-			cand.ExclusionNum++
-		}
+	for t := range targets {
+		cand.TargetInvariantIDs = append(cand.TargetInvariantIDs, t)
 	}
+	sort.Strings(cand.TargetInvariantIDs)
 	cand.DistinctMechanismSupport = len(supporters)
 	cand.CoverageOrdinal = band(cand.CoverageNum, cand.CoverageDen)
 	cand.ExclusionOrdinal = band(cand.ExclusionNum, cand.ExclusionDen)
 	sort.Slice(cand.CohortEvaluations, func(i, j int) bool {
-		return cand.CohortEvaluations[i].ProposalID < cand.CohortEvaluations[j].ProposalID
+		if cand.CohortEvaluations[i].ProposalID != cand.CohortEvaluations[j].ProposalID {
+			return cand.CohortEvaluations[i].ProposalID < cand.CohortEvaluations[j].ProposalID
+		}
+		return cand.CohortEvaluations[i].Role < cand.CohortEvaluations[j].Role
 	})
 	return cand
 }
@@ -207,15 +254,4 @@ func band(num, den int) domain.Ordinal {
 	default:
 		return domain.OrdinalLow
 	}
-}
-
-func mergeSorted(existing []string, add string) []string {
-	for _, e := range existing {
-		if e == add {
-			return existing
-		}
-	}
-	out := append(existing, add)
-	sort.Strings(out)
-	return out
 }

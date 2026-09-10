@@ -73,14 +73,21 @@ const (
 	// synthetic with no construction, a provider over-claiming operator-only
 	// verification). It is not a search over any population.
 	OutcomeInadmissible CheckOutcome = "inadmissible"
+	// OutcomeInapplicable: the attack was well-formed but its eligible population
+	// was EMPTY — there were zero applicable cases to check. Zero eligible cases
+	// decide nothing (H4); it is neither a completed negative search nor a
+	// confirmation, and never earns survival.
+	OutcomeInapplicable CheckOutcome = "inapplicable"
 	// OutcomeInconclusive: the attack ran but reached no definite result over its
-	// eligible population (unknown-only evidence, an unsupported synthetic
+	// eligible population (unresolved/unknown evidence, an unsupported synthetic
 	// proposal). It neither confirms nor completes a negative search.
 	OutcomeInconclusive CheckOutcome = "inconclusive"
 	// OutcomeCompletedNegative: a decisive negative — the attack ran a real
-	// determination over an eligible population and the claim did not land (e.g.
-	// no known member violates; support holds under recomputation). This is what
-	// legitimately earns `surviving`.
+	// determination over a NONEMPTY eligible population, every applicable case was
+	// decisively resolved, and the claim did not land (e.g. every eligible failure
+	// member was decisively checked and none violated; support holds under
+	// recomputation). This is the only disposition that legitimately earns
+	// `surviving`.
 	OutcomeCompletedNegative CheckOutcome = "completed_negative"
 	// OutcomeConfirmed: the attack landed (a confirmed counterexample / weakening).
 	OutcomeConfirmed CheckOutcome = "confirmed"
@@ -118,6 +125,13 @@ func inadmissible(reason string) ChallengeResult {
 	return ChallengeResult{Confirmed: false, Outcome: OutcomeInadmissible, Detail: reason}
 }
 
+// inapplicable builds an empty-population result: the attack was well-formed but
+// no eligible cases existed, so it decides nothing (H4). It never counts toward
+// survival.
+func inapplicable(reason string) ChallengeResult {
+	return ChallengeResult{Confirmed: false, Outcome: OutcomeInapplicable, Detail: reason}
+}
+
 // AssociationKind is the refutation-governing claim class the CALLER derives for
 // a candidate. It is deliberately distinct from the engine's measured
 // association_status: recurrence is a frequency label, not a logical quantifier
@@ -148,24 +162,40 @@ const (
 // makes no confirmed regularity claim, so a lone counterexample is inconclusive.
 func VerifyKnownCounterexample(pred Predicate, families []Family, kind AssociationKind) ChallengeResult {
 	var ev []ChallengeEvidence
+	eligible, unknown := 0, 0
 	for _, fam := range families {
 		for _, m := range fam.Members {
-			role, eligible := memberRole(fam, m)
-			if !eligible || role != RoleSupport {
+			role, ok := memberRole(fam, m)
+			if !ok || role != RoleSupport {
 				continue
 			}
-			if Evaluate(pred, m.Signature) == VerdictViolates {
+			eligible++
+			switch Evaluate(pred, m.Signature) {
+			case VerdictViolates:
 				ev = append(ev, ChallengeEvidence{
 					Kind:        EvidenceCounterexampleMember,
 					ClusterID:   fam.ClusterID,
 					SignatureID: m.SignatureID,
 					Detail:      "failure-side member violates the predicate",
 				})
+			case VerdictUnknown:
+				unknown++
 			}
 		}
 	}
 	if len(ev) == 0 {
-		return completedNegative("no known failure-side member violates the predicate")
+		// No violation found. Distinguish the three collapsed dispositions (H4):
+		// an empty eligible population decides nothing; unresolved members are
+		// inconclusive; only a fully-decided nonempty population is a completed
+		// negative that may count toward survival.
+		switch {
+		case eligible == 0:
+			return inapplicable("no eligible failure-side member to check for a counterexample (empty population)")
+		case unknown > 0:
+			return unconfirmed(fmt.Sprintf("%d of %d eligible failure-side member(s) evaluated unknown; no decisive counterexample and not a completed negative search", unknown, eligible))
+		default:
+			return completedNegative(fmt.Sprintf("all %d eligible failure-side member(s) decisively checked; none violates the predicate", eligible))
+		}
 	}
 	sort.Slice(ev, func(i, j int) bool {
 		if ev[i].ClusterID != ev[j].ClusterID {
@@ -245,6 +275,7 @@ func hasSupportedClaim(sig canon.MechanismSignature) bool {
 // preservation).
 func VerifySuccessPreserving(pred Predicate, families []Family) ChallengeResult {
 	var ev []ChallengeEvidence
+	totalEligible, sawUnknown := 0, false
 	for _, fam := range families {
 		eligible, allSatisfy := 0, true
 		for _, m := range fam.Members {
@@ -253,10 +284,17 @@ func VerifySuccessPreserving(pred Predicate, families []Family) ChallengeResult 
 				continue
 			}
 			eligible++
-			if Evaluate(pred, m.Signature) != VerdictSatisfies {
+			switch Evaluate(pred, m.Signature) {
+			case VerdictSatisfies:
+				// preserves
+			case VerdictUnknown:
+				allSatisfy = false
+				sawUnknown = true
+			default:
 				allSatisfy = false
 			}
 		}
+		totalEligible += eligible
 		if eligible > 0 && allSatisfy {
 			ev = append(ev, ChallengeEvidence{
 				Kind:      EvidenceSuccessFamily,
@@ -266,7 +304,18 @@ func VerifySuccessPreserving(pred Predicate, families []Family) ChallengeResult 
 		}
 	}
 	if len(ev) == 0 {
-		return completedNegative("no success-side family preserves the predicate")
+		// No preserving family found. Distinguish the collapsed dispositions (H4):
+		// zero eligible contrast members is inapplicable; unresolved members leave
+		// the negative undecided (inconclusive); only a fully-decided nonempty
+		// contrast population is a completed negative.
+		switch {
+		case totalEligible == 0:
+			return inapplicable("no eligible success-side member to check for preservation (empty contrast population)")
+		case sawUnknown:
+			return unconfirmed("success-side preservation undecided: one or more eligible contrast members evaluated unknown; not a completed negative search")
+		default:
+			return completedNegative(fmt.Sprintf("all %d eligible success-side member(s) decisively checked; none preserves the predicate", totalEligible))
+		}
 	}
 	sort.Slice(ev, func(i, j int) bool { return ev[i].ClusterID < ev[j].ClusterID })
 	return ChallengeResult{Confirmed: true, Outcome: OutcomeConfirmed, Evidence: ev,

@@ -171,7 +171,76 @@ func TestCompressMergesSameConditionAcrossTargets(t *testing.T) {
 	}
 }
 
-// Member permutation changes nothing (deterministic identity + counts).
+// H2 regression: merging a condition across two targets must NOT discard the
+// second cohort's contradictory evidence. Cohort A: the sole progressor
+// satisfies C (1/1). Cohort B (disjoint members): the sole progressor does NOT
+// satisfy C (0/1). The merged candidate must reflect BOTH — coverage 1/2, and
+// B's contradictory member present in the cohort evaluations — not cohort A's
+// 1/1 attributed to both targets.
+func TestCompressMergeRetainsContradictoryCrossTargetEvidence(t *testing.T) {
+	cohortA := BreakCohort{
+		TargetInvariantID: "inv_P",
+		Progressors: []Member{
+			{ProposalID: "fpr_A1", EvaluationID: "eval_A1", Signature: scSignature(scIDBounds), Result: domain.OutcomeSuccess, Strength: "deterministic"},
+		},
+	}
+	cohortB := BreakCohort{
+		TargetInvariantID: "inv_Q",
+		Progressors: []Member{
+			// disjoint member that does NOT preserve bounds -> violates C.
+			{ProposalID: "fpr_B1", EvaluationID: "eval_B1", Signature: scSignature(scIDGlobal), Result: domain.OutcomeSuccess, Strength: "deterministic"},
+		},
+	}
+	cands := Compress(
+		[]Condition{scCondition("inv_P", scIDBounds), scCondition("inv_Q", scIDBounds)},
+		[]BreakCohort{cohortA, cohortB},
+	)
+	if len(cands) != 1 {
+		t.Fatalf("expected 1 merged candidate, got %d", len(cands))
+	}
+	c := cands[0]
+	if len(c.TargetInvariantIDs) != 2 {
+		t.Fatalf("expected both P links, got %v", c.TargetInvariantIDs)
+	}
+	if c.CoverageNum != 1 || c.CoverageDen != 2 {
+		t.Fatalf("coverage = %d/%d, want 1/2 (B's contradictory member must not be dropped)", c.CoverageNum, c.CoverageDen)
+	}
+	// B's contradictory member must be present in the evaluations.
+	sawB := false
+	for _, ce := range c.CohortEvaluations {
+		if ce.ProposalID == "fpr_B1" {
+			sawB = true
+			if ce.Verdict != invariant.VerdictViolates {
+				t.Fatalf("fpr_B1 verdict = %s, want violates", ce.Verdict)
+			}
+			if ce.EvaluationID != "eval_B1" {
+				t.Fatalf("fpr_B1 evaluation_id = %q, want eval_B1 (H1 provenance)", ce.EvaluationID)
+			}
+		}
+	}
+	if !sawB {
+		t.Fatal("cohort B's contradictory member was dropped by the merge (H2)")
+	}
+}
+
+// H2: overlapping cohorts (the SAME proposal is a progressor under both targets)
+// count the member ONCE — the merge deduplicates by proposal, never double-counts.
+func TestCompressMergeDedupsOverlappingMembers(t *testing.T) {
+	shared := Member{ProposalID: "fpr_shared", EvaluationID: "eval_s", Signature: scSignature(scIDBounds), Result: domain.OutcomeSuccess, Strength: "deterministic"}
+	cohortA := BreakCohort{TargetInvariantID: "inv_P", Progressors: []Member{shared}}
+	cohortB := BreakCohort{TargetInvariantID: "inv_Q", Progressors: []Member{shared}}
+	cands := Compress(
+		[]Condition{scCondition("inv_P", scIDBounds), scCondition("inv_Q", scIDBounds)},
+		[]BreakCohort{cohortA, cohortB},
+	)
+	c := cands[0]
+	if c.CoverageNum != 1 || c.CoverageDen != 1 {
+		t.Fatalf("coverage = %d/%d, want 1/1 (overlapping member counted once)", c.CoverageNum, c.CoverageDen)
+	}
+	if len(c.CohortEvaluations) != 1 {
+		t.Fatalf("expected 1 deduped cohort evaluation, got %d", len(c.CohortEvaluations))
+	}
+}
 func TestCompressOrderIndependent(t *testing.T) {
 	cohort := scCohort()
 	rev := scCohort()

@@ -533,6 +533,13 @@ Exit condition:
 
 ### M6.2 — Persist and mutate search policy
 
+**Status: delivered.** `newf policy mutate --problem <id>` derives an explicit,
+versioned, immutable search-policy revision from persisted evidence, and the
+next `newf frontier generate` applies it as a bounded ordinal bias whose
+per-proposal effect is logged so a run can reproduce *why* a proposal was
+favored or suppressed. `newf policy list|show` inspect revisions;
+`frontier generate --no-policy` runs the unbiased baseline.
+
 Goal:
 
 Make future search behavior explicit and revisioned.
@@ -553,9 +560,42 @@ budget:
   cheap_falsification_first: true
 ```
 
+How it is delivered (offline, deterministic):
+
+- **Code owns identity.** `newf` builds the policy evidence from persisted rows
+  — success invariants (M6.1) with their verification-strength composition,
+  surviving/operator-attested failure invariants (avoid targets), under-sampled
+  coverage axes (expand targets), and re-entered evaluated failures. A provider
+  (`role='policy-mutate'`) MAY propose directives, but each is re-verified
+  against the resolvable evidence set before it counts (`ModelJudgment !=
+  Verification`); unresolved proposals are recorded `inert_proposals` and bias
+  nothing.
+- **Typed directives.** `prefer | avoid | expand | penalize` over typed targets,
+  each with an ordinal weight and provenance. Preference strength for a success
+  invariant is weighted by the strongest verification class present in its
+  support (never promoted beyond the counts).
+- **Bounded ordinal bias with a falsifiability floor.** `policy.Apply`
+  re-ranks already-ranked candidates: the code-verified violation gate is
+  **inviolable** (a non-violating proposal can never outrank a violating one, no
+  matter how strongly preferred), no proposal is ever dropped (suppression is a
+  rank penalty), and for each targeted invariant the cheapest-falsification
+  proposal is **floor-protected** so policy can never render a run
+  unfalsifiable.
+- **Reproducible "why".** The applied bias is persisted per proposal in
+  `frontier_generation_policy`. A generation with no policy writes nothing
+  (unbiased == absence); `--no-policy` is a first-class baseline.
+- **Idempotent revisions.** Mutation is idempotent on the order-independent
+  evidence-cohort hash; new evidence yields the next revision, never a rewrite.
+
+Persistence: additive migration `v19` (`search_policy_revisions`,
+`search_policy_directives`, `search_policy_provenance`,
+`frontier_generation_policy`; all immutable) plus a guarded widen of
+`provider_invocations.role`. See [`docs/search-policy.md`](docs/search-policy.md)
+and [`docs/persistence.md`](docs/persistence.md).
+
 Exit condition:
 
-- a new run can reproduce why a particular frontier proposal was favored or suppressed.
+- a new run can reproduce why a particular frontier proposal was favored or suppressed. **Met:** `frontier_generation_policy` records the policy revision and the net ordinal bias (preferred/avoided/penalized/floor-protected) for every proposal in a biased generation.
 
 ## Cross-cutting operator: abstraction / grounding
 
