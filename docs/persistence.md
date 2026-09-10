@@ -359,7 +359,7 @@ CREATE TABLE invariant_support_evidence (
 CREATE TABLE invariant_lineage (
   parent_invariant_id TEXT NOT NULL REFERENCES candidate_invariant(id),
   child_invariant_id TEXT NOT NULL REFERENCES candidate_invariant(id),
-  relation TEXT NOT NULL CHECK (relation IN ('split', 'merge', 'weaken')),
+  relation TEXT NOT NULL CHECK (relation IN ('split', 'merged', 'weakened')),
   PRIMARY KEY(parent_invariant_id, child_invariant_id, relation)
 );
 
@@ -559,8 +559,9 @@ CREATE TABLE evaluation_holdout_match (
   match_verdict TEXT NOT NULL CHECK (match_verdict IN ('exact', 'equivalent', 'miss')),
   notes TEXT,
   CHECK (
-    (holdout_source_id IS NOT NULL AND holdout_family_label IS NULL) OR
-    (holdout_source_id IS NULL AND holdout_family_label IS NOT NULL)
+    (match_kind = 'source_recovery' AND holdout_source_id IS NOT NULL AND holdout_family_label IS NULL) OR
+    (match_kind = 'family_recovery' AND holdout_source_id IS NULL AND holdout_family_label IS NOT NULL) OR
+    (match_kind = 'structural_break' AND holdout_source_id IS NULL AND holdout_family_label IS NOT NULL)
   )
 );
 

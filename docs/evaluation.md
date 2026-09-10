@@ -65,7 +65,7 @@ Machine (`--json`) includes:
 
 - evaluation run metadata (cutoff, holdout IDs, baseline type, budget envelope, judge provider/config),
 - proposal-level verdicts and confidence,
-- typed holdout-match rows (source/family/structural-break targets and match verdicts),
+- typed holdout-match rows (`source_recovery` targets a held-out source ID; `family_recovery` and `structural_break` target a held-out family label, each with a match verdict),
 - metric rows with scales and comparators,
 - leakage/precondition status.
 
