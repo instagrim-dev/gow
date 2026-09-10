@@ -32,7 +32,9 @@ func signatureView(rec store.SignatureRecord) SignatureView {
 		VocabularyVersion: rec.VocabularyVersion,
 		Fingerprint:       rec.Fingerprint,
 		OutcomeClass:      rec.OutcomeClass,
+		OutcomeStatus:     rec.OutcomeStatus,
 		Posture:           rec.Posture,
+		PostureStatus:     rec.PostureStatus,
 		CreatedAt:         rec.CreatedAt,
 	}
 	for _, c := range rec.FieldClaims {
@@ -54,6 +56,7 @@ func signatureView(rec store.SignatureRecord) SignatureView {
 			ResolutionState: b.ResolutionState,
 			CanonicalID:     b.CanonicalID,
 			Relation:        b.Relation,
+			ClaimStatus:     b.ClaimStatus,
 		})
 	}
 	return view

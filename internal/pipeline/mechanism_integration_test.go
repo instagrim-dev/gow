@@ -209,6 +209,99 @@ func TestIntegrationSignatureIdempotentAndDeterministic(t *testing.T) {
 	}
 }
 
+// TestIntegrationCanonicalSupportPathsJoin is the regression guard for the
+// support-field-path vocabulary drift found in adversarial review: the #7
+// writer stores verbatim JSON-key paths (plural list attributes,
+// mechanism.uncertainty_mode, outcome.boundary_statement) while the #9 reader
+// previously reconstructed singular/no-suffix paths, so explicit source support
+// was silently demoted to unknown. It derives a signature through the real
+// ingest path using the canonical corpus vocabulary and asserts that:
+//   - attribute provenance joins (operators explicit, representations inferred,
+//     breaks explicit, auxiliary_objects explicit);
+//   - posture provenance joins (uncertainty_mode -> uncertainty inferred);
+//   - outcome provenance joins (outcome.class explicit);
+//   - the boundary_statement support attaches only to the statement-derived
+//     boundary and is NOT broadcast across enumerated boundary conditions.
+func TestIntegrationCanonicalSupportPathsJoin(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	problemID, runID, snapshotID := seedProblemAndSnapshot(t, ctx, dbPath, now)
+
+	sig := seedAndSignature(t, ctx, app, dbPath, problemID, runID, snapshotID, "canonical_support_paths.json", canon.VocabularyMechanismV1)
+
+	// Attribute provenance: each supported field kind must carry its authored
+	// status, not a demoted unknown.
+	wantByKind := map[string]string{
+		"operator":         "explicit",
+		"representation":   "inferred",
+		"breaks":           "explicit",
+		"auxiliary_object": "explicit",
+		"assumption":       "unknown", // no support row -> preserved as unknown
+		"preserves":        "unknown", // no support row -> preserved as unknown
+	}
+	seenKind := map[string]bool{}
+	for _, c := range sig.Signature.FieldClaims {
+		want, ok := wantByKind[c.FieldKind]
+		if !ok {
+			continue
+		}
+		seenKind[c.FieldKind] = true
+		if c.ClaimStatus != want {
+			t.Fatalf("field %s claim %q status = %q, want %q (join drift?)", c.FieldKind, c.SurfaceLabel, c.ClaimStatus, want)
+		}
+	}
+	for kind := range wantByKind {
+		if !seenKind[kind] {
+			t.Fatalf("field kind %q missing from signature claims", kind)
+		}
+	}
+
+	// Posture provenance: uncertainty_mode support must join to the uncertainty
+	// axis; locality support to locality; unsupported construction stays unknown.
+	if got := sig.Signature.PostureStatus["uncertainty"]; got != "inferred" {
+		t.Fatalf("posture uncertainty status = %q, want inferred (uncertainty_mode join)", got)
+	}
+	if got := sig.Signature.PostureStatus["locality"]; got != "explicit" {
+		t.Fatalf("posture locality status = %q, want explicit", got)
+	}
+	if got := sig.Signature.PostureStatus["construction"]; got != "unknown" {
+		t.Fatalf("posture construction status = %q, want unknown (no support row)", got)
+	}
+
+	// Outcome provenance: outcome.class support must join.
+	if sig.Signature.OutcomeStatus != "explicit" {
+		t.Fatalf("outcome status = %q, want explicit (outcome.class join)", sig.Signature.OutcomeStatus)
+	}
+
+	// Boundary provenance: the statement-derived boundary carries the authored
+	// boundary_statement support (inferred); enumerated conditions carry unknown
+	// and never inherit the statement's provenance (no broadcast/conflation).
+	var statement, condition *SignatureBoundaryView
+	for i := range sig.Signature.Boundaries {
+		b := &sig.Signature.Boundaries[i]
+		switch b.SurfaceLabel {
+		case "stalls at composite moduli":
+			statement = b
+		case "composite modulus":
+			condition = b
+		}
+	}
+	if statement == nil {
+		t.Fatal("statement-derived boundary missing from signature")
+	}
+	if statement.ClaimStatus != "inferred" {
+		t.Fatalf("statement boundary status = %q, want inferred (boundary_statement join)", statement.ClaimStatus)
+	}
+	if condition == nil {
+		t.Fatal("enumerated boundary condition missing from signature")
+	}
+	if condition.ClaimStatus != "unknown" {
+		t.Fatalf("enumerated boundary status = %q, want unknown (must NOT inherit statement support)", condition.ClaimStatus)
+	}
+}
+
 func TestIntegrationVersionIsolation(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

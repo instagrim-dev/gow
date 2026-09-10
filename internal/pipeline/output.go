@@ -349,6 +349,7 @@ type SignatureBoundaryView struct {
 	ResolutionState string `json:"resolution_state"`
 	CanonicalID     string `json:"canonical_id,omitempty"`
 	Relation        string `json:"relation,omitempty"`
+	ClaimStatus     string `json:"claim_status"`
 }
 
 type SignatureView struct {
@@ -358,7 +359,9 @@ type SignatureView struct {
 	VocabularyVersion string                    `json:"vocabulary_version"`
 	Fingerprint       string                    `json:"fingerprint"`
 	OutcomeClass      string                    `json:"outcome_class"`
+	OutcomeStatus     string                    `json:"outcome_status"`
 	Posture           map[string]string         `json:"posture"`
+	PostureStatus     map[string]string         `json:"posture_status"`
 	FieldClaims       []SignatureFieldClaimView `json:"field_claims"`
 	Boundaries        []SignatureBoundaryView   `json:"boundaries,omitempty"`
 	CreatedAt         string                    `json:"created_at"`

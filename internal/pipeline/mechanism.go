@@ -215,11 +215,11 @@ func mechanismInputFromDetail(detail store.ApproachDetail) canon.MechanismInput 
 		// Posture/outcome provenance is preserved from #7 dotted-path support,
 		// defaulting to unknown (never explicit) when no support row exists.
 		PostureProvenance: canon.PostureProvenance{
-			Locality:     claimStatusForSupport(supportByField, "mechanism.locality"),
-			Construction: claimStatusForSupport(supportByField, "mechanism.construction"),
-			Uncertainty:  claimStatusForSupport(supportByField, "mechanism.uncertainty"),
+			Locality:     claimStatusForPaths(supportByField, domain.PostureSupportPaths("locality")),
+			Construction: claimStatusForPaths(supportByField, domain.PostureSupportPaths("construction")),
+			Uncertainty:  claimStatusForPaths(supportByField, domain.PostureSupportPaths("uncertainty")),
 		},
-		OutcomeProvenance: claimStatusForSupport(supportByField, "outcome.class"),
+		OutcomeProvenance: claimStatusForPaths(supportByField, domain.OutcomeSupportPaths()),
 	}
 
 	for _, attr := range detail.Attributes {
@@ -227,12 +227,13 @@ func mechanismInputFromDetail(detail store.ApproachDetail) canon.MechanismInput 
 		if err != nil {
 			continue
 		}
+		paths := domain.AttributeSupportPaths(attr.Kind)
 		claim := canon.MechanismClaimInput{
 			FieldKind:    fieldKind,
 			SurfaceLabel: attr.Value,
-			Status:       claimStatusForSupport(supportByField, "mechanism."+string(attr.Kind)),
+			Status:       claimStatusForPaths(supportByField, paths),
 		}
-		if sup, ok := supportByField["mechanism."+string(attr.Kind)]; ok {
+		if sup, ok := lookupSupport(supportByField, paths); ok {
 			claim.SupportSnapshotID = sup.SnapshotID
 			claim.SupportLocator = sup.Locator
 			claim.Confidence = sup.Confidence
@@ -240,34 +241,70 @@ func mechanismInputFromDetail(detail store.ApproachDetail) canon.MechanismInput 
 		in.Claims = append(in.Claims, claim)
 	}
 
-	for _, b := range detail.Boundaries {
+	// Boundary provenance is split across two distinct #7 fields:
+	//   * outcome.boundary_statement — a single statement-level boundary that
+	//     carries its own support (outcome.boundary_statement); and
+	//   * enumerated outcome.boundary_conditions (detail.Boundaries) — which
+	//     have NO per-condition support path in #7.
+	// The statement support must attach only to the statement-derived boundary,
+	// never be broadcast across the enumerated conditions (that would conflate
+	// and over-attribute provenance). Enumerated conditions carry unknown until
+	// a per-condition support path exists.
+	if statement := detail.Outcome.BoundaryStatement; statement != "" {
 		bin := canon.MechanismBoundaryInput{
-			SurfaceLabel: b.Condition,
+			SurfaceLabel: statement,
 			Relation:     "stops_at",
-			Status:       claimStatusForSupport(supportByField, "outcome.boundary"),
+			Status:       claimStatusForPaths(supportByField, []string{domain.SupportPathBoundaryStatement}),
 		}
-		if sup, ok := supportByField["outcome.boundary"]; ok {
+		if sup, ok := lookupSupport(supportByField, []string{domain.SupportPathBoundaryStatement}); ok {
 			bin.SupportSnapshotID = sup.SnapshotID
 			bin.SupportLocator = sup.Locator
 		}
 		in.Boundaries = append(in.Boundaries, bin)
 	}
+	for _, b := range detail.Boundaries {
+		in.Boundaries = append(in.Boundaries, canon.MechanismBoundaryInput{
+			SurfaceLabel: b.Condition,
+			Relation:     "stops_at",
+			Status:       domain.ClaimUnknown,
+		})
+	}
 	return in
 }
 
-// claimStatusForSupport maps the #7 SupportKind to a ClaimStatus. Absence of a
-// support row is NOT treated as explicit: #7 does not require a support row for
-// every populated field, so a missing row means the provenance is unknown, not
-// that the value is source-backed. Defaulting to explicit here would silently
-// promote an unprovenanced value into an explicit source-backed claim, which
-// violates the epistemic-status hard constraint (an operation must never
-// upgrade Hypothesis->Evidence-class strength). We preserve the weaker type
-// (unknown) and let downstream mining see the value as unprovenanced.
-func claimStatusForSupport(byField map[string]domain.SourceSupport, fieldPath string) domain.ClaimStatus {
-	sup, ok := byField[fieldPath]
+// lookupSupport resolves a support row by trying accepted field paths in order
+// (canonical first, historical aliases after). It returns the first match. The
+// alias tolerance exists so authored provenance is not silently demoted to
+// unknown by field-path spelling drift between the #7 writer (which stores the
+// verbatim JSON-key path, e.g. mechanism.operators / mechanism.uncertainty_mode
+// / outcome.boundary_statement) and the #9 reader.
+func lookupSupport(byField map[string]domain.SourceSupport, paths []string) (domain.SourceSupport, bool) {
+	for _, p := range paths {
+		if sup, ok := byField[p]; ok {
+			return sup, true
+		}
+	}
+	return domain.SourceSupport{}, false
+}
+
+// claimStatusForPaths maps the resolved support (across accepted paths) to a
+// ClaimStatus, preserving unknown when no row is present so an unprovenanced
+// field is never promoted to explicit.
+func claimStatusForPaths(byField map[string]domain.SourceSupport, paths []string) domain.ClaimStatus {
+	sup, ok := lookupSupport(byField, paths)
 	if !ok {
 		return domain.ClaimUnknown
 	}
+	return claimStatusFromSupport(sup)
+}
+
+// claimStatusFromSupport maps a resolved #7 SupportKind to a ClaimStatus.
+// Absence of a support row (handled by callers via claimStatusForPaths) is NOT
+// treated as explicit: #7 does not require a support row for every populated
+// field, so a missing row means the provenance is unknown, not source-backed.
+// Defaulting to explicit would silently promote an unprovenanced value into an
+// explicit source-backed claim, violating the epistemic-status hard constraint.
+func claimStatusFromSupport(sup domain.SourceSupport) domain.ClaimStatus {
 	switch sup.SupportKind {
 	case domain.SupportExplicit:
 		return domain.ClaimExplicit
@@ -347,6 +384,7 @@ func signatureFromRecord(rec store.SignatureRecord) canon.MechanismSignature {
 		SchemaVersion:     rec.SchemaVersion,
 		VocabularyVersion: rec.VocabularyVersion,
 		MechanismID:       rec.MechanismID,
+		SignatureID:       rec.ID,
 		OutcomeClass:      domain.OutcomeClass(rec.OutcomeClass),
 		Posture: canon.Posture{
 			Locality:     domain.Locality(rec.Posture["locality"]),

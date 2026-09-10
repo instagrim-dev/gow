@@ -81,12 +81,23 @@ guarded by the provenance assertions in the mechanism integration test.
 
 This holds for the non-vocabulary fields too: posture axes, outcome class, and
 boundaries each carry their own preserved claim status through
-`MechanismSignature` (from the #7 dotted-path support: `mechanism.locality`,
-`mechanism.construction`, `mechanism.uncertainty`, `outcome.class`,
-`outcome.boundary`) and are persisted alongside the signature, so invariant
-mining reads their provenance rather than assuming source backing. Unprovenanced
-posture/outcome round-trips as `unknown`
-(`TestSignatureCarriesPostureOutcomeBoundaryProvenance`).
+`MechanismSignature`. The support field paths are the verbatim #7 normalize JSON
+keys: list attributes are plural (`mechanism.operators`,
+`mechanism.representations`, `mechanism.assumptions`, `mechanism.preserves`,
+`mechanism.breaks`, `mechanism.auxiliary_objects`), posture is
+`mechanism.locality` / `mechanism.construction_mode` / `mechanism.uncertainty_mode`,
+outcome is `outcome.class`, and the boundary is `outcome.boundary_statement`.
+Because `source_support.field_path` is free-form in #7, the #9 reader resolves
+each field against a canonical-first list of accepted paths
+(`domain.AttributeSupportPaths` / `PostureSupportPaths` / `OutcomeSupportPaths`),
+tolerating earlier singular aliases (e.g. `mechanism.operator`) so authored
+provenance is never demoted to `unknown` by spelling drift. The
+`outcome.boundary_statement` support attaches only to the statement-derived
+boundary; enumerated `boundary_conditions` have no per-condition support path and
+carry `unknown` rather than inheriting the statement's provenance (no broadcast).
+Unprovenanced posture/outcome round-trips as `unknown`
+(`TestSignatureCarriesPostureOutcomeBoundaryProvenance`); the end-to-end join is
+guarded by `TestIntegrationCanonicalSupportPathsJoin`.
 
 ### Alias namespace (per field kind)
 

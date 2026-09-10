@@ -351,6 +351,70 @@ func (k MechanismAttributeKind) Valid() bool {
 	}
 }
 
+// Canonical SourceSupport.FieldPath values. FieldPath is free-form in the #7
+// schema, but a stable canonical vocabulary is required so the #9 read side can
+// join support rows to the fields they justify without silently defaulting an
+// explicitly-supported field to unknown (which would promote/demote epistemic
+// status). The canonical form matches the normalize JSON keys: plural list
+// attributes, `_mode`-suffixed posture, and `boundary_statement`.
+const (
+	SupportPathRepresentations   = "mechanism.representations"
+	SupportPathAssumptions       = "mechanism.assumptions"
+	SupportPathOperators         = "mechanism.operators"
+	SupportPathPreserves         = "mechanism.preserves"
+	SupportPathBreaks            = "mechanism.breaks"
+	SupportPathAuxiliaryObjects  = "mechanism.auxiliary_objects"
+	SupportPathLocality          = "mechanism.locality"
+	SupportPathConstructionMode  = "mechanism.construction_mode"
+	SupportPathUncertaintyMode   = "mechanism.uncertainty_mode"
+	SupportPathOutcomeClass      = "outcome.class"
+	SupportPathBoundaryStatement = "outcome.boundary_statement"
+)
+
+// attributeSupportPaths maps each list attribute kind to its canonical support
+// field path plus historically-authored aliases that must still join. The
+// alias set exists because two conventions appear in real data: the plural
+// canonical form (corpus) and an earlier singular form (older fixtures). A
+// support row under any listed alias resolves to the same field so no authored
+// provenance is dropped by spelling drift.
+var attributeSupportPaths = map[MechanismAttributeKind][]string{
+	AttrRepresentation:  {SupportPathRepresentations, "mechanism.representation"},
+	AttrAssumption:      {SupportPathAssumptions, "mechanism.assumption"},
+	AttrOperator:        {SupportPathOperators, "mechanism.operator"},
+	AttrPreserves:       {SupportPathPreserves},
+	AttrBreaks:          {SupportPathBreaks},
+	AttrAuxiliaryObject: {SupportPathAuxiliaryObjects, "mechanism.auxiliary_object"},
+}
+
+// postureSupportPaths maps each posture axis to its canonical support path plus
+// accepted aliases (the `_mode` suffix is canonical; the bare form is tolerated).
+var postureSupportPaths = map[string][]string{
+	"locality":     {SupportPathLocality},
+	"construction": {SupportPathConstructionMode, "mechanism.construction"},
+	"uncertainty":  {SupportPathUncertaintyMode, "mechanism.uncertainty"},
+}
+
+// outcomeSupportPaths lists accepted paths for the outcome class.
+var outcomeSupportPaths = []string{SupportPathOutcomeClass}
+
+// AttributeSupportPaths returns the accepted support field paths for a list
+// attribute kind (canonical first). Empty when the kind is unknown.
+func AttributeSupportPaths(kind MechanismAttributeKind) []string {
+	return attributeSupportPaths[kind]
+}
+
+// PostureSupportPaths returns the accepted support field paths for a posture
+// axis ("locality" / "construction" / "uncertainty"), canonical first.
+func PostureSupportPaths(axis string) []string {
+	return postureSupportPaths[axis]
+}
+
+// OutcomeSupportPaths returns the accepted support field paths for the outcome
+// class, canonical first.
+func OutcomeSupportPaths() []string {
+	return outcomeSupportPaths
+}
+
 // MechanismAttribute is a single list-valued mechanism entry. Namespaced kind
 // + value keeps the vocabulary extensible without schema churn.
 type MechanismAttribute struct {
