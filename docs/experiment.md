@@ -40,31 +40,60 @@ reserved lift, replaced in v21).
 `canon.CompareWithProfile(proposal_content, target_representative)` classifies
 as `mechanism-near` (incl. `surface-distinct+mechanism-near`) under the pinned
 profile. Proposal content comes from the v17 `frontier_proposal_signatures`
-sidecar; target signatures are rehydrated with full provenance from the
-quarantined problem. Ambiguous content classifies `unknown` — an epistemic gap,
-never a coerced recovery. The rule version is stamped on the experiment;
-changing the rule is a new experiment identity.
+sidecar. Target representatives are the **frozen manifest**: exactly the
+canonical signatures derived (via normalization provenance) from the holdout
+set's REGISTERED withheld sources — the same population the leakage audit
+inspects. Target material added to the quarantined problem after definition is
+invisible to scoring, and the manifest (signature ids + content fingerprints)
+is persisted per experiment (`experiment_targets`) and folded into the
+experiment identity, so a changed target population is a **new** experiment,
+never a silent recomputation. Ambiguous content classifies `unknown` — an
+epistemic gap, never a coerced recovery. The rule version and the complete
+comparison-profile hash are stamped on the experiment; changing either is a new
+experiment identity.
 
 ## Arms and budgets
 
 | arm | v0 status |
 |---|---|
-| `b0_undirected` | ships — no invariant targets, no policy. The offline fixture honestly yields **zero** proposals (a fixture cannot brainstorm); a live model generates freely under the same budget |
-| `b1_semantic_summary`, `b2_brainstorm` | schema-supported, **execution-refused** until their baseline provider roles gain deriving fixtures (v21 already admits roles `'summarize-next'`/`'brainstorm'`) |
-| `b3_invariant_guided` | ships — the full loop, keyed on the problem's persisted proposal set so an unchanged atlas replays idempotently |
+| `b0_undirected` | ships — no invariant targets, no policy. The offline deriving fixture honestly yields **zero** proposals (it derives from targets, and B0 has none); a live generator wired via `generatorFn` brainstorms freely under the same budget |
+| `b1_semantic_summary` | ships — the summarize-next deriving fixture restates the dominant known failure family per family (role `'summarize-next'`); it targets no invariant and is expected to land mechanism-near the KNOWN failure, not the held-out advance |
+| `b2_brainstorm` | ships — the undirected-brainstorm deriving fixture emits generic, canonically-redundant variations (role `'brainstorm'`); surface-only variation means one distinct mechanism and measurable redundancy |
+| `b3_invariant_guided` | ships — the full loop (surviving targets + search policy), keyed on the dedup-stable set of proposals its generator produced this run so an unchanged atlas replays idempotently |
 
-All arms share one persisted proposal/evaluation budget; hitting it records
-`budget_exhausted` (the AGENTS.md stopping-condition vocabulary) — truncation
-is never silent. Metrics are exact counts + derived ordinal bands
-(`held_out_family_recovery`, `mechanistic_diversity`, `normalized_redundancy`;
+Every arm flows through **one** shared frontier core: distance, violation
+verification, hashing, ranking, and persistence are identical across arms; only
+target selection, policy, generator, and provenance role differ by arm. Each
+arm's scored set is its EXPLICIT persisted membership
+(`experiment_arm_proposals`: proposal id, rank, per-proposal assessment) — the
+dedup-stable set of proposals *its* generator produced this run, resolved
+through cross-run dedup to canonical persisted ids. Artifact deduplication and
+experiment participation are different identities: an arm is never credited
+with (or measured against) proposals another generation produced.
+
+Both budgets are enforced and audited. The **proposal budget** caps the arm's
+membership. The **evaluation budget** is spent in units of one proposal–target
+comparison, in rank order, with actual consumption persisted per arm
+(`evaluations_consumed`); a proposal the budget could not finish is recorded
+`unassessed`. Hitting either budget records `budget_exhausted` (the AGENTS.md
+stopping-condition vocabulary) — truncation is never silent. Per-proposal
+assessments roll up as `recovered` / `decisive_no` / `unknown` / `unassessed`
+counts, and the experiment conclusion respects them: `no_recovery` requires
+EVERY membership proposal decisively assessed; unknown-only or budget-starved
+populations conclude `inconclusive`, never a coerced negative. Metrics are
+exact counts + derived ordinal bands (`held_out_family_recovery`,
+`decisive_assessments`, `mechanistic_diversity`, `normalized_redundancy`;
 verdict-dependent metrics land with M5.2 evaluation volume).
 
-## Persistence (migration v21) and side-effect freedom
+## Persistence (migrations v21 + v22) and side-effect freedom
 
 `holdout_sets` (+ withheld-source links with problem-guard triggers,
 `holdout_source_dating`), `leakage_checks`, `experiment_runs` (idempotent on an
-identity hash over split + rule + profile + budgets + arms + the persisted
-proposal set), `experiment_arms`, `experiment_metrics` — all immutable.
+identity hash over split + rule + profile version **and hash** + budgets +
+arms + the frozen target-manifest fingerprints + the per-arm membership set),
+`experiment_arms` (with assessment counts and consumed evaluations),
+`experiment_arm_proposals` (explicit membership), `experiment_targets` (frozen
+manifest), `experiment_metrics` — all immutable.
 Experiments **measure** the research state and never mutate it: no invariant
 lifecycle change, no policy write, no train-atlas write.
 
@@ -72,17 +101,29 @@ lifecycle change, no policy write, no train-atlas write.
 
 ```text
 newf experiment define --problem <train> --target-problem <target> [--mode blinded|historical] [--cutoff <t>] [--name <n>]
-newf experiment run [--problem <train> | --holdout-set <id>] [--arms b0_undirected,b3_invariant_guided] [--proposal-budget n]
+newf experiment run [--problem <train> | --holdout-set <id>] [--arms b0_undirected,b1_semantic_summary,b2_brainstorm,b3_invariant_guided] [--proposal-budget n] [--evaluation-budget n]
 newf experiment show [experiment-id] [--problem <id>]
 newf experiment list --problem <id>
+newf experiment compare [experiment-id] [--problem <id>] [--baseline <arm>] [--treatment <arm>]
 ```
 
 All support `--json`; runs use `running → completed/failed`. Fully offline.
 
+`compare` reports a **within-experiment**, apples-to-apples arm delta (default
+`b0_undirected` vs `b3_invariant_guided`): both arms share the same holdout
+split, recovery rule, comparison profile, and shared budget. It reports exact
+counts, an ordinal direction (by exact ratio when comparable, else band), and
+the recovery delta only — a single deterministic split supports **no**
+statistical-significance claim, and the interpretation string never implies one.
+
 ## The v0 value is the harness
 
-Offline fixtures make B0 trivially empty and B1/B2 unavailable — the v0 claim
-is NOT "B3 beats baselines." It is that the **harness** exists: leakage-audited
-blinding, equal budgets, one code-owned recovery rule, mode-honest immutable
-artifacts. The first live-model campaign and the first dated corpus drop into
-it without schema or metric retrofit.
+All four arms now execute offline against deterministic fixtures: B0 is
+honestly empty, B1/B2 produce baseline-shaped proposals (summary restatement /
+generic redundancy), and B3 runs the directed loop. The v0 claim is still NOT
+"B3 beats baselines" — the shipped corpus is a single synthetic split with
+fixture generators, so no arm outcome is a scientific result. The claim is that
+the **harness** exists: leakage-audited blinding, equal budgets, one code-owned
+recovery rule across every arm, a non-inflating compare, and mode-honest
+immutable artifacts. The first live-model campaign and the first dated corpus
+drop into it without schema or metric retrofit.

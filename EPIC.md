@@ -642,8 +642,8 @@ better compression + worse prediction     = abstraction drift
 ## M7 — Historical holdout validation
 
 **Status: v0 delivered as a BLINDED-BENCHMARK harness; historical mode gated.**
-`newf experiment define/run/show/list` (schema `v21`) composes the whole loop
-into a measured, mode-stamped experiment: a quarantined target problem whose
+`newf experiment define/run/show/list/compare` (schema `v21`) composes the whole
+loop into a measured, mode-stamped experiment: a quarantined target problem whose
 every source is withheld, a **code-computed leakage audit** (content-identity
 joins over snapshots/normalizations/signatures) that gates completion and lifts
 the M5.2 holdout evaluation gate, equal persisted budgets with
@@ -655,12 +655,18 @@ to every arm. Conclusion vocabularies are mode-disjoint by CHECK —
 be cited as historical evidence (`corpus/README.md` documents why: the shipped
 corpus is a synthetic blinded benchmark, not a dated holdout). `mode=historical`
 remains execution-refused until every withheld source carries auditable dated
-evidence (`holdout_source_dating`) — lifting it needs data, not code. Arms:
-`b0_undirected` + `b3_invariant_guided` ship (offline B0 is honestly empty —
-a fixture cannot brainstorm); `b1`/`b2` are schema-supported and
-execution-refused until their baseline provider roles gain fixtures. The v0
-claim is the HARNESS, not a victory: the first live-model campaign and the
-first dated corpus drop in without schema or metric retrofit. See
+evidence (`holdout_source_dating`) — lifting it needs data, not code. All four
+arms now execute offline through **one shared frontier core**: `b0_undirected`
+(no targets/policy — the deriving fixture yields honest-empty offline),
+`b1_semantic_summary` (summarize-next restatement, role `'summarize-next'`),
+`b2_brainstorm` (generic redundant variation, role `'brainstorm'`), and
+`b3_invariant_guided` (the directed loop). Each arm keys on the dedup-stable
+set of proposals its own generator produced, so arms sharing a train problem
+never contaminate each other. `compare` renders a non-inflating,
+within-experiment arm delta (exact counts + ordinal direction + recovery delta;
+never a significance claim over one deterministic split). The v0 claim is the
+HARNESS, not a victory: the first live-model campaign and the first dated
+corpus drop in without schema or metric retrofit. See
 [`docs/experiment.md`](docs/experiment.md).
 
 This is the first scientifically meaningful end-to-end milestone.

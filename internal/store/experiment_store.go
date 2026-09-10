@@ -222,6 +222,49 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
 	return rec, nil
 }
 
+// TargetSignatureRow is one FROZEN-manifest member: a canonical signature of
+// the quarantined target problem that derives from a REGISTERED withheld
+// source. Audit, scoring, and experiment identity all consume this same set —
+// target material outside the registered withheld sources is invisible to
+// scoring, exactly as it is invisible to the leakage audit.
+type TargetSignatureRow struct {
+	SignatureID          string
+	CanonicalFingerprint string
+}
+
+// ListTargetSignaturesForHoldout returns the target signatures derived (via
+// normalization provenance) from the holdout set's registered withheld
+// sources, ordered by signature id.
+func (s *Store) ListTargetSignaturesForHoldout(ctx context.Context, holdoutSetID string) ([]TargetSignatureRow, error) {
+	if err := domain.ValidateHoldoutSetID(holdoutSetID); err != nil {
+		return nil, err
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT DISTINCT ms.id, ms.fingerprint
+FROM holdout_set_sources hss
+JOIN source_snapshots ss ON ss.source_id = hss.source_id
+JOIN normalization_revisions nr ON nr.snapshot_id = ss.id
+JOIN approach_revisions ar ON ar.normalization_revision_id = nr.id
+JOIN mechanisms m ON m.approach_revision_id = ar.id
+JOIN mechanism_signatures ms ON ms.mechanism_id = m.id
+WHERE hss.holdout_set_id = ?
+ORDER BY ms.id
+`, holdoutSetID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []TargetSignatureRow
+	for rows.Next() {
+		var r TargetSignatureRow
+		if err := rows.Scan(&r.SignatureID, &r.CanonicalFingerprint); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
 // ExperimentArmRow is one baseline/treatment arm's persisted facts.
 type ExperimentArmRow struct {
 	Arm                   string // b0_undirected|b1_semantic_summary|b2_brainstorm|b3_invariant_guided
@@ -233,6 +276,29 @@ type ExperimentArmRow struct {
 	DistinctFamilyCount   int
 	RedundantCount        int
 	StoppingCondition     string
+	// v22 measurement contract: assessment counts + actual budget consumption.
+	DecisiveCount       int
+	UnknownCount        int
+	UnassessedCount     int
+	EvaluationsConsumed int
+	// Members are the EXPLICIT arm<->proposal memberships (rank + assessment):
+	// what this arm derived this run, dedup mapped to persisted artifact ids.
+	Members []ExperimentArmProposalRow
+}
+
+// ExperimentArmProposalRow is one explicit membership record: artifact
+// deduplication and experiment participation are different identities.
+type ExperimentArmProposalRow struct {
+	ProposalID string
+	MemberRank int
+	Assessment string // recovered|decisive_no|unknown|unassessed
+}
+
+// ExperimentTargetRow is one frozen-manifest member persisted on the
+// experiment.
+type ExperimentTargetRow struct {
+	SignatureID          string
+	CanonicalFingerprint string
 }
 
 // ExperimentMetricRow is one exact-count metric with its derived ordinal.
@@ -262,6 +328,9 @@ type ExperimentRecord struct {
 	CreatedAt             string
 	Arms                  []ExperimentArmRow
 	Metrics               []ExperimentMetricRow
+	// Targets is the frozen target manifest (withheld-source-scoped signatures)
+	// that scoring and identity consumed.
+	Targets []ExperimentTargetRow
 }
 
 // PersistExperimentResult reports the persisted experiment and newness.
@@ -312,9 +381,24 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	}
 	for _, arm := range rec.Arms {
 		if _, err := tx.ExecContext(ctx, `
-INSERT INTO experiment_arms(experiment_id, arm, frontier_generation_run_id, proposal_count, recovered, first_recovery_rank, nearest_classification, distinct_family_count, redundant_count, stopping_condition)
-VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`, rec.ID, arm.Arm, nullable(arm.FrontierGenerationRun), arm.ProposalCount, boolToInt(arm.Recovered), arm.FirstRecoveryRank, arm.NearestClassification, arm.DistinctFamilyCount, arm.RedundantCount, arm.StoppingCondition); err != nil {
+INSERT INTO experiment_arms(experiment_id, arm, frontier_generation_run_id, proposal_count, recovered, first_recovery_rank, nearest_classification, distinct_family_count, redundant_count, stopping_condition, decisive_count, unknown_count, unassessed_count, evaluations_consumed)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, rec.ID, arm.Arm, nullable(arm.FrontierGenerationRun), arm.ProposalCount, boolToInt(arm.Recovered), arm.FirstRecoveryRank, arm.NearestClassification, arm.DistinctFamilyCount, arm.RedundantCount, arm.StoppingCondition, arm.DecisiveCount, arm.UnknownCount, arm.UnassessedCount, arm.EvaluationsConsumed); err != nil {
+			return PersistExperimentResult{}, err
+		}
+		for _, m := range arm.Members {
+			if _, err := tx.ExecContext(ctx, `
+INSERT INTO experiment_arm_proposals(experiment_id, arm, proposal_id, member_rank, assessment)
+VALUES(?, ?, ?, ?, ?)
+`, rec.ID, arm.Arm, m.ProposalID, m.MemberRank, m.Assessment); err != nil {
+				return PersistExperimentResult{}, err
+			}
+		}
+	}
+	for _, target := range rec.Targets {
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO experiment_targets(experiment_id, signature_id, canonical_fingerprint) VALUES(?, ?, ?)
+`, rec.ID, target.SignatureID, target.CanonicalFingerprint); err != nil {
 			return PersistExperimentResult{}, err
 		}
 	}
@@ -349,7 +433,7 @@ FROM experiment_runs WHERE id = ?
 		return ExperimentRecord{}, err
 	}
 	armRows, err := s.db.QueryContext(ctx, `
-SELECT arm, COALESCE(frontier_generation_run_id,''), proposal_count, recovered, first_recovery_rank, nearest_classification, distinct_family_count, redundant_count, stopping_condition
+SELECT arm, COALESCE(frontier_generation_run_id,''), proposal_count, recovered, first_recovery_rank, nearest_classification, distinct_family_count, redundant_count, stopping_condition, decisive_count, unknown_count, unassessed_count, evaluations_consumed
 FROM experiment_arms WHERE experiment_id = ? ORDER BY arm
 `, id)
 	if err != nil {
@@ -359,13 +443,50 @@ FROM experiment_arms WHERE experiment_id = ? ORDER BY arm
 	for armRows.Next() {
 		var a ExperimentArmRow
 		var recovered int
-		if err := armRows.Scan(&a.Arm, &a.FrontierGenerationRun, &a.ProposalCount, &recovered, &a.FirstRecoveryRank, &a.NearestClassification, &a.DistinctFamilyCount, &a.RedundantCount, &a.StoppingCondition); err != nil {
+		if err := armRows.Scan(&a.Arm, &a.FrontierGenerationRun, &a.ProposalCount, &recovered, &a.FirstRecoveryRank, &a.NearestClassification, &a.DistinctFamilyCount, &a.RedundantCount, &a.StoppingCondition, &a.DecisiveCount, &a.UnknownCount, &a.UnassessedCount, &a.EvaluationsConsumed); err != nil {
 			return ExperimentRecord{}, err
 		}
 		a.Recovered = recovered != 0
 		rec.Arms = append(rec.Arms, a)
 	}
 	if err := armRows.Err(); err != nil {
+		return ExperimentRecord{}, err
+	}
+	for i := range rec.Arms {
+		memberRows, err := s.db.QueryContext(ctx, `
+SELECT proposal_id, member_rank, assessment FROM experiment_arm_proposals
+WHERE experiment_id = ? AND arm = ? ORDER BY member_rank
+`, id, rec.Arms[i].Arm)
+		if err != nil {
+			return ExperimentRecord{}, err
+		}
+		for memberRows.Next() {
+			var m ExperimentArmProposalRow
+			if err := memberRows.Scan(&m.ProposalID, &m.MemberRank, &m.Assessment); err != nil {
+				memberRows.Close()
+				return ExperimentRecord{}, err
+			}
+			rec.Arms[i].Members = append(rec.Arms[i].Members, m)
+		}
+		if err := memberRows.Err(); err != nil {
+			memberRows.Close()
+			return ExperimentRecord{}, err
+		}
+		memberRows.Close()
+	}
+	targetRows, err := s.db.QueryContext(ctx, `SELECT signature_id, canonical_fingerprint FROM experiment_targets WHERE experiment_id = ? ORDER BY signature_id`, id)
+	if err != nil {
+		return ExperimentRecord{}, err
+	}
+	defer targetRows.Close()
+	for targetRows.Next() {
+		var tr ExperimentTargetRow
+		if err := targetRows.Scan(&tr.SignatureID, &tr.CanonicalFingerprint); err != nil {
+			return ExperimentRecord{}, err
+		}
+		rec.Targets = append(rec.Targets, tr)
+	}
+	if err := targetRows.Err(); err != nil {
 		return ExperimentRecord{}, err
 	}
 	metricRows, err := s.db.QueryContext(ctx, `
@@ -471,6 +592,43 @@ LEFT JOIN frontier_proposal_signatures fps ON fps.proposal_id = p.id
 WHERE p.problem_id = ?
 ORDER BY p.created_at, p.rank_ordinal, p.id
 `, problemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []ProposalContentRow
+	for rows.Next() {
+		var r ProposalContentRow
+		if err := rows.Scan(&r.ProposalID, &r.Rank, &r.SignatureJSON); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+// ListProposalContentsByIDs returns the persisted content + rank for a specific
+// set of proposal ids, rank-ordered. It is the dedup-stable per-arm read: an
+// experiment arm keys on exactly the proposals ITS generator produced this run
+// (resolved through cross-run dedup to their canonical persisted ids), so
+// arms writing into the same problem never contaminate each other's set and a
+// replay whose proposals all dedup still returns the same canonical content.
+func (s *Store) ListProposalContentsByIDs(ctx context.Context, ids []string) ([]ProposalContentRow, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
+	args := make([]any, 0, len(ids))
+	for _, id := range ids {
+		args = append(args, id)
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT p.id, p.rank_ordinal, COALESCE(fps.signature_json, '')
+FROM frontier_proposals p
+LEFT JOIN frontier_proposal_signatures fps ON fps.proposal_id = p.id
+WHERE p.id IN (`+placeholders+`)
+ORDER BY p.rank_ordinal, p.id
+`, args...)
 	if err != nil {
 		return nil, err
 	}

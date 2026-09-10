@@ -13,6 +13,7 @@ import (
 	"github.com/instagrim-dev/newf/internal/canon"
 	"github.com/instagrim-dev/newf/internal/domain"
 	"github.com/instagrim-dev/newf/internal/experiment"
+	"github.com/instagrim-dev/newf/internal/provider"
 	"github.com/instagrim-dev/newf/internal/store"
 )
 
@@ -41,6 +42,19 @@ type ExperimentRunInput struct {
 	ProposalBudget   int
 	EvaluationBudget int
 	JSONOutput       bool
+}
+
+// ExperimentCompareInput compares two arms WITHIN one experiment (latest for
+// the problem when the id is empty). Same experiment == same holdout split,
+// recovery rule, profile, and shared budget: the only apples-to-apples arm
+// comparison the harness can make without inventing cross-run significance.
+type ExperimentCompareInput struct {
+	DBPath       string
+	ExperimentID string
+	ProblemID    string
+	BaselineArm  string // default b0_undirected
+	TreatmentArm string // default b3_invariant_guided
+	JSONOutput   bool
 }
 
 // ExperimentShowInput loads one experiment (latest for the problem when empty).
@@ -92,15 +106,33 @@ type LeakageCheckView struct {
 
 // ExperimentArmView is one arm's persisted facts.
 type ExperimentArmView struct {
-	Arm                   string `json:"arm"`
-	FrontierGenerationRun string `json:"frontier_generation_run_id,omitempty"`
-	ProposalCount         int    `json:"proposal_count"`
-	Recovered             bool   `json:"recovered"`
-	FirstRecoveryRank     *int   `json:"first_recovery_rank,omitempty"`
-	NearestClassification string `json:"nearest_classification"`
-	DistinctFamilyCount   int    `json:"distinct_family_count"`
-	RedundantCount        int    `json:"redundant_count"`
-	StoppingCondition     string `json:"stopping_condition"`
+	Arm                   string                      `json:"arm"`
+	FrontierGenerationRun string                      `json:"frontier_generation_run_id,omitempty"`
+	ProposalCount         int                         `json:"proposal_count"`
+	Recovered             bool                        `json:"recovered"`
+	FirstRecoveryRank     *int                        `json:"first_recovery_rank,omitempty"`
+	NearestClassification string                      `json:"nearest_classification"`
+	DistinctFamilyCount   int                         `json:"distinct_family_count"`
+	RedundantCount        int                         `json:"redundant_count"`
+	StoppingCondition     string                      `json:"stopping_condition"`
+	DecisiveCount         int                         `json:"decisive_count"`
+	UnknownCount          int                         `json:"unknown_count"`
+	UnassessedCount       int                         `json:"unassessed_count"`
+	EvaluationsConsumed   int                         `json:"evaluations_consumed"`
+	Members               []ExperimentArmProposalView `json:"members"`
+}
+
+// ExperimentArmProposalView is one explicit membership record.
+type ExperimentArmProposalView struct {
+	ProposalID string `json:"proposal_id"`
+	MemberRank int    `json:"member_rank"`
+	Assessment string `json:"assessment"`
+}
+
+// ExperimentTargetView is one frozen-manifest member.
+type ExperimentTargetView struct {
+	SignatureID          string `json:"signature_id"`
+	CanonicalFingerprint string `json:"canonical_fingerprint"`
 }
 
 // ExperimentMetricView is one exact-count metric + derived ordinal.
@@ -130,6 +162,7 @@ type ExperimentView struct {
 	LeakageCheck        LeakageCheckView       `json:"leakage_check"`
 	Arms                []ExperimentArmView    `json:"arms"`
 	Metrics             []ExperimentMetricView `json:"metrics"`
+	Targets             []ExperimentTargetView `json:"targets"`
 }
 
 // ExperimentRunResponse is returned by `newf experiment run`.
@@ -157,6 +190,44 @@ type ExperimentListResponse struct {
 	Experiments []ExperimentView `json:"experiments"`
 }
 
+// ArmMetricDelta is one metric's baseline/treatment counts and the ordinal
+// direction of the treatment relative to the baseline. It never invents a
+// numeric effect size or significance — the corpus is a single deterministic
+// split, so only the exact counts and an ordinal direction are honest.
+type ArmMetricDelta struct {
+	Metric             string `json:"metric"`
+	BaselineNumerator  int    `json:"baseline_numerator"`
+	BaselineDenom      int    `json:"baseline_denominator"`
+	BaselineOrdinal    string `json:"baseline_ordinal"`
+	TreatmentNumerator int    `json:"treatment_numerator"`
+	TreatmentDenom     int    `json:"treatment_denominator"`
+	TreatmentOrdinal   string `json:"treatment_ordinal"`
+	Direction          string `json:"direction"` // higher|lower|same
+}
+
+// ExperimentCompareView is a within-experiment, apples-to-apples arm delta.
+type ExperimentCompareView struct {
+	ExperimentID        string            `json:"experiment_id"`
+	Mode                string            `json:"mode"`
+	ModeDisclaimer      string            `json:"mode_disclaimer"`
+	RecoveryRuleVersion string            `json:"recovery_rule_version"`
+	ProfileVersion      string            `json:"profile_version"`
+	ProposalBudget      int               `json:"proposal_budget_count"`
+	BaselineArm         ExperimentArmView `json:"baseline_arm"`
+	TreatmentArm        ExperimentArmView `json:"treatment_arm"`
+	RecoveryDelta       string            `json:"recovery_delta"` // treatment-only|baseline-only|both|neither
+	Metrics             []ArmMetricDelta  `json:"metrics"`
+	Interpretation      string            `json:"interpretation"`
+}
+
+// ExperimentCompareResponse is returned by `newf experiment compare`.
+type ExperimentCompareResponse struct {
+	OK         bool                  `json:"ok"`
+	Command    string                `json:"command"`
+	Store      string                `json:"store"`
+	Comparison ExperimentCompareView `json:"comparison"`
+}
+
 // modeDisclaimer renders the non-launderable epistemic qualifier on every view.
 func modeDisclaimer(mode string) string {
 	if mode == "historical" {
@@ -166,9 +237,8 @@ func modeDisclaimer(mode string) string {
 }
 
 // defaultExperimentArms is the v0 arm set: the scientifically decisive
-// comparison is undirected (B0) vs invariant-guided (B3). B1/B2 baseline
-// provider roles are schema-supported but execution-refused until their
-// deriving fixtures land (named trigger in docs/experiment.md).
+// comparison is undirected (B0) vs invariant-guided (B3). B1/B2 baselines are
+// now executable via their deriving fixtures and may be requested explicitly.
 var defaultExperimentArms = []string{"b0_undirected", "b3_invariant_guided"}
 
 const defaultProposalBudget = 8
@@ -188,9 +258,7 @@ func (a *App) RunExperiment(ctx context.Context, input ExperimentRunInput) (Expe
 	sort.Strings(arms)
 	for _, arm := range arms {
 		switch arm {
-		case "b0_undirected", "b3_invariant_guided":
-		case "b1_semantic_summary", "b2_brainstorm":
-			return ExperimentRunResponse{}, fmt.Errorf("arm %q is schema-supported but not yet executable: its baseline provider role has no deriving fixture (see docs/experiment.md)", arm)
+		case "b0_undirected", "b1_semantic_summary", "b2_brainstorm", "b3_invariant_guided":
 		default:
 			return ExperimentRunResponse{}, fmt.Errorf("unknown arm %q", arm)
 		}
@@ -335,59 +403,86 @@ func (a *App) DefineExperiment(ctx context.Context, input ExperimentDefineInput)
 // recovery rule against the quarantined target signatures, computes metrics,
 // and persists the experiment (idempotent on the identity hash).
 func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore, dbPath string, hs store.HoldoutSetRecord, check store.LeakageCheckRecord, runID string, arms []string, proposalBudget, evaluationBudget int, now time.Time) (ExperimentView, bool, error) {
-	targets, err := a.targetSignatures(ctx, repoStore, hs.TargetProblemID)
+	// FROZEN target manifest (F2): scoring consumes EXACTLY the signatures
+	// derived from the REGISTERED withheld sources — the same population the
+	// leakage audit inspects. Target material added outside the registered set
+	// is invisible to scoring, and the manifest (ids + content fingerprints) is
+	// persisted on the experiment and folded into its identity, so a changed
+	// target population is a NEW experiment, never a silent recomputation.
+	manifest, err := repoStore.ListTargetSignaturesForHoldout(ctx, hs.ID)
 	if err != nil {
 		return ExperimentView{}, false, err
 	}
-	if len(targets) == 0 {
-		return ExperimentView{}, false, fmt.Errorf("target problem %s has no canonical signatures; run `mechanism signature` on the quarantined target first", hs.TargetProblemID)
+	if len(manifest) == 0 {
+		return ExperimentView{}, false, fmt.Errorf("holdout set %s has no canonical signatures derived from its registered withheld sources; run `mechanism signature` on the quarantined target first", hs.ID)
 	}
+	targets := make([]canon.MechanismSignature, 0, len(manifest))
+	targetRows := make([]store.ExperimentTargetRow, 0, len(manifest))
+	var targetFPs []string
+	for _, m := range manifest {
+		rec, gerr := repoStore.GetSignature(ctx, m.SignatureID)
+		if gerr != nil {
+			return ExperimentView{}, false, gerr
+		}
+		targets = append(targets, signatureFromRecordWithProvenance(rec))
+		targetRows = append(targetRows, store.ExperimentTargetRow{SignatureID: m.SignatureID, CanonicalFingerprint: m.CanonicalFingerprint})
+		targetFPs = append(targetFPs, m.CanonicalFingerprint)
+	}
+	sort.Strings(targetFPs)
 
 	profile := canon.ProfileMechanismV1()
 	var armRows []store.ExperimentArmRow
 	var metricRows []store.ExperimentMetricRow
 	var identityParts []string
-	b3Recovered, b3Ran, b3HadProposals := false, false, false
+	var b3 *store.ExperimentArmRow
 
 	for _, arm := range arms {
 		genID, contents, aerr := a.runArm(ctx, repoStore, dbPath, hs.ProblemID, arm, proposalBudget)
 		if aerr != nil {
 			return ExperimentView{}, false, aerr
 		}
-		// One recovery rule for every arm: best rollup across target signatures.
-		best := experiment.ArmRecovery{FirstRecoveryRank: -1, NearestClassification: canon.ClassUnknown}
-		for _, target := range targets {
-			r := experiment.DetectRecovery(contents, target, profile)
-			switch {
-			case r.Recovered && (!best.Recovered || r.FirstRecoveryRank < best.FirstRecoveryRank):
-				best = r
-			case !best.Recovered && classificationStronger(r.NearestClassification, best.NearestClassification):
-				best = r
-			}
-		}
+		// Enforced evaluation budget (F3): the unit is one proposal-target
+		// comparison; consumption is persisted; proposals the budget could not
+		// finish are UNASSESSED, never silently included or coerced (F5).
+		assessment := experiment.AssessProposals(contents, targets, profile, evaluationBudget)
 		div := experiment.ComputeDiversity(contents)
+
 		stopping := "completed"
-		if len(contents) >= proposalBudget {
+		if len(contents) >= proposalBudget || assessment.UnassessedCount > 0 {
 			stopping = "budget_exhausted"
 		}
 		row := store.ExperimentArmRow{
 			Arm:                   arm,
 			FrontierGenerationRun: genID,
 			ProposalCount:         len(contents),
-			Recovered:             best.Recovered,
-			NearestClassification: string(best.NearestClassification),
+			Recovered:             assessment.RecoveredCount > 0,
+			NearestClassification: string(assessment.NearestClassification),
 			DistinctFamilyCount:   div.DistinctMechanisms,
 			RedundantCount:        div.RedundantProposals,
 			StoppingCondition:     stopping,
+			DecisiveCount:         assessment.DecisiveNoCount,
+			UnknownCount:          assessment.UnknownCount,
+			UnassessedCount:       assessment.UnassessedCount,
+			EvaluationsConsumed:   assessment.EvaluationsConsumed,
 		}
-		if best.Recovered {
+		if assessment.FirstRecoveryRank >= 0 {
 			row.FirstRecoveryRank.Valid = true
-			row.FirstRecoveryRank.Int64 = int64(best.FirstRecoveryRank)
+			row.FirstRecoveryRank.Int64 = int64(assessment.FirstRecoveryRank)
+		}
+		// Explicit arm<->proposal membership (F1): what THIS arm derived, in
+		// rank order, with its per-proposal assessment.
+		for _, pa := range assessment.Proposals {
+			row.Members = append(row.Members, store.ExperimentArmProposalRow{
+				ProposalID: pa.ProposalID,
+				MemberRank: pa.Rank,
+				Assessment: string(pa.Assessment),
+			})
+			identityParts = append(identityParts, arm+":"+pa.ProposalID)
 		}
 		armRows = append(armRows, row)
 
 		recoveredNum := 0
-		if best.Recovered {
+		if row.Recovered {
 			recoveredNum = 1
 		}
 		den := len(contents)
@@ -396,30 +491,31 @@ func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore,
 		}
 		metricRows = append(metricRows,
 			store.ExperimentMetricRow{Arm: arm, Metric: "held_out_family_recovery", Numerator: recoveredNum, Denominator: 1, Ordinal: string(experiment.MetricOrdinal(recoveredNum, 1))},
+			store.ExperimentMetricRow{Arm: arm, Metric: "decisive_assessments", Numerator: assessment.RecoveredCount + assessment.DecisiveNoCount, Denominator: den, Ordinal: string(experiment.MetricOrdinal(assessment.RecoveredCount+assessment.DecisiveNoCount, den))},
 			store.ExperimentMetricRow{Arm: arm, Metric: "mechanistic_diversity", Numerator: div.DistinctMechanisms, Denominator: den, Ordinal: string(experiment.MetricOrdinal(div.DistinctMechanisms, den))},
 			store.ExperimentMetricRow{Arm: arm, Metric: "normalized_redundancy", Numerator: div.RedundantProposals, Denominator: den, Ordinal: string(experiment.MetricOrdinal(div.RedundantProposals, den))},
 		)
-		for _, c := range contents {
-			identityParts = append(identityParts, arm+":"+c.ProposalID)
-		}
 		if arm == "b3_invariant_guided" {
-			b3Ran = true
-			b3Recovered = best.Recovered
-			b3HadProposals = len(contents) > 0
+			b3 = &armRows[len(armRows)-1]
 		}
 	}
 
+	// Conclusion (F5): unknown/unassessed are epistemic gaps, never coerced.
+	// no_recovery requires EVERY membership proposal to have been decisively
+	// assessed; anything less concludes inconclusive.
 	conclusion := "inconclusive"
-	if hs.Mode == "blinded" && b3Ran && b3HadProposals {
-		if b3Recovered {
+	if hs.Mode == "blinded" && b3 != nil && b3.ProposalCount > 0 {
+		switch {
+		case b3.Recovered:
 			conclusion = "structural_recovery"
-		} else {
+		case b3.DecisiveCount == b3.ProposalCount:
 			conclusion = "no_recovery"
 		}
 	}
 
 	sort.Strings(identityParts)
-	idPayload := strings.Join(append([]string{hs.ID, experiment.RecoveryRuleV1, profile.Version, fmt.Sprint(proposalBudget), fmt.Sprint(evaluationBudget), strings.Join(arms, ",")}, identityParts...), "\n")
+	idHeader := []string{hs.ID, experiment.RecoveryRuleV1, profile.Version, profile.Hash(), fmt.Sprint(proposalBudget), fmt.Sprint(evaluationBudget), strings.Join(arms, ","), strings.Join(targetFPs, ",")}
+	idPayload := strings.Join(append(idHeader, identityParts...), "\n")
 	idSum := sha256.Sum256([]byte(idPayload))
 
 	rec := store.ExperimentRecord{
@@ -438,6 +534,7 @@ func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore,
 		CreatedAt:             now.Format(timeLayout),
 		Arms:                  armRows,
 		Metrics:               metricRows,
+		Targets:               targetRows,
 	}
 	result, err := repoStore.PersistExperiment(ctx, rec)
 	if err != nil {
@@ -451,42 +548,51 @@ func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore,
 }
 
 // runArm executes one arm's generation under the shared budget and returns the
-// generation id + the rank-ordered proposal contents.
+// generation id + the rank-ordered proposal contents. Every arm flows through
+// the ONE shared frontier core (generateFrontierWith): distance, violation
+// verification, hashing, ranking, and persistence are identical across arms;
+// only target selection, policy, generator, and provenance role differ. Each
+// arm keys on the dedup-stable set of proposals ITS generator produced this run
+// (result.ProposalIDByHash), so arms writing into the same problem never
+// contaminate each other and a replay whose proposals all dedup is stable.
 func (a *App) runArm(ctx context.Context, repoStore problemStore, dbPath, problemID, arm string, budget int) (string, []experiment.ProposalContent, error) {
+	var opts frontierArmOptions
 	switch arm {
 	case "b3_invariant_guided":
-		// Generate (idempotent at the proposal level: an unchanged atlas dedups
-		// every proposal), then key the arm on the problem's FULL persisted
-		// proposal set so replay is stable — a fresh generation whose proposals
-		// all dedup contributes nothing new.
-		gen, err := a.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID, Count: budget})
-		if err != nil {
-			return "", nil, fmt.Errorf("b3 generation: %w", err)
-		}
-		rows, rerr := repoStore.ListProposalContentsForProblem(ctx, problemID)
-		if rerr != nil {
-			return "", nil, rerr
-		}
-		contents, cerr := rehydrateProposalContents(rows, budget)
-		return gen.Generation.ID, contents, cerr
+		// The directed loop: surviving targets + search policy + directed generator.
+		opts = frontierArmOptions{role: provider.GeneratorRole}
 	case "b0_undirected":
-		// Undirected baseline: no invariant targets, no policy. The deterministic
-		// fixture generator derives proposals FROM targets, so offline B0 honestly
-		// yields zero proposals — recorded, never fabricated. A live model B0
-		// generates freely here under the same budget.
-		return "", nil, nil
+		// Undirected baseline: no invariant targets, no policy, default deriving
+		// generator. Because that fixture derives proposals FROM targets, offline
+		// B0 honestly yields zero proposals — recorded, never fabricated. A live
+		// generator wired via generatorFn brainstorms freely under the same budget.
+		opts = frontierArmOptions{noTargets: true, noPolicy: true, role: provider.GeneratorRole}
+	case "b1_semantic_summary":
+		// Semantic-summary baseline: no targets, no policy, the summarize-next
+		// deriving fixture (restates the dominant known family), its own role.
+		opts = frontierArmOptions{noTargets: true, noPolicy: true, generator: provider.NewSummarizeNextProposer(), role: provider.SummarizeNextProposerRole}
+	case "b2_brainstorm":
+		// Undirected-brainstorm baseline: no targets, no policy, the brainstorm
+		// deriving fixture (generic redundant variations), its own role.
+		opts = frontierArmOptions{noTargets: true, noPolicy: true, generator: provider.NewBrainstormer(), role: provider.BrainstormerRole}
 	default:
 		return "", nil, fmt.Errorf("unknown arm %q", arm)
 	}
-}
 
-// proposalContents loads + rehydrates a generation's proposals (v17 sidecar).
-func (a *App) proposalContents(ctx context.Context, repoStore problemStore, generationID string) ([]experiment.ProposalContent, error) {
-	rows, err := repoStore.ListProposalContents(ctx, generationID)
+	_, result, err := a.generateFrontierWith(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID, Count: budget}, opts)
 	if err != nil {
-		return nil, err
+		return "", nil, fmt.Errorf("%s generation: %w", arm, err)
 	}
-	return rehydrateProposalContents(rows, 0)
+	ids := make([]string, 0, len(result.ProposalIDByHash))
+	for _, id := range result.ProposalIDByHash {
+		ids = append(ids, id)
+	}
+	rows, rerr := repoStore.ListProposalContentsByIDs(ctx, ids)
+	if rerr != nil {
+		return "", nil, rerr
+	}
+	contents, cerr := rehydrateProposalContents(rows, budget)
+	return result.Record.ID, contents, cerr
 }
 
 // rehydrateProposalContents unmarshals sidecar content, skipping pre-v17 gaps
@@ -507,24 +613,6 @@ func rehydrateProposalContents(rows []store.ProposalContentRow, budget int) ([]e
 			return nil, fmt.Errorf("proposal %s: corrupt persisted signature: %w", r.ProposalID, err)
 		}
 		out = append(out, experiment.ProposalContent{ProposalID: r.ProposalID, Rank: r.Rank, Signature: sig})
-	}
-	return out, nil
-}
-
-// targetSignatures rehydrates the quarantined target problem's canonical
-// signatures with full epistemic provenance.
-func (a *App) targetSignatures(ctx context.Context, repoStore problemStore, targetProblemID string) ([]canon.MechanismSignature, error) {
-	ids, err := repoStore.ListSignaturesForProblem(ctx, targetProblemID, canon.SchemaMechanismV1, canon.VocabularyMechanismV1)
-	if err != nil {
-		return nil, err
-	}
-	var out []canon.MechanismSignature
-	for _, id := range ids {
-		rec, gerr := repoStore.GetSignature(ctx, id)
-		if gerr != nil {
-			return nil, gerr
-		}
-		out = append(out, signatureFromRecordWithProvenance(rec))
 	}
 	return out, nil
 }
@@ -594,6 +682,13 @@ func (a *App) experimentView(ctx context.Context, repoStore problemStore, rec st
 			DistinctFamilyCount:   arm.DistinctFamilyCount,
 			RedundantCount:        arm.RedundantCount,
 			StoppingCondition:     arm.StoppingCondition,
+			DecisiveCount:         arm.DecisiveCount,
+			UnknownCount:          arm.UnknownCount,
+			UnassessedCount:       arm.UnassessedCount,
+			EvaluationsConsumed:   arm.EvaluationsConsumed,
+		}
+		for _, m := range arm.Members {
+			av.Members = append(av.Members, ExperimentArmProposalView{ProposalID: m.ProposalID, MemberRank: m.MemberRank, Assessment: m.Assessment})
 		}
 		if arm.FirstRecoveryRank.Valid {
 			rank := int(arm.FirstRecoveryRank.Int64)
@@ -603,6 +698,9 @@ func (a *App) experimentView(ctx context.Context, repoStore problemStore, rec st
 	}
 	for _, m := range rec.Metrics {
 		view.Metrics = append(view.Metrics, ExperimentMetricView{Arm: m.Arm, Metric: m.Metric, Numerator: m.Numerator, Denominator: m.Denominator, Ordinal: m.Ordinal})
+	}
+	for _, tr := range rec.Targets {
+		view.Targets = append(view.Targets, ExperimentTargetView{SignatureID: tr.SignatureID, CanonicalFingerprint: tr.CanonicalFingerprint})
 	}
 	return view, nil
 }
@@ -660,4 +758,163 @@ func (a *App) ListExperimentsForProblem(ctx context.Context, input ExperimentLis
 		})
 	}
 	return resp, nil
+}
+
+// ordinalStrength orders the ordinal bands for a same/higher/lower direction.
+var ordinalStrength = map[string]int{"unknown": 0, "low": 1, "medium": 2, "high": 3}
+
+// metricDirection reports whether treatment is higher/lower/same vs baseline by
+// exact ratio when comparable, else by ordinal band. It never fabricates a
+// numeric effect size — the corpus is one deterministic split.
+func metricDirection(d ArmMetricDelta) string {
+	// Prefer the exact ratio when both denominators are positive.
+	if d.BaselineDenom > 0 && d.TreatmentDenom > 0 {
+		lhs := d.TreatmentNumerator * d.BaselineDenom
+		rhs := d.BaselineNumerator * d.TreatmentDenom
+		switch {
+		case lhs > rhs:
+			return "higher"
+		case lhs < rhs:
+			return "lower"
+		default:
+			return "same"
+		}
+	}
+	switch bs, ts := ordinalStrength[d.BaselineOrdinal], ordinalStrength[d.TreatmentOrdinal]; {
+	case ts > bs:
+		return "higher"
+	case ts < bs:
+		return "lower"
+	default:
+		return "same"
+	}
+}
+
+// CompareExperiment produces a within-experiment, apples-to-apples arm delta
+// (default b0_undirected vs b3_invariant_guided). Both arms share the SAME
+// holdout split, recovery rule, comparison profile, and proposal budget, so the
+// only honest report is exact counts, an ordinal direction, and a recovery
+// delta — never an invented significance over a single deterministic split.
+func (a *App) CompareExperiment(ctx context.Context, input ExperimentCompareInput) (ExperimentCompareResponse, error) {
+	baselineArm := input.BaselineArm
+	if baselineArm == "" {
+		baselineArm = "b0_undirected"
+	}
+	treatmentArm := input.TreatmentArm
+	if treatmentArm == "" {
+		treatmentArm = "b3_invariant_guided"
+	}
+	if baselineArm == treatmentArm {
+		return ExperimentCompareResponse{}, fmt.Errorf("baseline and treatment arms must differ (both %q)", baselineArm)
+	}
+
+	dbPath, repoStore, err := a.openStoreFn(ctx, input.DBPath)
+	if err != nil {
+		return ExperimentCompareResponse{}, err
+	}
+	defer repoStore.Close()
+
+	id := input.ExperimentID
+	if id == "" {
+		list, lerr := repoStore.ListExperiments(ctx, input.ProblemID)
+		if lerr != nil {
+			return ExperimentCompareResponse{}, lerr
+		}
+		if len(list) == 0 {
+			return ExperimentCompareResponse{}, fmt.Errorf("no experiment for problem %s; run `experiment run` first", input.ProblemID)
+		}
+		id = list[0].ID
+	}
+	rec, err := repoStore.GetExperiment(ctx, id)
+	if err != nil {
+		return ExperimentCompareResponse{}, err
+	}
+	view, err := a.experimentView(ctx, repoStore, rec)
+	if err != nil {
+		return ExperimentCompareResponse{}, err
+	}
+
+	armByName := make(map[string]ExperimentArmView, len(view.Arms))
+	for _, arm := range view.Arms {
+		armByName[arm.Arm] = arm
+	}
+	baseline, ok := armByName[baselineArm]
+	if !ok {
+		return ExperimentCompareResponse{}, fmt.Errorf("experiment %s has no arm %q", id, baselineArm)
+	}
+	treatment, ok := armByName[treatmentArm]
+	if !ok {
+		return ExperimentCompareResponse{}, fmt.Errorf("experiment %s has no arm %q", id, treatmentArm)
+	}
+
+	// Index metrics by (arm, metric) so a delta pairs the SAME metric.
+	type metricKey struct{ arm, metric string }
+	metricByKey := make(map[metricKey]ExperimentMetricView, len(view.Metrics))
+	var metricNames []string
+	seenMetric := map[string]bool{}
+	for _, m := range view.Metrics {
+		metricByKey[metricKey{m.Arm, m.Metric}] = m
+		if !seenMetric[m.Metric] {
+			seenMetric[m.Metric] = true
+			metricNames = append(metricNames, m.Metric)
+		}
+	}
+	sort.Strings(metricNames)
+	var deltas []ArmMetricDelta
+	for _, name := range metricNames {
+		bm := metricByKey[metricKey{baselineArm, name}]
+		tm := metricByKey[metricKey{treatmentArm, name}]
+		d := ArmMetricDelta{
+			Metric:             name,
+			BaselineNumerator:  bm.Numerator,
+			BaselineDenom:      bm.Denominator,
+			BaselineOrdinal:    bm.Ordinal,
+			TreatmentNumerator: tm.Numerator,
+			TreatmentDenom:     tm.Denominator,
+			TreatmentOrdinal:   tm.Ordinal,
+		}
+		d.Direction = metricDirection(d)
+		deltas = append(deltas, d)
+	}
+
+	recoveryDelta := "neither"
+	switch {
+	case treatment.Recovered && baseline.Recovered:
+		recoveryDelta = "both"
+	case treatment.Recovered && !baseline.Recovered:
+		recoveryDelta = "treatment-only"
+	case !treatment.Recovered && baseline.Recovered:
+		recoveryDelta = "baseline-only"
+	}
+
+	cmp := ExperimentCompareView{
+		ExperimentID:        rec.ID,
+		Mode:                rec.Mode,
+		ModeDisclaimer:      modeDisclaimer(rec.Mode),
+		RecoveryRuleVersion: rec.RecoveryRuleVersion,
+		ProfileVersion:      rec.ProfileVersion,
+		ProposalBudget:      rec.ProposalBudgetCount,
+		BaselineArm:         baseline,
+		TreatmentArm:        treatment,
+		RecoveryDelta:       recoveryDelta,
+		Metrics:             deltas,
+		Interpretation:      compareInterpretation(recoveryDelta, baselineArm, treatmentArm),
+	}
+	return ExperimentCompareResponse{OK: true, Command: "experiment compare", Store: dbPath, Comparison: cmp}, nil
+}
+
+// compareInterpretation renders a plain, non-inflated reading of the recovery
+// delta. It states the structural fact only — a single deterministic split
+// supports no statistical claim, and the phrasing must not imply one.
+func compareInterpretation(recoveryDelta, baselineArm, treatmentArm string) string {
+	switch recoveryDelta {
+	case "treatment-only":
+		return treatmentArm + " recovered the held-out structural move on this split; " + baselineArm + " did not (single deterministic split; no statistical claim)"
+	case "baseline-only":
+		return baselineArm + " recovered the held-out structural move on this split; " + treatmentArm + " did not (single deterministic split; no statistical claim)"
+	case "both":
+		return "both arms recovered the held-out structural move on this split (compare first-recovery rank and diversity)"
+	default:
+		return "neither arm recovered the held-out structural move on this split (an honest negative for both)"
+	}
 }

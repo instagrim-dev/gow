@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 21
+const currentSchemaVersion = 22
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -865,6 +865,24 @@ END;
 		// to admit the baseline roles 'summarize-next' and 'brainstorm'
 		// (guarded in-place writable_schema edit). Introspective + idempotent.
 		apply: migrateV21BlindedExperiment,
+	},
+	{
+		version: 22,
+		// M7 measurement-contract hardening (review findings 1-3, 5). (1)
+		// experiment_arm_proposals: explicit arm<->proposal MEMBERSHIP with rank
+		// and per-proposal assessment — artifact deduplication and experiment
+		// participation are different identities; an arm is scored ONLY on what
+		// it derived this run (dedup may map a derived proposal to an existing
+		// artifact id, recorded explicitly). (2) experiment_targets: the FROZEN
+		// target manifest (signature ids + content fingerprints) that audit,
+		// scoring, and experiment identity all consume — scored targets are
+		// restricted to signatures derived from the REGISTERED withheld sources.
+		// (3) experiment_arms gains decisive/unknown/unassessed counts and
+		// evaluations_consumed so the evaluation budget is enforced and its
+		// consumption persisted, and unknown-only assessments can conclude
+		// inconclusive rather than being coerced to no_recovery. Additive +
+		// guarded; idempotent on fresh v22.
+		apply: migrateV22ExperimentMeasurementContract,
 	},
 }
 
@@ -2763,6 +2781,75 @@ END`,
 		// Widen by replacing the closing paren of the role CHECK enum.
 		const marker = "'policy-mutate'"
 		if err := editTableCheckInPlace(ctx, tx, "provider_invocations", marker, marker+",'"+role+"'"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// experimentMeasurementSQL is the additive DDL for the v22 measurement-contract
+// hardening: explicit arm membership + the frozen target manifest.
+const experimentMeasurementSQL = `
+CREATE TABLE IF NOT EXISTS experiment_arm_proposals (
+  experiment_id TEXT NOT NULL REFERENCES experiment_runs(id),
+  arm TEXT NOT NULL,
+  proposal_id TEXT NOT NULL REFERENCES frontier_proposals(id),
+  member_rank INTEGER NOT NULL,
+  assessment TEXT NOT NULL CHECK (assessment IN ('recovered','decisive_no','unknown','unassessed')),
+  PRIMARY KEY(experiment_id, arm, proposal_id)
+);
+
+CREATE TABLE IF NOT EXISTS experiment_targets (
+  experiment_id TEXT NOT NULL REFERENCES experiment_runs(id),
+  signature_id TEXT NOT NULL REFERENCES mechanism_signatures(id),
+  canonical_fingerprint TEXT NOT NULL,
+  PRIMARY KEY(experiment_id, signature_id)
+);
+
+CREATE TRIGGER IF NOT EXISTS experiment_arm_proposals_immutable_update
+BEFORE UPDATE ON experiment_arm_proposals
+BEGIN
+  SELECT RAISE(ABORT, 'experiment arm proposals are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS experiment_arm_proposals_immutable_delete
+BEFORE DELETE ON experiment_arm_proposals
+BEGIN
+  SELECT RAISE(ABORT, 'experiment arm proposals are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS experiment_targets_immutable_update
+BEFORE UPDATE ON experiment_targets
+BEGIN
+  SELECT RAISE(ABORT, 'experiment targets are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS experiment_targets_immutable_delete
+BEFORE DELETE ON experiment_targets
+BEGIN
+  SELECT RAISE(ABORT, 'experiment targets are immutable');
+END;
+`
+
+// migrateV22ExperimentMeasurementContract creates the membership + manifest
+// tables and adds the assessment-count/consumption columns to experiment_arms.
+// Guarded + idempotent.
+func migrateV22ExperimentMeasurementContract(ctx context.Context, tx *sql.Tx) error {
+	if _, err := tx.ExecContext(ctx, experimentMeasurementSQL); err != nil {
+		return err
+	}
+	cols := []struct{ column, ddl string }{
+		{"decisive_count", "ALTER TABLE experiment_arms ADD COLUMN decisive_count INTEGER NOT NULL DEFAULT 0"},
+		{"unknown_count", "ALTER TABLE experiment_arms ADD COLUMN unknown_count INTEGER NOT NULL DEFAULT 0"},
+		{"unassessed_count", "ALTER TABLE experiment_arms ADD COLUMN unassessed_count INTEGER NOT NULL DEFAULT 0"},
+		{"evaluations_consumed", "ALTER TABLE experiment_arms ADD COLUMN evaluations_consumed INTEGER NOT NULL DEFAULT 0"},
+	}
+	for _, c := range cols {
+		has, err := columnExists(ctx, tx, "experiment_arms", c.column)
+		if err != nil {
+			return err
+		}
+		if has {
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, c.ddl); err != nil {
 			return err
 		}
 	}

@@ -487,6 +487,14 @@ func (f *fakeProblemStore) ListProposalContentsForProblem(context.Context, strin
 	return nil, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) ListProposalContentsByIDs(context.Context, []string) ([]store.ProposalContentRow, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListTargetSignaturesForHoldout(context.Context, string) ([]store.TargetSignatureRow, error) {
+	return nil, errors.New("unexpected call")
+}
+
 func (f *fakeProblemStore) PersistExperiment(context.Context, store.ExperimentRecord) (store.PersistExperimentResult, error) {
 	return store.PersistExperimentResult{}, errors.New("unexpected call")
 }

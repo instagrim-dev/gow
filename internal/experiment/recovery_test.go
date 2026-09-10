@@ -113,3 +113,67 @@ func TestMetricOrdinalBands(t *testing.T) {
 		}
 	}
 }
+
+// --- AssessProposals: enforced evaluation budget + honest assessment classes ---
+
+// F3 regression: proposal_budget larger than evaluation_budget, with the only
+// recovering proposal BEYOND the budget. The enforced budget must stop before
+// evaluating it: no recovery may be reported, the unfinished proposal is
+// unassessed, and consumption is auditable.
+func TestAssessProposalsBudgetStopsBeforeRecovery(t *testing.T) {
+	targets := []canon.MechanismSignature{expSignature(expIDLattice)}
+	proposals := []ProposalContent{
+		{ProposalID: "fpr_far", Rank: 0, Signature: expSignature(expIDResidue)},
+		{ProposalID: "fpr_near", Rank: 1, Signature: expSignature(expIDLattice)}, // would recover
+	}
+	out := AssessProposals(proposals, targets, canon.ProfileMechanismV1(), 1)
+	if out.RecoveredCount != 0 {
+		t.Fatalf("budget=1 must stop before the recovering proposal: %+v", out)
+	}
+	if out.EvaluationsConsumed != 1 {
+		t.Fatalf("consumed = %d, want 1", out.EvaluationsConsumed)
+	}
+	if out.UnassessedCount != 1 {
+		t.Fatalf("unassessed = %d, want 1 (the never-compared proposal)", out.UnassessedCount)
+	}
+	if out.Proposals[1].Assessment != AssessmentUnassessed {
+		t.Fatalf("rank-1 assessment = %s, want unassessed", out.Proposals[1].Assessment)
+	}
+}
+
+// With sufficient budget the same population recovers, consumption reflects the
+// early-exit comparison count, and the decisive non-recovery is counted.
+func TestAssessProposalsSufficientBudgetRecovers(t *testing.T) {
+	targets := []canon.MechanismSignature{expSignature(expIDLattice)}
+	proposals := []ProposalContent{
+		{ProposalID: "fpr_far", Rank: 0, Signature: expSignature(expIDResidue)},
+		{ProposalID: "fpr_near", Rank: 1, Signature: expSignature(expIDLattice)},
+	}
+	out := AssessProposals(proposals, targets, canon.ProfileMechanismV1(), 0) // unlimited
+	if out.RecoveredCount != 1 || out.FirstRecoveryRank != 1 {
+		t.Fatalf("expected recovery at rank 1: %+v", out)
+	}
+	if out.DecisiveNoCount != 1 {
+		t.Fatalf("decisive-no = %d, want 1", out.DecisiveNoCount)
+	}
+	if out.EvaluationsConsumed != 2 {
+		t.Fatalf("consumed = %d, want 2", out.EvaluationsConsumed)
+	}
+}
+
+// F5 regression: a fully-compared population whose comparisons are all unknown
+// is an UNKNOWN assessment, never decisive non-recovery.
+func TestAssessProposalsUnknownOnlyIsNotDecisive(t *testing.T) {
+	targets := []canon.MechanismSignature{expSignature(expIDLattice)}
+	amb := expSignature()
+	amb.Preserves = append(amb.Preserves, canon.FieldClaim{
+		FieldKind: domain.FieldPreserves, State: domain.ResolutionAmbiguous, Status: domain.ClaimAmbiguous,
+	})
+	out := AssessProposals([]ProposalContent{{ProposalID: "fpr_amb", Rank: 0, Signature: amb}}, targets, canon.ProfileMechanismV1(), 0)
+	if out.UnknownCount != 1 || out.DecisiveNoCount != 0 {
+		t.Fatalf("unknown-only must stay unknown: %+v", out)
+	}
+	if out.Proposals[0].Assessment != AssessmentUnknown {
+		t.Fatalf("assessment = %s, want unknown", out.Proposals[0].Assessment)
+	}
+}

@@ -149,6 +149,46 @@ func newExperimentCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions
 	listCmd.Flags().StringVar(&listProblem, "problem", "", "Problem ID")
 	cmd.AddCommand(listCmd)
 
+	var (
+		cmpProblem   string
+		cmpBaseline  string
+		cmpTreatment string
+	)
+	compareCmd := &cobra.Command{
+		Use:   "compare [experiment-id]",
+		Short: "Compare two arms within one experiment (default b0 vs b3)",
+		Long: "Apples-to-apples arm delta WITHIN one experiment (same holdout split,\n" +
+			"recovery rule, profile, and shared budget). Reports exact counts, an ordinal\n" +
+			"direction, and the recovery delta only — a single deterministic split\n" +
+			"supports NO statistical significance claim.",
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var id string
+			if len(args) == 1 {
+				id = args[0]
+			}
+			if id == "" && cmpProblem == "" {
+				return wrapCommandError("experiment compare", errors.New("an experiment id or --problem is required"))
+			}
+			result, err := app.CompareExperiment(cmd.Context(), pipeline.ExperimentCompareInput{
+				DBPath: opts.dbPath, ExperimentID: id, ProblemID: cmpProblem,
+				BaselineArm: cmpBaseline, TreatmentArm: cmpTreatment, JSONOutput: opts.jsonOutput,
+			})
+			if err != nil {
+				return wrapCommandError("experiment compare", err)
+			}
+			if opts.jsonOutput {
+				return writeJSON(stdout, result)
+			}
+			writeExperimentCompareHuman(stdout, result.Comparison)
+			return nil
+		},
+	}
+	compareCmd.Flags().StringVar(&cmpProblem, "problem", "", "Problem ID (latest experiment when no id is given)")
+	compareCmd.Flags().StringVar(&cmpBaseline, "baseline", "", "Baseline arm (default b0_undirected)")
+	compareCmd.Flags().StringVar(&cmpTreatment, "treatment", "", "Treatment arm (default b3_invariant_guided)")
+	cmd.AddCommand(compareCmd)
+
 	return cmd
 }
 
@@ -158,7 +198,7 @@ func writeExperimentHuman(w io.Writer, e pipeline.ExperimentView, created bool) 
 	lk := e.LeakageCheck
 	fmt.Fprintf(w, "  leakage: passed=%t (snapshots=%d normalizations=%d signatures=%d)\n", lk.Passed, lk.SnapshotLeaks, lk.NormalizationLeaks, lk.SignatureLeaks)
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "  ARM\tPROPOSALS\tRECOVERED\tNEAREST\tDISTINCT\tREDUNDANT\tSTOP")
+	fmt.Fprintln(tw, "  ARM\tPROPOSALS\tRECOVERED\tNEAREST\tDECISIVE\tUNKNOWN\tUNASSESSED\tEVALS\tDISTINCT\tREDUNDANT\tSTOP")
 	for _, arm := range e.Arms {
 		rank := "-"
 		if arm.FirstRecoveryRank != nil {
@@ -168,7 +208,7 @@ func writeExperimentHuman(w io.Writer, e pipeline.ExperimentView, created bool) 
 		} else {
 			rank = "no"
 		}
-		fmt.Fprintf(tw, "  %s\t%d\t%s\t%s\t%d\t%d\t%s\n", arm.Arm, arm.ProposalCount, rank, arm.NearestClassification, arm.DistinctFamilyCount, arm.RedundantCount, arm.StoppingCondition)
+		fmt.Fprintf(tw, "  %s\t%d\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%s\n", arm.Arm, arm.ProposalCount, rank, arm.NearestClassification, arm.DecisiveCount, arm.UnknownCount, arm.UnassessedCount, arm.EvaluationsConsumed, arm.DistinctFamilyCount, arm.RedundantCount, arm.StoppingCondition)
 	}
 	tw.Flush()
 }
@@ -182,6 +222,21 @@ func writeExperimentListHuman(w io.Writer, resp pipeline.ExperimentListResponse)
 	fmt.Fprintln(tw, "REVISION\tID\tMODE\tCONCLUSION\tCREATED")
 	for _, e := range resp.Experiments {
 		fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\n", e.Revision, e.ID, e.Mode, e.Conclusion, e.CreatedAt)
+	}
+	tw.Flush()
+}
+
+func writeExperimentCompareHuman(w io.Writer, c pipeline.ExperimentCompareView) {
+	fmt.Fprintf(w, "Experiment %s (mode=%s) — %s vs %s\n  NOTE: %s\n",
+		c.ExperimentID, c.Mode, c.BaselineArm.Arm, c.TreatmentArm.Arm, c.ModeDisclaimer)
+	fmt.Fprintf(w, "  rule=%s profile=%s budget=%d\n", c.RecoveryRuleVersion, c.ProfileVersion, c.ProposalBudget)
+	fmt.Fprintf(w, "  recovery: %s\n  %s\n", c.RecoveryDelta, c.Interpretation)
+	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+	fmt.Fprintf(tw, "  METRIC\t%s\t%s\tDIRECTION\n", c.BaselineArm.Arm, c.TreatmentArm.Arm)
+	for _, d := range c.Metrics {
+		fmt.Fprintf(tw, "  %s\t%d/%d (%s)\t%d/%d (%s)\t%s\n",
+			d.Metric, d.BaselineNumerator, d.BaselineDenom, d.BaselineOrdinal,
+			d.TreatmentNumerator, d.TreatmentDenom, d.TreatmentOrdinal, d.Direction)
 	}
 	tw.Flush()
 }

@@ -123,6 +123,110 @@ func TestIntegrationExperimentEndToEnd(t *testing.T) {
 	if shown.Experiment.ID != exp.ID || shown.Experiment.ModeDisclaimer == "" {
 		t.Fatalf("show mismatch: %+v", shown.Experiment)
 	}
+
+	// F1: explicit arm<->proposal membership persisted with rank + assessment;
+	// only membership determines what the arm is scored on.
+	if len(b3.Members) != b3.ProposalCount {
+		t.Fatalf("b3 members = %d, want %d (one membership per scored proposal)", len(b3.Members), b3.ProposalCount)
+	}
+	for i, m := range b3.Members {
+		if m.ProposalID == "" || m.Assessment == "" {
+			t.Fatalf("member %d incomplete: %+v", i, m)
+		}
+	}
+	// F2: the frozen target manifest is persisted alongside the experiment.
+	if len(exp.Targets) == 0 {
+		t.Fatalf("experiment must persist its frozen target manifest")
+	}
+	// F3/F5: budget consumption is persisted and the decisive counts add up —
+	// no_recovery above required every proposal decisively assessed.
+	if b3.EvaluationsConsumed == 0 {
+		t.Fatalf("b3 consumed no evaluations yet concluded: %+v", b3)
+	}
+	if b3.DecisiveCount != b3.ProposalCount || b3.UnknownCount != 0 || b3.UnassessedCount != 0 {
+		t.Fatalf("no_recovery requires fully decisive assessment: %+v", b3)
+	}
+
+	// F2 regression: target material added AFTER definition (outside the
+	// registered withheld sources) is invisible to scoring AND to experiment
+	// identity — the replay stays idempotent with an unchanged manifest.
+	addPostDefinitionTargetSource(t, ctx, app, dbPath, targetProblem)
+	after, err := app.RunExperiment(ctx, ExperimentRunInput{DBPath: dbPath, ProblemID: trainProblem})
+	if err != nil {
+		t.Fatalf("re-run after target growth: %v", err)
+	}
+	if after.Created || after.Experiment.ID != exp.ID {
+		t.Fatalf("post-definition target growth must not change the experiment: created=%v id=%s", after.Created, after.Experiment.ID)
+	}
+	if len(after.Experiment.Targets) != len(exp.Targets) {
+		t.Fatalf("frozen manifest changed: %d -> %d targets", len(exp.Targets), len(after.Experiment.Targets))
+	}
+
+	// F3 regression: an enforced evaluation budget too small to finish yields
+	// unassessed proposals and an INCONCLUSIVE conclusion (a different
+	// experiment identity: the budget is part of the contract).
+	starved, err := app.RunExperiment(ctx, ExperimentRunInput{DBPath: dbPath, ProblemID: trainProblem, EvaluationBudget: 1})
+	if err != nil {
+		t.Fatalf("starved run: %v", err)
+	}
+	if !starved.Created {
+		t.Fatal("a different evaluation budget is a different experiment")
+	}
+	var sb3 *ExperimentArmView
+	for i := range starved.Experiment.Arms {
+		if starved.Experiment.Arms[i].Arm == "b3_invariant_guided" {
+			sb3 = &starved.Experiment.Arms[i]
+		}
+	}
+	if sb3 == nil || sb3.ProposalCount == 0 {
+		t.Fatalf("starved b3 needs proposals to exercise the budget: %+v", sb3)
+	}
+	if sb3.EvaluationsConsumed > 1 {
+		t.Fatalf("evaluation budget not enforced: consumed=%d budget=1", sb3.EvaluationsConsumed)
+	}
+	if sb3.UnassessedCount == 0 {
+		t.Fatalf("starved run must leave proposals unassessed: %+v", sb3)
+	}
+	if starved.Experiment.Conclusion != "inconclusive" {
+		t.Fatalf("starved conclusion = %q, want inconclusive (unassessed proposals are an epistemic gap)", starved.Experiment.Conclusion)
+	}
+}
+
+// addPostDefinitionTargetSource grows the target problem with a NEW source +
+// canonical signatures after the holdout definition froze the withheld set.
+func addPostDefinitionTargetSource(t *testing.T, ctx context.Context, app *App, dbPath, targetProblem string) {
+	t.Helper()
+	later := time.Date(2026, 9, 10, 15, 0, 0, 0, time.UTC)
+	repo := openTestStore(t, ctx, dbPath)
+	defer repo.Close()
+	runID := domain.NewRunID(later)
+	if _, err := repo.CreateRun(ctx, domain.NewRun{
+		ID: runID, ProblemID: targetProblem, Operation: "ingest", Status: domain.RunStatusInitialized,
+		InputRef: "late-target", ToolName: "newf", ToolVersion: "test", StartedAt: later, CompletedAt: later,
+	}); err != nil {
+		t.Fatalf("late run: %v", err)
+	}
+	admission, err := repo.CreateSourceSnapshot(ctx, store.SnapshotAdmission{
+		ProblemID: targetProblem, Kind: domain.SourceKindLocalPath,
+		LogicalName: "late-target.md", Origin: "/tmp/late-target.md", SHA256: "deadd00d",
+		ByteLength: 9, MediaType: "text/markdown", ObjectPath: "sha256/de/deadd00d",
+		IngestRunID: runID, ObservedAt: later,
+	})
+	if err != nil {
+		t.Fatalf("late snapshot: %v", err)
+	}
+	seed, err := app.SeedMechanismFixture(ctx, MechanismFixtureSeedInput{
+		DBPath: dbPath, ProblemID: targetProblem, RunID: runID,
+		SnapshotID: admission.Snapshot.ID, Path: fixturePath("case4_novel_candidate.json"),
+	})
+	if err != nil {
+		t.Fatalf("late seed: %v", err)
+	}
+	for _, mechID := range seed.MechanismIDs {
+		if _, err := app.SignatureMechanism(ctx, SignatureInput{DBPath: dbPath, MechanismID: mechID, VocabVersion: canon.VocabularyMechanismV1}); err != nil {
+			t.Fatalf("late signature: %v", err)
+		}
+	}
 }
 
 // TestIntegrationExperimentLeakageFails seeds withheld CONTENT into the train
@@ -197,4 +301,137 @@ func TestIntegrationHistoricalModeRefused(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "historical mode refused") {
 		t.Fatalf("historical run without dating evidence must be refused, got %v", err)
 	}
+}
+
+// TestIntegrationExperimentBaselineArmsAndCompare runs all four arms (B0-B3),
+// asserts the now-executable B1/B2 baselines produce proposals with their own
+// provenance role, verifies the shared recovery rule classifies every arm, and
+// exercises the within-experiment compare service (default b0 vs b3 plus an
+// explicit b2-vs-b3 delta). Idempotent replay must not create a second
+// experiment and must not mutate the research state.
+func TestIntegrationExperimentBaselineArmsAndCompare(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = dataDrivenMiner{}
+	app.challengerFn = biasOnlyChallenger{}
+
+	trainProblem, targetProblem := seedExperimentSubstrate(t, ctx, app, dbPath)
+	if _, err := app.DefineExperiment(ctx, ExperimentDefineInput{DBPath: dbPath, ProblemID: trainProblem, TargetProblemID: targetProblem}); err != nil {
+		t.Fatalf("define: %v", err)
+	}
+
+	allArms := []string{"b0_undirected", "b1_semantic_summary", "b2_brainstorm", "b3_invariant_guided"}
+	res, err := app.RunExperiment(ctx, ExperimentRunInput{DBPath: dbPath, ProblemID: trainProblem, Arms: allArms, ProposalBudget: 4})
+	if err != nil {
+		t.Fatalf("run all arms: %v", err)
+	}
+	if !res.Created {
+		t.Fatal("first run must create the experiment")
+	}
+	if len(res.Experiment.Arms) != 4 {
+		t.Fatalf("expected 4 arms, got %d: %+v", len(res.Experiment.Arms), res.Experiment.Arms)
+	}
+	arms := map[string]ExperimentArmView{}
+	for _, a := range res.Experiment.Arms {
+		arms[a.Arm] = a
+	}
+	// B1/B2 are now executable: their deriving fixtures produce proposals from
+	// the family projection (no invariant targets), so they are NOT empty.
+	if arms["b1_semantic_summary"].ProposalCount == 0 {
+		t.Fatalf("b1 must generate restatement proposals: %+v", arms["b1_semantic_summary"])
+	}
+	if arms["b2_brainstorm"].ProposalCount == 0 {
+		t.Fatalf("b2 must generate brainstorm proposals: %+v", arms["b2_brainstorm"])
+	}
+	// B2's proposals are canonically redundant (surface-only variation), so its
+	// distinct-mechanism count must be 1 and redundancy must be > 0 when >1.
+	if b2 := arms["b2_brainstorm"]; b2.ProposalCount > 1 {
+		if b2.DistinctFamilyCount != 1 {
+			t.Fatalf("b2 distinct mechanisms = %d, want 1 (surface-only variation): %+v", b2.DistinctFamilyCount, b2)
+		}
+		if b2.RedundantCount == 0 {
+			t.Fatalf("b2 must record redundant proposals: %+v", b2)
+		}
+	}
+	// Every arm carries a stopping condition from the AGENTS.md vocabulary.
+	for name, a := range arms {
+		switch a.StoppingCondition {
+		case "completed", "budget_exhausted", "no_information_gain", "verification_blocked":
+		default:
+			t.Fatalf("arm %s has invalid stopping condition %q", name, a.StoppingCondition)
+		}
+	}
+
+	// Default compare (b0 vs b3): apples-to-apples within one experiment.
+	cmp, err := app.CompareExperiment(ctx, ExperimentCompareInput{DBPath: dbPath, ProblemID: trainProblem})
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+	if cmp.Comparison.BaselineArm.Arm != "b0_undirected" || cmp.Comparison.TreatmentArm.Arm != "b3_invariant_guided" {
+		t.Fatalf("default compare arms wrong: %+v", cmp.Comparison)
+	}
+	if cmp.Comparison.ModeDisclaimer == "" || !strings.Contains(cmp.Comparison.Interpretation, "split") {
+		t.Fatalf("compare must carry mode disclaimer + non-inflated interpretation: %+v", cmp.Comparison)
+	}
+	if len(cmp.Comparison.Metrics) == 0 {
+		t.Fatal("compare must report metric deltas")
+	}
+	for _, d := range cmp.Comparison.Metrics {
+		switch d.Direction {
+		case "higher", "lower", "same":
+		default:
+			t.Fatalf("metric %s has invalid direction %q", d.Metric, d.Direction)
+		}
+	}
+
+	// Explicit b2-vs-b3 compare pairs the same metric names across two arms.
+	cmp2, err := app.CompareExperiment(ctx, ExperimentCompareInput{DBPath: dbPath, ProblemID: trainProblem, BaselineArm: "b2_brainstorm", TreatmentArm: "b3_invariant_guided"})
+	if err != nil {
+		t.Fatalf("compare b2 vs b3: %v", err)
+	}
+	if cmp2.Comparison.BaselineArm.Arm != "b2_brainstorm" {
+		t.Fatalf("explicit baseline arm wrong: %+v", cmp2.Comparison)
+	}
+
+	// Same baseline == treatment is refused.
+	if _, err := app.CompareExperiment(ctx, ExperimentCompareInput{DBPath: dbPath, ProblemID: trainProblem, BaselineArm: "b3_invariant_guided", TreatmentArm: "b3_invariant_guided"}); err == nil {
+		t.Fatal("compare must refuse identical arms")
+	}
+
+	// Idempotent replay: same arms + budget returns the SAME experiment, and the
+	// research state (surviving invariants) is not mutated by measurement.
+	statesBefore, err := listSurvivingCount(ctx, dbPath, trainProblem)
+	if err != nil {
+		t.Fatalf("states before: %v", err)
+	}
+	again, err := app.RunExperiment(ctx, ExperimentRunInput{DBPath: dbPath, ProblemID: trainProblem, Arms: allArms, ProposalBudget: 4})
+	if err != nil {
+		t.Fatalf("replay: %v", err)
+	}
+	if again.Created || again.Experiment.ID != res.Experiment.ID {
+		t.Fatalf("replay must be idempotent: created=%v id=%s want %s", again.Created, again.Experiment.ID, res.Experiment.ID)
+	}
+	statesAfter, err := listSurvivingCount(ctx, dbPath, trainProblem)
+	if err != nil {
+		t.Fatalf("states after: %v", err)
+	}
+	if statesBefore != statesAfter {
+		t.Fatalf("experiment must not mutate invariant state: surviving before=%d after=%d", statesBefore, statesAfter)
+	}
+}
+
+// listSurvivingCount counts surviving invariants for a problem — a proxy for
+// "the experiment did not mutate the research state."
+func listSurvivingCount(ctx context.Context, dbPath, problemID string) (int, error) {
+	repo, err := store.Open(dbPath)
+	if err != nil {
+		return 0, err
+	}
+	defer repo.Close()
+	rows, err := repo.ListInvariantStates(ctx, problemID, "surviving")
+	if err != nil {
+		return 0, err
+	}
+	return len(rows), nil
 }

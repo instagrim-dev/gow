@@ -98,6 +98,8 @@ type problemStore interface {
 	GetLeakageCheck(context.Context, string) (store.LeakageCheckRecord, error)
 	ListProposalContents(context.Context, string) ([]store.ProposalContentRow, error)
 	ListProposalContentsForProblem(context.Context, string) ([]store.ProposalContentRow, error)
+	ListProposalContentsByIDs(context.Context, []string) ([]store.ProposalContentRow, error)
+	ListTargetSignaturesForHoldout(context.Context, string) ([]store.TargetSignatureRow, error)
 	PersistExperiment(context.Context, store.ExperimentRecord) (store.PersistExperimentResult, error)
 	GetExperiment(context.Context, string) (store.ExperimentRecord, error)
 	ListExperiments(context.Context, string) ([]store.ExperimentRecord, error)

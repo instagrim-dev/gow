@@ -76,6 +76,7 @@ newf experiment define --problem <train-id> --target-problem <target-id> [--mode
 newf experiment run [--problem <train-id> | --holdout-set <id>] [--proposal-budget <n>]
 newf experiment show [experiment-id] [--problem <problem-id>]
 newf experiment list --problem <problem-id>
+newf experiment compare [experiment-id] [--problem <problem-id>] [--baseline <arm>] [--treatment <arm>]
 newf policy mutate --problem <problem-id> [--no-provider]
 newf policy list --problem <problem-id>
 newf policy show [policy-revision-id] [--problem <problem-id>]

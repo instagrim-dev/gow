@@ -91,6 +91,114 @@ func DetectRecovery(proposals []ProposalContent, target canon.MechanismSignature
 	return out
 }
 
+// Assessment is the per-proposal evaluation status. Unknown is an epistemic
+// gap, never coerced into decisive non-recovery; unassessed means the
+// evaluation budget ran out before this proposal completed its comparisons.
+type Assessment string
+
+const (
+	AssessmentRecovered  Assessment = "recovered"
+	AssessmentDecisiveNo Assessment = "decisive_no"
+	AssessmentUnknown    Assessment = "unknown"
+	AssessmentUnassessed Assessment = "unassessed"
+)
+
+// ProposalAssessment is one proposal's budget-audited evaluation outcome.
+type ProposalAssessment struct {
+	ProposalID     string
+	Rank           int
+	Assessment     Assessment
+	Nearest        canon.Classification
+	ComparisonsRun int
+}
+
+// ArmAssessment is the per-arm rollup: counts by assessment class plus the
+// consumed evaluation budget, so no budget is recorded without operational
+// effect and no unknown is laundered into a decisive result.
+type ArmAssessment struct {
+	Proposals             []ProposalAssessment
+	RecoveredCount        int
+	DecisiveNoCount       int
+	UnknownCount          int
+	UnassessedCount       int
+	FirstRecoveryRank     int // -1 when nothing recovered
+	NearestClassification canon.Classification
+	EvaluationsConsumed   int
+}
+
+// AssessProposals evaluates proposals against the FROZEN target manifest under
+// an enforced evaluation budget. The evaluation unit is one proposal-target
+// comparison. Proposals are processed in rank order; per proposal, targets are
+// compared until a recovery is found, the targets are exhausted, or the budget
+// runs out. Classification per proposal:
+//
+//	recovered   — >=1 comparison classified mechanism-near (recovery-rule/v1);
+//	decisive_no — every target compared, all decisively non-near, none unknown;
+//	unknown     — every target compared, no recovery, >=1 unknown comparison;
+//	unassessed  — the budget exhausted before this proposal finished (or began).
+//
+// budget <= 0 means unlimited (every comparison runs).
+func AssessProposals(proposals []ProposalContent, targets []canon.MechanismSignature, profile canon.ComparisonProfile, budget int) ArmAssessment {
+	ordered := append([]ProposalContent(nil), proposals...)
+	sort.Slice(ordered, func(i, j int) bool { return ordered[i].Rank < ordered[j].Rank })
+
+	out := ArmAssessment{FirstRecoveryRank: -1, NearestClassification: canon.ClassUnknown}
+	for _, p := range ordered {
+		pa := ProposalAssessment{ProposalID: p.ProposalID, Rank: p.Rank, Nearest: canon.ClassUnknown, Assessment: AssessmentUnassessed}
+		sawUnknown := false
+		completed := true
+		for _, target := range targets {
+			if budget > 0 && out.EvaluationsConsumed >= budget {
+				completed = false
+				break
+			}
+			out.EvaluationsConsumed++
+			pa.ComparisonsRun++
+			cmp := canon.CompareWithProfile(p.Signature, target, profile)
+			if classificationStrength[cmp.Classification] > classificationStrength[pa.Nearest] {
+				pa.Nearest = cmp.Classification
+			}
+			if recoveringClassifications[cmp.Classification] {
+				pa.Assessment = AssessmentRecovered
+				break
+			}
+			if cmp.Classification == canon.ClassUnknown {
+				sawUnknown = true
+			}
+		}
+		if pa.Assessment != AssessmentRecovered {
+			switch {
+			case !completed || pa.ComparisonsRun < len(targets):
+				pa.Assessment = AssessmentUnassessed
+			case sawUnknown:
+				pa.Assessment = AssessmentUnknown
+			case len(targets) > 0:
+				pa.Assessment = AssessmentDecisiveNo
+			default:
+				pa.Assessment = AssessmentUnknown // no targets: nothing decisive happened
+			}
+		}
+		switch pa.Assessment {
+		case AssessmentRecovered:
+			out.RecoveredCount++
+			if out.FirstRecoveryRank < 0 {
+				out.FirstRecoveryRank = p.Rank
+			}
+		case AssessmentDecisiveNo:
+			out.DecisiveNoCount++
+		case AssessmentUnknown:
+			out.UnknownCount++
+		case AssessmentUnassessed:
+			out.UnassessedCount++
+		}
+		if classificationStrength[pa.Nearest] > classificationStrength[out.NearestClassification] {
+			out.NearestClassification = pa.Nearest
+		}
+		out.Proposals = append(out.Proposals, pa)
+	}
+	return out
+}
+
 // DiversityFacts are the code-computed per-arm diversity/redundancy counts:
 // distinct mechanisms by canonical fingerprint, and redundant proposals (same
 // fingerprint as an earlier proposal).
