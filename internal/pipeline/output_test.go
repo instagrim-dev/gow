@@ -230,51 +230,116 @@ func TestIngestResponseJSONContract(t *testing.T) {
 			t.Fatalf("missing key %q in JSON contract", key)
 		}
 	}
+}
 
-	func TestSourceResponseJSONContracts(t *testing.T) {
-		t.Parallel()
+func TestSourceResponseJSONContracts(t *testing.T) {
+	t.Parallel()
 
-		latestID := "snap_01K4Y8X6YJJ66Y5QY9G7DNE1H4"
-		source := SourceListView{
-			ID:               "src_01K4Y8X6YJJ66Y5QY9G7DNE1H3",
-			ProblemID:        "prb_01K4Y8X6YJJ66Y5QY9G7DNE1H1",
-			Kind:             "local_path",
-			LogicalName:      "paper.pdf",
-			Origin:           "/tmp/paper.pdf",
-			CreatedAt:        "2026-09-10T12:00:00Z",
-			SnapshotCount:    1,
-			LatestSnapshotID: &latestID,
-		}
-		snapshot := SourceSnapshotView{
-			ID:          latestID,
-			SourceID:    source.ID,
-			SHA256:      "abc",
-			ByteLength:  42,
-			MediaType:   "application/pdf",
-			ObjectPath:  "sha256/ab/abc",
-			ObservedAt:  "2026-09-10T12:00:00Z",
-			IngestRunID: "run_01K4Y8X6YJJ66Y5QY9G7DNE1H2",
-		}
+	latestID := "snap_01K4Y8X6YJJ66Y5QY9G7DNE1H4"
+	source := SourceListView{
+		ID:               "src_01K4Y8X6YJJ66Y5QY9G7DNE1H3",
+		ProblemID:        "prb_01K4Y8X6YJJ66Y5QY9G7DNE1H1",
+		Kind:             "local_path",
+		LogicalName:      "paper.pdf",
+		Origin:           "/tmp/paper.pdf",
+		CreatedAt:        "2026-09-10T12:00:00Z",
+		SnapshotCount:    1,
+		LatestSnapshotID: &latestID,
+	}
+	snapshot := SourceSnapshotView{
+		ID:          latestID,
+		SourceID:    source.ID,
+		SHA256:      "abc",
+		ByteLength:  42,
+		MediaType:   "application/pdf",
+		ObjectPath:  "sha256/ab/abc",
+		ObservedAt:  "2026-09-10T12:00:00Z",
+		IngestRunID: "run_01K4Y8X6YJJ66Y5QY9G7DNE1H2",
+	}
 
-		cases := []any{
-			SourceListResponse{OK: true, Command: "source list", Store: "/tmp/newf.db", ProblemID: source.ProblemID, Sources: []SourceListView{source}},
-			SourceShowResponse{OK: true, Command: "source show", Store: "/tmp/newf.db", Source: source, Snapshots: []SourceSnapshotView{snapshot}},
-			SourceSnapshotShowResponse{OK: true, Command: "source snapshot show", Store: "/tmp/newf.db", Source: source, Snapshot: snapshot, ObjectAbsolutePath: "/tmp/.newf/objects/sha256/ab/abc"},
-			SourceSnapshotVerifyResponse{OK: true, Command: "source snapshot verify", Store: "/tmp/newf.db", SnapshotID: latestID, Status: "verified", SHA256: "abc", Bytes: 42},
+	cases := []any{
+		SourceListResponse{OK: true, Command: "source list", Store: "/tmp/newf.db", ProblemID: source.ProblemID, Sources: []SourceListView{source}},
+		SourceShowResponse{OK: true, Command: "source show", Store: "/tmp/newf.db", Source: source, Snapshots: []SourceSnapshotView{snapshot}},
+		SourceSnapshotShowResponse{OK: true, Command: "source snapshot show", Store: "/tmp/newf.db", Source: source, Snapshot: snapshot, ObjectAbsolutePath: "/tmp/.newf/objects/sha256/ab/abc"},
+		SourceSnapshotVerifyResponse{OK: true, Command: "source snapshot verify", Store: "/tmp/newf.db", SnapshotID: latestID, Status: "verified", SHA256: "abc", Bytes: 42},
+	}
+	for _, item := range cases {
+		raw, err := json.Marshal(item)
+		if err != nil {
+			t.Fatalf("json.Marshal() error = %v", err)
 		}
-		for _, item := range cases {
-			raw, err := json.Marshal(item)
-			if err != nil {
-				t.Fatalf("json.Marshal() error = %v", err)
-			}
-			var decoded map[string]any
-			decodeJSON(t, raw, &decoded)
-			if _, ok := decoded["command"]; !ok {
-				t.Fatalf("missing command field in %T", item)
-			}
-			if _, ok := decoded["ok"]; !ok {
-				t.Fatalf("missing ok field in %T", item)
-			}
+		var decoded map[string]any
+		decodeJSON(t, raw, &decoded)
+		if _, ok := decoded["command"]; !ok {
+			t.Fatalf("missing command field in %T", item)
+		}
+		if _, ok := decoded["ok"]; !ok {
+			t.Fatalf("missing ok field in %T", item)
+		}
+	}
+}
+
+func TestNormalizeResponseJSONContract(t *testing.T) {
+	t.Parallel()
+
+	raw, err := json.Marshal(NormalizeResponse{
+		OK:        true,
+		Command:   "normalize",
+		Store:     "/tmp/newf.db",
+		ProblemID: "prb_01K4Y8X6YJJ66Y5QY9G7DNE1H1",
+		RunID:     "run_01K4Y8X6YJJ66Y5QY9G7DNE1H2",
+		Provider:  "fixture",
+		Schema:    "normalize/v1",
+		Results: []NormalizeResult{{
+			SnapshotID: "snap_01K4Y8X6YJJ66Y5QY9G7DNE1H4",
+			Status:     "created",
+			RevisionID: "nrev_01K4Y8X6YJJ66Y5QY9G7DNE1H5",
+			Approaches: []NormalizeApproachResult{{
+				ApproachID:      "app_01K4Y8X6YJJ66Y5QY9G7DNE1H6",
+				RevisionID:      "apr_01K4Y8X6YJJ66Y5QY9G7DNE1H7",
+				MechanismID:     "mech_01K4Y8X6YJJ66Y5QY9G7DNE1H8",
+				CreatedApproach: true,
+			}},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	var decoded map[string]any
+	decodeJSON(t, raw, &decoded)
+	for _, key := range []string{"ok", "command", "store", "problem_id", "run_id", "provider", "schema_version", "results"} {
+		if _, ok := decoded[key]; !ok {
+			t.Fatalf("missing key %q in normalize JSON contract", key)
+		}
+	}
+}
+
+func TestApproachShowResponseJSONContract(t *testing.T) {
+	t.Parallel()
+
+	raw, err := json.Marshal(ApproachShowResponse{
+		OK:                    true,
+		Command:               "approach show",
+		Store:                 "/tmp/newf.db",
+		ApproachID:            "app_01K4Y8X6YJJ66Y5QY9G7DNE1H6",
+		ProblemID:             "prb_01K4Y8X6YJJ66Y5QY9G7DNE1H1",
+		LogicalIdentity:       "erdos-straus/modular-residue-cover",
+		NormalizationRevision: "nrev_01K4Y8X6YJJ66Y5QY9G7DNE1H5",
+		SnapshotID:            "snap_01K4Y8X6YJJ66Y5QY9G7DNE1H4",
+		RunID:                 "run_01K4Y8X6YJJ66Y5QY9G7DNE1H2",
+		Provider:              ProviderInvocationView{ProviderName: "fixture", Role: "normalize", SchemaVersion: "normalize/v1", RequestHash: "abc"},
+		Mechanism:             MechanismView{ID: "mech_1", Locality: "local", ConstructionMode: "constructive", UncertaintyMode: "deterministic"},
+		Outcome:               OutcomeView{Class: "partial_failure"},
+		Support:               []FieldSupportView{{FieldPath: "outcome.class", SupportKind: "explicit"}},
+	})
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	var decoded map[string]any
+	decodeJSON(t, raw, &decoded)
+	for _, key := range []string{"approach_id", "source_snapshot_id", "provider", "mechanism", "outcome", "support"} {
+		if _, ok := decoded[key]; !ok {
+			t.Fatalf("missing key %q in approach show JSON contract", key)
 		}
 	}
 }

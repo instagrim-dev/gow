@@ -10,7 +10,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/instagrim-dev/newf/internal/domain"
+	"github.com/instagrim-dev/newf/internal/normalize"
 	"github.com/instagrim-dev/newf/internal/pipeline"
+	"github.com/instagrim-dev/newf/internal/provider"
 	"github.com/instagrim-dev/newf/internal/store"
 )
 
@@ -52,9 +54,12 @@ func newRootCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cob
 
 	cmd.AddCommand(newInitCommand(stdout, app, opts))
 	cmd.AddCommand(newIngestCommand(stdout, app, opts))
+	cmd.AddCommand(newNormalizeCommand(stdout, app, opts))
 	cmd.AddCommand(newProblemCommand(stdout, app, opts))
 	cmd.AddCommand(newRunCommand(stdout, app, opts))
 	cmd.AddCommand(newSourceCommand(stdout, app, opts))
+	cmd.AddCommand(newApproachCommand(stdout, app, opts))
+	cmd.AddCommand(newMechanismCommand(stdout, app, opts))
 
 	return cmd
 }
@@ -85,8 +90,19 @@ func classifyError(err error) string {
 	switch {
 	case errors.Is(err, domain.ErrInvalidProblemStatement), errors.Is(err, domain.ErrInvalidSlug),
 		errors.Is(err, domain.ErrInvalidProblemID), errors.Is(err, domain.ErrInvalidRunID),
-		errors.Is(err, domain.ErrInvalidSourceID), errors.Is(err, domain.ErrInvalidSnapshotID):
+		errors.Is(err, domain.ErrInvalidSourceID), errors.Is(err, domain.ErrInvalidSnapshotID),
+		errors.Is(err, domain.ErrInvalidApproachID), errors.Is(err, domain.ErrInvalidMechanismID),
+		errors.Is(err, domain.ErrInvalidApproachRevisionID),
+		errors.Is(err, domain.ErrInvalidNormalizationRevisionID):
 		return "invalid_input"
+	case errors.Is(err, pipeline.ErrUnknownProvider):
+		return "unknown_provider"
+	case errors.Is(err, pipeline.ErrNoEligibleSnapshots):
+		return "no_eligible_snapshots"
+	case errors.Is(err, normalize.ErrSchemaViolation):
+		return "schema_validation_failed"
+	case errors.Is(err, provider.ErrProviderTransport):
+		return "provider_unavailable"
 	case errors.Is(err, store.ErrNotFound):
 		return "not_found"
 	case errors.Is(err, store.ErrCorruptStore):

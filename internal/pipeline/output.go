@@ -150,3 +150,137 @@ type SourceSnapshotVerifyResponse struct {
 	SHA256     string `json:"sha256,omitempty"`
 	Bytes      int64  `json:"bytes,omitempty"`
 }
+
+type NormalizeApproachResult struct {
+	ApproachID      string `json:"approach_id"`
+	RevisionID      string `json:"revision_id"`
+	MechanismID     string `json:"mechanism_id"`
+	CreatedApproach bool   `json:"created_approach"`
+}
+
+type NormalizeResult struct {
+	SnapshotID string                    `json:"source_snapshot_id"`
+	Status     string                    `json:"status"`
+	Reason     string                    `json:"reason,omitempty"`
+	Message    string                    `json:"message,omitempty"`
+	RevisionID string                    `json:"revision_id,omitempty"`
+	Approaches []NormalizeApproachResult `json:"approaches,omitempty"`
+	Warnings   []string                  `json:"warnings,omitempty"`
+}
+
+type NormalizeResponse struct {
+	OK        bool              `json:"ok"`
+	Command   string            `json:"command"`
+	Store     string            `json:"store"`
+	ProblemID string            `json:"problem_id"`
+	RunID     string            `json:"run_id"`
+	Provider  string            `json:"provider"`
+	Schema    string            `json:"schema_version"`
+	Results   []NormalizeResult `json:"results"`
+}
+
+type FieldSupportView struct {
+	FieldPath   string `json:"field_path"`
+	SupportKind string `json:"support_kind"`
+	Locator     string `json:"locator,omitempty"`
+	Confidence  string `json:"confidence,omitempty"`
+}
+
+type MechanismView struct {
+	ID               string   `json:"id"`
+	ApproachRevision string   `json:"approach_revision_id"`
+	Representations  []string `json:"representations,omitempty"`
+	Assumptions      []string `json:"assumptions,omitempty"`
+	Operators        []string `json:"operators,omitempty"`
+	Preserves        []string `json:"preserves,omitempty"`
+	Breaks           []string `json:"breaks,omitempty"`
+	AuxiliaryObjects []string `json:"auxiliary_objects,omitempty"`
+	Locality         string   `json:"locality"`
+	ConstructionMode string   `json:"construction_mode"`
+	UncertaintyMode  string   `json:"uncertainty_mode"`
+	Notes            string   `json:"notes,omitempty"`
+}
+
+type OutcomeView struct {
+	Class              string   `json:"class"`
+	BoundaryStatement  string   `json:"boundary_statement,omitempty"`
+	BoundaryConditions []string `json:"boundary_conditions,omitempty"`
+	Notes              string   `json:"notes,omitempty"`
+}
+
+type ApproachRevisionView struct {
+	ID                      string  `json:"id"`
+	ApproachID              string  `json:"approach_id"`
+	NormalizationRevisionID string  `json:"normalization_revision_id"`
+	Label                   string  `json:"label"`
+	Description             string  `json:"description,omitempty"`
+	SupersedesRevisionID    *string `json:"supersedes_revision_id,omitempty"`
+	CreatedAt               string  `json:"created_at"`
+}
+
+type ApproachListView struct {
+	ID              string `json:"id"`
+	ProblemID       string `json:"problem_id"`
+	LogicalIdentity string `json:"logical_identity"`
+	Label           string `json:"label"`
+	OutcomeClass    string `json:"outcome_class,omitempty"`
+	SnapshotID      string `json:"source_snapshot_id,omitempty"`
+	RevisionCount   int    `json:"revision_count"`
+	LatestRevision  string `json:"latest_revision_id,omitempty"`
+}
+
+type ApproachListResponse struct {
+	OK         bool               `json:"ok"`
+	Command    string             `json:"command"`
+	Store      string             `json:"store"`
+	ProblemID  string             `json:"problem_id"`
+	Approaches []ApproachListView `json:"approaches"`
+}
+
+type ProviderInvocationView struct {
+	ID              string `json:"id"`
+	Role            string `json:"role"`
+	ProviderName    string `json:"provider_name"`
+	ProviderVersion string `json:"provider_version,omitempty"`
+	ModelName       string `json:"model_name,omitempty"`
+	SchemaVersion   string `json:"schema_version"`
+	RequestHash     string `json:"request_hash"`
+}
+
+type ApproachShowResponse struct {
+	OK                    bool                   `json:"ok"`
+	Command               string                 `json:"command"`
+	Store                 string                 `json:"store"`
+	ApproachID            string                 `json:"approach_id"`
+	ProblemID             string                 `json:"problem_id"`
+	LogicalIdentity       string                 `json:"logical_identity"`
+	Revision              ApproachRevisionView   `json:"revision"`
+	NormalizationRevision string                 `json:"normalization_revision_id"`
+	SnapshotID            string                 `json:"source_snapshot_id"`
+	RunID                 string                 `json:"run_id"`
+	Provider              ProviderInvocationView `json:"provider"`
+	Mechanism             MechanismView          `json:"mechanism"`
+	Outcome               OutcomeView            `json:"outcome"`
+	Support               []FieldSupportView     `json:"support"`
+	RevisionCount         int                    `json:"revision_count"`
+}
+
+type ApproachRevisionsResponse struct {
+	OK         bool                   `json:"ok"`
+	Command    string                 `json:"command"`
+	Store      string                 `json:"store"`
+	ApproachID string                 `json:"approach_id"`
+	ProblemID  string                 `json:"problem_id"`
+	Revisions  []ApproachRevisionView `json:"revisions"`
+}
+
+type MechanismShowResponse struct {
+	OK          bool          `json:"ok"`
+	Command     string        `json:"command"`
+	Store       string        `json:"store"`
+	MechanismID string        `json:"mechanism_id"`
+	ApproachID  string        `json:"approach_id"`
+	RevisionID  string        `json:"approach_revision_id"`
+	Mechanism   MechanismView `json:"mechanism"`
+	Outcome     OutcomeView   `json:"outcome"`
+}

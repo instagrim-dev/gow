@@ -13,17 +13,31 @@ import (
 )
 
 const (
-	ProblemIDPrefix  = "prb_"
-	RunIDPrefix      = "run_"
-	SourceIDPrefix   = "src_"
-	SnapshotIDPrefix = "snap_"
+	ProblemIDPrefix               = "prb_"
+	RunIDPrefix                   = "run_"
+	SourceIDPrefix                = "src_"
+	SnapshotIDPrefix              = "snap_"
+	NormalizationRevisionIDPrefix = "nrev_"
+	ProviderInvocationIDPrefix    = "pinv_"
+	ApproachIDPrefix              = "app_"
+	ApproachRevisionIDPrefix      = "apr_"
+	MechanismIDPrefix             = "mech_"
+	OutcomeIDPrefix               = "out_"
+	FailureBoundaryIDPrefix       = "fbnd_"
 )
 
 var (
-	ErrInvalidProblemID  = errors.New("invalid problem id")
-	ErrInvalidRunID      = errors.New("invalid run id")
-	ErrInvalidSourceID   = errors.New("invalid source id")
-	ErrInvalidSnapshotID = errors.New("invalid snapshot id")
+	ErrInvalidProblemID               = errors.New("invalid problem id")
+	ErrInvalidRunID                   = errors.New("invalid run id")
+	ErrInvalidSourceID                = errors.New("invalid source id")
+	ErrInvalidSnapshotID              = errors.New("invalid snapshot id")
+	ErrInvalidNormalizationRevisionID = errors.New("invalid normalization revision id")
+	ErrInvalidProviderInvocationID    = errors.New("invalid provider invocation id")
+	ErrInvalidApproachID              = errors.New("invalid approach id")
+	ErrInvalidApproachRevisionID      = errors.New("invalid approach revision id")
+	ErrInvalidMechanismID             = errors.New("invalid mechanism id")
+	ErrInvalidOutcomeID               = errors.New("invalid outcome id")
+	ErrInvalidFailureBoundaryID       = errors.New("invalid failure boundary id")
 
 	entropyMu sync.Mutex
 	entropy   = ulid.Monotonic(defaultEntropy(), 0)
@@ -59,6 +73,62 @@ func ValidateSourceID(id string) error {
 
 func ValidateSnapshotID(id string) error {
 	return validateID(id, SnapshotIDPrefix, ErrInvalidSnapshotID)
+}
+
+func NewNormalizationRevisionID(now time.Time) string {
+	return newID(NormalizationRevisionIDPrefix, now)
+}
+
+func NewProviderInvocationID(now time.Time) string {
+	return newID(ProviderInvocationIDPrefix, now)
+}
+
+func NewApproachID(now time.Time) string {
+	return newID(ApproachIDPrefix, now)
+}
+
+func NewApproachRevisionID(now time.Time) string {
+	return newID(ApproachRevisionIDPrefix, now)
+}
+
+func NewMechanismID(now time.Time) string {
+	return newID(MechanismIDPrefix, now)
+}
+
+func NewOutcomeID(now time.Time) string {
+	return newID(OutcomeIDPrefix, now)
+}
+
+func NewFailureBoundaryID(now time.Time) string {
+	return newID(FailureBoundaryIDPrefix, now)
+}
+
+func ValidateNormalizationRevisionID(id string) error {
+	return validateID(id, NormalizationRevisionIDPrefix, ErrInvalidNormalizationRevisionID)
+}
+
+func ValidateProviderInvocationID(id string) error {
+	return validateID(id, ProviderInvocationIDPrefix, ErrInvalidProviderInvocationID)
+}
+
+func ValidateApproachID(id string) error {
+	return validateID(id, ApproachIDPrefix, ErrInvalidApproachID)
+}
+
+func ValidateApproachRevisionID(id string) error {
+	return validateID(id, ApproachRevisionIDPrefix, ErrInvalidApproachRevisionID)
+}
+
+func ValidateMechanismID(id string) error {
+	return validateID(id, MechanismIDPrefix, ErrInvalidMechanismID)
+}
+
+func ValidateOutcomeID(id string) error {
+	return validateID(id, OutcomeIDPrefix, ErrInvalidOutcomeID)
+}
+
+func ValidateFailureBoundaryID(id string) error {
+	return validateID(id, FailureBoundaryIDPrefix, ErrInvalidFailureBoundaryID)
 }
 
 func newID(prefix string, now time.Time) string {

@@ -250,3 +250,31 @@ func (f *fakeProblemStore) GetSourceSnapshot(context.Context, string) (domain.So
 func (f *fakeProblemStore) ListSourceSnapshots(context.Context, string) ([]domain.SourceSnapshot, error) {
 	return nil, errors.New("unexpected call")
 }
+
+func (f *fakeProblemStore) FindEquivalentNormalization(context.Context, string, string, string) (store.ExistingNormalization, error) {
+	return store.ExistingNormalization{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) LatestNormalizationForSnapshot(context.Context, string) (domain.NormalizationRevision, bool, error) {
+	return domain.NormalizationRevision{}, false, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistNormalization(context.Context, store.NormalizationInput) (store.NormalizationWriteResult, error) {
+	return store.NormalizationWriteResult{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListApproaches(context.Context, string) ([]store.ApproachListItem, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetApproachDetail(context.Context, string) (store.ApproachDetail, error) {
+	return store.ApproachDetail{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetMechanismDetail(context.Context, string) (store.ApproachDetail, error) {
+	return store.ApproachDetail{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListApproachRevisions(context.Context, string) (domain.Approach, []domain.ApproachRevision, error) {
+	return domain.Approach{}, nil, errors.New("unexpected call")
+}

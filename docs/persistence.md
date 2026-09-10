@@ -1,5 +1,16 @@
 # SQLite persistence design (`newf` v0)
 
+> **Implementation note (slices 2–3).** The shipped corpus uses immutable,
+> content-addressed `sources` + `source_snapshots` (see
+> [`docs/normalization.md`](normalization.md) and the README) rather than the
+> `source` + `evidence_record` split sketched below. Normalization therefore
+> consumes **source snapshots** directly: `normalization_revisions` link a
+> `snapshot_id` and a `provider_invocation`, and per-field provenance is stored
+> in `source_supports` (`explicit | inferred | unsupported`) referencing the
+> exact snapshot. The relational-first, revision-append-only, no-opaque-blob
+> principles below still hold; the concrete evidence tables will be reconciled
+> when evidence-unit extraction lands.
+
 ## Why SQLite
 
 - Single-file reproducible experiments.

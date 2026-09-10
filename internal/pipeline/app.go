@@ -9,6 +9,7 @@ import (
 
 	"github.com/instagrim-dev/newf/internal/config"
 	"github.com/instagrim-dev/newf/internal/domain"
+	"github.com/instagrim-dev/newf/internal/provider"
 	"github.com/instagrim-dev/newf/internal/store"
 )
 
@@ -18,6 +19,7 @@ type App struct {
 	getwd       func() (string, error)
 	stdin       io.Reader
 	openStoreFn func(context.Context, string) (string, problemStore, error)
+	normalizers map[string]provider.Normalizer
 }
 
 type problemStore interface {
@@ -35,6 +37,13 @@ type problemStore interface {
 	GetSource(context.Context, string) (domain.Source, error)
 	GetSourceSnapshot(context.Context, string) (domain.SourceSnapshot, error)
 	ListSourceSnapshots(context.Context, string) ([]domain.SourceSnapshot, error)
+	FindEquivalentNormalization(context.Context, string, string, string) (store.ExistingNormalization, error)
+	LatestNormalizationForSnapshot(context.Context, string) (domain.NormalizationRevision, bool, error)
+	PersistNormalization(context.Context, store.NormalizationInput) (store.NormalizationWriteResult, error)
+	ListApproaches(context.Context, string) ([]store.ApproachListItem, error)
+	GetApproachDetail(context.Context, string) (store.ApproachDetail, error)
+	GetMechanismDetail(context.Context, string) (store.ApproachDetail, error)
+	ListApproachRevisions(context.Context, string) (domain.Approach, []domain.ApproachRevision, error)
 }
 
 type InitProblemInput struct {
@@ -64,6 +73,9 @@ func New(version string) *App {
 		},
 		getwd: os.Getwd,
 		stdin: os.Stdin,
+		normalizers: map[string]provider.Normalizer{
+			provider.FixtureProviderName: provider.NewFixtureNormalizer(),
+		},
 	}
 	app.openStoreFn = app.defaultOpenStore
 	return app

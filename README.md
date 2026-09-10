@@ -18,6 +18,8 @@ The repository now ships the first provenance-heavy local CLI slice:
 ```text
 newf init <problem>
 newf ingest <path...> --problem <problem-id>
+newf normalize --source <source-id|snapshot-id> --problem <problem-id> --provider fixture
+newf normalize --problem <problem-id> --all
 newf problem list
 newf problem show <problem-id>
 newf run show <run-id>
@@ -25,6 +27,10 @@ newf source list --problem <problem-id>
 newf source show <source-id>
 newf source snapshot show <snapshot-id>
 newf source snapshot verify <snapshot-id>
+newf approach list --problem <problem-id>
+newf approach show <approach-id>
+newf approach revisions <approach-id>
+newf mechanism show <mechanism-id>
 ```
 
 Build it with:
@@ -89,6 +95,36 @@ newf --json init "Erdős-Straus conjecture"
 Repeated `init` calls reuse the existing problem for the same canonical slug by
 default and create a new provenance `run` each time. Pass `--new-problem` to
 force a distinct problem when the slug would otherwise match an existing one.
+
+## Approach normalization
+
+`newf normalize` converts immutable source snapshots into typed, comparable
+`Approach` / `Mechanism` / `Outcome` / `FailureBoundary` revisions. It is the
+first stage where a model/provider may participate.
+
+Normalization output is **interpretation, not verified evidence**. Every
+normalized field records whether it is `explicit` (source-stated), `inferred`
+(model-derived), or `unsupported`, and each revision links back to the exact
+snapshot, provider invocation, schema version, and run that produced it.
+
+```bash
+newf normalize --source <snapshot-id> --problem <problem-id> --provider fixture
+newf approach list --problem <problem-id>
+newf approach show <approach-id>
+newf approach revisions <approach-id>
+newf mechanism show <mechanism-id>
+```
+
+- One source may produce multiple distinct approaches.
+- Re-normalization creates a lineage-preserving revision; it never overwrites
+  history. Equivalent reruns are idempotent (`duplicate_existing`); `--force`
+  creates a linked new revision.
+- Unsupported/binary snapshots are skipped with a typed reason rather than
+  guessed at.
+- A deterministic `fixture` provider makes the whole slice reproducible offline;
+  project-authored Erdős–Straus fixtures live under `fixtures/`.
+
+See [`docs/normalization.md`](docs/normalization.md) for the full contract.
 
 ## Core loop
 
@@ -382,6 +418,7 @@ Design details for implementation:
 
 - [`docs/cli-design.md`](docs/cli-design.md)
 - [`docs/domain-model.md`](docs/domain-model.md)
+- [`docs/normalization.md`](docs/normalization.md)
 - [`docs/persistence.md`](docs/persistence.md)
 - [`docs/evaluation.md`](docs/evaluation.md)
 - [`docs/implementation-plan.md`](docs/implementation-plan.md)

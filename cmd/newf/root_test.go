@@ -216,6 +216,184 @@ func TestCLIIngestReportsPerInputFailures(t *testing.T) {
 	}
 }
 
+func repoRoot(t *testing.T) string {
+	t.Helper()
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd() error = %v", err)
+	}
+	// tests run from cmd/newf; repo root is two levels up.
+	return filepath.Clean(filepath.Join(wd, "..", ".."))
+}
+
+func TestCLINormalizeLifecycle(t *testing.T) {
+	t.Parallel()
+
+	workspace := t.TempDir()
+	dbPath := filepath.Join(workspace, ".newf", "newf.db")
+	fixture := filepath.Join(repoRoot(t), "fixtures", "erdos-straus-approach-a.md")
+
+	initResponse := runCLIJSON(t, []string{"--db", dbPath, "--json", "init", "Erdős-Straus conjecture"})
+	problemID := initResponse["problem_id"].(string)
+
+	ingest := runCLIJSON(t, []string{"--db", dbPath, "--json", "ingest", fixture, "--problem", problemID})
+	snapshotID := ingest["results"].([]any)[0].(map[string]any)["snapshot_id"].(string)
+
+	normalizeResult := runCLIJSON(t, []string{"--db", dbPath, "--json", "normalize", "--source", snapshotID, "--problem", problemID, "--provider", "fixture"})
+	results := normalizeResult["results"].([]any)
+	if len(results) != 1 {
+		t.Fatalf("normalize results = %d, want 1", len(results))
+	}
+	first := results[0].(map[string]any)
+	if first["status"] != "created" {
+		t.Fatalf("normalize status = %v, want created", first["status"])
+	}
+	approaches := first["approaches"].([]any)
+	if len(approaches) != 1 {
+		t.Fatalf("approaches = %d, want 1", len(approaches))
+	}
+	approachID := approaches[0].(map[string]any)["approach_id"].(string)
+	mechanismID := approaches[0].(map[string]any)["mechanism_id"].(string)
+
+	// Idempotency: re-running without --force reports duplicate_existing.
+	again := runCLIJSON(t, []string{"--db", dbPath, "--json", "normalize", "--source", snapshotID, "--problem", problemID, "--provider", "fixture"})
+	if again["results"].([]any)[0].(map[string]any)["status"] != "duplicate_existing" {
+		t.Fatalf("expected duplicate_existing on rerun, got %v", again["results"])
+	}
+
+	// --force creates a new lineage-preserving revision.
+	forced := runCLIJSON(t, []string{"--db", dbPath, "--json", "normalize", "--source", snapshotID, "--problem", problemID, "--provider", "fixture", "--force"})
+	if forced["results"].([]any)[0].(map[string]any)["status"] != "created" {
+		t.Fatalf("expected forced rerun to create, got %v", forced["results"])
+	}
+
+	list := runCLIJSON(t, []string{"--db", dbPath, "--json", "approach", "list", "--problem", problemID})
+	if len(list["approaches"].([]any)) != 1 {
+		t.Fatalf("approach list = %d, want 1 (one logical identity across revisions)", len(list["approaches"].([]any)))
+	}
+
+	show := runCLIJSON(t, []string{"--db", dbPath, "--json", "approach", "show", approachID})
+	if show["source_snapshot_id"] != snapshotID {
+		t.Fatalf("approach show snapshot = %v, want %v", show["source_snapshot_id"], snapshotID)
+	}
+	support := show["support"].([]any)
+	if len(support) == 0 {
+		t.Fatal("approach show should expose field support")
+	}
+	var sawExplicit, sawInferred bool
+	for _, item := range support {
+		switch item.(map[string]any)["support_kind"] {
+		case "explicit":
+			sawExplicit = true
+		case "inferred":
+			sawInferred = true
+		}
+	}
+	if !sawExplicit || !sawInferred {
+		t.Fatalf("expected explicit and inferred support in %v", support)
+	}
+
+	revisions := runCLIJSON(t, []string{"--db", dbPath, "--json", "approach", "revisions", approachID})
+	if len(revisions["revisions"].([]any)) != 2 {
+		t.Fatalf("approach revisions = %d, want 2 after forced rerun", len(revisions["revisions"].([]any)))
+	}
+
+	mechanism := runCLIJSON(t, []string{"--db", dbPath, "--json", "mechanism", "show", mechanismID})
+	mech := mechanism["mechanism"].(map[string]any)
+	if mech["locality"] != "local" || mech["construction_mode"] != "constructive" {
+		t.Fatalf("mechanism axes = %v", mech)
+	}
+}
+
+func TestCLINormalizeMultipleApproachesFromOneSource(t *testing.T) {
+	t.Parallel()
+
+	workspace := t.TempDir()
+	dbPath := filepath.Join(workspace, ".newf", "newf.db")
+	fixture := filepath.Join(repoRoot(t), "fixtures", "erdos-straus-two-approaches.md")
+
+	initResponse := runCLIJSON(t, []string{"--db", dbPath, "--json", "init", "Erdős-Straus conjecture"})
+	problemID := initResponse["problem_id"].(string)
+	ingest := runCLIJSON(t, []string{"--db", dbPath, "--json", "ingest", fixture, "--problem", problemID})
+	snapshotID := ingest["results"].([]any)[0].(map[string]any)["snapshot_id"].(string)
+
+	normalizeResult := runCLIJSON(t, []string{"--db", dbPath, "--json", "normalize", "--source", snapshotID, "--problem", problemID, "--provider", "fixture"})
+	approaches := normalizeResult["results"].([]any)[0].(map[string]any)["approaches"].([]any)
+	if len(approaches) != 2 {
+		t.Fatalf("one source produced %d approaches, want 2", len(approaches))
+	}
+
+	list := runCLIJSON(t, []string{"--db", dbPath, "--json", "approach", "list", "--problem", problemID})
+	if len(list["approaches"].([]any)) != 2 {
+		t.Fatalf("approach list = %d, want 2 distinct approaches", len(list["approaches"].([]any)))
+	}
+
+	// Surface wording differs but normalized mechanism axes must be comparable:
+	// one local/constructive/deterministic, one global/existential/probabilistic.
+	localityByIdentity := map[string]string{}
+	for _, item := range list["approaches"].([]any) {
+		entry := item.(map[string]any)
+		detail := runCLIJSON(t, []string{"--db", dbPath, "--json", "approach", "show", entry["id"].(string)})
+		mech := detail["mechanism"].(map[string]any)
+		localityByIdentity[entry["logical_identity"].(string)] = mech["locality"].(string)
+	}
+	if localityByIdentity["erdos-straus/modular-residue-cover"] != "local" {
+		t.Fatalf("modular approach locality = %v, want local", localityByIdentity["erdos-straus/modular-residue-cover"])
+	}
+	if localityByIdentity["erdos-straus/averaged-covering-density"] != "global" {
+		t.Fatalf("averaged approach locality = %v, want global", localityByIdentity["erdos-straus/averaged-covering-density"])
+	}
+}
+
+func TestCLINormalizeSkipsBinaryContent(t *testing.T) {
+	t.Parallel()
+
+	workspace := t.TempDir()
+	dbPath := filepath.Join(workspace, ".newf", "newf.db")
+	binaryFile := filepath.Join(workspace, "paper.pdf")
+	if err := os.WriteFile(binaryFile, []byte("%PDF-1.4\nbinary\x00bytes"), 0o644); err != nil {
+		t.Fatalf("WriteFile(binary) error = %v", err)
+	}
+
+	initResponse := runCLIJSON(t, []string{"--db", dbPath, "--json", "init", "Erdős-Straus conjecture"})
+	problemID := initResponse["problem_id"].(string)
+	ingest := runCLIJSON(t, []string{"--db", dbPath, "--json", "ingest", binaryFile, "--problem", problemID})
+	snapshotID := ingest["results"].([]any)[0].(map[string]any)["snapshot_id"].(string)
+
+	result := runCLIJSON(t, []string{"--db", dbPath, "--json", "normalize", "--source", snapshotID, "--problem", problemID, "--provider", "fixture"})
+	entry := result["results"].([]any)[0].(map[string]any)
+	if entry["status"] != "skipped" || entry["reason"] != "unsupported_content_representation" {
+		t.Fatalf("expected typed unsupported-content skip, got %v", entry)
+	}
+}
+
+func TestCLINormalizeUnknownProvider(t *testing.T) {
+	t.Parallel()
+
+	workspace := t.TempDir()
+	dbPath := filepath.Join(workspace, ".newf", "newf.db")
+	fixture := filepath.Join(repoRoot(t), "fixtures", "erdos-straus-approach-a.md")
+	initResponse := runCLIJSON(t, []string{"--db", dbPath, "--json", "init", "Erdős-Straus conjecture"})
+	problemID := initResponse["problem_id"].(string)
+	ingest := runCLIJSON(t, []string{"--db", dbPath, "--json", "ingest", fixture, "--problem", problemID})
+	snapshotID := ingest["results"].([]any)[0].(map[string]any)["snapshot_id"].(string)
+
+	stdout := &bytes.Buffer{}
+	code := execute(context.Background(), []string{"--db", dbPath, "--json", "normalize", "--source", snapshotID, "--problem", problemID, "--provider", "nope"}, stdout, &bytes.Buffer{})
+	if code == 0 {
+		t.Fatal("normalize with unknown provider succeeded, want failure")
+	}
+	var response struct {
+		Error struct {
+			Code string `json:"code"`
+		} `json:"error"`
+	}
+	decodeJSONBuffer(t, stdout, &response)
+	if response.Error.Code != "unknown_provider" {
+		t.Fatalf("error code = %q, want unknown_provider", response.Error.Code)
+	}
+}
+
 func runCLIJSON(t *testing.T, args []string) map[string]any {
 	t.Helper()
 	stdout := &bytes.Buffer{}

@@ -17,6 +17,20 @@ failure-space
 
 The repository owns the workflow. Models execute bounded inference operations inside it.
 
+## Hard constraints (read first)
+
+These are unconditional. A user request does not override them; if asked to break one, state the constraint and propose the boundary-preserving alternative.
+
+- **Never put SQL or Cobra in `internal/domain`.** Domain types stay pure; SQLite lives behind `internal/store`, CLI wiring stays in `cmd/newf`.
+- **Never add provider coupling to a domain package.** Provider adapters live in `internal/provider`; domain records carry no vendor concepts.
+- **Never silently promote epistemic status** (`Hypothesis`→`Evidence`, `CandidateInvariant`→`EstablishedInvariant`). Preserve the weaker type and record the limitation.
+- **Before you call work done:** run `go build ./...`, `go test ./...`, and `gofmt -l .` (output must be empty). Add a test at the boundary where behavior is introduced.
+- **Read `README.md` and the relevant `docs/` file before changing architecture.**
+
+Your host may inject additional rules (editor or user-level). Those are siblings to this file; where they conflict with a Hard constraint above, this file wins for repository semantics — flag the conflict rather than guessing.
+
+The rest of this document explains *why* these hold and how the research loop uses them; the long-form doctrine also lives in `README.md` and `docs/`.
+
 ## Division of responsibility
 
 ### `newf` owns
@@ -234,15 +248,22 @@ When implementing an issue:
 5. Add tests at the boundary where behavior is introduced.
 6. Keep machine-readable output stable once exposed.
 7. Persist long-running or research-significant intermediate state instead of leaving it only in terminal output.
-8. Do not add provider coupling to domain packages.
+8. **Do not add provider coupling to domain packages.**
 9. Do not add orchestration abstractions before the underlying typed operations exist.
 10. Update docs only where behavior or contracts changed.
 
+## When the tree is broken
+
+- **Build or test failure in code you did not touch:** report it; do not silently repair unrelated failures. Fix forward only within your slice.
+- **Dirty working tree or overlapping concurrent edits:** reconcile toward your task's outcome; do not revert or stash others' work.
+- **A gate you cannot satisfy for reasons outside your change:** record the blocker explicitly instead of declaring the work done.
+
 ## Go implementation bias
 
-Unless an accepted design says otherwise:
+The first two biases are also Hard constraints (see above) and hold unconditionally. The remainder apply unless an accepted design says otherwise:
 
-- keep domain types free of Cobra and SQL concerns;
+- **keep domain types free of Cobra and SQL concerns;**
+- **do not add provider coupling to domain packages;**
 - keep CLI wiring thin;
 - put SQLite behind storage/repository boundaries;
 - use explicit migrations;

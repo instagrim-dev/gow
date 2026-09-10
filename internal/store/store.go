@@ -874,7 +874,12 @@ func isKnownMigrationVersion(version int) bool {
 }
 
 func validateSchemaTables(ctx context.Context, tx *sql.Tx) error {
-	for _, table := range []string{"problems", "runs", "sources", "source_snapshots"} {
+	for _, table := range []string{
+		"problems", "runs", "sources", "source_snapshots",
+		"provider_invocations", "approaches", "normalization_revisions",
+		"approach_revisions", "mechanisms", "mechanism_attributes",
+		"outcomes", "failure_boundaries", "source_supports",
+	} {
 		row := tx.QueryRowContext(ctx, `
 SELECT EXISTS(
   SELECT 1

@@ -26,6 +26,36 @@ func TestGeneratedIDsValidate(t *testing.T) {
 	if err := ValidateSnapshotID(snapshotID); err != nil {
 		t.Fatalf("ValidateSnapshotID() error = %v", err)
 	}
+
+	normalizationRevisionID := NewNormalizationRevisionID(now)
+	providerInvocationID := NewProviderInvocationID(now)
+	approachID := NewApproachID(now)
+	approachRevisionID := NewApproachRevisionID(now)
+	mechanismID := NewMechanismID(now)
+	outcomeID := NewOutcomeID(now)
+	failureBoundaryID := NewFailureBoundaryID(now)
+
+	if err := ValidateNormalizationRevisionID(normalizationRevisionID); err != nil {
+		t.Fatalf("ValidateNormalizationRevisionID() error = %v", err)
+	}
+	if err := ValidateProviderInvocationID(providerInvocationID); err != nil {
+		t.Fatalf("ValidateProviderInvocationID() error = %v", err)
+	}
+	if err := ValidateApproachID(approachID); err != nil {
+		t.Fatalf("ValidateApproachID() error = %v", err)
+	}
+	if err := ValidateApproachRevisionID(approachRevisionID); err != nil {
+		t.Fatalf("ValidateApproachRevisionID() error = %v", err)
+	}
+	if err := ValidateMechanismID(mechanismID); err != nil {
+		t.Fatalf("ValidateMechanismID() error = %v", err)
+	}
+	if err := ValidateOutcomeID(outcomeID); err != nil {
+		t.Fatalf("ValidateOutcomeID() error = %v", err)
+	}
+	if err := ValidateFailureBoundaryID(failureBoundaryID); err != nil {
+		t.Fatalf("ValidateFailureBoundaryID() error = %v", err)
+	}
 }
 
 func TestValidateRejectsCrossClassIDs(t *testing.T) {
@@ -34,5 +64,18 @@ func TestValidateRejectsCrossClassIDs(t *testing.T) {
 	runID := NewRunID(time.Now().UTC())
 	if err := ValidateProblemID(runID); err == nil {
 		t.Fatal("ValidateProblemID() succeeded for run ID")
+	}
+
+	approachID := NewApproachID(time.Now().UTC())
+	if err := ValidateApproachRevisionID(approachID); err == nil {
+		t.Fatal("ValidateApproachRevisionID() succeeded for approach ID")
+	}
+	if err := ValidateMechanismID(approachID); err == nil {
+		t.Fatal("ValidateMechanismID() succeeded for approach ID")
+	}
+
+	snapshotID := NewSnapshotID(time.Now().UTC())
+	if err := ValidateNormalizationRevisionID(snapshotID); err == nil {
+		t.Fatal("ValidateNormalizationRevisionID() succeeded for snapshot ID")
 	}
 }
