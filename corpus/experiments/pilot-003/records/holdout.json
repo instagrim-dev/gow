@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "command": "experiment define",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-003/newf.db",
+  "created": true,
+  "holdout_set": {
+    "id": "hset_01M27NK7YDJG4WQ24B78MF7DJK",
+    "problem_id": "prb_01M27NK7JK45PTA0P0DSBP8KT3",
+    "target_problem_id": "prb_01M27NK7JYN6M98HHK4RQNWYH8",
+    "name": "pilot-003-es-synthetic",
+    "mode": "blinded",
+    "withheld_sources": [
+      "src_01M27NK7M29ZWD98RNDBFR2MZ4"
+    ]
+  }
+}

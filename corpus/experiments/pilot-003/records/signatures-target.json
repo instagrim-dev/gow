@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "command": "mechanism signature",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-003/newf.db",
+  "problem_id": "prb_01M27NK7JYN6M98HHK4RQNWYH8",
+  "signatures": [
+    {
+      "mechanism_id": "mech_01M27NK7N3MRBK9B3WQYJ5CZ89",
+      "signature_id": "msig_01M27NK7VE95CGAT91ZTRQSRQ2",
+      "fingerprint": "97cc19e793c060d12974de3c8bec2758254f01c5e7455ce157383a67eae60280",
+      "status": "created"
+    }
+  ]
+}

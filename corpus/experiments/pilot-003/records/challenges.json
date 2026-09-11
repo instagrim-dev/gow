@@ -1,0 +1,130 @@
+{
+  "ok": true,
+  "command": "challenge",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-003/newf.db",
+  "reports": [
+    {
+      "invariant_id": "inv_01M27NK7WSTSW3GKJFVDE0XZGC",
+      "state_before": "proposed",
+      "state_after": "surviving",
+      "challenges": [
+        {
+          "id": "chl_01M27NK7XCET8HJ4YQXVAFPPE0",
+          "challenge_type": "known-counterexample",
+          "claimed_verdict": "violates",
+          "result_summary": "unconfirmed",
+          "detail": "4 of 7 eligible failure-side member(s) evaluated unknown; no decisive counterexample and not a completed negative search",
+          "transitions": [
+            "challenged"
+          ]
+        },
+        {
+          "id": "chl_01M27NK7XCET8HJ4YQXY7JG791",
+          "challenge_type": "success-preserving",
+          "claimed_verdict": "preserves",
+          "result_summary": "unconfirmed",
+          "detail": "success-side preservation undecided: one or more eligible contrast members evaluated unknown; not a completed negative search"
+        },
+        {
+          "id": "chl_01M27NK7XCET8HJ4YQY0ZENET5",
+          "challenge_type": "bias-critique",
+          "claimed_verdict": "support_collapses",
+          "result_summary": "unconfirmed",
+          "detail": "support holds under recomputation: recomputed distinct-family support = 3 (threshold 2)",
+          "evidence": [
+            {
+              "kind": "support_recount",
+              "detail": "recomputed distinct-family support = 3 (threshold 2)"
+            }
+          ],
+          "transitions": [
+            "surviving"
+          ]
+        }
+      ],
+      "run_id": "run_01M27NK7XCET8HJ4YQXQBPS5AM"
+    },
+    {
+      "invariant_id": "inv_01M27NK7WSTSW3GKJFVEK43SQD",
+      "state_before": "proposed",
+      "state_after": "surviving",
+      "challenges": [
+        {
+          "id": "chl_01M27NK7XF7715JFZ6AAVQDGM1",
+          "challenge_type": "known-counterexample",
+          "claimed_verdict": "violates",
+          "result_summary": "unconfirmed",
+          "detail": "2 of 7 eligible failure-side member(s) evaluated unknown; no decisive counterexample and not a completed negative search",
+          "transitions": [
+            "challenged"
+          ]
+        },
+        {
+          "id": "chl_01M27NK7XF7715JFZ6AD5CBFKR",
+          "challenge_type": "success-preserving",
+          "claimed_verdict": "preserves",
+          "result_summary": "unconfirmed",
+          "detail": "success-side preservation undecided: one or more eligible contrast members evaluated unknown; not a completed negative search"
+        },
+        {
+          "id": "chl_01M27NK7XF7715JFZ6AET65E3Y",
+          "challenge_type": "bias-critique",
+          "claimed_verdict": "support_collapses",
+          "result_summary": "unconfirmed",
+          "detail": "support holds under recomputation: recomputed distinct-family support = 5 (threshold 2)",
+          "evidence": [
+            {
+              "kind": "support_recount",
+              "detail": "recomputed distinct-family support = 5 (threshold 2)"
+            }
+          ],
+          "transitions": [
+            "surviving"
+          ]
+        }
+      ],
+      "run_id": "run_01M27NK7XF7715JFZ6A8Y7Y05H"
+    },
+    {
+      "invariant_id": "inv_01M27NK7WSTSW3GKJFVEVJKYNE",
+      "state_before": "proposed",
+      "state_after": "surviving",
+      "challenges": [
+        {
+          "id": "chl_01M27NK7XKJZ4GX12VT63RP6NA",
+          "challenge_type": "known-counterexample",
+          "claimed_verdict": "violates",
+          "result_summary": "unconfirmed",
+          "detail": "5 of 7 eligible failure-side member(s) evaluated unknown; no decisive counterexample and not a completed negative search",
+          "transitions": [
+            "challenged"
+          ]
+        },
+        {
+          "id": "chl_01M27NK7XKJZ4GX12VT9RWP3CN",
+          "challenge_type": "success-preserving",
+          "claimed_verdict": "preserves",
+          "result_summary": "unconfirmed",
+          "detail": "success-side preservation undecided: one or more eligible contrast members evaluated unknown; not a completed negative search"
+        },
+        {
+          "id": "chl_01M27NK7XKJZ4GX12VTCGVD420",
+          "challenge_type": "bias-critique",
+          "claimed_verdict": "support_collapses",
+          "result_summary": "unconfirmed",
+          "detail": "support holds under recomputation: recomputed distinct-family support = 2 (threshold 2)",
+          "evidence": [
+            {
+              "kind": "support_recount",
+              "detail": "recomputed distinct-family support = 2 (threshold 2)"
+            }
+          ],
+          "transitions": [
+            "surviving"
+          ]
+        }
+      ],
+      "run_id": "run_01M27NK7XKJZ4GX12VT1DFD4DD"
+    }
+  ]
+}

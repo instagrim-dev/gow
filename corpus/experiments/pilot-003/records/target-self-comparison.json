@@ -1,0 +1,71 @@
+{
+  "ok": true,
+  "command": "mechanism compare",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-003/newf.db",
+  "signature_a_id": "msig_01M27NK7VE95CGAT91ZTRQSRQ2",
+  "signature_b_id": "msig_01M27NK7VE95CGAT91ZTRQSRQ2",
+  "fingerprint_a": "97cc19e793c060d12974de3c8bec2758254f01c5e7455ce157383a67eae60280",
+  "fingerprint_b": "97cc19e793c060d12974de3c8bec2758254f01c5e7455ce157383a67eae60280",
+  "comparison": {
+    "weights_version": "classify/v1",
+    "classify_version": "classify/v1",
+    "profile_hash": "profile-sha256:f3334d08f073785c169efe798cf4e62570cba89ee2889720c192566bf5166ec3",
+    "classification": "mechanism-near",
+    "outcome_equal": true,
+    "posture": {
+      "locality_equal": true,
+      "construction_equal": true,
+      "uncertainty_equal": true
+    },
+    "fields": [
+      {
+        "field_kind": "representation",
+        "overlap_count": 3,
+        "union_count": 3,
+        "jaccard": 1,
+        "ordinal": "identical",
+        "incomparable": false
+      },
+      {
+        "field_kind": "operator",
+        "overlap_count": 4,
+        "union_count": 4,
+        "jaccard": 1,
+        "ordinal": "identical",
+        "incomparable": false
+      },
+      {
+        "field_kind": "assumption",
+        "overlap_count": 2,
+        "union_count": 2,
+        "jaccard": 1,
+        "ordinal": "identical",
+        "incomparable": false
+      },
+      {
+        "field_kind": "preserves",
+        "overlap_count": 1,
+        "union_count": 1,
+        "jaccard": 1,
+        "ordinal": "identical",
+        "incomparable": false
+      },
+      {
+        "field_kind": "breaks",
+        "overlap_count": 2,
+        "union_count": 2,
+        "jaccard": 1,
+        "ordinal": "identical",
+        "incomparable": false
+      },
+      {
+        "field_kind": "auxiliary_object",
+        "overlap_count": 2,
+        "union_count": 2,
+        "jaccard": 1,
+        "ordinal": "identical",
+        "incomparable": false
+      }
+    ]
+  }
+}

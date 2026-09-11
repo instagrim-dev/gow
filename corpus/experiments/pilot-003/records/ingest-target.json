@@ -1,0 +1,24 @@
+{
+  "ok": true,
+  "command": "ingest",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-003/newf.db",
+  "problem_id": "prb_01M27NK7JYN6M98HHK4RQNWYH8",
+  "run_id": "run_01M27NK7M11023SCG3RDFSM573",
+  "results": [
+    {
+      "input": "/Users/jmh/dev/gh/newf/.newf/pilot-003/source/corpus/target/es-target-affine-lattice-linear-forms.md",
+      "source_id": "src_01M27NK7M29ZWD98RNDBFR2MZ4",
+      "snapshot_id": "snap_01M27NK7M29ZWD98RNDFDEHDQ9",
+      "status": "created_snapshot",
+      "sha256": "c23cca95d2fa7398aa21f33e0c42c3bc1273cec177bc69f6be072d5747187189",
+      "media_type": "text/markdown",
+      "bytes": 4814,
+      "created_source": true
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "succeeded": 1,
+    "failed": 0
+  }
+}
