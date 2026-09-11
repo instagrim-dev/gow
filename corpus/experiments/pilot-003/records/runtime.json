@@ -1,5 +1,5 @@
 {
-  "status": "captured_not_executed",
+  "status": "executed_awaiting_independent_review",
   "protocol_revision": "pilot-003 (successor to pilot-002; PROTOCOL-REVISION.md)",
   "source_commit": "a868dec70e6cb0f5ab6000ec89bbd36e12f43ec4",
   "executable_commit": "00e22b2246c43525877dd6acbb807ab3b0bba812",
@@ -12,8 +12,31 @@
   "mechanically_ready": true,
   "recovery_reachability": "ready",
   "target_self_comparison_classification": "mechanism-near",
-  "operator_attestations_complete": false,
+  "operator_attestations_complete": true,
   "capture_status": "captured_sealed",
   "conclusion": null,
-  "capture_record": "../captures/capture-record.json"
+  "capture_record": "../captures/capture-record.json",
+  "operator_attestation": {
+    "recorded_at_utc": "2026-09-11T07:51:23.622814+00:00",
+    "form": "operator approval token 'approv' in the driving session",
+    "scope": "pre-capture attestations per PROTOCOL (source/mapping review sign-off freeze; independent assessment arrangement); the independent unlabeled review itself remains owed after execution"
+  },
+  "executed_at_utc": "2026-09-11T07:54:58.873762+00:00",
+  "experiment_id": "exp_01M27QA4137EYA7S1FPTF2Q0SM",
+  "automatic_conclusion": {
+    "recovery_delta": "inconclusive",
+    "b0_undirected": {
+      "proposals": 7,
+      "decisive_no": 2,
+      "unknown": 5,
+      "recovered": false
+    },
+    "b3_invariant_guided": {
+      "proposals": 6,
+      "decisive_no": 2,
+      "unknown": 4,
+      "recovered": false
+    },
+    "note": "no arm recovered under recovery-rule/v1; unknowns are proposals whose surface labels do not resolve under the pinned mechanism/v3, making decisive fields incomparable. The automatic classifier abstained rather than guessed. Post-capture vocabulary changes to resolve proposal wording would be outcome-selected and are prohibited; adjudication of unknowns belongs to the independent unlabeled review."
+  }
 }

@@ -1,0 +1,79 @@
+[
+  {
+    "arm": "b0_undirected",
+    "stopping": "completed",
+    "members": [
+      {
+        "rank": 0,
+        "proposal_id": "fpr_01M27Q69RJZHY3FAHC5STBC1E9",
+        "assessment": "unknown"
+      },
+      {
+        "rank": 1,
+        "proposal_id": "fpr_01M27Q69RJZHY3FAHC5WEYF90J",
+        "assessment": "unknown"
+      },
+      {
+        "rank": 2,
+        "proposal_id": "fpr_01M27Q69RJZHY3FAHC5ZH6YRDH",
+        "assessment": "unknown"
+      },
+      {
+        "rank": 3,
+        "proposal_id": "fpr_01M27Q69RJZHY3FAHC5ZSJT7N1",
+        "assessment": "decisive_no"
+      },
+      {
+        "rank": 4,
+        "proposal_id": "fpr_01M27Q69RJZHY3FAHC61XJ2ACD",
+        "assessment": "unknown"
+      },
+      {
+        "rank": 5,
+        "proposal_id": "fpr_01M27Q69RJZHY3FAHC62R4V8GF",
+        "assessment": "unknown"
+      },
+      {
+        "rank": 6,
+        "proposal_id": "fpr_01M27Q69RJZHY3FAHC64EAE4J2",
+        "assessment": "decisive_no"
+      }
+    ]
+  },
+  {
+    "arm": "b3_invariant_guided",
+    "stopping": "completed",
+    "members": [
+      {
+        "rank": 0,
+        "proposal_id": "fpr_01M27QA41G7B5WN1354DE4FBEC",
+        "assessment": "unknown"
+      },
+      {
+        "rank": 1,
+        "proposal_id": "fpr_01M27QA41G7B5WN1354GZQ3H45",
+        "assessment": "unknown"
+      },
+      {
+        "rank": 2,
+        "proposal_id": "fpr_01M27QA41G7B5WN1354MKHZV0Q",
+        "assessment": "decisive_no"
+      },
+      {
+        "rank": 3,
+        "proposal_id": "fpr_01M27QA41G7B5WN1354R9EP9TH",
+        "assessment": "decisive_no"
+      },
+      {
+        "rank": 4,
+        "proposal_id": "fpr_01M27QA41G7B5WN1354RR5SCTS",
+        "assessment": "unknown"
+      },
+      {
+        "rank": 5,
+        "proposal_id": "fpr_01M27QA41G7B5WN1354RTA1D5Z",
+        "assessment": "unknown"
+      }
+    ]
+  }
+]

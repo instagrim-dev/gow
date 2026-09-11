@@ -1,0 +1,192 @@
+{
+  "ok": true,
+  "command": "experiment run",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-003/newf.db",
+  "created": true,
+  "experiment": {
+    "id": "exp_01M27QA4137EYA7S1FPTF2Q0SM",
+    "problem_id": "prb_01M27NK7JK45PTA0P0DSBP8KT3",
+    "holdout_set_id": "hset_01M27NK7YDJG4WQ24B78MF7DJK",
+    "run_id": "run_01M27QA413SH1KX1AQSBMQBSGV",
+    "mode": "blinded",
+    "mode_disclaimer": "blinded benchmark: structural-move recovery under enforced blinding; NO chronological claim is made or implied",
+    "recovery_rule_version": "recovery-rule/v1",
+    "profile_version": "classify/v1",
+    "proposal_budget_count": 8,
+    "evaluation_budget_count": 8,
+    "conclusion": "inconclusive",
+    "revision": 1,
+    "created_at": "2026-09-11T07:53:28.867664Z",
+    "leakage_check": {
+      "id": "lkc_01M27QA413SH1KX1AQSF58XWFS",
+      "checker_version": "leakage-check/v1",
+      "snapshot_leaks": 0,
+      "normalization_leaks": 0,
+      "signature_leaks": 0,
+      "passed": true
+    },
+    "arms": [
+      {
+        "arm": "b0_undirected",
+        "frontier_generation_run_id": "fgr_01M27QA419P2ZCMV2K79WP6KH1",
+        "proposal_count": 7,
+        "recovered": false,
+        "nearest_classification": "mechanism-distinct",
+        "distinct_family_count": 6,
+        "redundant_count": 1,
+        "stopping_condition": "completed",
+        "decisive_count": 2,
+        "unknown_count": 5,
+        "unassessed_count": 0,
+        "evaluations_consumed": 7,
+        "members": [
+          {
+            "proposal_id": "fpr_01M27Q69RJZHY3FAHC5STBC1E9",
+            "member_rank": 0,
+            "assessment": "unknown"
+          },
+          {
+            "proposal_id": "fpr_01M27Q69RJZHY3FAHC5WEYF90J",
+            "member_rank": 1,
+            "assessment": "unknown"
+          },
+          {
+            "proposal_id": "fpr_01M27Q69RJZHY3FAHC5ZH6YRDH",
+            "member_rank": 2,
+            "assessment": "unknown"
+          },
+          {
+            "proposal_id": "fpr_01M27Q69RJZHY3FAHC5ZSJT7N1",
+            "member_rank": 3,
+            "assessment": "decisive_no"
+          },
+          {
+            "proposal_id": "fpr_01M27Q69RJZHY3FAHC61XJ2ACD",
+            "member_rank": 4,
+            "assessment": "unknown"
+          },
+          {
+            "proposal_id": "fpr_01M27Q69RJZHY3FAHC62R4V8GF",
+            "member_rank": 5,
+            "assessment": "unknown"
+          },
+          {
+            "proposal_id": "fpr_01M27Q69RJZHY3FAHC64EAE4J2",
+            "member_rank": 6,
+            "assessment": "decisive_no"
+          }
+        ]
+      },
+      {
+        "arm": "b3_invariant_guided",
+        "frontier_generation_run_id": "fgr_01M27QA41G7B5WN13547J4E2QB",
+        "proposal_count": 6,
+        "recovered": false,
+        "nearest_classification": "mechanism-distinct",
+        "distinct_family_count": 6,
+        "redundant_count": 0,
+        "stopping_condition": "completed",
+        "decisive_count": 2,
+        "unknown_count": 4,
+        "unassessed_count": 0,
+        "evaluations_consumed": 6,
+        "members": [
+          {
+            "proposal_id": "fpr_01M27QA41G7B5WN1354DE4FBEC",
+            "member_rank": 0,
+            "assessment": "unknown"
+          },
+          {
+            "proposal_id": "fpr_01M27QA41G7B5WN1354GZQ3H45",
+            "member_rank": 1,
+            "assessment": "unknown"
+          },
+          {
+            "proposal_id": "fpr_01M27QA41G7B5WN1354MKHZV0Q",
+            "member_rank": 2,
+            "assessment": "decisive_no"
+          },
+          {
+            "proposal_id": "fpr_01M27QA41G7B5WN1354R9EP9TH",
+            "member_rank": 3,
+            "assessment": "decisive_no"
+          },
+          {
+            "proposal_id": "fpr_01M27QA41G7B5WN1354RR5SCTS",
+            "member_rank": 4,
+            "assessment": "unknown"
+          },
+          {
+            "proposal_id": "fpr_01M27QA41G7B5WN1354RTA1D5Z",
+            "member_rank": 5,
+            "assessment": "unknown"
+          }
+        ]
+      }
+    ],
+    "metrics": [
+      {
+        "arm": "b0_undirected",
+        "metric": "held_out_family_recovery",
+        "numerator": 0,
+        "denominator": 1,
+        "ordinal": "low"
+      },
+      {
+        "arm": "b0_undirected",
+        "metric": "decisive_assessments",
+        "numerator": 2,
+        "denominator": 7,
+        "ordinal": "low"
+      },
+      {
+        "arm": "b0_undirected",
+        "metric": "mechanistic_diversity",
+        "numerator": 6,
+        "denominator": 7,
+        "ordinal": "medium"
+      },
+      {
+        "arm": "b0_undirected",
+        "metric": "normalized_redundancy",
+        "numerator": 1,
+        "denominator": 7,
+        "ordinal": "low"
+      },
+      {
+        "arm": "b3_invariant_guided",
+        "metric": "held_out_family_recovery",
+        "numerator": 0,
+        "denominator": 1,
+        "ordinal": "low"
+      },
+      {
+        "arm": "b3_invariant_guided",
+        "metric": "decisive_assessments",
+        "numerator": 2,
+        "denominator": 6,
+        "ordinal": "low"
+      },
+      {
+        "arm": "b3_invariant_guided",
+        "metric": "mechanistic_diversity",
+        "numerator": 6,
+        "denominator": 6,
+        "ordinal": "high"
+      },
+      {
+        "arm": "b3_invariant_guided",
+        "metric": "normalized_redundancy",
+        "numerator": 0,
+        "denominator": 6,
+        "ordinal": "low"
+      }
+    ],
+    "targets": [
+      {
+        "signature_id": "msig_01M27NK7VE95CGAT91ZTRQSRQ2",
+        "canonical_fingerprint": "97cc19e793c060d12974de3c8bec2758254f01c5e7455ce157383a67eae60280"
+      }
+    ]
+  }
+}

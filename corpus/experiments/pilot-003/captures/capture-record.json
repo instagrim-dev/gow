@@ -39,5 +39,11 @@
     "proposer model/config granularity limited to what the subagent interface exposes (see config.json unavailable_settings)",
     "both arms used the same model family as the orchestrating agent; the orchestrating session (which has read the target) wrote the dispatch instruction but supplied no content beyond the file path"
   ],
-  "capture_decision": "resolver decision D-CAP: subagent capture with mandatory transcript audit; any tool use beyond the sanctioned Read voids the capture"
+  "capture_decision": "resolver decision D-CAP: subagent capture with mandatory transcript audit; any tool use beyond the sanctioned Read voids the capture",
+  "extraction_details": {
+    "b3_wire_rejection": "the sealed b3-raw.json placed the OPTIONAL enum fields expected_information_gain / evaluation_cost inside mechanism; proposal-wire/v1 accepts them only at the proposal level, and the strict decoder rejected the payload (recorded verbatim: 'proposal wire schema violation: json: unknown field \"expected_information_gain\"'). The inherited prompt text was ambiguous about their placement.",
+    "transform": "deterministic jq re-nesting moving ONLY those two fields from mechanism to the proposal level; losslessness machine-verified (all other content byte-identical); sealed raw bytes untouched",
+    "consumed_file": "captures/b3-consumed.json",
+    "consumed_sha256": "8128831bcd508177407e35129a6cf0c91a8ad3254031deec9695df18d7ce979c"
+  }
 }
