@@ -1,1 +1,15 @@
 .cursor
+
+# Local review-run output. Files already tracked under docs/reviews remain tracked;
+# this only hides newly generated review artifacts.
+docs/reviews
+
+# Root build binary only — anchored so new files under cmd/newf/ stay visible to git status.
+/newf
+
+# Local research substrate (default CLI state per README).
+.newf/
+
+# Experiment DB snapshots: the durable record is the sha256 committed in records/runtime.json;
+# the file itself is retained locally per the pilot RUNBOOK retention rule.
+corpus/experiments/*/records/*.db
