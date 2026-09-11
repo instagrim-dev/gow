@@ -16,6 +16,15 @@ The theory is derived rigorously from what the implementation has taught us; the
 thesis is the authored, project-level statement of the move itself; the
 practitioner field guide is the reach-for-it-Monday-morning companion to both.
 
+## Naming canon
+
+The [naming canon](naming-canon.md) is authoritative for the project names:
+**Geometry of Work** (theory), **Cartographic Search** (method), **Map the Work**
+(practitioner instruction), **The Shape of Trying** (authored thesis / book),
+**Counterform** (complement-geometry extension), and **`newf`** (implementation).
+These roles are not interchangeable; the canon also preserves the alternative
+name catalog and the rule against incidental code, schema, or artifact renames.
+
 ## Layers
 
 | # | Document | Layer | Question it answers |
@@ -23,14 +32,15 @@ practitioner field guide is the reach-for-it-Monday-morning companion to both.
 | 00 | [Geometry of Work](00-geometry-of-work.md) | Semantic (center) | What space does `newf` search, and what is its governing principle? |
 | 01 | [Semantic Model](01-semantic-model.md) | Semantic | What are the descriptive objects and how do they relate? |
 | 02 | [Epistemic Model](02-epistemic-model.md) | Epistemic | What may we believe, and how does belief strengthen? |
-| 03 | [Shape-Guided Search](03-shape-guided-search.md) | Operational | What is the recursive algorithm over the geometry? |
+| 03 | [Cartographic Search (shape-guided search)](03-shape-guided-search.md) | Operational | What is the recursive algorithm over the geometry? |
 | 04 | [Classical Projection](04-classical-projection.md) | Operational | How does a shape-space move get verified in domain-space? |
-| 05 | [Complement Geometry](05-complement-geometry.md) | Semantic (dual) | What shape does accumulated Work force the remaining possibility-space to take? |
+| 05 | [Counterform (complement geometry)](05-complement-geometry.md) | Semantic (dual) | What shape does accumulated Work force the remaining possibility-space to take? |
 | 06 | [Situated in the Literature](06-situated-in-the-literature.md) | Research program | What established fields does GoW compose, what is the distinct lift, and what rigorous pieces are still missing? |
 | 07 | [Relational Structure](07-relational-structure.md) | Semantic (extension) | Can relations among aspects of Work carry information no individual feature carries — and what would prove GoW exploits them? |
 | 08 | [Earning Operational Authority](08-earning-operational-authority.md) | Research program (contracts) | What must connect representation changes to realizable actions and future evidence before the geometry earns search authority? |
 | 09 | [Falsification Review](09-falsification-review.md) | Operational (review) | What is the one bounded operation every claim must survive, and why can it damage but never promote? |
 | 10 | [Self-Referential Programmatic Cartography](10-self-referential-cartography.md) | Semantic (extension) | Can the system map its own mapping and search decisions and use that map to choose next Work — without letting self-description become self-certification? |
+| — | [Naming canon](naming-canon.md) | Naming authority | Which names belong to the theory, method, practitioner instruction, authored title, extension, and implementation? |
 | — | [Paper Claims](00-paper-claims.md) | Claim registry | Which four claims may the manuscript make, and at what evidence standard? |
 | — | [Glossary / ontology](glossary.md) | Anchor | What does each term mean, and its legacy implementation name? |
 
