@@ -1,0 +1,5 @@
+TRAIN=prb_01M28TR00P16PHA8RG4V6NNGAR
+TARGET=prb_01M28TR07FVS0D1NGPWP2XNJR0
+experiment=exp_01M28TR11Q6FZ1PX09H76769ES
+conclusion=no_recovery
+target=operator-attested overlay (posture explicit + declared_payload completeness)

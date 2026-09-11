@@ -26,6 +26,8 @@ practitioner field guide is the reach-for-it-Monday-morning companion to both.
 | 03 | [Shape-Guided Search](03-shape-guided-search.md) | Operational | What is the recursive algorithm over the geometry? |
 | 04 | [Classical Projection](04-classical-projection.md) | Operational | How does a shape-space move get verified in domain-space? |
 | 05 | [Complement Geometry](05-complement-geometry.md) | Semantic (dual) | What shape does accumulated Work force the remaining possibility-space to take? |
+| 06 | [Situated in the Literature](06-situated-in-the-literature.md) | Research program | What established fields does GoW compose, what is the distinct lift, and what rigorous pieces are still missing? |
+| — | [Paper Claims](00-paper-claims.md) | Claim registry | Which four claims may the manuscript make, and at what evidence standard? |
 | — | [Glossary / ontology](glossary.md) | Anchor | What does each term mean, and its legacy implementation name? |
 
 Alongside the theory series, the [thesis](../thesis/) directory holds the

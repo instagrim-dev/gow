@@ -691,6 +691,26 @@ without). See
 
 This is the first scientifically meaningful end-to-end milestone.
 
+> **M7 executed (2026-09-11).** The full blinded loop has now been run end to
+> end from `corpus/` in an isolated DB via a reproducible offline runbook
+> ([`corpus/experiments/m7-blinded-run/`](corpus/experiments/m7-blinded-run/)):
+> `init → ingest → normalize → enrich → signature (mechanism/v3) → cluster →
+> failure-space → mine (3 candidates) → challenge (3 surviving) → experiment
+> define → run (B0/B1/B2/B3, equal budget 8) → show/compare`. Two honest stages:
+> against the **pristine** target the result is `inconclusive` (the target's
+> field completeness is provider-declared but not operator-accepted, so under
+> `recovery-rule/v1`+`classify/v3` it self-classifies `unknown` and is
+> unreachable — reproducing the later `pilot-003` runs); against an
+> **operator-attested** target overlay (adds only prose-stated posture support +
+> a `declared_payload` completeness declaration, no structural claim changed)
+> the target becomes reachable and the run is **decisive `no_recovery`** — B3
+> goes from `0/3` to `3/3` decisively assessed, and every B1/B2/B3 proposal
+> classifies `mechanism-distinct` from the affine-lattice target. Leakage passed
+> (blinding clean) in both. The negative is the expected offline-fixture result;
+> the v0 win is the harness plus decisive assessability. A real recovery signal
+> needs a live-model campaign; `mode=historical` remains gated on dated evidence
+> — both data, not code.
+
 ### Experiment shape
 
 ```text

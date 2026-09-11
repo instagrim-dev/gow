@@ -155,6 +155,22 @@ explicitly labeled hypotheses or future directions — not as claims:
 Each of these could become a claim in a future paper with the right evidence.
 None is supported by the current experimental record.
 
+## Situating GoW against neighboring fields
+
+The manuscript's related-work section is drafted in
+[`06-situated-in-the-literature.md`](06-situated-in-the-literature.md). It is
+`interpretation` + `hypothesis`, never `observation`: it makes **no** "nobody
+thought of this" claim. It maps each GoW operation to its closest established
+relative (Lakatos, CEGIS/CEGAR, version spaces / active learning / Bayesian
+experimental design, Conceptual Spaces, Instance Space Analysis,
+Quality-Diversity, constraint propagation, inverse design), names the one lift
+that appears distinct (search over the population of *Work*, with the
+representation itself allowed to move), and states the `D ⇆ W ⇆ M(W)` three-space
+decomposition. Its four "missing rigorous pieces" — representation learning,
+geometry, causality, convergence — are the research program, and each maps onto
+a falsification condition below. Any novelty sentence in the manuscript must
+survive comparison against Lakatos and Instance Space Analysis first.
+
 ---
 
 ## Falsification conditions for GoW (Stage 8 material)
