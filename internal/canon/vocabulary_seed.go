@@ -22,6 +22,20 @@ const (
 	// content — no term is an interpretation, and none was chosen for its
 	// effect on B0/B3 outcomes (no captures existed when it was pinned).
 	VocabularyMechanismV3 = "mechanism/v3"
+	// VocabularyMechanismV4 is the pilot-004 N2a challenge revision: a strict
+	// superset of mechanism/v3 adding the density_averaging_ceiling
+	// GeneratedInterpretation property. This property survived all seven
+	// challenge probes (see
+	// corpus/experiments/pilot-004-discovery/records/N2a-challenge.md).
+	// Scope: es-05 (averaging/Bombieri–Vinogradov) and es-10 (Vaughan
+	// congruence density), both partial_failure. The claim is that each
+	// method's almost-all statement has an intrinsic ceiling that cannot be
+	// closed within the method's own machinery: es-05 because sieve-average
+	// growth is polylogarithmic (subthreshold for existence-forcing); es-10
+	// because QR-survivor classes provide an absolute floor (the QR
+	// obstruction). Both sub-mechanisms are recorded as scope notes; the
+	// single canonical ID covers both.
+	VocabularyMechanismV4 = "mechanism/v4"
 	// VocabularyMechanismV0Lossy is a deliberately over-compressed vocabulary
 	// used only to exercise the abstraction-loss regression: it merges two
 	// outcome-predictive operators into one canonical ID.
@@ -340,9 +354,53 @@ func MechanismV0Lossy() *Vocabulary {
 	return mustBuild(mechanismV0LossySeed)
 }
 
+// mechanismV4Terms are the pilot-004 N2a challenge additions layered on top of
+// mechanism/v3 to form mechanism/v4. A single GeneratedInterpretation property
+// covers the intrinsic density/averaging ceiling shared by es-05 and es-10.
+// The two sub-mechanisms differ concretely (rate-subthreshold for es-05;
+// QR-absolute-floor for es-10); the canonical ID covers both, and the scope
+// notes in the description record that distinction. Source occurrences:
+// pilot-004 entries E13/E16/E20/E23, all unanimous (3-0). Challenge record:
+// corpus/experiments/pilot-004-discovery/records/N2a-challenge.md.
+var mechanismV4Terms = []Term{
+	{
+		CanonicalID: "domain.number_theory.property.density_averaging_ceiling",
+		FieldKind:   domain.FieldPreserves,
+		Description: "GeneratedInterpretation (pilot-004 N2a challenge, admitted): each of these methods produces a monotone-improving almost-all statement whose gap to universality cannot be closed within the method's own machinery. Scope: es-05 (averaging/Bombieri–Vinogradov — ceiling because sieve-average growth is polylogarithmic, below the polynomial threshold required to force existence); es-10 (Vaughan congruence density — ceiling because QR-survivor classes provide an absolute floor that no finite congruence battery can remove, a constraint already named by the confined_to_quadratic_nonresidues concept in v2). The two sub-mechanisms are distinct; the property covers both.",
+		Aliases: []string{
+			"density averaging ceiling",
+			"intrinsic density ceiling",
+			"averaging ceiling",
+			"almost all ceiling",
+		},
+	},
+}
+
+// MechanismV4 builds the mechanism/v4 vocabulary: every mechanism/v3 term
+// unchanged plus the pilot-004 N2a density_averaging_ceiling property.
+func MechanismV4() *Vocabulary {
+	base := append(append([]Term{}, mechanismV1Seed.terms...), mechanismV2Terms...)
+	base = append(base, mechanismV3Terms...)
+	// Apply v3 extra aliases (same as MechanismV3 does).
+	terms := make([]Term, 0, len(base)+len(mechanismV4Terms))
+	for _, t := range base {
+		if extra, ok := mechanismV3ExtraAliases[t.CanonicalID]; ok {
+			t.Aliases = append(append([]string{}, t.Aliases...), extra...)
+		}
+		terms = append(terms, t)
+	}
+	terms = append(terms, mechanismV4Terms...)
+	seed := vocabularyBuilder{
+		version:  VocabularyMechanismV4,
+		terms:    terms,
+		rejected: append([]string{}, mechanismV1Seed.rejected...),
+	}
+	return mustBuild(seed)
+}
+
 // SeededVocabularies returns every in-repo vocabulary, used to seed persistence.
 func SeededVocabularies() []*Vocabulary {
-	return []*Vocabulary{MechanismV1(), MechanismV2(), MechanismV3(), MechanismV0Lossy()}
+	return []*Vocabulary{MechanismV1(), MechanismV2(), MechanismV3(), MechanismV4(), MechanismV0Lossy()}
 }
 
 func mustBuild(b vocabularyBuilder) *Vocabulary {
