@@ -1,101 +1,204 @@
-# Pilot 001 — structural-recovery comparison (protocol scaffold)
+# Pilot 001 — structural-recovery comparison
 
-Status: **template — not yet executed.** Every `[ ]` and `TBD` is an operator
-decision or research judgment that must be filled before the run. The harness
-half of readiness is computed by `newf experiment readiness --problem <id>`;
-nothing in this file may claim readiness that command does not report, and
-nothing that command reports substitutes for the attestations below.
+Status: **configured; not executed; readiness not asserted**. This revision
+fills the design choices, source selection, budgets, capture instructions and
+assessment rubric. Runtime identifiers, actual model metadata, hashes of
+future captures and human attestations are deliberately `null` in
+`manifest.json`: those are observations to collect, not values to invent.
+
+**Operator/reviewer material: do not include this file or `manifest.json` in
+either proposer's context. They disclose the withheld target.**
 
 ## Claim under test (narrow, fixed before capture)
 
-> Does explicit failure-derived structure (challenged, surviving invariants)
-> improve the directions an external proposer proposes, measured as
-> structural recovery of a withheld advance under `recovery-rule/v1` /
+> On the repository's project-authored Erdős–Straus synthetic split, does
+> access to challenged failure-derived structure change an external proposer's
+> directions toward the withheld mechanism, under `recovery-rule/v1` and
 > `classify/v1`?
 
-This is a structural-recovery pilot. It is NOT a novel-progress claim, NOT a
-discovery-effectiveness result on its own, and a label-level match is never a
-verified mathematical advance.
+One paired, exploratory B0/B3 run; no statistical-significance, historical
+prediction, verified mathematical progress or general discovery-effectiveness
+claim. This is explicitly a **synthetic-substrate pilot with external outputs**,
+not the independently assessed literature experiment. File import does not make
+an authored fixture a non-predetermined capture.
 
 ## 1. Corpus readiness (package 2 — research judgment)
 
-- [ ] Selected failure cases each state: method M, under assumptions A and
-      restrictions B, reaches documented boundary D — with a source locator.
-      A paper stopping short of the conjecture is NOT a failure record.
-- [ ] Outcome classes and scopes reviewed by: `TBD (name)` on `TBD (date)`.
-- [ ] Vocabulary: the terms REQUIRED by this experiment's comparison axes
-      resolve; all other terms deliberately left unresolved (claim narrowed
-      accordingly). Reviewed mappings: `TBD`.
-- [ ] Withheld target: `TBD (source)`, structural criterion: `TBD (what
-      counts as recovering its move, stated before generation)`.
-- [ ] Mechanical half: `newf experiment readiness` output attached below
-      (`READY` required). Output: `TBD`.
+| Decision | Selected value |
+|---|---|
+| Source revision | `a868dec70e6cb0f5ab6000ec89bbd36e12f43ec4` |
+| Train set | All 12 Markdown notes under `corpus/train/`, ascending filename order |
+| Train content pin | Git tree `da49ddcf8bbe89ba2f51627ff7c4a6c7f6f03cf6` |
+| Withheld set | `corpus/target/es-target-affine-lattice-linear-forms.md` only |
+| Target content pin | Git blob `7ed727ab709e3149f21df88a7377ac9ff6751818` |
+| Vocabulary | `mechanism/v1`, existing seed; no new aliases during this pilot |
+| Comparison profile | `classify/v1`; record its actual content hash at freeze |
+| Mining and readiness minimum support | 2 distinct failure-side families |
+| Excluded inputs | `corpus/research/`, previous experiment outputs, test fixtures and reviews |
+
+These Git object IDs are **not SHA-256 file hashes**. The source selection is
+from `corpus/README.md`, which labels this split synthetic. It is not permission
+to promote the research collection's `benchmark_training_eligible: false` or
+`historical_holdout_eligible: false` flags. No source files, outcomes, aliases or
+completeness declarations are changed by this configuration.
+
+Failure scopes are the selected notes' own mechanism, assumption and boundary
+statements, located by file and heading/normalization field. They remain
+project-authored annotations, not independently verified accounts of failed
+proofs. Outcome/scope review and mapping review: **not performed in this
+configuration pass; reviewer and date unrecorded**. Do not infer actual family
+counts or resolution coverage from the 12-file count. Save the mechanical
+readiness report and the review ledger before capture; a blocker stops this
+pilot, not a pretext to relabel a partial success as a failure.
+
+**Predeclared target criterion (reviewer only):** recover the target note's
+intended move from independent residue-class covering to a global
+integer/lattice representation and a concrete lattice-point/existence or
+enumeration argument. The response must describe the proposed mapping and the
+positivity, integrality and coverage obligations, not merely say “global,”
+“lattice,” or “geometry of numbers.” Exact wording or reproduction of the
+note's displayed identity is not required. The note's claim that a suitable
+affine representation exists is itself unverified here; the reviewer must
+record a mathematical objection rather than accept an invalid mapping to
+satisfy the benchmark. This criterion measures the **intended synthetic
+mechanism**, not the truth of every statement in the target note.
+
+Mechanical readiness: **not run**, expected output path `records/readiness.json`.
+The required decision is `.ready == true`, followed by the separate operator
+attestations. This configuration is not a READY report.
 
 ## 2. Split freeze
 
-- problem (train): `TBD (prb_...)`
-- target problem: `TBD (prb_...)`
-- holdout set: `TBD (hset_...)` — mode `blinded` (no chronological claim)
-- frozen at commit: `TBD (sha)` — db snapshot hash: `TBD`
+- Train slug: `pilot-001-es-train`; statement: `Erdos-Straus pilot 001 train`.
+- Target slug: `pilot-001-es-target`; statement: `Erdos-Straus pilot 001 target`.
+- Holdout name: `pilot-001-es-synthetic`; mode: `blinded`; historical cutoff: none.
+- Scratch database: `.newf/pilot-001/newf.db`; do not reuse the earlier negative-run DB.
+- Dataset baseline: the source revision and Git pins in §1. Record the actual
+  executable commit separately; recheck the source pins if main has moved.
+- Train/target/holdout IDs: generated by the CLI, extracted by `RUNBOOK.md`;
+  no `prb_`/`hset_` identifier has been fabricated or copied from another DB.
+- Freeze snapshot: `records/pre-capture.db`, created via SQLite backup after
+  preparation, plus its SHA-256 in `records/runtime.json`. Not created yet.
+
+Do not expose the repository checkout, target DB, this protocol, manifest or
+runbook to either proposer. Supply only that arm's assembled prompt/context.
+This conversation already contains target information. **Do not use this
+conversation as either capture session.** A fresh context cannot prove the
+underlying model lacks pretraining exposure; record that limitation.
 
 ## 3. Capture protocol (the harness cannot establish these)
 
-Same proposer, same configuration, both arms; predeclared budgets.
-
-| field | B0 capture | B3 capture |
+| Field | B0 capture | B3 capture |
 |---|---|---|
-| model identity + version | TBD | TBD (must equal B0) |
-| configuration (temp, seeds, etc.) | TBD | TBD (must equal B0) |
-| prompt file (retained verbatim) | TBD | TBD |
-| permitted context | source material only — **no inferred invariants, no target** | source material + surviving invariants — **no target** |
-| capture file | `b0-captured.json` | `b3-captured.json` |
-| capture sha256 | TBD | TBD |
-| captured at | TBD | TBD |
+| Arm | `b0_undirected` | `b3_invariant_guided` |
+| Transport | `external-file`, `proposal-wire/v1` | Same |
+| Actual model identity/version | Not captured; record before first call | Must exactly match B0 |
+| Configuration policy | Same model deployment and exposed defaults; record exact settings, including unavailable controls | Must exactly match B0 |
+| Context | Pinned train notes only | Same train notes plus the frozen surviving-invariant IDs, predicates and statements |
+| Prompt instructions | `prompts/b0.md` | `prompts/b3.md` |
+| Complete submitted prompt | `captures/b0-prompt.txt` | `captures/b3-prompt.txt` |
+| Raw response | `captures/b0-raw.txt` | `captures/b3-raw.txt` |
+| Wire file consumed | `b0-captured.json` | `b3-captured.json` |
+| Wire SHA-256 / captured-at UTC | Unrecorded until capture | Unrecorded until capture |
+| Submitted proposal cap | 8 | 8 |
+| Assessment budget | 8 proposal-target comparisons | 8 proposal-target comparisons |
+| Primary sampling attempts | 1 | 1 |
 
-- [ ] B0's context verifiably excluded the invariants (prompt retained).
-- [ ] Neither prompt contains the withheld target's information.
-- [ ] Wire files validate (`proposal-wire/v1`; explicit `target_invariant_ids`
-      for B3 — an empty selection is a violation by design).
+Select and record one actual external model deployment **before either call**;
+no deployment identifier or sampling seed is asserted by this commit. Keep all
+exposed settings identical. Do not report an unavailable seed/temperature as
+zero. No browsing, connectors, repository tools, shared chat history or
+cross-arm output in either capture session. Capture B0 first, seal it, then
+capture B3 in an isolated context; never show B0 output to B3.
+
+The wire preserves source terms and may contain unresolved labels; do not
+invent ontology aliases to improve a score. B0 omits `target_invariant_ids`.
+B3 names a nonempty explicit subset of the **actual frozen survivor IDs** for
+each proposal. An inability to propose is `proposals: []`, not a fabricated
+break. The untrusted wire cannot confer completeness authority.
+
+Use the first response from each arm, including empty/invalid responses. Do not
+repair or choose responses based on target scores. Record parse/transport
+failures as failed attempts; any new capture is a separately identified pilot
+revision. Preserve raw bytes before any format extraction. A formatting-only
+extraction must retain both originals and the exact transformation, never edit
+mechanism content.
+
+Pre-capture conditions are currently **unattested**: actual model/configuration,
+B0 invariant exclusion, withheld-target exclusion, source/mapping review and
+reviewer independence. Instructions alone are not proof they were satisfied.
 
 ## 4. Execution
 
+`RUNBOOK.md` supplies the exact preparation commands and derives runtime IDs
+from their returned JSON. Run only after the mechanical and operator gates pass.
+The CLI flag is **`--proposal-budget`**, not the scaffold's unsupported `--count`.
+
 ```bash
-newf experiment readiness --problem <train>            # must be READY
-newf experiment run --problem <train> \
-  --b0-proposals-file b0-captured.json \
-  --b3-proposals-file b3-captured.json \
-  --count <N> --evaluation-budget <M>
-newf experiment compare --problem <train>
+"$NEWF" --db "$DB" --json experiment readiness \
+  --problem "$TRAIN" --holdout-set "$HOLDOUT" --min-support 2
+"$NEWF" --db "$DB" --json experiment run \
+  --problem "$TRAIN" --holdout-set "$HOLDOUT" \
+  --arms b0_undirected,b3_invariant_guided \
+  --b0-proposals-file "$PILOT/b0-captured.json" \
+  --b3-proposals-file "$PILOT/b3-captured.json" \
+  --proposal-budget 8 --evaluation-budget 8 > "$OUT/experiment.json"
+EXPERIMENT=$(jq -er '.experiment.id' "$OUT/experiment.json")
+"$NEWF" --db "$DB" --json experiment compare "$EXPERIMENT" \
+  --baseline b0_undirected --treatment b3_invariant_guided > "$OUT/compare-b0-b3.json"
 ```
 
-Record from the run (cite EXECUTION rows, not "latest experiment"):
-
-- execution run ids + per-arm generation ids + file sha256s
-  (`experiment_executions`, v32): `TBD`
-- experiment id + identity hash: `TBD`
-- admission audit per arm (`admission_corrected/downgraded/stripped/rejected/overflow`): `TBD`
-- budgets configured vs consumed: `TBD`
-- raw result + comparison JSON committed beside this file.
+Commit the actual readiness, result and comparison JSON only after execution.
+Record the v32 execution rows: outer run ID, per-arm generation ID, consumed
+file hash and selected assessment artifact. Do not substitute “latest
+experiment” or mistake a reused assessment artifact's original run for the
+new capture execution. Also retain admission counts, configured/consumed
+budgets, exact content/profile hashes, observed model metadata and capture
+prompts. All results and actual consumption are **unrecorded**, not zero.
 
 ## 5. Assessment (package 4 — research judgment)
 
-- [ ] Independent reviewer (`TBD`) assesses, for every `recovered` and
-      `decisive_no` classification, whether the comparator's verdict
-      corresponds to the intended mechanism — using the pre-stated criterion
-      from §1, blind to which arm produced the proposal where practicable.
-- [ ] Disagreements recorded verbatim; the comparator's classification is
-      never silently overridden — both are reported.
-- [ ] Cost accounting: work spent deriving + challenging B3's invariants is
-      reported alongside any effectiveness statement.
+Reviewer assignment and review date: **unassigned / not reviewed**. The reviewer
+must not have authored the proposals or seen their arm labels when judging.
+Use neutral proposal labels; seal the label-to-arm mapping until review ends.
+This protocol's author is target-exposed and is not the independent reviewer.
+
+| Reviewer verdict | Predeclared meaning |
+|---|---|
+| `supports_intended_move` | A concrete global integer/lattice reformulation and follow-through mechanism are described; positivity/integrality and the remaining existence/coverage obligations are explicit |
+| `does_not_support_intended_move` | The proposal only renames a residue-local construction, supplies keywords without a mapping, or proposes a substantively different move |
+| `indeterminate` | Missing detail or an unresolved mathematical mapping prevents a defensible comparison |
+
+Assess every proposal, not just comparator hits. Preserve the automatic
+`recovered / decisive_no / unknown / unassessed` label alongside the reviewer
+verdict and its rationale. A reviewer disagreement never silently overwrites
+an automatic score. Mathematical validity is a separate field with a concrete
+argument, counterexample or `not_verified`; recovery does not imply validity.
+Report observed recovery, first-recovery rank, decisive/unknown/unassessed
+counts, diversity and redundancy for each arm. Single-pair differences are
+descriptive. Record B3 preparation/mining/challenge costs separately from the
+equal per-arm proposal/evaluation budgets. Do not assert cost-effectiveness
+when provider usage or preparation costs are unavailable.
 
 ## 6. Interpretation discipline
 
-- `unknown` / `inconclusive` outcomes are acceptable results, not failures of
-  the pilot. An unintended all-target failure is a protocol defect.
-- The gate is a meaningful, attributable comparison whose recorded result
-  follows from the actual inputs — **not "B3 wins"**.
-- Post-run findings are classified per the freeze-gate policy in
-  `docs/experiment.md`: fix-before-interpreting / fix-alongside / defer.
-- Known tracked limitation: interpret replayed experiments by explicit
-  experiment id (see `docs/plans/2026-09-10-011-audit-current-state-readers.md`,
-  finding 2).
+- Unknown, inconclusive, failed capture and unmet readiness are valid recorded
+  outcomes. Do not silently coerce them into recovery or non-recovery.
+- The gate is a meaningful, attributable comparison, not “B3 wins.”
+- Corpus contents, vocabulary, rubric, settings and budgets are fixed before
+  capture. Changes create a documented protocol revision, not tuned results.
+- Existing synthetic/negative controls and research-only cards are not upgraded
+  into historical or verified failure evidence by this protocol.
+- Fix claim-scope, leakage, attribution, revision or verdict defects before
+  interpretation; handle operational polish alongside the pilot; defer general
+  orchestration. No live transport or new harness subsystem is required here.
+
+## Configuration provenance
+
+Basis: `corpus/README.md`, the withheld note's “The structural move” section,
+`docs/experiment.md`, `docs/frontier-generation.md`, and the CLI/readiness
+contracts at the pinned baseline. The values above are new **predeclared design
+choices**, not reported past measurements. They preserve the template's split
+between mechanical readiness and research attestations. No build, repository
+test run, capture, database preparation, mathematical verification or independent
+review was performed while filling these values.

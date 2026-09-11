@@ -1,0 +1,147 @@
+{
+  "schema": "newf-pilot-registration/v1",
+  "pilot_id": "pilot-001",
+  "status": "configured_not_executed",
+  "registration_kind": "predeclared_design_not_execution_evidence",
+  "configuration_request_at_utc": "2026-09-11T05:44:58Z",
+  "repository": "instagrim-dev/newf",
+  "basis_commit": "a868dec70e6cb0f5ab6000ec89bbd36e12f43ec4",
+  "claim_scope": "external-proposal structural recovery on a project-authored synthetic split",
+  "mode": "blinded",
+  "chronological_claim": false,
+  "statistical_significance_claim": false,
+  "design": {
+    "arms": [
+      "b0_undirected",
+      "b3_invariant_guided"
+    ],
+    "primary_capture_pairs": 1,
+    "primary_attempts_per_arm": 1,
+    "proposal_budget_per_arm": 8,
+    "evaluation_budget_per_arm": 8,
+    "evaluation_unit": "proposal_target_comparison",
+    "min_support": 2,
+    "capture_order": [
+      "b0_undirected",
+      "b3_invariant_guided"
+    ],
+    "capture_sessions": "isolated",
+    "external_tools_allowed": false,
+    "cross_arm_outputs_allowed": false,
+    "automatic_retries": 0,
+    "recovery_rule": "recovery-rule/v1",
+    "comparison_profile": "classify/v1",
+    "vocabulary_version": "mechanism/v1"
+  },
+  "corpus": {
+    "kind": "synthetic_blinded_benchmark",
+    "train_path": "corpus/train",
+    "train_count": 12,
+    "train_order": "ascending_filename",
+    "train_git_tree_sha1": "da49ddcf8bbe89ba2f51627ff7c4a6c7f6f03cf6",
+    "target_path": "corpus/target/es-target-affine-lattice-linear-forms.md",
+    "target_git_blob_sha1": "7ed727ab709e3149f21df88a7377ac9ff6751818",
+    "source_review_status": "not_independently_reviewed",
+    "mapping_review_status": "not_reviewed",
+    "excluded_paths": [
+      "corpus/research",
+      "corpus/experiments",
+      "testdata",
+      "fixtures",
+      "docs/reviews"
+    ],
+    "research_collection_eligibility_overridden": false
+  },
+  "workspace": {
+    "database": ".newf/pilot-001/newf.db",
+    "train_slug": "pilot-001-es-train",
+    "target_slug": "pilot-001-es-target",
+    "holdout_name": "pilot-001-es-synthetic",
+    "artifact_root": "corpus/experiments/pilot-001",
+    "database_snapshot": "records/pre-capture.db"
+  },
+  "capture_policy": {
+    "transport": "external-file",
+    "wire_contract": "proposal-wire/v1",
+    "actual_model_id": null,
+    "actual_model_version": null,
+    "actual_configuration": null,
+    "configuration_rule": "Choose and record one fixed deployment and identical exposed defaults before either call; unavailable controls stay explicitly unavailable.",
+    "b0_target_selection": "omitted",
+    "b3_target_selection": "explicit_nonempty_subset_of_frozen_survivors",
+    "this_conversation_eligible_for_capture": false,
+    "prior_model_training_exposure": "unknown_not_excluded_by_fresh_context",
+    "capture_status": "not_captured"
+  },
+  "artifacts": {
+    "b0": {
+      "instructions": "prompts/b0.md",
+      "submitted_prompt": "captures/b0-prompt.txt",
+      "raw_response": "captures/b0-raw.txt",
+      "wire_file": "b0-captured.json",
+      "captured_at_utc": null,
+      "wire_sha256": null
+    },
+    "b3": {
+      "instructions": "prompts/b3.md",
+      "submitted_prompt": "captures/b3-prompt.txt",
+      "raw_response": "captures/b3-raw.txt",
+      "wire_file": "b3-captured.json",
+      "captured_at_utc": null,
+      "wire_sha256": null
+    },
+    "readiness": "records/readiness.json",
+    "runtime": "records/runtime.json",
+    "experiment": "records/experiment.json",
+    "comparison": "records/compare-b0-b3.json",
+    "execution_rows": "records/executions.json",
+    "review": "records/independent-assessment.json"
+  },
+  "runtime_observations": {
+    "status": "not_created",
+    "train_problem_id": null,
+    "target_problem_id": null,
+    "holdout_set_id": null,
+    "executable_commit": null,
+    "pre_capture_database_sha256": null,
+    "comparison_profile_hash": null,
+    "mechanically_ready": null,
+    "experiment_id": null,
+    "identity_hash": null,
+    "execution_run_id": null,
+    "generation_ids": null,
+    "actual_budgets_consumed": null,
+    "admission_counts": null,
+    "conclusion": null
+  },
+  "attestations": {
+    "source_scope_reviewer": null,
+    "source_scope_reviewed_at": null,
+    "mapping_reviewer": null,
+    "mapping_reviewed_at": null,
+    "same_model_configuration_confirmed": null,
+    "b0_invariants_excluded": null,
+    "withheld_target_excluded_from_both_captures": null,
+    "independent_reviewer": null,
+    "reviewed_at": null
+  },
+  "independent_assessment": {
+    "criterion_reference": "PROTOCOL.md sections 1 and 5",
+    "verdicts": [
+      "supports_intended_move",
+      "does_not_support_intended_move",
+      "indeterminate"
+    ],
+    "review_every_proposal": true,
+    "blind_arm_labels": true,
+    "keep_automatic_and_reviewed_results_separate": true,
+    "mathematical_validity_default": "not_verified"
+  },
+  "missing_value_policy": "null means not yet observed or attested, never zero, passed, ready or completed; runtime evidence belongs in records/runtime.json and capture/review records",
+  "documentation_files_sha256": {
+    "PROTOCOL.md": "fb35482f972d3de8928ed93543a83895dfc1e66fbcf221114b51362cc567589a",
+    "prompts/b0.md": "9aadfdd1f40824761bbb6ccffe05e905c6594387f067fc64c7b7e9d645cfe652",
+    "prompts/b3.md": "3765e4558688dfbcd69163b4a36483870201159ed3db5e86480236928c85d074",
+    "RUNBOOK.md": "c596845c0955c897b7fc713272428ef15f2cc0c35948056727d12c58141ac85b"
+  }
+}
