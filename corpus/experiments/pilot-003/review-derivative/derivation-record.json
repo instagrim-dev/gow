@@ -1,0 +1,41 @@
+{
+  "schema": "pilot-review-derivation/v1",
+  "changes": [
+    {
+      "proposal_id": "P02",
+      "field": "structural_violation_claim",
+      "before": "Targets the identity-carried-solvability predicate: existence pressure would come from moment concentration of the solution count over the survivor class alone, with no identity carrying any individual solution. The known first-moment obstacle is acknowledged: polylog average growth cannot force existence, and it is an open obligation whether restricted higher moments concentrate tightly enough that a zero-solution prime is inconsistent; no such inconsistency is claimed as established.",
+      "after": "Existence pressure would come from moment concentration of the solution count over the survivor class alone, with no identity carrying any individual solution. The known first-moment obstacle is acknowledged: polylog average growth cannot force existence, and it is an open obligation whether restricted higher moments concentrate tightly enough that a zero-solution prime is inconsistent; no such inconsistency is claimed as established."
+    },
+    {
+      "proposal_id": "P04",
+      "field": "structural_violation_claim",
+      "before": "Targets all three surviving predicates: existence for a survivor prime would be inherited from the known positivity of an auxiliary object (a class number or representation count) through an explicit correspondence, so no congruence identity carries the solution, no class union performs coverage, and the mechanism operates directly on quadratic-residue primes. No such correspondence is exhibited here; constructing one that is faithful on the survivor class is the entire unmet obligation, and its existence is the hypothesis being proposed for investigation.",
+      "after": "Existence for a survivor prime would be inherited from the known positivity of an auxiliary object (a class number or representation count) through an explicit correspondence, so no congruence identity carries the solution, no class union performs coverage, and the mechanism operates directly on quadratic-residue primes. No such correspondence is exhibited here; constructing one that is faithful on the survivor class is the entire unmet obligation, and its existence is the hypothesis being proposed for investigation."
+    },
+    {
+      "proposal_id": "P08",
+      "field": "structural_violation_claim",
+      "before": "The surviving predicates read a preserves-set containing identity-carried solvability and class-union construction. This direction hypothesizes existence via a descent recursion: solvability of a hard prime p is derived from a solved smaller instance through an induced-solution map, so no fixed polynomial identity carries the solution and no union of congruence classes performs the coverage. The break is hypothesized, not constructed: the required well-founded transport map is exactly the open obligation, and I have not established that any candidate map decreases a monovariant on the quadratic-residue survivor class.",
+      "after": "Several recorded failed approaches share identity-carried solvability and class-union construction as preserved properties. This direction hypothesizes existence via a descent recursion: solvability of a hard prime p is derived from a solved smaller instance through an induced-solution map, so no fixed polynomial identity carries the solution and no union of congruence classes performs the coverage. The break is hypothesized, not constructed: the required well-founded transport map is exactly the open obligation, and I have not established that any candidate map decreases a monovariant on the quadratic-residue survivor class."
+    },
+    {
+      "proposal_id": "P10",
+      "field": "structural_violation_claim",
+      "before": "Targets the identity-carried-solvability and nonresidue-confinement predicates: positivity would be supplied by counting integral points on the fiber of the lifted variety over each survivor prime, an input the identity/covering program never had, applied without restriction to nonresidue classes. The bundle itself records that the lift adds no positivity; this proposal's entire content is the unproven claim that fiberwise counting can add it, and the main-term-versus-error-term battle on thin fibers is the open obligation.",
+      "after": "Positivity would be supplied by counting integral points on the fiber of the lifted variety over each survivor prime, an input the identity/covering program never had, applied without restriction to nonresidue classes. The bundle itself records that the lift adds no positivity; this proposal's entire content is the unproven claim that fiberwise counting can add it, and the main-term-versus-error-term battle on thin fibers is the open obligation."
+    },
+    {
+      "proposal_id": "P12",
+      "field": "structural_violation_claim",
+      "before": "Targets the identity-carried-solvability and nonresidue-confinement predicates: existence would follow from a pointwise divisor-in-interval statement applied directly to primes in the quadratic-residue survivor class, with no congruence identity carrying the solution and no restriction to nonresidue classes. The obligation is severe and stated openly: known divisor-in-interval results are average-case, and upgrading them to every prime in a thin class is unproven; this proposal does not claim that upgrade exists.",
+      "after": "Existence would follow from a pointwise divisor-in-interval statement applied directly to primes in the quadratic-residue survivor class, with no congruence identity carrying the solution and no restriction to nonresidue classes. The obligation is severe and stated openly: known divisor-in-interval results are average-case, and upgrading them to every prime in a thin class is unproven; this proposal does not claim that upgrade exists."
+    },
+    {
+      "proposal_id": "P13",
+      "field": "structural_violation_claim",
+      "before": "Targets the class-union-construction predicate: the decomposition parameters are functions of n-specific multiplicative data (such as a small nonresidue witness modulo n) rather than of the residue class of n to a fixed modulus, so no finite union of congruence classes describes the construction and the reciprocity argument that forces Jacobi-symbol equality for fixed-modulus identities does not directly read the parameterization. Whether the forced-symbol argument reappears in witness-indexed form is unresolved; this is a hypothesized break, not a verified escape from the obstruction.",
+      "after": "The decomposition parameters are functions of n-specific multiplicative data (such as a small nonresidue witness modulo n) rather than of the residue class of n to a fixed modulus, so no finite union of congruence classes describes the construction and the reciprocity argument that forces Jacobi-symbol equality for fixed-modulus identities does not directly read the parameterization. Whether the forced-symbol argument reappears in witness-indexed form is unresolved; this is a hypothesized break, not a verified escape from the obstruction."
+    }
+  ]
+}

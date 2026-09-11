@@ -12,7 +12,14 @@ without an external reviewer, and it is recorded as exactly that.
 
 - Packet: `../review-packet.json` (13 proposals, deterministic shuffle
   seeded from the consumed-capture digests, arm labels and
-  `target_invariant_ids` stripped, blinding asserted mechanically).
+  `target_invariant_ids` stripped). **Blinding correction (operator audit):
+  explicit arm identifiers, target IDs, and automatic classifications were
+  withheld; treatment-revealing language remained in the proposal text**
+  (e.g. P08 "The surviving predicates read a preserves-set…", P04 "Targets
+  all three surviving predicates…", P10 "Targets the …predicates:") — the
+  mechanical check established identifier masking, not effective
+  concealment of the experimental condition. This does not establish the
+  reviewer inferred the arms; it narrows what the blinding claim can mean.
 - Predeclared criterion: PROTOCOL §1 "recover the target note's intended
   move from independent residue-class covering to a global integer/lattice
   representation and a concrete lattice-point/existence or enumeration
@@ -34,13 +41,38 @@ without an external reviewer, and it is recorded as exactly that.
 **The single full-recovery verdict is B3 rank 4** — the fiberwise
 lattice-point / geometry-of-numbers proposal that the automatic rule could
 not compare (out-of-vocabulary wording) and that `EXECUTION-RESULT.md`
-flagged pre-review as the most important unknown. The blinded reviewer
+flagged pre-review as the most important unknown (useful triage history,
+NOT an independent confirmation of this judgment). The blinded reviewer
 judged it to make "precisely the intended synthetic move," naming the
 mapping, integrality object, positivity obligation, and coverage stance —
 while recording two mathematical objections (unexhibited correspondence
 faithfulness; thin-fiber main-term versus error-term doubt) and two
 unresolved items. The verdict is a criterion match with objections
 attached, not a claim the proposal is mathematically sound.
+
+**Operator audit corrections (adopted):**
+
+1. **The positive judgment over-reads one detail.** The reviewer's
+   justification says P10 counts points in "explicitly described bounded
+   fiber regions"; the proposal does NOT describe those regions — it lists
+   "explicit fiber region descriptions" as a proposed auxiliary object and
+   assigns writing the region down to the falsification task, and the
+   reviewer's own unresolved section concedes the description cannot be
+   determined from the text. The sealed `recovers` judgment stands AS THE
+   REVIEWER'S RESULT; "full recovery established" is NOT adopted as the
+   operator conclusion. The open question for external review: does P10
+   clear the same specificity threshold that P04 and P07 do not, on what
+   the proposals actually describe — without supplying missing details for
+   one of them.
+2. **Assessment-schema note.** PROTOCOL §5 defines three reviewer
+   categories; `partially_recovers` is a packet-introduced fourth. It is
+   retained as an assessment-schema extension, not an originally specified
+   endpoint.
+3. **The automatic/judged divergence has two live explanations**: the
+   reviewer seeing through wording, or the reviewer interpreting the
+   criterion more loosely / supplying missing structure. The fiber-region
+   over-reading is why the second cannot be dismissed. Neither recorded
+   result absorbs the other.
 
 ## Interpretation discipline
 

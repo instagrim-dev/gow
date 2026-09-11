@@ -1,5 +1,5 @@
 {
-  "status": "reviewed_model_judgment_awaiting_operator_conclusion",
+  "status": "closed_exploratory_frozen",
   "protocol_revision": "pilot-003 (successor to pilot-002; PROTOCOL-REVISION.md)",
   "source_commit": "a868dec70e6cb0f5ab6000ec89bbd36e12f43ec4",
   "executable_commit": "00e22b2246c43525877dd6acbb807ab3b0bba812",
@@ -14,7 +14,7 @@
   "target_self_comparison_classification": "mechanism-near",
   "operator_attestations_complete": true,
   "capture_status": "captured_sealed",
-  "conclusion": null,
+  "conclusion": "completed exploratory curated-feature pilot; model-judged recovery provisional; see records/CLOSURE.md for the operator conclusion, milestone ledger, and deviation adjudications",
   "capture_record": "../captures/capture-record.json",
   "operator_attestation": {
     "recorded_at_utc": "2026-09-11T07:51:23.622814+00:00",
@@ -64,5 +64,7 @@
       "review-key.json",
       "INDEPENDENT-REVIEW-RESULT.md"
     ]
-  }
+  },
+  "closed_at_utc": "2026-09-11T09:41:04.888877+00:00",
+  "next_step": "external human review of review-derivative/external-review-packet.json (P10-specificity question); then optional post-hoc v2 reassessment; then discovery-pilot protocol planning"
 }
