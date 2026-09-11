@@ -61,6 +61,42 @@ func TestCLIProblemLifecycle(t *testing.T) {
 	}
 }
 
+// TestCLIVersion locks the two supported ways to read the build-time tool
+// version (`newf version` and `newf --version`), and its JSON shape, so a
+// release-time ldflags override (`-X main.version=...`) has a stable
+// contract to land on.
+func TestCLIVersion(t *testing.T) {
+	t.Parallel()
+
+	humanStdout := &bytes.Buffer{}
+	if code := execute(context.Background(), []string{"version"}, humanStdout, &bytes.Buffer{}); code != 0 {
+		t.Fatalf("execute(version) code = %d", code)
+	}
+	if got := humanStdout.String(); got != "newf dev\n" {
+		t.Fatalf("version human output = %q, want %q", got, "newf dev\n")
+	}
+
+	jsonStdout := &bytes.Buffer{}
+	if code := execute(context.Background(), []string{"--json", "version"}, jsonStdout, &bytes.Buffer{}); code != 0 {
+		t.Fatalf("execute(--json version) code = %d", code)
+	}
+	var decoded struct {
+		Version string `json:"version"`
+	}
+	decodeJSONBuffer(t, jsonStdout, &decoded)
+	if decoded.Version != "dev" {
+		t.Fatalf("version json = %q, want %q", decoded.Version, "dev")
+	}
+
+	flagStdout := &bytes.Buffer{}
+	if code := execute(context.Background(), []string{"--version"}, flagStdout, &bytes.Buffer{}); code != 0 {
+		t.Fatalf("execute(--version) code = %d", code)
+	}
+	if got := flagStdout.String(); got != "newf dev\n" {
+		t.Fatalf("--version output = %q, want %q", got, "newf dev\n")
+	}
+}
+
 func TestCLIJSONError(t *testing.T) {
 	t.Parallel()
 

@@ -21,7 +21,7 @@ generator**.
 - [Failure atlas](#failure-atlas) and [mechanistic diversity](#mechanistic-diversity)
 - [Candidate failure invariants](#candidate-failure-invariants) → [invariant critic](#invariant-critic) → [frontier generation](#frontier-generation)
 - [Evaluation before open-problem theater](#evaluation-before-open-problem-theater)
-- [Roadmap](#roadmap) — planned, not yet shipped
+- [Roadmap](#roadmap) — shipped surface + what remains (M8 only)
 - [v0 exit criteria](#v0-exit-criteria)
 
 ## Current executable slice
@@ -524,16 +524,21 @@ verification strength, see [`docs/evaluation.md`](docs/evaluation.md)) →
 [`docs/success-compression.md`](docs/success-compression.md)) →
 `policy mutate`/`policy list`/`policy show` (explicit, versioned search-policy
 mutation that biases the next `frontier generate`, see
-[`docs/search-policy.md`](docs/search-policy.md)). The remaining loop stage is
-**planned, not yet shipped**:
+[`docs/search-policy.md`](docs/search-policy.md)) → `experiment
+define`/`run`/`readiness`/`show`/`validate-proposals`/`list`/`compare` (the M7
+BLINDED-BENCHMARK holdout harness, see [`docs/experiment.md`](docs/experiment.md)).
 
-```text
-newf holdout                                      # planned: historical-holdout experiment (M7)
-```
+`experiment run` ships as a harness, not a completed historical result:
+`mode=historical` execution is refused pending an operator-supplied
+dated-evidence artifact establishing that the held-out material predates the
+candidate invariants being tested (both a data gap, not a code gap — see
+`EPIC.md` §M7). `mode=BLINDED-BENCHMARK` is fully exercised today
+(`corpus/experiments/m7-blinded-run/`).
 
-Do not treat the planned commands as available; they are the next stages of the
-[core loop](#core-loop), tracked so the shipped index stays the single source of
-truth for what actually runs today.
+The one milestone genuinely **not started** is M8 (cross-discipline
+portability — a Navier–Stokes litmus outside the Erdős–Straus corpus); no
+code or CLI surface exists for it yet, and it is out of scope for the
+`v1.0.0` tag (see `EPIC.md` §M8 Gate E).
 
 SQLite is sufficient initially. Source/evidence records should be immutable;
 derived judgments should be stored separately with provenance.

@@ -1,5 +1,9 @@
 .cursor
 
+# OS cruft — ignored globally on this machine already, but the repo's own
+# .gitignore must not depend on a contributor's global gitignore config.
+.DS_Store
+
 # Local review-run output. Files already tracked under docs/reviews remain tracked;
 # this only hides newly generated review artifacts.
 docs/reviews

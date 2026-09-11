@@ -41,17 +41,24 @@ func wrapCommandError(command string, err error) error {
 	return &commandError{Command: command, Err: err}
 }
 
-func newRootCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cobra.Command {
+func newRootCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions, version string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "newf",
 		Short:         "Persist and inspect research problems with provenance",
+		Version:       version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
+	cmd.SetVersionTemplate("newf {{.Version}}\n")
+	// Route cobra's own printers (--version, --help, usage) through the same
+	// writer callers pass to `execute`, so output is fully deterministic for
+	// tests and scripting instead of falling back to the real os.Stdout.
+	cmd.SetOut(stdout)
 
 	cmd.PersistentFlags().StringVar(&opts.dbPath, "db", "", "SQLite database path (default .newf/newf.db or $NEWF_DB)")
 	cmd.PersistentFlags().BoolVar(&opts.jsonOutput, "json", false, "Emit machine-readable JSON output")
 
+	cmd.AddCommand(newVersionCommand(stdout, opts, version))
 	cmd.AddCommand(newInitCommand(stdout, app, opts))
 	cmd.AddCommand(newIngestCommand(stdout, app, opts))
 	cmd.AddCommand(newNormalizeCommand(stdout, app, opts))
@@ -76,6 +83,28 @@ func newRootCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cob
 	cmd.AddCommand(newPolicyCommand(stdout, app, opts))
 
 	return cmd
+}
+
+// newVersionCommand exposes the build-time tool version as a subcommand,
+// mirroring the `--version` flag cobra provides on the root command, so
+// scripts can rely on either `newf version` or `newf --version` and, under
+// `--json`, get a stable machine-readable shape instead of cobra's default
+// plain-text version template.
+func newVersionCommand(stdout io.Writer, opts *rootOptions, version string) *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Short: "Print the newf build version",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.jsonOutput {
+				return writeJSON(stdout, struct {
+					Version string `json:"version"`
+				}{Version: version})
+			}
+			_, _ = fmt.Fprintf(stdout, "newf %s\n", version)
+			return nil
+		},
+	}
 }
 
 func writeJSON(stdout io.Writer, value any) error {

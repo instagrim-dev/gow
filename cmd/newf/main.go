@@ -12,7 +12,14 @@ import (
 	"github.com/instagrim-dev/newf/internal/pipeline"
 )
 
-const version = "dev"
+// version is the build-time tool version. It defaults to "dev" for local
+// `go build`/`go run` and is overridden by release builds via:
+//
+//	go build -ldflags "-X main.version=v1.0.0" ./cmd/newf
+//
+// It is recorded as the ToolVersion on every persisted Run (provenance) and
+// surfaced by `newf version` / `newf --version`.
+var version = "dev"
 
 func main() {
 	os.Exit(execute(context.Background(), os.Args[1:], os.Stdout, os.Stderr))
@@ -21,7 +28,7 @@ func main() {
 func execute(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	opts := &rootOptions{}
 	app := pipeline.New(version)
-	cmd := newRootCommand(stdout, app, opts)
+	cmd := newRootCommand(stdout, app, opts, version)
 	cmd.SetErr(stderr)
 	cmd.SetArgs(args)
 
