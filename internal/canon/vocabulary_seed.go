@@ -36,6 +36,23 @@ const (
 	// obstruction). Both sub-mechanisms are recorded as scope notes; the
 	// single canonical ID covers both.
 	VocabularyMechanismV4 = "mechanism/v4"
+	// VocabularyMechanismV5 is the pilot-004 N5 challenge revision: a strict
+	// superset of mechanism/v4 adding the reorganisation_without_qr_existence
+	// GeneratedInterpretation property. This property survived all seven
+	// challenge probes (see
+	// corpus/experiments/pilot-004-discovery/records/N5-challenge.md).
+	// Scope: es-09 (higher-dimensional variety lift) and es-11
+	// (Monks–Velingker structural analysis), both partial_success.
+	// The claim is that reorganisation/re-representation operators deliver
+	// structural improvements but add no new existence at the QR survivor
+	// classes; the absence is caused by the operator type (reorganisation
+	// cannot generate positivity). C4 found that the property holds
+	// independently at two structural levels (parameterisation-family
+	// unification for es-09; solution-constraint geometry for es-11),
+	// which strengthens rather than splits the claim. C3 caveat: the
+	// property is non-discriminating within partial_success by construction;
+	// success-contrast is untestable until a success outcome appears.
+	VocabularyMechanismV5 = "mechanism/v5"
 	// VocabularyMechanismV0Lossy is a deliberately over-compressed vocabulary
 	// used only to exercise the abstraction-loss regression: it merges two
 	// outcome-predictive operators into one canonical ID.
@@ -398,9 +415,52 @@ func MechanismV4() *Vocabulary {
 	return mustBuild(seed)
 }
 
+// mechanismV5Terms are the pilot-004 N5 challenge additions layered on top of
+// mechanism/v4 to form mechanism/v5. A single GeneratedInterpretation property
+// covers the reorganisation-without-QR-existence shared feature of es-09 and
+// es-11. The two approaches reorganise at different structural levels
+// (parameterisation-family unification vs solution-constraint geometry), but
+// both independently fail to generate QR existence; the C4 boundary_delta
+// strengthens rather than splits the claim. See challenge record:
+// corpus/experiments/pilot-004-discovery/records/N5-challenge.md.
+var mechanismV5Terms = []Term{
+	{
+		CanonicalID: "domain.number_theory.property.reorganisation_without_qr_existence",
+		FieldKind:   domain.FieldPreserves,
+		Description: "GeneratedInterpretation (pilot-004 N5 challenge, admitted): reorganisation/re-representation operators deliver structural improvements (unification, constraint geometry) but add no new existence at the QR survivor classes. The absence is causal: reorganisation cannot generate positivity. Scope: es-09 (parameterisation-family unification via algebraic variety lift) and es-11 (solution-constraint analysis), both partial_success. C4 boundary_delta: the property holds independently at parameterisation-family level (es-09) and solution-constraint level (es-11). C3 caveat: non-discriminating within partial_success by construction; success-contrast untestable until a success outcome appears in corpus.",
+		Aliases: []string{
+			"reorganisation without qr existence",
+			"reorganisation without existence",
+			"structural reorganisation adds no positivity",
+		},
+	},
+}
+
+// MechanismV5 builds the mechanism/v5 vocabulary: every mechanism/v4 term
+// unchanged plus the pilot-004 N5 reorganisation_without_qr_existence property.
+func MechanismV5() *Vocabulary {
+	base := append(append([]Term{}, mechanismV1Seed.terms...), mechanismV2Terms...)
+	base = append(base, mechanismV3Terms...)
+	base = append(base, mechanismV4Terms...)
+	terms := make([]Term, 0, len(base)+len(mechanismV5Terms))
+	for _, t := range base {
+		if extra, ok := mechanismV3ExtraAliases[t.CanonicalID]; ok {
+			t.Aliases = append(append([]string{}, t.Aliases...), extra...)
+		}
+		terms = append(terms, t)
+	}
+	terms = append(terms, mechanismV5Terms...)
+	seed := vocabularyBuilder{
+		version:  VocabularyMechanismV5,
+		terms:    terms,
+		rejected: append([]string{}, mechanismV1Seed.rejected...),
+	}
+	return mustBuild(seed)
+}
+
 // SeededVocabularies returns every in-repo vocabulary, used to seed persistence.
 func SeededVocabularies() []*Vocabulary {
-	return []*Vocabulary{MechanismV1(), MechanismV2(), MechanismV3(), MechanismV4(), MechanismV0Lossy()}
+	return []*Vocabulary{MechanismV1(), MechanismV2(), MechanismV3(), MechanismV4(), MechanismV5(), MechanismV0Lossy()}
 }
 
 func mustBuild(b vocabularyBuilder) *Vocabulary {
