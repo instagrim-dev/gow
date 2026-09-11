@@ -8,6 +8,15 @@ This document is the delivery spine for `newf`. It charts the path from an empty
 
 The product is not organized around `solve`. It is organized around typed transformations over research state.
 
+> **Conceptual model:** what these objects *mean* and why the approach is shaped
+> this way now lives in [`docs/theory/`](docs/theory/) (the geometry-of-work
+> semantic model, the epistemic model, and shape-guided search), with the
+> authored project-level statement in
+> [`docs/thesis/why-solve-by-shape.md`](docs/thesis/why-solve-by-shape.md) and
+> scoped experiment findings in [`docs/findings/`](docs/findings/). This EPIC is
+> the *delivery* spine; the theory series is the *semantic* target it delivers
+> against.
+
 ## Core research loop
 
 ```text

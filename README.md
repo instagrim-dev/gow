@@ -549,6 +549,17 @@ Design details for implementation:
 - [`docs/search-policy.md`](docs/search-policy.md)
 - [`docs/implementation-plan.md`](docs/implementation-plan.md)
 
+Conceptual model (what the objects mean and why the project exists), kept
+separate from implementation docs:
+
+- [`docs/theory/`](docs/theory/) — the geometry-of-work semantic model, the
+  epistemic model, and shape-guided search (*search in shape-space; verify in
+  domain-space*).
+- [`docs/thesis/why-solve-by-shape.md`](docs/thesis/why-solve-by-shape.md) — the
+  authored, project-level statement of the move.
+- [`docs/findings/`](docs/findings/) — scoped capability findings from
+  experiments (e.g. [Finding 001](docs/findings/001-unencoded-shape-generation.md)).
+
 ## v0 exit criteria
 
 Promote the mechanism beyond an experiment when it can repeatedly:
