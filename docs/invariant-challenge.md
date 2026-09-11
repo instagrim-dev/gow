@@ -158,6 +158,112 @@ newf invariant establish <invariant-id> --snapshot <snap-id> --locator <loc> [--
 All support `--json`. `invariant list --state surviving|operator_attested` is the
 frontier read surface for M5.1 (both states are legal targets).
 
+## `boundary_delta` — first-class challenge product
+
+A challenge does not only pass or fail. The most valuable challenge outcome is
+**narrowing the condition under which the parent invariant stops being true**.
+That narrowed condition is a `boundary_delta`:
+
+```text
+InvariantBoundary: the minimal structural difference between the
+    support population and the counterexample (or the split child)
+    under which the parent claim ceases to hold.
+```
+
+This is distinct from both the counterexample itself and any derived child
+hypothesis:
+
+```text
+counterexample
+    ≠ boundary_delta (the counterexample is an instance; the boundary is the
+                      minimal condition distinguishing it from the support)
+
+boundary_delta
+    ≠ child invariant (the delta is an observation about I; the child is a
+                       new proposed claim that must be independently grounded)
+
+repeated/grounded boundary_delta
+    → candidate child hypothesis (enters proposed, not inherited state)
+```
+
+The reason for keeping these separate is anti-fractal discipline: a single
+counterexample is not a license to instantiate ten new child hypotheses.
+The sequence is:
+
+```text
+challenge(I)
+→ boundary_delta: "what minimally distinguishes the counterexample from the
+                   support population?"
+→ derive child hypothesis if and only if the boundary is specific, grounded,
+  and non-trivially distinct from the parent
+→ child enters proposed with no inherited authority
+→ challenge(child) independently
+```
+
+### `ChallengeResult` structure
+
+A complete challenge result carries:
+
+```text
+ChallengeResult {
+    invariant_id:         ID of the challenged invariant
+    counterexample:       the specific failing instance (if found)
+    boundary_delta:       the minimal condition separating the counterexample
+                          from the support population
+    disposition:          survive | weaken | split | falsify
+    derived_candidate_ids: child candidates generated from the boundary
+                           (empty unless disposition is split/weaken with a
+                           specific boundary)
+}
+```
+
+`disposition` maps to lifecycle transitions as before; `boundary_delta` is an
+additional field that narrows what the transition *means*, not the transition
+machinery itself.
+
+### The recursive refinement loop
+
+A challenge that produces a `boundary_delta` does not close the research loop —
+it **opens a smaller one**:
+
+```text
+failure-space F0
+    ↓ compress
+candidate invariant I0
+    ↓ challenge
+    ├── survive:  I0 stands; boundary_delta = "no distinguishing condition found"
+    ├── weaken:   I0 narrows; boundary_delta names the excluded condition;
+    │             derived child H1 (proposed, no inherited status)
+    ├── split:    I0 → {I0a, I0b}; boundary_delta names the bifurcation axis
+    └── falsify:  I0 refuted; boundary_delta names the decisive counterstructure
+
+    ↓ (if weaken or split)
+micro-failure-space F1 (the boundary_delta's support population)
+    ↓ compress
+candidate invariant I1
+    ↓ challenge
+    ...
+```
+
+A `weaken` with a sharp `boundary_delta` is **not a disappointment** — it is the
+mechanism by which the failure-space representation recursively gains resolution.
+The challenge discipline was already designed for this: `split` and `weaken` were
+always intended to produce a narrower surviving claim. `boundary_delta` makes the
+narrowing artifact explicit.
+
+### Resistance to hypothesis proliferation
+
+The child hypothesis discipline prevents unbounded branching:
+
+- A `boundary_delta` must be specific (names a structural condition, not "more
+  research needed").
+- A derived child must be non-trivially distinct from the parent (a paraphrase
+  is not a child).
+- Each child enters `proposed` and must survive its own challenge. No authority
+  is inherited from the parent surviving a challenge.
+- A boundary that requires more corpus data to test should be recorded as
+  `challenged` (open campaign), not converted immediately into a new candidate.
+
 ## Boundaries
 
 - `internal/invariant/challenge.go` — pure verifiers (no SQL/Cobra/provider).

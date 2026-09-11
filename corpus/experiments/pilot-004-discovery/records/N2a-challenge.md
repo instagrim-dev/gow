@@ -252,12 +252,75 @@ though the mechanisms differ (C4).**
 | C1: known failed approach violating property | No counterexample — property survives |
 | C2: synthetic failed approach violating property | Synthetic case is the target the property names — reconfirms |
 | C3: success preserving the property | es-06 contrast is genuine; es-06's ceiling is QR-wall, not rate-limited — property survives with distinction intact |
-| C4: lower abstraction — splits? | **Partial split:** es-05 ceiling = rate subthreshold; es-10 ceiling = QR absolute floor. Abstract property survives; concrete mechanisms differ |
+| C4: lower abstraction — splits? | **Partial split / boundary_delta produced** — see below |
 | C5: higher abstraction — merges? | Does not merge with L1 or N3 — stable |
 | C6: sampling bias | None identified — two independent publications |
 | C7: correlation vs causal | Both ceilings causally explained within notes |
 
 **Verdict: property survives challenge with one refinement required.**
+
+---
+
+## C4 boundary_delta
+
+C4 is the productive probe: it lowered the abstraction level and found not a
+falsification but a **boundary** — the minimal structural condition that
+distinguishes the two members of N2a from each other:
+
+```
+boundary_delta:
+    axis:     mechanism of the ceiling
+    es-05:    rate_subthreshold
+              (the sieve-average growth is polylogarithmic; the threshold
+               for existence-forcing is polynomial; the gap is a rate
+               inequality internal to the method)
+    es-10:    qr_absolute_floor
+              (the QR-survivor classes are reciprocity-protected; the
+               exceptional-set density cannot reach zero regardless of
+               how many congruence classes are assembled; the ceiling is
+               set externally, not by convergence speed)
+```
+
+This boundary does not falsify N2a. The parent claim ("each method has an
+intrinsic ceiling") is true of both. But the delta reveals that the two
+members reach their ceiling by different paths. That matters because:
+
+- A proposal that crosses es-05's barrier (achieves polynomial average
+  growth) would not be challenged by N2a.
+- A proposal that crosses es-10's barrier (empties the QR survivor set)
+  would challenge both N2a and L1/L3.
+- A proposal that crosses both barriers is the regime-boundary hypothesis
+  Δ(N2a, success-shape).
+
+### Derived child hypothesis
+
+The C4 boundary_delta licenses one concrete child hypothesis. It is **not**
+promoted from N2a's surviving status; it enters `proposed` independently and
+must survive its own challenge:
+
+> **N2a-child-1 (proposed): The rate-limited ceiling (es-05's mechanism)
+> and the reciprocity-floor ceiling (es-10's mechanism) are distinct
+> obstructions. A proposal that crosses one does not automatically cross
+> the other. In particular, achieving polynomial average growth (crossing
+> es-05's ceiling) within a congruence-class-structured framework would
+> still face the QR-survivor floor (es-10's mechanism) unless it also
+> breaks QR confinement.**
+
+Canonical ID proposal: `density_averaging_ceiling_obstruction_independence`
+
+This child is worth challenging because:
+- It asserts the two sub-obstructions are structurally decoupled.
+- If it survives, the Δ(N2a, success-shape) hypothesis requires addressing
+  BOTH, and they must be addressed in the right order.
+- If it is falsified (a proposal could exist that crosses both simultaneously),
+  the search space for success-side proposals expands.
+- Cheapest falsification path: find a mechanism (or construct a synthetic one)
+  that achieves polynomial average growth AND breaks QR confinement in a
+  single combined operation.
+
+This child is **not yet admitted**. It requires: operator review of the
+boundary_delta reasoning, grounding to specific corpus passages, and a
+formal challenge run.
 
 ---
 

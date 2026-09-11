@@ -60,6 +60,88 @@ Source evidence is immutable and never overwritten. Model/provider interpretatio
 - `split`/`merge` are lineage relations, not invariant lifecycle states.
 - `operator_attested` (formerly `established`): an operator has attached independent external evidence (a same-problem snapshot + locator). It records an ATTESTATION of that evidence, not a machine verification of the claim against the predicate, so it must not be read as machine-confirmed. A claim-specific verification contract that would justify a stronger status is future work.
 
+## Invariant taxonomy — three orthogonal axes
+
+An invariant record is a claim along **three independent axes** that must not be
+collapsed into one enum or one ladder:
+
+```text
+Invariant = shape × observed_regime × epistemic_status
+```
+
+**Shape (structural claim):** the actual conserved structure being asserted.
+Examples: `class-local reasoning`, `finite-resource exhaustion`,
+`identity-carried solvability`. The shape does not change when confidence
+changes and does not become a "different kind of invariant" when the scope
+narrows.
+
+**Observed regime (population conditioning):** where the shape was observed.
+```text
+failure_conditioned   — shape conserved across sampled failure mechanisms
+success_conditioned   — shape conserved across sampled success/partial-success mechanisms
+mixed                 — observed in both regimes (a non-discriminating regularity)
+frontier_conditioned  — future; observed in proposal/partial-success transitions
+```
+`failure_conditioned` means "this shape is observed across failures." It does
+**not** imply "this shape causes failure." The causal reading is a stronger claim
+that requires explicit evidence and is recorded separately as `claim_role`.
+
+**Epistemic status:** how much pressure the claim has survived.
+```text
+proposed          — no challenge run
+challenged        — challenge open, no decisive negative yet
+surviving         — at least one completed_negative attack, no falsifying evidence
+weakened          — scope narrowed by a boundary_delta
+falsified         — decisively refuted
+operator_attested — human-attached independent evidence (attestation, not verification)
+```
+
+The three axes are independent. "Candidate" is a status word (`proposed`), not
+a kind of invariant. A failure-conditioned shape at `surviving` is not a
+"stronger" invariant than a failure-conditioned shape at `proposed` — it is the
+same shape claim with more evidence. A success-conditioned shape is not a
+"positive invariant" on a different ladder — it is the same type of record with
+a different regime.
+
+### Claim role (separate from regime)
+
+`claim_role` records the interpretive standing of the shape claim:
+
+```text
+regularity         — shape conserved across the sampled population;
+                     no causal reading claimed
+obstruction        — regularity + discrimination against successes + challenge
+                     survival; the shape may be causally blocking progress
+enabling_condition — regularity conserved across successes; the shape may
+                     be necessary for progress
+boundary_hypothesis— the minimal structural difference (delta) between a
+                     failure-conditioned and a success-conditioned regime;
+                     see invariant-challenge.md §boundary_delta
+```
+
+Code assigns only `regularity` automatically. All other roles require explicit
+evidence and operator/model attestation. `ModelJudgment != Verification`.
+
+### Δ(F, S) — the regime boundary hypothesis
+
+The most actionable derived object is not a failure-shape or a success-shape
+individually, but the structural difference between them:
+
+```text
+Δ(failure_conditioned_shape F, success_conditioned_shape S)
+    = regime boundary hypothesis
+    = "what changed between mechanisms that remain trapped and mechanisms that
+       make progress?"
+```
+
+This is the target of `claim_role = boundary_hypothesis`. After independent
+challenge and survival, it becomes a candidate obstruction/enabling-condition
+pair. That may be the actual structural content of a "classical/big-brain move"
+on the problem.
+
+**Do not conflate** `Δ(F, S)` with either F or S individually. Both are
+needed, and the delta is a third distinct record.
+
 ## Go type skeletons
 
 ```go
