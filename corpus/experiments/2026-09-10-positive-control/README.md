@@ -2,104 +2,135 @@
 
 ## Recorded conclusion
 
-**Populated positive control: the discovery path fires and discriminates.** On a
-deliberately synthetic fixture with known ground truth, the full research path
-produced actual records — scoped failure evidence, a nonempty candidate set, a
-completed-negative challenge campaign, a surviving invariant, a guided proposal
-that *verifiably* breaks that invariant, and a **decisive structural recovery**
-of the withheld target — while the undirected baseline honestly produced no
-proposal. A four-part mutation battery then flips each expected result for the
-corresponding reason, so a green result is evidence the path *discriminates*,
-not merely that it runs.
+**Populated integration-control package: the discovery path fires and
+discriminates on this fixture.** On a deliberately synthetic fixture with known
+ground truth, the full research path produced actual records — scoped failure
+evidence, a nonempty candidate set, a completed-negative challenge campaign, a
+surviving invariant, a generated proposal whose **persisted violation verdict is
+read back as `violates`**, and a **decisive structural recovery** of the
+withheld target. Mutation controls at two tiers flip each expected result for
+the corresponding reason.
 
-This is the complement to `../2026-09-10-esr-negative-control/` (expected
-abstention on unsuitable inputs). Together they are the negative-path control
-and the populated positive control the review asked for — complementary, not
-alternatives.
+Complement to `../2026-09-10-esr-negative-control/` (expected abstention on
+unsuitable inputs). Together: negative-path control + populated positive
+control.
 
 ## Where it lives (auditable, not `/tmp`)
 
-The control is executable and deterministic: it is a committed integration test,
-`internal/pipeline/positive_control_integration_test.go`, run by
-`go test ./internal/pipeline/ -run PositiveControl`. Ground truth is authored in
-the fixture, so the assertions ARE the audit trail.
+Executable and deterministic: `internal/pipeline/positive_control_integration_test.go`,
+run by `go test ./internal/pipeline/ -run PositiveControl`. Ground truth is
+authored in the fixture, so the assertions are the audit trail.
 
-- commit: `760e54a661493dc28e1ea4686c76607b0d9213ef` (+ this change)
 - provider: `fixture` (deterministic; no model training)
-- recovery rule: `recovery-rule/v1`; profile `classify/v1` (`ProfileMechanismV1`)
+- recovery rule: `recovery-rule/v1`; profile `classify/v1`
 - mode: `blinded`
+- miner: `minPreservesMiner` (deterministic mined predicate); challenger:
+  `biasOnlyChallenger` — a **support recount**, NOT a known-counterexample
+  attack. The counterexample refutation contract is covered separately (below).
 
-## Required path — each link is an asserted record
+## Required path — each link is an asserted persisted record
 
 ```text
-scoped failure evidence   3 families preserving residue_locality, all axes RESOLVED
-  -> comparable mechanisms real clustering (distinct operators/representations), not "cannot compare"
-  -> nonempty candidate    miner derives `preserves contains residue_locality` (support >= 2)
-  -> executed challenges    a completed-negative campaign transitions the candidate to `surviving`
-  -> eligible guided target the surviving invariant B3 may attack
-  -> generated proposal     a mechanism whose preserves is COMPLETE and omits residue_locality
-                            => `preserves(residue_locality)` evaluates to a VERIFIED violation
-  -> decisive recovery      the proposal is mechanism-near the WITHHELD target (both preserve
-                            mean_growth_rate, exhaustively) => experiment conclusion
-                            `structural_recovery`, with unknown_count = unassessed_count = 0
+scoped failure evidence   corpus failure-side families (resolved axes)
+-> comparable mechanisms  real clustering, not "cannot compare"
+-> nonempty candidate     mined predicate `preserves contains mean_growth_rate`
+-> executed challenge     completed-negative campaign -> `surviving`
+-> eligible guided target the surviving invariant B3 may attack
+-> generated proposal     preserves ONLY residue_locality, preserves field Complete
+-> verified break         READ BACK: persisted per-target verdict == violates
+-> decisive recovery      proposal mechanism-near withheld target -> structural_recovery
 ```
 
-`TestIntegrationPositiveControlDecisiveRecovery` asserts every link, plus the
-scientific contrast: **B0 (undirected) is honest-empty; B3 (guided) recovers.**
-B0 vs B3 is a real guided-vs-undirected comparison here, not two empty arms.
+The **read-back chain** ties: expected predicate fingerprint → surviving
+invariant ID → proposal target ID → exact persisted signature revision
+(occurrence content hash + JSON) → violation verdict `violates` → recovered
+experiment member. This distinguishes *recovering a representation* from
+*establishing a decidable predicate violation* — `AssessProposals` compares
+proposal↔target and never consumes the violation verdict, so `structural_recovery`
+alone would not establish the intervening verified-break step.
 
-## Mutation battery — the result changes for the right reason
+## Scope: what B0-vs-B3 is here
 
-| Mutation | Expected change | Where |
+**A target-conditioned generation positive control, paired with a
+no-target/no-proposal control.** The generator returns the authored matching
+signature per surviving target and nothing when there are no targets; B0's
+emptiness and B3's output are encoded by the fixture. It shows the treatment
+path can be invoked and scored. It does **not** show an undirected proposer
+attempted and failed, nor that the inferred invariant supplied information the
+generator needed. The effectiveness comparison is reserved for the later
+experiment with a non-predetermined proposer.
+
+## Mutation controls — two tiers
+
+Same-path integration mutations (same pipeline configuration, fresh workspaces,
+persisted records asserted across the storage/reporting boundary):
+
+| Mutation | Expected change | Test |
 |---|---|---|
-| Remove shared support (1 family, support 1 < 2) | miner derives **NO** candidate → no failure-invariant task | `TestPositiveControlMutationRemoveEvidence` |
-| Add a valid known counterexample to an overbroad (`recurring`) candidate | candidate is **falsified**; the same counterexample leaves a `contrast_observed` candidate surviving | `internal/invariant`: `TestVerifyKnownCounterexampleRefutationDependsOnClaimKind` (existing regression) |
-| Make a decisive axis **unknown** (unresolved preserves on the target) | assessment is **`unknown`** — never coerced to recovery or decisive non-recovery | `TestPositiveControlMutationUnknownFieldIsInconclusive` |
-| Exhaust the evaluation budget (2 targets, budget 1) | proposal is **`unassessed`**, consumed budget recorded exactly (1); unlimited budget → decisive_no | `TestPositiveControlMutationBudgetExhaustion` |
+| Support threshold: 2 vs 1 failure families sharing the id, CLI-default deriving miner, explicit MinSupport 2, via `MineInvariants` | candidate with persisted support ≥ 2 vs **zero** candidates | `SamePathMatrix/support_threshold` |
+| Unknown target axis: withheld target's preserves label does not resolve (real admission path) | persisted arm `unknown_count=1`, no recovery, conclusion `inconclusive` (via `ShowExperiment`) | `SamePathMatrix/unknown_target_axis` |
+| Budget exhaustion: 2 distinct proposals, evaluation budget 1, full experiment run | persisted `decisive=1 unassessed=1 consumed=1`, stopping `budget_exhausted`, conclusion `inconclusive` — never coerced to `no_recovery` | `SamePathMatrix/budget_exhaustion` |
+| Completeness flip: same resolved features, preserves completeness Complete → Unobserved | persisted violation verdict degrades to **`unknown`** while recovery stays decisive | `UnobservedCompletenessBreaksVerification` |
 
-## Two structural findings this control surfaced
+Component-level mutation controls (direct provider/evaluator calls pinning one
+boundary each): `TestPositiveControlMutation{RemoveEvidence,UnknownFieldIsInconclusive,BudgetExhaustion}`.
+The known-counterexample refutation contract (one in-atlas counterexample
+falsifies a `recurring` claim; a `contrast_observed` claim survives it) is the
+existing regression `TestVerifyKnownCounterexampleRefutationDependsOnClaimKind`
+in `internal/invariant` — component coverage, distinct from this control's
+bias-recount campaign.
 
-Building a control that reaches **verified violation → decisive recovery**
-exposed two facts about the persisted CLI/vocab path — the same two blockers the
-negative-path review predicted, now pinned mechanistically:
+Note: these are **input mutations**. The separate verification-contract
+requirement — disabling a guard and confirming the test catches the defect — is
+not replaced by them and remains future work.
 
-1. **The signature builder never marks a set field `Complete`.**
-   `internal/canon/signature.go` sets every set field to
-   `CompletenessUnobserved`. `invariant.Evaluate` returns `violates` for a
-   `contains`-absence **only** when the field is `CompletenessComplete`;
-   otherwise absence is `unknown` (an epistemic gap, correctly). So a mechanism
-   rehydrated from a persisted record can never yield a *verified* break — only a
-   directly-authored signature (as a live generator emits) can. The recovering
-   generator here sets `preserves` complete on purpose. **Implication:** the
-   corpus→signature path cannot today manufacture the "exhaustively extracted"
-   completeness that verified negatives require; a real run needs a generator
-   (or normalizer) that asserts field completeness with provenance.
+## Two structural findings (narrowed)
 
-2. **The default deriving fixture generator's only break is out-of-vocabulary.**
-   `DerivingFixtureGenerator` proposes a mechanism preserving
-   `core.property.global_coupling`, which is intentionally NOT in `mechanism/v1`
-   (see `internal/pipeline/success_integration_test.go`, which asserts that
-   condition is *inadmissible*). A vocab-normalized target can therefore never be
-   mechanism-near it — which is exactly why the shipped end-to-end test yields
-   `no_recovery`. The positive control uses an in-vocab complement
-   (`mean_growth_rate`) shared by proposal and target so recovery is reachable
-   and decisive. **Implication:** demonstrating recovery end-to-end requires a
-   generator whose proposals live in the same resolved vocabulary as the target.
+1. **The current builder cannot establish absence-based violations of positive
+   `contains` predicates when it leaves the relevant set field unobserved.**
+   `internal/canon/signature.go` marks every set field
+   `CompletenessUnobserved`; `invariant.Evaluate` returns `violates` for
+   absence only under `CompletenessComplete`. (Enum mismatches and negated
+   predicates can still verify without proving set absence.) The fixture
+   authors the flag under its synthetic ground-truth convention. **The
+   production fix must not be "let the model set Complete"**: completeness
+   needs a defined scope and justification — "all entries in this declared
+   field were parsed" is enforceable; "all properties preserved by this method
+   were identified" is a much stronger claim, and they cannot share an
+   unqualified authority level.
 
-Neither is a bug in the harness; both are honest limits of the deterministic
-fixtures. They are the concrete "corpus/generator interface" work the negative
-run pointed at.
+2. **The default deriving fixture generator's only break preserves an
+   out-of-vocabulary id** (`core.property.global_coupling`, intentionally
+   inadmissible — see `success_integration_test.go`), so a vocab-normalized
+   target can never be mechanism-near it; that is why the shipped end-to-end
+   test yields `no_recovery`. This control uses an in-vocab preserves id
+   (`residue_locality`) shared by proposal and target. The **target** side
+   reaches its representation through the real vocabulary-admission path; the
+   **proposal** side still directly authors resolved claims. The next control
+   should demonstrate a proposal reaching the same comparable representation
+   through the intended admission path, without trusting a provider-supplied
+   `resolved` status or silently inventing an alias.
 
 ## What this validates — and what it does not
 
 Validated: the mechanics of populated discovery — mining support thresholds,
-challenge survival on a completed negative, verified structural violation,
-decisive recovery classification, and the budget/unknown discipline — all
-DISCRIMINATE under known ground truth.
+challenge survival on a completed negative, persisted verified structural
+violation, decisive recovery classification, and the budget/unknown discipline —
+all discriminate under known ground truth, with intermediate records asserted.
 
-**Not** validated: discovery *ability*. The proposal here is authored by a
-fixture with the answer built in; it is not evidence that the system can find a
-withheld structural move it was not handed. Testing the research thesis requires
-independently assessed source cases and a proposal-producing system whose
-outputs are not predetermined by the fixture. That is the next step after
-mechanics.
+**Not** validated: discovery ability. The proposal is authored by a fixture with
+the answer built in. Testing the research thesis requires independently assessed
+source cases and a proposal-producing system whose outputs are not predetermined
+by the fixture.
+
+**Next milestone (per review): a persisted-input positive control** — the same
+synthetic scenario entering through ordinary ingestion and normalization,
+carrying justified completeness and vocabulary mappings through storage, then
+challenged, generated against, and assessed, with exact records asserted at each
+boundary. Deterministic proposals suffice; a live model is not needed to prove
+the interface works.
+
+## Validation scope
+
+Gates (`go build`, `go vet`, `go test ./...`, `gofmt -l`) are author-reported
+from the local run; the reviewing party did not independently execute them.
