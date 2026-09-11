@@ -107,6 +107,44 @@ func newExperimentCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions
 	runCmd.Flags().StringVar(&runB3File, "b3-proposals-file", "", "Captured external proposals (proposal-wire/v1) for the B3 arm — surviving invariants were in the proposer's permitted context")
 	cmd.AddCommand(runCmd)
 
+	var (
+		readyProblem string
+		readySet     string
+		readySupport int
+	)
+	readinessCmd := &cobra.Command{
+		Use:   "readiness",
+		Short: "Read-only pilot readiness report: the mechanical half of the readiness decision",
+		Long: "Report whether the persisted substrate can support a meaningful experiment BEFORE\n" +
+			"running it: eligible failure cohort, decisive-axis resolution, completeness\n" +
+			"admissions, surviving invariants, and an assessable withheld target. The\n" +
+			"non-mechanical half — justified failure scopes, capture protocol, independent\n" +
+			"assessment — is listed as operator attestations, never assumed. No run rows,\n" +
+			"no writes.",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if readyProblem == "" {
+				return wrapCommandError("experiment readiness", errors.New("--problem is required"))
+			}
+			result, err := app.ExperimentReadiness(cmd.Context(), pipeline.ExperimentReadinessInput{
+				DBPath: opts.dbPath, ProblemID: readyProblem, HoldoutSetID: readySet,
+				MinSupport: readySupport, JSONOutput: opts.jsonOutput,
+			})
+			if err != nil {
+				return wrapCommandError("experiment readiness", err)
+			}
+			if opts.jsonOutput {
+				return writeJSON(stdout, result)
+			}
+			writeReadinessHuman(stdout, result)
+			return nil
+		},
+	}
+	readinessCmd.Flags().StringVar(&readyProblem, "problem", "", "Problem ID")
+	readinessCmd.Flags().StringVar(&readySet, "holdout-set", "", "Holdout set ID (default: the problem's only/latest set)")
+	readinessCmd.Flags().IntVar(&readySupport, "min-support", 0, "Failure-side family threshold (default 2)")
+	cmd.AddCommand(readinessCmd)
+
 	var showProblem string
 	showCmd := &cobra.Command{
 		Use:   "show [experiment-id]",
@@ -251,4 +289,22 @@ func writeExperimentCompareHuman(w io.Writer, c pipeline.ExperimentCompareView) 
 			d.TreatmentNumerator, d.TreatmentDenom, d.TreatmentOrdinal, d.Direction)
 	}
 	tw.Flush()
+}
+
+func writeReadinessHuman(w io.Writer, r pipeline.ExperimentReadinessResponse) {
+	verdict := "READY (mechanical checks)"
+	if !r.Ready {
+		verdict = "NOT READY"
+	}
+	fmt.Fprintf(w, "experiment readiness: %s  problem=%s\n", verdict, r.ProblemID)
+	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
+	fmt.Fprintln(tw, "CHECK\tSTATUS\tDETAIL")
+	for _, c := range r.Checks {
+		fmt.Fprintf(tw, "%s\t%s\t%s\n", c.Check, c.Status, c.Detail)
+	}
+	tw.Flush()
+	fmt.Fprintln(w, "operator attestations (not mechanically checkable — required by the pilot protocol):")
+	for _, a := range r.OperatorAttestations {
+		fmt.Fprintf(w, "  [ ] %s\n", a)
+	}
 }

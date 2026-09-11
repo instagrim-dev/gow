@@ -129,6 +129,15 @@ the withheld target. Those are PILOT PROTOCOL obligations: retain actual
 model identity, configuration, prompts, permitted context, and capture hashes
 alongside the run.
 
+`newf experiment readiness --problem <id>` computes the MECHANICAL half of
+the readiness decision, read-only: eligible failure cohort (vs the mining
+support threshold), decisive-axis resolution on the train population,
+completeness admissions (informational — zero accepted means absence-based
+verification degrades to unknown, honestly), surviving invariants, and an
+assessable withheld target. The non-mechanical half is emitted as operator
+attestations, never assumed. The pilot template lives at
+`corpus/experiments/pilot-001/PROTOCOL.md`.
+
 ### Pilot freeze gate
 
 Harness development stops for the pilot when this chain demonstrably holds:

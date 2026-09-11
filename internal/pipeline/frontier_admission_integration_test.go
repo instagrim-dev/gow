@@ -812,3 +812,66 @@ func TestIntegrationExecutionAttributionSurvivesReuse(t *testing.T) {
 		t.Fatalf("the capture hashes must distinguish the two files: %q vs %q", a1.ProposalsFileSHA256, a2.ProposalsFileSHA256)
 	}
 }
+
+// TestIntegrationExperimentReadiness pins the mechanical half of the pilot
+// readiness decision: the full positive-control substrate reports READY with
+// the expected per-check facts, and a bare problem reports NOT READY with
+// each blocker NAMED — the report never manufactures readiness, and the
+// non-mechanical protocol items surface as operator attestations.
+func TestIntegrationExperimentReadiness(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = minPreservesMiner{}
+	app.challengerFn = biasOnlyChallenger{}
+
+	trainProblem, targetProblem, _ := seedPositiveControl(t, ctx, app, dbPath, "residue locality")
+	if _, err := app.DefineExperiment(ctx, ExperimentDefineInput{DBPath: dbPath, ProblemID: trainProblem, TargetProblemID: targetProblem}); err != nil {
+		t.Fatalf("define: %v", err)
+	}
+
+	ready, err := app.ExperimentReadiness(ctx, ExperimentReadinessInput{DBPath: dbPath, ProblemID: trainProblem})
+	if err != nil {
+		t.Fatalf("readiness: %v", err)
+	}
+	if !ready.Ready {
+		t.Fatalf("full substrate must be mechanically ready: %+v", ready.Checks)
+	}
+	status := map[string]string{}
+	for _, c := range ready.Checks {
+		status[c.Check] = c.Status
+	}
+	for _, check := range []string{"failure_cohort", "decisive_axis_resolution", "surviving_invariants", "withheld_target"} {
+		if status[check] != "ready" {
+			t.Fatalf("check %s must be ready: %+v", check, ready.Checks)
+		}
+	}
+	if status["completeness_admissions"] != "info" || status["recovery_criterion"] != "info" {
+		t.Fatalf("informational checks must not gate: %+v", ready.Checks)
+	}
+	if len(ready.OperatorAttestations) == 0 {
+		t.Fatal("the non-mechanical protocol items must surface as attestations")
+	}
+
+	// Bare problem: every substrate blocker is NAMED.
+	bare, err := app.InitProblem(ctx, InitProblemInput{DBPath: dbPath, Statement: "bare readiness probe", Slug: "readiness-bare", ForceNew: true})
+	if err != nil {
+		t.Fatalf("init bare: %v", err)
+	}
+	blocked, err := app.ExperimentReadiness(ctx, ExperimentReadinessInput{DBPath: dbPath, ProblemID: bare.ProblemID})
+	if err != nil {
+		t.Fatalf("readiness bare: %v", err)
+	}
+	if blocked.Ready {
+		t.Fatal("a bare problem must not be ready")
+	}
+	bstatus := map[string]string{}
+	for _, c := range blocked.Checks {
+		bstatus[c.Check] = c.Status
+	}
+	for _, check := range []string{"failure_cohort", "decisive_axis_resolution", "surviving_invariants", "withheld_target"} {
+		if bstatus[check] != "blocked" {
+			t.Fatalf("bare problem: check %s must be blocked with a named reason: %+v", check, blocked.Checks)
+		}
+	}
+}
