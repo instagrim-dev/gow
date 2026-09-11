@@ -142,6 +142,11 @@ type problemStore interface {
 	ListProposalContentsForProblem(context.Context, string) ([]store.ProposalContentRow, error)
 	ListProposalContentsByIDs(context.Context, []string) ([]store.ProposalContentRow, error)
 	ListTargetSignaturesForHoldout(context.Context, string) ([]store.TargetSignatureRow, error)
+	// RecordExperimentExecutions / ListExperimentExecutions: v32 execution
+	// attribution — which capture each execution assessed, even under
+	// assessment-artifact reuse.
+	RecordExperimentExecutions(context.Context, []store.ExperimentExecutionRow) error
+	ListExperimentExecutions(context.Context, string) ([]store.ExperimentExecutionRow, error)
 	PersistExperiment(context.Context, store.ExperimentRecord) (store.PersistExperimentResult, error)
 	GetExperiment(context.Context, string) (store.ExperimentRecord, error)
 	ListExperiments(context.Context, string) ([]store.ExperimentRecord, error)

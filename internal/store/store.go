@@ -967,7 +967,7 @@ func validateSchemaTables(ctx context.Context, tx *sql.Tx) error {
 		"evaluation_run_metrics", "evaluated_failures", "evaluation_target_verdicts",
 		"holdout_sets", "holdout_set_sources", "holdout_source_dating",
 		"leakage_checks", "experiment_runs", "experiment_arms", "experiment_metrics",
-		"experiment_arm_proposals", "experiment_targets",
+		"experiment_arm_proposals", "experiment_targets", "experiment_executions",
 		"frontier_proposal_signatures", "frontier_proposal_signature_revisions", "frontier_generation_contents", "success_invariant_revisions",
 		"success_invariants", "success_invariant_predicates",
 		"success_invariant_broken_targets", "success_invariant_cohort_evaluations",

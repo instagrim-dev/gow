@@ -82,8 +82,12 @@ type ProposalTransport interface {
 // fixture) and feeds it through the exact production parsing/admission path.
 type FileProposalTransport struct{ Path string }
 
-// Fetch reads the file verbatim.
+// Fetch reads the file verbatim, refusing oversized files by stat BEFORE
+// reading (the decode-side limit alone would still read the bytes first).
 func (t FileProposalTransport) Fetch(_ context.Context, _ GenerationRequest) (string, error) {
+	if info, err := os.Stat(t.Path); err == nil && info.Size() > MaxProposalResponseBytes {
+		return "", fmt.Errorf("%w: proposals file is %d bytes (limit %d)", ErrProposalWireViolation, info.Size(), MaxProposalResponseBytes)
+	}
 	raw, err := os.ReadFile(t.Path)
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrProviderTransport, err)

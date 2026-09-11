@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 31
+const currentSchemaVersion = 32
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -1012,6 +1012,19 @@ END;
 		// rather than leaving the bound to provider cooperation. The raw
 		// response retains the full set.
 		apply: migrateV31AdmissionOverflow,
+	},
+	{
+		version: 32,
+		// Execution-vs-assessment attribution (c860720 review, finding 2).
+		// Experiment identity keys on the ASSESSED structure, so a changed
+		// external capture whose assessed structure is unchanged (e.g. only
+		// prose that ProposalHash excludes) correctly REUSES the experiment
+		// artifact — but it is still a different execution of a different
+		// capture. experiment_executions records, per run and arm, which
+		// experiment that execution selected, which frontier generation it
+		// actually produced, and the sha256 of the supplied proposals file —
+		// so reuse never obscures which capture was assessed.
+		apply: migrateV32ExperimentExecutions,
 	},
 }
 
@@ -3359,4 +3372,36 @@ func migrateV31AdmissionOverflow(ctx context.Context, tx *sql.Tx) error {
 		}
 	}
 	return nil
+}
+
+// experimentExecutionsSQL is the additive DDL for execution attribution
+// (migration v32): one immutable row per (experiment execution run, arm).
+const experimentExecutionsSQL = `
+CREATE TABLE IF NOT EXISTS experiment_executions (
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  arm TEXT NOT NULL,
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  experiment_id TEXT NOT NULL REFERENCES experiment_runs(id),
+  frontier_generation_run_id TEXT NOT NULL REFERENCES frontier_generation_runs(id),
+  proposals_file_sha256 TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  PRIMARY KEY(run_id, arm)
+);
+
+CREATE TRIGGER IF NOT EXISTS experiment_executions_immutable_update
+BEFORE UPDATE ON experiment_executions
+BEGIN
+  SELECT RAISE(ABORT, 'experiment executions are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS experiment_executions_immutable_delete
+BEFORE DELETE ON experiment_executions
+BEGIN
+  SELECT RAISE(ABORT, 'experiment executions are immutable');
+END;
+`
+
+func migrateV32ExperimentExecutions(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, experimentExecutionsSQL)
+	return err
 }

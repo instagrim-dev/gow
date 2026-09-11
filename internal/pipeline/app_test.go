@@ -526,6 +526,12 @@ func (f *fakeProblemStore) ListProposalContentsByIDs(context.Context, []string) 
 	return nil, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) RecordExperimentExecutions(context.Context, []store.ExperimentExecutionRow) error {
+	return errors.New("unexpected call")
+}
+func (f *fakeProblemStore) ListExperimentExecutions(context.Context, string) ([]store.ExperimentExecutionRow, error) {
+	return nil, errors.New("unexpected call")
+}
 func (f *fakeProblemStore) ListTargetSignaturesForHoldout(context.Context, string) ([]store.TargetSignatureRow, error) {
 	return nil, errors.New("unexpected call")
 }

@@ -681,3 +681,134 @@ func TestIntegrationExternalProposalArms(t *testing.T) {
 		t.Fatal("external proposals for a scripted control arm must be refused")
 	}
 }
+
+// TestIntegrationExternalArmPreflight is the c860720 finding-1 regression:
+// external-file options are validated BEFORE any run record exists. A file
+// for an unselected arm is rejected (an explicitly supplied input either
+// participates or is rejected, never silently ignored), a file for a
+// scripted control arm is rejected, and neither rejection leaves a run row.
+func TestIntegrationExternalArmPreflight(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = minPreservesMiner{}
+	app.challengerFn = biasOnlyChallenger{}
+
+	trainProblem, targetProblem, _ := seedPositiveControl(t, ctx, app, dbPath, "residue locality")
+	if _, err := app.DefineExperiment(ctx, ExperimentDefineInput{DBPath: dbPath, ProblemID: trainProblem, TargetProblemID: targetProblem}); err != nil {
+		t.Fatalf("define: %v", err)
+	}
+	path := filepath.Join(t.TempDir(), "b3.json")
+	if err := os.WriteFile(path, []byte(`{"schema_version":"proposal-wire/v1","proposals":[]}`), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	// (a) File for an arm that is NOT selected.
+	_, err := app.RunExperiment(ctx, ExperimentRunInput{
+		DBPath: dbPath, ProblemID: trainProblem,
+		Arms:             []string{"b0_undirected"},
+		ArmProposalFiles: map[string]string{"b3_invariant_guided": path},
+	})
+	if err == nil || !strings.Contains(err.Error(), "not in the selected arm set") {
+		t.Fatalf("a file for an unselected arm must be rejected explicitly, got %v", err)
+	}
+
+	// (b) File for a scripted control arm.
+	_, err = app.RunExperiment(ctx, ExperimentRunInput{
+		DBPath: dbPath, ProblemID: trainProblem,
+		ArmProposalFiles: map[string]string{"b1_semantic_summary": path},
+	})
+	if err == nil || !strings.Contains(err.Error(), "scripted machinery controls") {
+		t.Fatalf("a file for a scripted arm must be rejected, got %v", err)
+	}
+
+	// Neither rejection created (or abandoned) a run record.
+	repo := openTestStore(t, ctx, dbPath)
+	defer repo.Close()
+	if _, found, ferr := repo.LatestRunForOperation(ctx, trainProblem, "experiment run"); ferr != nil || found {
+		t.Fatalf("preflight rejection must not leave a run record: found=%v err=%v", found, ferr)
+	}
+}
+
+// TestIntegrationExecutionAttributionSurvivesReuse is the c860720 finding-2
+// regression: experiment identity keys on ASSESSED STRUCTURE, so a changed
+// capture whose assessed structure is unchanged (only prose that
+// ProposalHash excludes) reuses the experiment artifact — but each execution
+// still records WHICH capture it assessed: its own run, generation, and file
+// hash. Reuse never obscures the attribution.
+func TestIntegrationExecutionAttributionSurvivesReuse(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = minPreservesMiner{}
+	app.challengerFn = biasOnlyChallenger{}
+
+	trainProblem, targetProblem, _ := seedPositiveControl(t, ctx, app, dbPath, "residue locality")
+	if _, err := app.DefineExperiment(ctx, ExperimentDefineInput{DBPath: dbPath, ProblemID: trainProblem, TargetProblemID: targetProblem}); err != nil {
+		t.Fatalf("define: %v", err)
+	}
+	wire := func(novelty string) string {
+		return `{"schema_version": "proposal-wire/v1", "proposals": [{
+  "mechanism": {"preserves": ["residue locality"], "locality": "global", "construction_mode": "constructive", "uncertainty_mode": "deterministic"},
+  "structural_violation_claim": "guided break",
+  "novelty_argument": "` + novelty + `",
+  "cheapest_falsification_path": "compare"}]}`
+	}
+	dir := t.TempDir()
+	fileA := filepath.Join(dir, "capture-a.json")
+	fileB := filepath.Join(dir, "capture-b.json")
+	if err := os.WriteFile(fileA, []byte(wire("first phrasing")), 0o644); err != nil {
+		t.Fatalf("write A: %v", err)
+	}
+	// Only the novelty prose differs: ProposalHash excludes it, so the
+	// assessed structure — and therefore the experiment identity — is unchanged.
+	if err := os.WriteFile(fileB, []byte(wire("different phrasing, same mechanism")), 0o644); err != nil {
+		t.Fatalf("write B: %v", err)
+	}
+
+	first, err := app.RunExperiment(ctx, ExperimentRunInput{
+		DBPath: dbPath, ProblemID: trainProblem,
+		ArmProposalFiles: map[string]string{"b3_invariant_guided": fileA},
+	})
+	if err != nil {
+		t.Fatalf("run A: %v", err)
+	}
+	second, err := app.RunExperiment(ctx, ExperimentRunInput{
+		DBPath: dbPath, ProblemID: trainProblem,
+		ArmProposalFiles: map[string]string{"b3_invariant_guided": fileB},
+	})
+	if err != nil {
+		t.Fatalf("run B: %v", err)
+	}
+	if second.Created || second.Experiment.ID != first.Experiment.ID {
+		t.Fatalf("unchanged assessed structure must reuse the experiment artifact: %v %s vs %s", second.Created, second.Experiment.ID, first.Experiment.ID)
+	}
+
+	// The attribution record distinguishes the two executions: different runs,
+	// different generations, different capture hashes — same experiment.
+	repo := openTestStore(t, ctx, dbPath)
+	defer repo.Close()
+	execs, err := repo.ListExperimentExecutions(ctx, trainProblem)
+	if err != nil {
+		t.Fatalf("list executions: %v", err)
+	}
+	var b3execs []store.ExperimentExecutionRow
+	for _, e := range execs {
+		if e.Arm == "b3_invariant_guided" {
+			b3execs = append(b3execs, e)
+		}
+	}
+	if len(b3execs) != 2 {
+		t.Fatalf("both executions must be attributed, got %d", len(b3execs))
+	}
+	a1, a2 := b3execs[0], b3execs[1]
+	if a1.ExperimentID != first.Experiment.ID || a2.ExperimentID != first.Experiment.ID {
+		t.Fatalf("both executions selected the same (reused) experiment: %+v %+v", a1, a2)
+	}
+	if a1.RunID == a2.RunID || a1.FrontierGenerationRun == a2.FrontierGenerationRun {
+		t.Fatalf("executions must keep their own run + generation: %+v %+v", a1, a2)
+	}
+	if a1.ProposalsFileSHA256 == "" || a1.ProposalsFileSHA256 == a2.ProposalsFileSHA256 {
+		t.Fatalf("the capture hashes must distinguish the two files: %q vs %q", a1.ProposalsFileSHA256, a2.ProposalsFileSHA256)
+	}
+}

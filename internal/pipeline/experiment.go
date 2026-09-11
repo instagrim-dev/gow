@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -282,11 +283,26 @@ func (a *App) RunExperiment(ctx context.Context, input ExperimentRunInput) (Expe
 	}
 	arms = append([]string(nil), arms...)
 	sort.Strings(arms)
+	selected := map[string]bool{}
 	for _, arm := range arms {
 		switch arm {
 		case "b0_undirected", "b1_semantic_summary", "b2_brainstorm", "b3_invariant_guided":
+			selected[arm] = true
 		default:
 			return ExperimentRunResponse{}, fmt.Errorf("unknown arm %q", arm)
+		}
+	}
+	// PREFLIGHT (c860720 review, finding 1): external-file options are
+	// validated before ANY run record exists. A supplied file must name a
+	// supported external arm AND that arm must actually be selected — an
+	// explicitly supplied input either participates or is rejected, never
+	// silently ignored in a comparative experiment.
+	for arm := range input.ArmProposalFiles {
+		if arm != "b0_undirected" && arm != "b3_invariant_guided" {
+			return ExperimentRunResponse{}, fmt.Errorf("external proposals are accepted only for b0_undirected and b3_invariant_guided (got %q); B1/B2 remain scripted machinery controls", arm)
+		}
+		if !selected[arm] {
+			return ExperimentRunResponse{}, fmt.Errorf("a proposals file was supplied for arm %q, which is not in the selected arm set %v; select the arm or drop the file", arm, arms)
 		}
 	}
 	proposalBudget := input.ProposalBudget
@@ -347,11 +363,6 @@ func (a *App) RunExperiment(ctx context.Context, input ExperimentRunInput) (Expe
 		return ExperimentRunResponse{}, err
 	}
 
-	for arm := range input.ArmProposalFiles {
-		if arm != "b0_undirected" && arm != "b3_invariant_guided" {
-			return ExperimentRunResponse{}, fmt.Errorf("external proposals are accepted only for b0_undirected and b3_invariant_guided (got %q); B1/B2 remain scripted machinery controls", arm)
-		}
-	}
 	view, created, err := a.executeArmsAndPersist(ctx, repoStore, input.DBPath, hs, check, run.ID, arms, proposalBudget, evaluationBudget, input.ArmProposalFiles, now)
 	if err != nil {
 		a.failRun(ctx, repoStore, run.ID, err)
@@ -605,6 +616,29 @@ func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore,
 	}
 	result, err := repoStore.PersistExperiment(ctx, rec)
 	if err != nil {
+		return ExperimentView{}, false, err
+	}
+	// v32 execution attribution: THIS execution happened regardless of whether
+	// the assessed structure reused an existing experiment artifact. Record,
+	// per arm, the experiment this execution selected, the generation it
+	// actually produced, and the sha256 of the capture file it consumed — so
+	// reuse never obscures which capture was assessed.
+	execRows := make([]store.ExperimentExecutionRow, 0, len(armRows))
+	for _, ar := range armRows {
+		fileHash := ""
+		if path := armProposalFiles[ar.Arm]; path != "" {
+			if raw, rerr := os.ReadFile(path); rerr == nil {
+				sum := sha256.Sum256(raw)
+				fileHash = hex.EncodeToString(sum[:])
+			}
+		}
+		execRows = append(execRows, store.ExperimentExecutionRow{
+			RunID: runID, Arm: ar.Arm, ProblemID: hs.ProblemID,
+			ExperimentID: result.Record.ID, FrontierGenerationRun: ar.FrontierGenerationRun,
+			ProposalsFileSHA256: fileHash, CreatedAt: now.Format(timeLayout),
+		})
+	}
+	if err := repoStore.RecordExperimentExecutions(ctx, execRows); err != nil {
 		return ExperimentView{}, false, err
 	}
 	view, err := a.experimentView(ctx, repoStore, result.Record)

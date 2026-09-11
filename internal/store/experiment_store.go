@@ -776,3 +776,57 @@ type OccurrenceContent struct {
 	SignatureJSON  string
 	FallbackLatest bool // pre-v24 history: no occurrence binding recorded
 }
+
+// ExperimentExecutionRow attributes one experiment execution's arm to the
+// experiment it selected, the generation it actually produced, and the sha256
+// of the external proposals file it consumed (empty for fixture arms).
+type ExperimentExecutionRow struct {
+	RunID                 string
+	Arm                   string
+	ProblemID             string
+	ExperimentID          string
+	FrontierGenerationRun string
+	ProposalsFileSHA256   string
+	CreatedAt             string
+}
+
+// RecordExperimentExecutions appends the execution-attribution rows (v32) —
+// written on EVERY execution, including one whose assessed structure reused an
+// existing experiment artifact, so reuse never obscures which capture was
+// assessed. Idempotent per (run, arm).
+func (s *Store) RecordExperimentExecutions(ctx context.Context, rows []ExperimentExecutionRow) error {
+	for _, r := range rows {
+		if _, err := s.db.ExecContext(ctx, `
+INSERT OR IGNORE INTO experiment_executions(run_id, arm, problem_id, experiment_id, frontier_generation_run_id, proposals_file_sha256, created_at)
+VALUES(?, ?, ?, ?, ?, ?, ?)
+`, r.RunID, r.Arm, r.ProblemID, r.ExperimentID, r.FrontierGenerationRun, r.ProposalsFileSHA256, r.CreatedAt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ListExperimentExecutions returns a problem's execution-attribution history
+// in execution order (oldest first).
+func (s *Store) ListExperimentExecutions(ctx context.Context, problemID string) ([]ExperimentExecutionRow, error) {
+	if err := domain.ValidateProblemID(problemID); err != nil {
+		return nil, err
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT run_id, arm, problem_id, experiment_id, frontier_generation_run_id, proposals_file_sha256, created_at
+FROM experiment_executions WHERE problem_id = ? ORDER BY created_at ASC, rowid ASC
+`, problemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []ExperimentExecutionRow
+	for rows.Next() {
+		var r ExperimentExecutionRow
+		if err := rows.Scan(&r.RunID, &r.Arm, &r.ProblemID, &r.ExperimentID, &r.FrontierGenerationRun, &r.ProposalsFileSHA256, &r.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}

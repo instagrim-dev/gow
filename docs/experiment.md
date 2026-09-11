@@ -103,10 +103,31 @@ the raw wire output verbatim, the admission audit
 (`admission_corrected/downgraded/stripped/rejected/overflow`), and the
 assessed membership. The **operator** retains the prompts that produced the
 captured output — record them alongside the run in the experiment manifest.
-Replaying with the same files is idempotent; a changed file is a new
-assessment identity. For a cost-effectiveness claim, additionally account for
-the work spent deriving and challenging B3's invariants — the harness does not
-do that accounting for you.
+A supplied file must name a selected external arm (B0/B3): a file for an
+unselected or scripted arm is rejected in preflight, before any run record
+exists — an explicitly supplied input either participates or is rejected,
+never silently ignored.
+
+**Execution identity vs assessment identity (v32).** Experiment identity keys
+on the ASSESSED structure (ordered proposal identities/content, targets,
+budgets, arms) — so a changed capture whose assessed structure is unchanged
+(e.g. only prose that `ProposalHash` excludes) correctly REUSES the experiment
+artifact. It is still a different execution of a different capture: every
+execution appends `experiment_executions` rows recording, per arm, its own
+run id, the experiment it selected (created or reused), the generation it
+actually produced (whose invocation retains the new raw payload), and the
+sha256 of the consumed proposals file. Pilot manifests should cite those
+execution rows — run id, generation id, file hash — not "latest experiment".
+For a cost-effectiveness claim, additionally account for the work spent
+deriving and challenging B3's invariants — the harness does not do that
+accounting for you.
+
+The harness cannot establish from the files alone that both captures came
+from the same model/configuration, that B0's context genuinely lacked the
+invariants when the output was produced, or that the proposer was unaware of
+the withheld target. Those are PILOT PROTOCOL obligations: retain actual
+model identity, configuration, prompts, permitted context, and capture hashes
+alongside the run.
 
 ### Pilot freeze gate
 
