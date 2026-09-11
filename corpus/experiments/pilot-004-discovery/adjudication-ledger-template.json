@@ -1,0 +1,25 @@
+{
+  "schema": "pilot-discovery-adjudication/v1",
+  "discipline": "Operator-owned (decision D3): no model pre-screen, summaries, clustering, or triage. Entries from all six captures are shuffled and arm-blind (shuffle keyed like the pilot-003 review packet: seeded from the sealed capture digests, key sealed separately) until EVERY entry carries a category. Near-identical proposals across runs are adjudicated once with occurrence_count and the contributing capture ids.",
+  "categories": [
+    "matches_reference",
+    "defensible_novel",
+    "over_merge",
+    "prohibited_promotion",
+    "unsupported"
+  ],
+  "entry_shape": {
+    "entry_id": "E01",
+    "statement": "<verbatim proposed property>",
+    "occurrence_count": 0,
+    "capture_refs": [
+      "<sealed capture id + index>"
+    ],
+    "category": null,
+    "reference_match": "<ledger entry id or null>",
+    "scope_deltas": "<differences from the matched reference scope, or null>",
+    "evidence_notes": "<passage-level adjudication reasons>"
+  },
+  "entries": [],
+  "unblinding": "permitted only after every entry has a category"
+}

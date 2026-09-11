@@ -1,0 +1,80 @@
+{
+  "schema": "pilot-d0-permutation/v1",
+  "seed": "pilot-004-d0/a1c95a6637fbc6f04e9718d5c65af2d9014d98ef048fd6fb57c969b750c018c8",
+  "rule": "complete outcome objects (class + boundary_statement + boundary_conditions + notes) permuted across the 12 payloads; prose untouched (predeclared conservative-control leak, decision D2); fixed points <= 2",
+  "fixed_points": 2,
+  "mapping": [
+    {
+      "note": "es-01-mordell-polynomial-identities.md",
+      "outcome_taken_from": "es-08-quadratic-reciprocity-obstruction.md",
+      "original_class": "partial_failure",
+      "permuted_class": "failure"
+    },
+    {
+      "note": "es-02-covering-system-attempt.md",
+      "outcome_taken_from": "es-06-two-fraction-representation-bounds.md",
+      "original_class": "failure",
+      "permuted_class": "partial_success"
+    },
+    {
+      "note": "es-03-factorization-scheme.md",
+      "outcome_taken_from": "es-12-type-a-b-congruence-system.md",
+      "original_class": "partial_failure",
+      "permuted_class": "partial_success"
+    },
+    {
+      "note": "es-04-type-i-ii-classification.md",
+      "outcome_taken_from": "es-04-type-i-ii-classification.md",
+      "original_class": "partial_success",
+      "permuted_class": "partial_success"
+    },
+    {
+      "note": "es-05-averaging-bombieri-vinogradov.md",
+      "outcome_taken_from": "es-01-mordell-polynomial-identities.md",
+      "original_class": "partial_failure",
+      "permuted_class": "partial_failure"
+    },
+    {
+      "note": "es-06-two-fraction-representation-bounds.md",
+      "outcome_taken_from": "es-09-higher-dimensional-variety-lift.md",
+      "original_class": "partial_success",
+      "permuted_class": "partial_success"
+    },
+    {
+      "note": "es-07-computational-verification.md",
+      "outcome_taken_from": "es-11-monks-velingker-structure.md",
+      "original_class": "partial_failure",
+      "permuted_class": "partial_success"
+    },
+    {
+      "note": "es-08-quadratic-reciprocity-obstruction.md",
+      "outcome_taken_from": "es-07-computational-verification.md",
+      "original_class": "failure",
+      "permuted_class": "partial_failure"
+    },
+    {
+      "note": "es-09-higher-dimensional-variety-lift.md",
+      "outcome_taken_from": "es-03-factorization-scheme.md",
+      "original_class": "partial_success",
+      "permuted_class": "partial_failure"
+    },
+    {
+      "note": "es-10-vaughan-congruence-density.md",
+      "outcome_taken_from": "es-10-vaughan-congruence-density.md",
+      "original_class": "partial_failure",
+      "permuted_class": "partial_failure"
+    },
+    {
+      "note": "es-11-monks-velingker-structure.md",
+      "outcome_taken_from": "es-05-averaging-bombieri-vinogradov.md",
+      "original_class": "partial_success",
+      "permuted_class": "partial_failure"
+    },
+    {
+      "note": "es-12-type-a-b-congruence-system.md",
+      "outcome_taken_from": "es-02-covering-system-attempt.md",
+      "original_class": "partial_success",
+      "permuted_class": "failure"
+    }
+  ]
+}

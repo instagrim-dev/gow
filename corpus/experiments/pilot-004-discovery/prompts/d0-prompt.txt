@@ -1,0 +1,1181 @@
+# Shared-property discovery task
+
+You are analyzing research notes about attempts on the Erdős–Straus
+equation 4/n = 1/x + 1/y + 1/z (n >= 2; x, y, z positive integers). The
+attached notes are project-authored synthetic study material, not verified
+mathematical literature; treat their annotations as scoped claims.
+
+Use only the supplied notes. Do not browse, call tools, open files beyond
+the one you were told to read, or rely on outside knowledge of this
+specific corpus. Do not guess what a hidden benchmark rewards.
+
+Task: propose up to FIVE candidate SHARED PROPERTIES — structural
+properties that two or more of the FAILED or PARTIALLY FAILED approaches
+have in common and that plausibly participate in why they stall. A shared
+property is not a shared topic or shared wording: two approaches can use
+the same words and differ structurally, or describe the same property in
+different words. Prefer properties that discriminate: a property that the
+successful or partially successful approaches ALSO have is weaker evidence
+of failure structure, and you must check for that.
+
+For each proposed property supply exactly: statement (one sentence);
+shared_by (>= 2 note filenames); supporting_passages (verbatim quotes with
+their note filenames); preserved_distinctions (what the property
+deliberately does NOT merge — name approaches that remain structurally
+different despite sharing it); contrast_check (what you found when checking
+the property against the partial-success notes); falsification (what
+observation would refute the property). Do not merge distinct operations
+into one property merely because they co-occur; if the evidence does not
+establish a shared property, propose fewer — an empty list is acceptable
+and is not penalized.
+
+Return ONE JSON document, no Markdown fence, exactly:
+{"schema_version": "discovery-wire/v1", "properties": [...]}
+with the six fields above per property and nothing else. Quotes must be
+verbatim substrings of the attached notes. Order properties by your
+confidence.
+
+The notes follow.
+
+
+---
+
+<!-- train-source: es-01-mordell-polynomial-identities.md -->
+
+# Mordell polynomial identities (es-01)
+
+**Era:** classical (Mordell, *Diophantine Equations*, 1969); systematized through
+the 20th century. Pre-cutoff.
+
+For many residue classes of `n`, a fixed **polynomial identity** in `n` writes
+down `4/n = 1/x + 1/y + 1/z` directly. The canonical example is `n ≡ 2 (mod 3)`:
+
+```text
+4/n = 1/n + 1/((n+1)/3) + 1/(n(n+1)/3)
+```
+
+Mordell listed identities covering `n ≡ 2 (mod 3)`, `3 (mod 4)`, `2 or 3 (mod 5)`,
+`3, 5, 6 (mod 7)`, and `5 (mod 8)`. Each identity is local to a residue class and
+deterministic: given `n` in a covered class, the denominators are computed by the
+identity with no search.
+
+Because these identities are keyed to fixed moduli, they reason one class at a
+time and never couple classes. They resolve every class **except** those where
+`n` behaves like a perfect square to small moduli. The residues left uncovered by
+all such identities reduce to `n ≡ 1 (mod 24)` for the small-modulus family, and
+more fundamentally to the quadratic-residue classes (see es-08). Progress stops
+exactly at those survivor classes.
+
+This note summarizes a known mechanism family; it is not new mathematics.
+
+<!-- newf-normalize
+{
+  "schema_version": "normalize/v1",
+  "approaches": [
+    {
+      "logical_identity": "erdos-straus/mordell-polynomial-identities",
+      "label": "Mordell polynomial identities",
+      "description": "Fixed polynomial identities in n give explicit unit-fraction decompositions per residue class.",
+      "mechanism": {
+        "representations": [
+          "residue classes",
+          "polynomial identities"
+        ],
+        "assumptions": [
+          "fixed small modulus",
+          "class-local reasoning"
+        ],
+        "operators": [
+          "polynomial identity",
+          "modular decomposition"
+        ],
+        "preserves": [
+          "residue locality",
+          "fixed-modulus structure"
+        ],
+        "breaks": [],
+        "auxiliary_objects": [],
+        "locality": "local",
+        "construction_mode": "constructive",
+        "uncertainty_mode": "deterministic",
+        "notes": "Per-class explicit denominators; classes never coupled."
+      },
+      "outcome": {
+        "class": "failure",
+        "boundary_statement": "an obstruction locates the wall but constructs no solution",
+        "boundary_conditions": [
+          "quadratic-residue classes",
+          "odd perfect squares"
+        ],
+        "notes": "Candidate failure invariant: the QR wall is preserved by every congruence method."
+      },
+      "support": [
+        {
+          "field_path": "mechanism.operators",
+          "support_kind": "explicit",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "mechanism.preserves",
+          "support_kind": "inferred",
+          "locator": "para:4"
+        },
+        {
+          "field_path": "outcome.class",
+          "support_kind": "explicit",
+          "locator": "para:4"
+        },
+        {
+          "field_path": "outcome.boundary_statement",
+          "support_kind": "explicit",
+          "locator": "para:4"
+        }
+      ]
+    }
+  ]
+}
+newf-normalize -->
+
+
+---
+
+<!-- train-source: es-02-covering-system-attempt.md -->
+
+# Covering-system attempt (es-02)
+
+**Era:** classical to modern; the hope predates and motivates Mordell's obstruction.
+Pre-cutoff.
+
+The idea couples the per-class polynomial identities (es-01) into a **covering
+system of congruences**: choose finitely many moduli and residue classes so that
+every integer `n` falls into at least one class that admits an identity. If such a
+finite covering existed, it would resolve the conjecture globally by reducing it to
+a finite check.
+
+Unlike a single identity, this approach reasons globally — it seeks a finite family
+of congruences whose union is all of `Z`. It is existential in posture: it asks
+whether *some* covering exists, not constructing one class at a time for its own
+sake.
+
+The attempt fails for a structural reason, not for lack of effort: the congruence
+relations that carry polynomial identities can only eliminate quadratic
+*non*-residues. By quadratic reciprocity, no finite covering built from these
+identities can catch the quadratic-residue classes (see es-08). The survivor set
+is therefore non-empty for every candidate covering, and it contains infinitely
+many primes (Dirichlet). The covering hope stalls on the same quadratic-residue
+wall.
+
+<!-- newf-normalize
+{
+  "schema_version": "normalize/v1",
+  "approaches": [
+    {
+      "logical_identity": "erdos-straus/covering-system-attempt",
+      "label": "Covering-system of congruences",
+      "description": "Couple per-class identities into a finite covering system meant to catch every n.",
+      "mechanism": {
+        "representations": [
+          "covering systems",
+          "congruence classes"
+        ],
+        "assumptions": [
+          "finite covering suffices",
+          "identities compose across classes"
+        ],
+        "operators": [
+          "congruence covering",
+          "class union"
+        ],
+        "preserves": [
+          "polynomial-identity solvability per class"
+        ],
+        "breaks": [
+          "class-local isolation"
+        ],
+        "auxiliary_objects": [
+          "system of moduli"
+        ],
+        "locality": "global",
+        "construction_mode": "existential",
+        "uncertainty_mode": "deterministic",
+        "notes": "Seeks a finite union of solvable classes covering Z."
+      },
+      "outcome": {
+        "class": "partial_success",
+        "boundary_statement": "covers almost all primes but degrades for perfect-square-like primes",
+        "boundary_conditions": [
+          "quadratic-residue primes",
+          "no guaranteed 2-fraction representation there"
+        ],
+        "notes": "Almost-all, not all."
+      },
+      "support": [
+        {
+          "field_path": "mechanism.operators",
+          "support_kind": "explicit",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "mechanism.breaks",
+          "support_kind": "inferred",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "outcome.class",
+          "support_kind": "explicit",
+          "locator": "para:4"
+        },
+        {
+          "field_path": "outcome.boundary_statement",
+          "support_kind": "explicit",
+          "locator": "para:4"
+        }
+      ]
+    }
+  ]
+}
+newf-normalize -->
+
+
+---
+
+<!-- train-source: es-03-factorization-scheme.md -->
+
+# Factorization scheme (es-03)
+
+**Era:** classical parameterization, refined through the modern literature. Pre-cutoff.
+
+Starting from `4/n = 1/x + 1/y + 1/z` and clearing denominators, one seeks
+solutions through an identity of the form
+
+```text
+(γA − c)(γB − c) = c²
+```
+
+which parameterizes candidate denominators nonlinearly in `n`. Solving requires
+**enumerating divisors** of a quantity depending on `n` and applying local
+congruence filters to keep the denominators positive integers.
+
+This is a local, constructive mechanism: for a given `n` it produces concrete
+`(x, y, z)` when a suitable divisor factorization exists, and the arithmetic is
+deterministic. It is useful for exposing the local divisor structure of solutions
+and connects directly to the Type I/Type II divisibility classification (es-04).
+
+Its boundary is organizational rather than computational: the factorization view
+gives no **global lattice organization** of the solution set. Whether a suitable
+factorization exists for every `n` is exactly as hard as the conjecture; the
+scheme does not force existence for the quadratic-residue primes.
+
+<!-- newf-normalize
+{
+  "schema_version": "normalize/v1",
+  "approaches": [
+    {
+      "logical_identity": "erdos-straus/factorization-scheme",
+      "label": "Factorization scheme (γA−c)(γB−c)=c²",
+      "description": "Nonlinear divisor-enumeration parameterization of denominators with local congruence filtering.",
+      "mechanism": {
+        "representations": [
+          "divisor factorizations",
+          "nonlinear parameterization"
+        ],
+        "assumptions": [
+          "suitable divisor exists",
+          "positivity via local filters"
+        ],
+        "operators": [
+          "divisor enumeration",
+          "local congruence filter",
+          "factorization identity"
+        ],
+        "preserves": [
+          "local divisor structure"
+        ],
+        "breaks": [],
+        "auxiliary_objects": [
+          "divisor lattice of an n-dependent quantity"
+        ],
+        "locality": "local",
+        "construction_mode": "constructive",
+        "uncertainty_mode": "deterministic",
+        "notes": "Per-n divisor search; no global organization of the solution set."
+      },
+      "outcome": {
+        "class": "partial_success",
+        "boundary_statement": "coverage of all primes by Type A/B is conjectural",
+        "boundary_conditions": [
+          "a prime lacking both Type A and Type B would be a counterexample",
+          "may be as hard as the original"
+        ],
+        "notes": "Self-declared conjectural completeness."
+      },
+      "support": [
+        {
+          "field_path": "mechanism.operators",
+          "support_kind": "explicit",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "mechanism.auxiliary_objects",
+          "support_kind": "inferred",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "outcome.boundary_statement",
+          "support_kind": "explicit",
+          "locator": "para:4"
+        }
+      ]
+    }
+  ]
+}
+newf-normalize -->
+
+
+---
+
+<!-- train-source: es-04-type-i-ii-classification.md -->
+
+# Type I / Type II solution classification (es-04)
+
+**Era:** Mordell's two cases; sharpened by Elsholtz & Tao (2011–2013). Pre-cutoff.
+
+Rather than classify by the congruence that produces a solution, this approach
+classifies by the **divisibility structure** of the solution itself. For prime `n`,
+Elsholtz and Tao show every solution is one of two types:
+
+- **Type I:** exactly one of `x, y, z` is divisible by `n`;
+- **Type II:** exactly two of them are divisible by `n`.
+
+(For composite `n`, most solutions on average are of neither type, but for primes
+these exhaust the possibilities.) The classification is transversal: it cuts across
+the residue-class families and lets one count solutions of each type and relate
+them to divisor sums.
+
+The mechanism is mixed in locality (it reasons about global solution structure via
+local divisibility) and existential in mode: it characterizes what solutions *must*
+look like without constructing them. Its boundary is that a structural
+classification of solutions does not by itself force a solution to *exist* for the
+hard quadratic-residue primes — it reorganizes the problem rather than closing it.
+
+<!-- newf-normalize
+{
+  "schema_version": "normalize/v1",
+  "approaches": [
+    {
+      "logical_identity": "erdos-straus/type-i-ii-classification",
+      "label": "Type I / Type II solution classification",
+      "description": "Classify solutions by how many denominators n divides; for prime n only two types occur.",
+      "mechanism": {
+        "representations": [
+          "solution divisibility types",
+          "divisor sums"
+        ],
+        "assumptions": [
+          "n prime restricts to two types"
+        ],
+        "operators": [
+          "structural classification",
+          "divisibility partition"
+        ],
+        "preserves": [
+          "solution divisibility invariants"
+        ],
+        "breaks": [
+          "classification by producing congruence"
+        ],
+        "auxiliary_objects": [
+          "Type I and Type II solution counts"
+        ],
+        "locality": "mixed",
+        "construction_mode": "existential",
+        "uncertainty_mode": "deterministic",
+        "notes": "Transversal classification; characterizes rather than constructs."
+      },
+      "outcome": {
+        "class": "partial_success",
+        "boundary_statement": "characterizes solution shape but does not force existence for QR primes",
+        "boundary_conditions": [
+          "quadratic-residue primes",
+          "existence not implied by classification"
+        ],
+        "notes": "Reorganizes the problem; foundation for counting and averaging."
+      },
+      "support": [
+        {
+          "field_path": "mechanism.operators",
+          "support_kind": "explicit",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "mechanism.representations",
+          "support_kind": "explicit",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "outcome.class",
+          "support_kind": "inferred",
+          "locator": "para:4"
+        },
+        {
+          "field_path": "outcome.boundary_statement",
+          "support_kind": "explicit",
+          "locator": "para:4"
+        }
+      ]
+    }
+  ]
+}
+newf-normalize -->
+
+
+---
+
+<!-- train-source: es-05-averaging-bombieri-vinogradov.md -->
+
+# Averaging / Bombieri–Vinogradov solution count (es-05)
+
+**Era:** Elsholtz & Tao, *Counting the number of solutions to the Erdős–Straus
+equation on unit fractions* (2013). Pre-cutoff.
+
+Let `f(n)` count the solutions of `4/n = 1/x + 1/y + 1/z`. This approach studies the
+**average** of `f(p)` over primes `p ≤ N` using analytic number theory: the
+Bombieri–Vinogradov theorem, the Brun–Titchmarsh inequality, the Erdős divisor
+bound, and the Turán–Kubilius inequality. The result bounds the average number of
+solutions polylogarithmically in `N`.
+
+The mechanism is global and probabilistic in posture: it reasons about the
+distribution of solution counts across a large ensemble of primes rather than about
+any single `n`. It couples many moduli through sieve estimates and averages.
+
+Its boundary is intrinsic to the method: the average grows only polylogarithmically.
+For some Diophantine problems a positive average forces a solution to exist, but that
+argument needs at least polynomial growth. The slow polylog growth here means the
+averaging bound **cannot** be upgraded to "every prime has a solution" — a typical
+prime has few solutions, and rare primes could in principle have none. The method
+gives strong evidence but no existence proof for the quadratic-residue primes.
+
+<!-- newf-normalize
+{
+  "schema_version": "normalize/v1",
+  "approaches": [
+    {
+      "logical_identity": "erdos-straus/averaging-bv-count",
+      "label": "Averaging solution count via Bombieri–Vinogradov",
+      "description": "Bound the average number of solutions over primes ≤ N using sieve and analytic inequalities.",
+      "mechanism": {
+        "representations": [
+          "solution-count function f(n)",
+          "average over primes"
+        ],
+        "assumptions": [
+          "ensemble averaging is informative",
+          "sieve estimates apply"
+        ],
+        "operators": [
+          "averaging",
+          "sieve estimation",
+          "divisor bound"
+        ],
+        "preserves": [
+          "mean solution density"
+        ],
+        "breaks": [
+          "per-n constructivity"
+        ],
+        "auxiliary_objects": [
+          "Bombieri–Vinogradov theorem",
+          "Brun–Titchmarsh inequality",
+          "Turán–Kubilius inequality"
+        ],
+        "locality": "global",
+        "construction_mode": "existential",
+        "uncertainty_mode": "probabilistic",
+        "notes": "Distributional statement about many primes at once."
+      },
+      "outcome": {
+        "class": "partial_failure",
+        "boundary_statement": "quadratic-residue survivor classes remain uncovered",
+        "boundary_conditions": [
+          "n a quadratic residue to small moduli",
+          "n = 1 mod 24 survivors"
+        ],
+        "notes": "No fixed identity family covers the quadratic-residue classes."
+      },
+      "support": [
+        {
+          "field_path": "mechanism.auxiliary_objects",
+          "support_kind": "explicit",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "mechanism.uncertainty_mode",
+          "support_kind": "explicit",
+          "locator": "para:3"
+        },
+        {
+          "field_path": "outcome.boundary_statement",
+          "support_kind": "explicit",
+          "locator": "para:4"
+        }
+      ]
+    }
+  ]
+}
+newf-normalize -->
+
+
+---
+
+<!-- train-source: es-06-two-fraction-representation-bounds.md -->
+
+# Two-unit-fraction representation bounds (es-06)
+
+**Era:** Browning & Elsholtz (2010–2011); used inside the Elsholtz–Tao counting work.
+Pre-cutoff.
+
+This approach reduces `4/n = 1/x + 1/y + 1/z` to the question of representing a
+rational as a sum of **two** unit fractions once the first denominator is fixed: for
+a chosen `x`, one asks whether `4/n − 1/x = 1/y + 1/z` is solvable. Bounds on the
+number of representations of a rational `a/b` as `1/y + 1/z` (a divisor-counting
+question about `b` and `a`) then control how many full solutions exist.
+
+The mechanism is global and existential: it counts representations across ranges of
+`n` and uses those counts to derive lower bounds `f(n) > 0` for many `n`. It couples
+the three-denominator problem to a cleaner two-denominator divisor problem.
+
+Its boundary: the representation bounds give lower bounds that hold for almost all
+primes and for infinitely many `n`, but they degrade exactly for primes that "resemble
+a perfect square" to small moduli — the quadratic-residue primes — where the divisor
+structure of `4/n − 1/x` does not guarantee a two-fraction representation. The method
+covers typical primes, not the survivor class.
+
+<!-- newf-normalize
+{
+  "schema_version": "normalize/v1",
+  "approaches": [
+    {
+      "logical_identity": "erdos-straus/two-fraction-representation-bounds",
+      "label": "Two-unit-fraction representation bounds",
+      "description": "Fix one denominator, reduce to representing a rational as two unit fractions, and bound representation counts.",
+      "mechanism": {
+        "representations": [
+          "two-unit-fraction representations",
+          "divisor counts"
+        ],
+        "assumptions": [
+          "fixing one denominator is without loss",
+          "divisor counts control existence"
+        ],
+        "operators": [
+          "reduction to two fractions",
+          "representation counting"
+        ],
+        "preserves": [
+          "existence via representation lower bounds"
+        ],
+        "breaks": [],
+        "auxiliary_objects": [
+          "representation-count estimates for a/b = 1/y + 1/z"
+        ],
+        "locality": "global",
+        "construction_mode": "existential",
+        "uncertainty_mode": "deterministic",
+        "notes": "Lower bounds for almost all primes; couples 3-term to 2-term problem."
+      },
+      "outcome": {
+        "class": "partial_success",
+        "boundary_statement": "unifies methods but adds no positivity for QR primes",
+        "boundary_conditions": [
+          "quadratic-residue primes",
+          "existence not gained by lifting"
+        ],
+        "notes": "Better organization, same wall."
+      },
+      "support": [
+        {
+          "field_path": "mechanism.operators",
+          "support_kind": "explicit",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "mechanism.preserves",
+          "support_kind": "inferred",
+          "locator": "para:3"
+        },
+        {
+          "field_path": "outcome.boundary_statement",
+          "support_kind": "explicit",
+          "locator": "para:4"
+        }
+      ]
+    }
+  ]
+}
+newf-normalize -->
+
+
+---
+
+<!-- train-source: es-07-computational-verification.md -->
+
+# Large-scale computational verification (es-07)
+
+**Era:** ongoing; verified past `n = 10^17` and beyond by successive computations.
+Pre-cutoff.
+
+This approach abandons closed-form coverage and instead **checks the conjecture
+directly** for all `n` up to a large bound by search. For each `n` (reduced to primes
+via the multiplicative reduction), an algorithm enumerates candidate first
+denominators `x` in the admissible range and tests whether `4/n − 1/x` splits into
+two unit fractions. Efficient divisor-based search and sieving over residue classes
+make the range enormous.
+
+The mechanism is local and deterministic per `n`, and empirical in character: it
+produces a certified solution for every `n` in the tested range and thereby rules out
+small counterexamples. Recent computations even dispatch historically awkward
+"Mordell-exceptional" quadratic-residue primes within the finite range.
+
+Its boundary is definitional, not incidental: a finite verification, however large,
+is **not a proof** for all `n`. It cannot certify the infinitely many quadratic-residue
+primes beyond the bound. Its research value is as evidence and as a source of
+concrete solved instances that constrain what any structural invariant must respect,
+not as a closing argument.
+
+<!-- newf-normalize
+{
+  "schema_version": "normalize/v1",
+  "approaches": [
+    {
+      "logical_identity": "erdos-straus/computational-verification",
+      "label": "Large-scale computational verification",
+      "description": "Directly search and certify solutions for all n up to a large finite bound.",
+      "mechanism": {
+        "representations": [
+          "explicit solved instances",
+          "search over denominators"
+        ],
+        "assumptions": [
+          "finite range is checkable",
+          "multiplicative reduction to primes"
+        ],
+        "operators": [
+          "bounded search",
+          "sieving",
+          "divisor test"
+        ],
+        "preserves": [
+          "certified per-instance solutions"
+        ],
+        "breaks": [
+          "claim of generality"
+        ],
+        "auxiliary_objects": [
+          "verification range bound",
+          "solution certificates"
+        ],
+        "locality": "local",
+        "construction_mode": "constructive",
+        "uncertainty_mode": "deterministic",
+        "notes": "Empirical: certifies a finite range, including QR primes within it."
+      },
+      "outcome": {
+        "class": "partial_success",
+        "boundary_statement": "structural constraints do not prove coverage of all primes",
+        "boundary_conditions": [
+          "quadratic-residue primes",
+          "coverage remains conjectural"
+        ],
+        "notes": "Links classes; existence still owed."
+      },
+      "support": [
+        {
+          "field_path": "mechanism.operators",
+          "support_kind": "explicit",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "mechanism.breaks",
+          "support_kind": "inferred",
+          "locator": "para:4"
+        },
+        {
+          "field_path": "outcome.boundary_statement",
+          "support_kind": "explicit",
+          "locator": "para:4"
+        }
+      ]
+    }
+  ]
+}
+newf-normalize -->
+
+
+---
+
+<!-- train-source: es-08-quadratic-reciprocity-obstruction.md -->
+
+# Quadratic-reciprocity obstruction (es-08)
+
+**Era:** Mordell (1960s), reframed by Elsholtz & Tao. Pre-cutoff.
+
+This is not a construction but an **obstruction analysis** — the note that explains
+*why* the identity/covering families (es-01, es-02) all stall on the same classes.
+The congruence relations that carry polynomial identities are, in the relevant case,
+governed by Jacobi symbols. An application of the quadratic reciprocity law shows
+these relations can eliminate quadratic **non**-residues but never quadratic
+**residues**: for the coprime data producing solutions, the relevant Jacobi symbols
+are forced equal, so the congruence method is powerless exactly when `n` is a
+quadratic residue (in particular whenever `n` is an odd perfect square, or lies in a
+quadratic-residue class to small moduli).
+
+The mechanism is global and existential in a meta sense: it reasons about the *space
+of methods*, proving a negative structural fact rather than producing denominators.
+It preserves — indeed pinpoints — the invariant that the whole identity/covering
+program conserves: solvability-by-congruence is confined to the non-residue side.
+
+Its "boundary" is that an obstruction is not a solution: it tells the search where
+*not* to look and what any successful method must **break**, but it constructs
+nothing. Its research value is high precisely as a candidate **failure invariant**:
+every failed family here preserves the quadratic-residue wall.
+
+<!-- newf-normalize
+{
+  "schema_version": "normalize/v1",
+  "approaches": [
+    {
+      "logical_identity": "erdos-straus/quadratic-reciprocity-obstruction",
+      "label": "Quadratic-reciprocity obstruction",
+      "description": "Prove congruence/identity methods cannot eliminate quadratic-residue classes, via Jacobi-symbol reciprocity.",
+      "mechanism": {
+        "representations": [
+          "Jacobi symbols",
+          "residue/non-residue split"
+        ],
+        "assumptions": [
+          "identity methods reduce to congruence relations"
+        ],
+        "operators": [
+          "quadratic reciprocity",
+          "obstruction argument"
+        ],
+        "preserves": [
+          "confinement of congruence methods to non-residues"
+        ],
+        "breaks": [],
+        "auxiliary_objects": [
+          "quadratic reciprocity law"
+        ],
+        "locality": "global",
+        "construction_mode": "existential",
+        "uncertainty_mode": "deterministic",
+        "notes": "A negative structural result about the space of methods."
+      },
+      "outcome": {
+        "class": "partial_failure",
+        "boundary_statement": "finite verification is not a proof for all n",
+        "boundary_conditions": [
+          "infinitely many QR primes beyond the bound"
+        ],
+        "notes": "Evidence and instance source, not closure."
+      },
+      "support": [
+        {
+          "field_path": "mechanism.operators",
+          "support_kind": "explicit",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "mechanism.preserves",
+          "support_kind": "explicit",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "outcome.boundary_statement",
+          "support_kind": "inferred",
+          "locator": "para:4"
+        }
+      ]
+    }
+  ]
+}
+newf-normalize -->
+
+
+---
+
+<!-- train-source: es-09-higher-dimensional-variety-lift.md -->
+
+# Higher-dimensional variety lift (es-09)
+
+**Era:** Elsholtz & Tao (2013). Pre-cutoff.
+
+Many of the classical parameterizations (Mordell identities, factorization schemes,
+Type I/II forms) look unrelated on the surface. This approach **lifts** the
+two-dimensional Erdős–Straus surface into a higher-dimensional algebraic variety on
+which those parameterizations appear as different rational slices of a single object.
+Unifying them this way lets one transport counting and existence arguments uniformly
+instead of re-deriving each family.
+
+The mechanism is global, algebraic, and existential: it re-represents the problem at
+a higher abstraction level to expose shared structure. It preserves the solution sets
+of the individual parameterizations while abstracting away their surface differences.
+
+Its boundary is the abstraction-safety limit the project cares about: the lift
+compresses many methods into one, but the compression does **not** add positivity —
+it does not force a solution to exist for every prime, and in particular does not
+cross the quadratic-residue wall. The unified variety is a better *organization* of
+known mechanisms, not a new source of existence. It is a clean test case for whether
+a re-representation "earns search authority" by improving transfer without losing
+predictive discrimination.
+
+<!-- newf-normalize
+{
+  "schema_version": "normalize/v1",
+  "approaches": [
+    {
+      "logical_identity": "erdos-straus/higher-dimensional-variety-lift",
+      "label": "Higher-dimensional variety lift",
+      "description": "Lift known parameterizations onto one higher-dimensional variety to unify counting and existence arguments.",
+      "mechanism": {
+        "representations": [
+          "higher-dimensional variety",
+          "rational slices"
+        ],
+        "assumptions": [
+          "parameterizations are slices of one object",
+          "lift preserves solution sets"
+        ],
+        "operators": [
+          "algebraic lift",
+          "re-representation",
+          "unification"
+        ],
+        "preserves": [
+          "solution sets of unified parameterizations"
+        ],
+        "breaks": [
+          "surface distinctions between parameterizations"
+        ],
+        "auxiliary_objects": [
+          "unifying variety"
+        ],
+        "locality": "global",
+        "construction_mode": "existential",
+        "uncertainty_mode": "deterministic",
+        "notes": "Abstraction/transfer move; compression without added positivity."
+      },
+      "outcome": {
+        "class": "partial_failure",
+        "boundary_statement": "no global lattice organization; existence unforced for QR primes",
+        "boundary_conditions": [
+          "quadratic-residue primes",
+          "divisor search may fail to certify"
+        ],
+        "notes": "Exposes local structure but does not globalize."
+      },
+      "support": [
+        {
+          "field_path": "mechanism.operators",
+          "support_kind": "explicit",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "mechanism.breaks",
+          "support_kind": "inferred",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "outcome.boundary_statement",
+          "support_kind": "explicit",
+          "locator": "para:4"
+        }
+      ]
+    }
+  ]
+}
+newf-normalize -->
+
+
+---
+
+<!-- train-source: es-10-vaughan-congruence-density.md -->
+
+# Vaughan-style congruence verification (es-10)
+
+**Era:** Vaughan (1970) and successors. Pre-cutoff.
+
+This approach estimates the number of `n ≤ N` for which the conjecture is *not yet*
+settled by known congruence identities, and drives that count down. Vaughan showed
+the number of exceptional `n` up to `N` is small (bounded by an expression decaying
+like `N · exp(−c (log N)^{2/3})`), by assembling a large battery of congruence
+classes that admit identities and bounding the leftover.
+
+The mechanism is local-to-global: it works class by class (local identities) but its
+payoff is a **global density** statement about how thin the unsolved set is. It is
+deterministic and existential in flavor — it counts the survivors rather than
+constructing solutions for them.
+
+Its boundary is the familiar one from a different angle: the exceptional set is thin
+but **non-empty and infinite**, and it is exactly the quadratic-residue survivor
+family (the `n ≡ 1 (mod 24)` style classes and their refinements). Making the density
+smaller never reaches zero, because the surviving classes are protected by the
+reciprocity obstruction (es-08). It sharpens "almost all `n`" without closing "all
+`n`".
+
+<!-- newf-normalize
+{
+  "schema_version": "normalize/v1",
+  "approaches": [
+    {
+      "logical_identity": "erdos-straus/vaughan-congruence-density",
+      "label": "Vaughan-style congruence density bound",
+      "description": "Bound the density of unsolved n by assembling many identity-bearing congruence classes.",
+      "mechanism": {
+        "representations": [
+          "congruence classes",
+          "density of exceptional set"
+        ],
+        "assumptions": [
+          "many classes admit identities",
+          "leftover is boundable"
+        ],
+        "operators": [
+          "class assembly",
+          "density estimation"
+        ],
+        "preserves": [
+          "solvability on the assembled classes"
+        ],
+        "breaks": [],
+        "auxiliary_objects": [
+          "exceptional-set density bound"
+        ],
+        "locality": "mixed",
+        "construction_mode": "existential",
+        "uncertainty_mode": "deterministic",
+        "notes": "Local identities aggregated into a global thinness statement."
+      },
+      "outcome": {
+        "class": "partial_failure",
+        "boundary_statement": "exceptional set is thin but infinite and protected by the QR wall",
+        "boundary_conditions": [
+          "quadratic-residue survivor classes",
+          "density never reaches zero"
+        ],
+        "notes": "Sharpens almost-all; does not reach all."
+      },
+      "support": [
+        {
+          "field_path": "mechanism.operators",
+          "support_kind": "explicit",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "mechanism.representations",
+          "support_kind": "explicit",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "outcome.boundary_statement",
+          "support_kind": "explicit",
+          "locator": "para:4"
+        }
+      ]
+    }
+  ]
+}
+newf-normalize -->
+
+
+---
+
+<!-- train-source: es-11-monks-velingker-structure.md -->
+
+# Monks–Velingker structural solution analysis (es-11)
+
+**Era:** Monks & Velingker and related structural work; used as input to later
+congruence-system proposals. Pre-cutoff.
+
+This approach studies the **algebraic structure of the solution set** directly:
+relations among the denominators, symmetries of solutions, and how solutions of one
+`n` induce solutions of related `n`. It seeks structural constraints that any
+solution triple must satisfy and uses them to organize the search and to connect
+distinct residue classes through shared solution forms.
+
+The mechanism is mixed in locality and existential in mode: it characterizes the
+constraint geometry of solutions rather than constructing them for a fixed `n`. It
+preserves the algebraic relations among denominators and is a natural upstream input
+to the Type A/B congruence-system program (es-12).
+
+Its boundary is that structural relations, however tight, remain **conjectural about
+coverage**: they narrow what solutions look like and link classes, but they do not
+prove that every prime admits at least one solution. The hardest quadratic-residue
+primes still require an existence argument the structure alone does not supply.
+
+<!-- newf-normalize
+{
+  "schema_version": "normalize/v1",
+  "approaches": [
+    {
+      "logical_identity": "erdos-straus/monks-velingker-structure",
+      "label": "Structural solution-set analysis",
+      "description": "Analyze algebraic relations and symmetries among solution denominators to constrain and link classes.",
+      "mechanism": {
+        "representations": [
+          "solution-set relations",
+          "denominator symmetries"
+        ],
+        "assumptions": [
+          "structural constraints link residue classes"
+        ],
+        "operators": [
+          "structural constraint analysis",
+          "symmetry exploitation"
+        ],
+        "preserves": [
+          "algebraic relations among denominators"
+        ],
+        "breaks": [],
+        "auxiliary_objects": [
+          "induced-solution maps between related n"
+        ],
+        "locality": "mixed",
+        "construction_mode": "existential",
+        "uncertainty_mode": "deterministic",
+        "notes": "Constraint geometry of solutions; upstream of Type A/B systems."
+      },
+      "outcome": {
+        "class": "partial_failure",
+        "boundary_statement": "polylog average growth is too slow to force existence",
+        "boundary_conditions": [
+          "rare primes could have zero solutions",
+          "quadratic-residue primes"
+        ],
+        "notes": "Strong evidence, not an existence proof."
+      },
+      "support": [
+        {
+          "field_path": "mechanism.operators",
+          "support_kind": "explicit",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "mechanism.preserves",
+          "support_kind": "inferred",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "outcome.boundary_statement",
+          "support_kind": "explicit",
+          "locator": "para:4"
+        }
+      ]
+    }
+  ]
+}
+newf-normalize -->
+
+
+---
+
+<!-- train-source: es-12-type-a-b-congruence-system.md -->
+
+# Type A / Type B congruence system (es-12)
+
+**Era:** *A Complete Congruence System for the Erdős–Straus Conjecture*
+(arXiv:2404.01508, April 2024). Pre-cutoff.
+
+Building on Elsholtz–Tao and Monks–Velingker, this approach classifies solutions
+**by their form** rather than by the congruence that produces them, defining two new
+solution forms — **Type A** and **Type B** — and associating a congruence and a
+general polynomial to each. It then proposes a system of congruences that (it
+conjectures) always yields a Type A or Type B solution and, again conjecturally,
+covers all prime numbers.
+
+The mechanism is global and constructive-per-form: each form comes with an explicit
+polynomial, and by construction none of the admitted congruences is a quadratic
+residue (respecting Mordell's obstruction, es-08). It couples the transversal
+solution-form view with the covering-system goal (es-02), trying to reach coverage
+without hitting the reciprocity wall by choosing forms cleverly.
+
+Its boundary is honest and self-declared: it is **conjectural** that every prime has
+a Type A or Type B solution. Either a counterexample prime exists (lacking both
+forms), or the proposal is an alternative formulation "as difficult or more difficult
+to prove than the original". It advances the organization of the problem but does not
+close it.
+
+<!-- newf-normalize
+{
+  "schema_version": "normalize/v1",
+  "approaches": [
+    {
+      "logical_identity": "erdos-straus/type-a-b-congruence-system",
+      "label": "Type A / Type B congruence system",
+      "description": "Classify solutions by form (Type A/B), attach a polynomial and congruence to each, and propose a covering system avoiding quadratic residues.",
+      "mechanism": {
+        "representations": [
+          "Type A/B solution forms",
+          "congruence system",
+          "general polynomials"
+        ],
+        "assumptions": [
+          "forms cover all primes",
+          "admitted congruences avoid quadratic residues"
+        ],
+        "operators": [
+          "form classification",
+          "polynomial association",
+          "congruence covering"
+        ],
+        "preserves": [
+          "Mordell non-residue restriction",
+          "polynomial-identity solvability per form"
+        ],
+        "breaks": [
+          "classification by producing congruence"
+        ],
+        "auxiliary_objects": [
+          "Type A congruence+polynomial",
+          "Type B congruence+polynomial"
+        ],
+        "locality": "global",
+        "construction_mode": "constructive",
+        "uncertainty_mode": "deterministic",
+        "notes": "Couples transversal form view with the covering goal."
+      },
+      "outcome": {
+        "class": "failure",
+        "boundary_statement": "no finite covering eliminates quadratic-residue classes",
+        "boundary_conditions": [
+          "quadratic-residue survivor classes",
+          "infinitely many survivor primes"
+        ],
+        "notes": "Blocked by the quadratic-reciprocity obstruction, not by search effort."
+      },
+      "support": [
+        {
+          "field_path": "mechanism.representations",
+          "support_kind": "explicit",
+          "locator": "para:2"
+        },
+        {
+          "field_path": "mechanism.preserves",
+          "support_kind": "explicit",
+          "locator": "para:3"
+        },
+        {
+          "field_path": "outcome.boundary_statement",
+          "support_kind": "explicit",
+          "locator": "para:4"
+        },
+        {
+          "field_path": "outcome.class",
+          "support_kind": "inferred",
+          "locator": "para:4"
+        }
+      ]
+    }
+  ]
+}
+newf-normalize -->
