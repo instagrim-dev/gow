@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "command": "init",
+  "problem_id": "prb_01M27M1JE0K2YZ2KXFM2DEJWBZ",
+  "run_id": "run_01M27M1JE0K2YZ2KXFM1WC6585",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-002/newf.db",
+  "created": true,
+  "problem": "Erdos-Straus pilot 002 train"
+}

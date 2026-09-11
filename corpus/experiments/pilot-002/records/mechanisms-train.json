@@ -1,0 +1,116 @@
+{
+  "ok": true,
+  "command": "mechanism list",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-002/newf.db",
+  "problem_id": "prb_01M27M1JE0K2YZ2KXFM2DEJWBZ",
+  "mechanisms": [
+    {
+      "mechanism_id": "mech_01M27M1JFZQKQ0SYZPQXTAHADT",
+      "approach_id": "app_01M27M1JFZQKQ0SYZPR9Y9AB4C",
+      "approach_revision_id": "apr_01M27M1JFZQKQ0SYZPQWXRHJ6R",
+      "label": "Mordell polynomial identities",
+      "logical_identity": "erdos-straus/mordell-polynomial-identities",
+      "outcome_class": "partial_failure",
+      "signature_count": 0
+    },
+    {
+      "mechanism_id": "mech_01M27M1JG0BMVXCKQ2P98AK5F0",
+      "approach_id": "app_01M27M1JG0BMVXCKQ2PHPHVHYV",
+      "approach_revision_id": "apr_01M27M1JG0BMVXCKQ2P6QJ7ZAD",
+      "label": "Covering-system of congruences",
+      "logical_identity": "erdos-straus/covering-system-attempt",
+      "outcome_class": "failure",
+      "signature_count": 0
+    },
+    {
+      "mechanism_id": "mech_01M27M1JG1YAMNM5PV4E69QZCW",
+      "approach_id": "app_01M27M1JG1YAMNM5PV4RX24DVS",
+      "approach_revision_id": "apr_01M27M1JG1YAMNM5PV4AVR0STW",
+      "label": "Factorization scheme (γA−c)(γB−c)=c²",
+      "logical_identity": "erdos-straus/factorization-scheme",
+      "outcome_class": "partial_failure",
+      "signature_count": 0
+    },
+    {
+      "mechanism_id": "mech_01M27M1JG1YAMNM5PV52Q5HPYR",
+      "approach_id": "app_01M27M1JG1YAMNM5PV55SCP91E",
+      "approach_revision_id": "apr_01M27M1JG1YAMNM5PV4YVQNP5P",
+      "label": "Type I / Type II solution classification",
+      "logical_identity": "erdos-straus/type-i-ii-classification",
+      "outcome_class": "partial_success",
+      "signature_count": 0
+    },
+    {
+      "mechanism_id": "mech_01M27M1JG268K16JVMX7XVHC6Y",
+      "approach_id": "app_01M27M1JG268K16JVMXH4HRMYZ",
+      "approach_revision_id": "apr_01M27M1JG268K16JVMX7NKYBZF",
+      "label": "Averaging solution count via Bombieri–Vinogradov",
+      "logical_identity": "erdos-straus/averaging-bv-count",
+      "outcome_class": "partial_failure",
+      "signature_count": 0
+    },
+    {
+      "mechanism_id": "mech_01M27M1JG3MC54TNEEGE1K3883",
+      "approach_id": "app_01M27M1JG3MC54TNEEGWYA0G0D",
+      "approach_revision_id": "apr_01M27M1JG3MC54TNEEGD7TK44T",
+      "label": "Two-unit-fraction representation bounds",
+      "logical_identity": "erdos-straus/two-fraction-representation-bounds",
+      "outcome_class": "partial_success",
+      "signature_count": 0
+    },
+    {
+      "mechanism_id": "mech_01M27M1JG4XHM87B889B9Y6XH6",
+      "approach_id": "app_01M27M1JG4XHM87B889F6PSQCB",
+      "approach_revision_id": "apr_01M27M1JG4XHM87B889B1G04GT",
+      "label": "Large-scale computational verification",
+      "logical_identity": "erdos-straus/computational-verification",
+      "outcome_class": "partial_failure",
+      "signature_count": 0
+    },
+    {
+      "mechanism_id": "mech_01M27M1JG4XHM87B889RG8N9XC",
+      "approach_id": "app_01M27M1JG4XHM87B88A5PY79HJ",
+      "approach_revision_id": "apr_01M27M1JG4XHM87B889NQMBGWT",
+      "label": "Quadratic-reciprocity obstruction",
+      "logical_identity": "erdos-straus/quadratic-reciprocity-obstruction",
+      "outcome_class": "failure",
+      "signature_count": 0
+    },
+    {
+      "mechanism_id": "mech_01M27M1JG5MXE5AXNA04384RRA",
+      "approach_id": "app_01M27M1JG5MXE5AXNA0HHQYKV8",
+      "approach_revision_id": "apr_01M27M1JG5MXE5AXNA02ZSYCZN",
+      "label": "Higher-dimensional variety lift",
+      "logical_identity": "erdos-straus/higher-dimensional-variety-lift",
+      "outcome_class": "partial_success",
+      "signature_count": 0
+    },
+    {
+      "mechanism_id": "mech_01M27M1JG60RQGRHYD8NBJRR5D",
+      "approach_id": "app_01M27M1JG60RQGRHYD8V91PRQE",
+      "approach_revision_id": "apr_01M27M1JG60RQGRHYD8N9EBZ1E",
+      "label": "Vaughan-style congruence density bound",
+      "logical_identity": "erdos-straus/vaughan-congruence-density",
+      "outcome_class": "partial_failure",
+      "signature_count": 0
+    },
+    {
+      "mechanism_id": "mech_01M27M1JG60RQGRHYD949CG4XF",
+      "approach_id": "app_01M27M1JG60RQGRHYD9EB8ZP79",
+      "approach_revision_id": "apr_01M27M1JG60RQGRHYD92REF0CV",
+      "label": "Structural solution-set analysis",
+      "logical_identity": "erdos-straus/monks-velingker-structure",
+      "outcome_class": "partial_success",
+      "signature_count": 0
+    },
+    {
+      "mechanism_id": "mech_01M27M1JG776S6VZC057HGA5X0",
+      "approach_id": "app_01M27M1JG776S6VZC05FKRERYH",
+      "approach_revision_id": "apr_01M27M1JG776S6VZC0574R7563",
+      "label": "Type A / Type B congruence system",
+      "logical_identity": "erdos-straus/type-a-b-congruence-system",
+      "outcome_class": "partial_success",
+      "signature_count": 0
+    }
+  ]
+}

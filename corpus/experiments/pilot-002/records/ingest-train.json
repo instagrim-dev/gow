@@ -1,0 +1,134 @@
+{
+  "ok": true,
+  "command": "ingest",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-002/newf.db",
+  "problem_id": "prb_01M27M1JE0K2YZ2KXFM2DEJWBZ",
+  "run_id": "run_01M27M1JEW3TC2XHKB0E5BCXWZ",
+  "results": [
+    {
+      "input": "/Users/jmh/dev/gh/newf/.newf/pilot-002/source/corpus/train/es-01-mordell-polynomial-identities.md",
+      "source_id": "src_01M27M1JEX0NHGQ69PXEBSWNPG",
+      "snapshot_id": "snap_01M27M1JEX0NHGQ69PXHG4YCJ7",
+      "status": "created_snapshot",
+      "sha256": "98382b206561842ba55bea7f72d7561b5052b4b271805f7febabb1cdd6555b8a",
+      "media_type": "text/markdown",
+      "bytes": 2818,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/.newf/pilot-002/source/corpus/train/es-02-covering-system-attempt.md",
+      "source_id": "src_01M27M1JEY909GYD7A24PRCP33",
+      "snapshot_id": "snap_01M27M1JEY909GYD7A274GQMAJ",
+      "status": "created_snapshot",
+      "sha256": "e3de7f8566983040692bbace65aebc54ee65e61b6b732c57b30ec6532e2d2393",
+      "media_type": "text/markdown",
+      "bytes": 2902,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/.newf/pilot-002/source/corpus/train/es-03-factorization-scheme.md",
+      "source_id": "src_01M27M1JEY909GYD7A29F191KQ",
+      "snapshot_id": "snap_01M27M1JEY909GYD7A2AXPR82C",
+      "status": "created_snapshot",
+      "sha256": "c170964f7224f5bdd93a2383d9d529d3e1dcb0b23a8f8d4bcdc75a959a42e3db",
+      "media_type": "text/markdown",
+      "bytes": 2794,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/.newf/pilot-002/source/corpus/train/es-04-type-i-ii-classification.md",
+      "source_id": "src_01M27M1JEZ0KMQPH70ETXK047C",
+      "snapshot_id": "snap_01M27M1JEZ0KMQPH70EV8J7343",
+      "status": "created_snapshot",
+      "sha256": "7a46dd0f51e4efe628275459b8dd31b0feb2f6ea0c9902474b8875f8f283ee34",
+      "media_type": "text/markdown",
+      "bytes": 2915,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/.newf/pilot-002/source/corpus/train/es-05-averaging-bombieri-vinogradov.md",
+      "source_id": "src_01M27M1JEZ0KMQPH70EWS1542M",
+      "snapshot_id": "snap_01M27M1JEZ0KMQPH70F0EVNX7X",
+      "status": "created_snapshot",
+      "sha256": "e8de41abe20bee9650c3687e356a97910034795a25b5f5c2013d2abcee80d7a6",
+      "media_type": "text/markdown",
+      "bytes": 2994,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/.newf/pilot-002/source/corpus/train/es-06-two-fraction-representation-bounds.md",
+      "source_id": "src_01M27M1JF0RYFNJ8A2H7BP4JPN",
+      "snapshot_id": "snap_01M27M1JF0RYFNJ8A2H9X3V95P",
+      "status": "created_snapshot",
+      "sha256": "09be207cf0eb3221c95b9e3bc3dd31204d3f5d2106ee583131d9d113c41dc46e",
+      "media_type": "text/markdown",
+      "bytes": 2898,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/.newf/pilot-002/source/corpus/train/es-07-computational-verification.md",
+      "source_id": "src_01M27M1JF1AJWRW5YDPG3VE31J",
+      "snapshot_id": "snap_01M27M1JF1AJWRW5YDPH899C8R",
+      "status": "created_snapshot",
+      "sha256": "f629e9eb6092d9ab36e65c6d8ce7b6eae45118ae397ffde94f24f70c5d1d2e8f",
+      "media_type": "text/markdown",
+      "bytes": 2871,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/.newf/pilot-002/source/corpus/train/es-08-quadratic-reciprocity-obstruction.md",
+      "source_id": "src_01M27M1JF1AJWRW5YDPMT7MKVW",
+      "snapshot_id": "snap_01M27M1JF1AJWRW5YDPN6EGPR8",
+      "status": "created_snapshot",
+      "sha256": "9442078805a3bfee6b2e55b36276086e8d4f6be434832362be6075f159b7e855",
+      "media_type": "text/markdown",
+      "bytes": 3098,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/.newf/pilot-002/source/corpus/train/es-09-higher-dimensional-variety-lift.md",
+      "source_id": "src_01M27M1JF2SA5KBVA983PVJG3A",
+      "snapshot_id": "snap_01M27M1JF2SA5KBVA9847D7GW1",
+      "status": "created_snapshot",
+      "sha256": "965d2411c50938857f6b5ee367e2fe94f1449f423d6ce1b8c4535ac67d14ca92",
+      "media_type": "text/markdown",
+      "bytes": 2992,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/.newf/pilot-002/source/corpus/train/es-10-vaughan-congruence-density.md",
+      "source_id": "src_01M27M1JF3Y4WX0F9EXRW9FTKA",
+      "snapshot_id": "snap_01M27M1JF3Y4WX0F9EXT706QAH",
+      "status": "created_snapshot",
+      "sha256": "4740f82965e89c765e6d03c527ea5f7b978aa9bec00e2e6e3c753589007a89bd",
+      "media_type": "text/markdown",
+      "bytes": 2807,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/.newf/pilot-002/source/corpus/train/es-11-monks-velingker-structure.md",
+      "source_id": "src_01M27M1JF3Y4WX0F9EXV4D6JAG",
+      "snapshot_id": "snap_01M27M1JF3Y4WX0F9EXXNSS4DE",
+      "status": "created_snapshot",
+      "sha256": "0d8efb4ae2d6154a771f5858937a9bc6a5539c37f9c996c84a7f26996107f1c5",
+      "media_type": "text/markdown",
+      "bytes": 2803,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/.newf/pilot-002/source/corpus/train/es-12-type-a-b-congruence-system.md",
+      "source_id": "src_01M27M1JF76N3QHTM1YNW8RWNP",
+      "snapshot_id": "snap_01M27M1JF76N3QHTM1YQ4RCQ7F",
+      "status": "created_snapshot",
+      "sha256": "e5a7590ae68838eaef204dbf052052ec5453b909054bc998b25a549d483c3401",
+      "media_type": "text/markdown",
+      "bytes": 3279,
+      "created_source": true
+    }
+  ],
+  "summary": {
+    "total": 12,
+    "succeeded": 12,
+    "failed": 0
+  }
+}

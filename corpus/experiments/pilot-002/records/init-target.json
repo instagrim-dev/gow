@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "command": "init",
+  "problem_id": "prb_01M27M1JEBKTT8YQCQBG8BZPK5",
+  "run_id": "run_01M27M1JEBKTT8YQCQBEJEC00V",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-002/newf.db",
+  "created": true,
+  "problem": "Erdos-Straus pilot 002 target"
+}

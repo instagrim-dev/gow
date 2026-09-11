@@ -1,0 +1,16 @@
+{
+  "status": "prepared_not_captured",
+  "protocol_revision": "pilot-002 (successor to pilot-001; PROTOCOL-REVISION.md)",
+  "source_commit": "a868dec70e6cb0f5ab6000ec89bbd36e12f43ec4",
+  "executable_commit": "f7c7433fcf86145bc363840ff15d04183a42d210",
+  "vocabulary_version": "mechanism/v2",
+  "interpretation_claims_applied": 8,
+  "train_problem_id": "prb_01M27M1JE0K2YZ2KXFM2DEJWBZ",
+  "target_problem_id": "prb_01M27M1JEBKTT8YQCQBG8BZPK5",
+  "holdout_set_id": "hset_01M27M3THQ9SFM0YY7VBRDQBVM",
+  "database_snapshot_sha256": "f4b5e21565de02ef297e8bf5d7bc283051b558c567e88c5ac2997bd5f9e2fa54",
+  "mechanically_ready": true,
+  "operator_attestations_complete": false,
+  "capture_status": "not_captured",
+  "conclusion": null
+}

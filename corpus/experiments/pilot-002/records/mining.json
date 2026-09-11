@@ -1,0 +1,408 @@
+{
+  "ok": true,
+  "command": "invariants mine",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-002/newf.db",
+  "created": true,
+  "revision": {
+    "id": "ivr_01M27M3A7YV9WNNT0PWXC6NG8X",
+    "problem_id": "prb_01M27M1JE0K2YZ2KXFM2DEJWBZ",
+    "failure_space_id": "fsp_01M27M3A7HKR23W7KTBVX3MR0N",
+    "cluster_run_id": "clr_01M27M3A7094B87FPPKFY3M7AA",
+    "run_id": "run_01M27M3A7YV9WNNT0PWSJ5BGA1",
+    "miner_version": "invariant/v1+671cf5d70015c34a",
+    "predicate_schema": "invariant-predicate/v1",
+    "min_support": 2,
+    "revision": 1,
+    "candidate_count": 3,
+    "created_at": "2026-09-11T06:57:20.126299Z",
+    "candidates": [
+      {
+        "id": "inv_01M27M3A7YV9WNNT0PWZ57MMED",
+        "predicate_fingerprint": "43fc42831554e4abc499344f012b96585fd00c8e0085b57e382b585a593a302f",
+        "predicate": "{\"schema\":\"invariant-predicate/v1\",\"root\":{\"op\":\"contains\",\"field\":\"preserves\",\"canonical_id\":\"domain.number_theory.property.identity_carried_solvability\"}}",
+        "statement": "failed approaches share preserves(domain.number_theory.property.identity_carried_solvability)",
+        "abstraction_level": "mechanism",
+        "state": "proposed",
+        "association_status": "recurring",
+        "obstruction_is_model_hypothesis": false,
+        "distinct_family_support": 3,
+        "failure_coverage_num": 3,
+        "failure_coverage_den": 7,
+        "contrast_violating_num": 0,
+        "contrast_eligible_den": 5,
+        "support_explicit_count": 0,
+        "support_inferred_count": 9,
+        "support_other_count": 2,
+        "family_evaluations": [
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKGZ3VP91",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKKFYE6ZH",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 2,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKPR3JFA8",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKPRX8WT3",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKPYZK1WP",
+            "outcome_class": "partial_failure",
+            "role": "support",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKTBAWF4H",
+            "outcome_class": "partial_failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 4,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKVPD3MY1",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKWPCJ32D",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKXAYC2CA",
+            "outcome_class": "partial_failure",
+            "role": "support",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKXZJWGZP",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKYP5THAP",
+            "outcome_class": "partial_failure",
+            "role": "support",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPM0VKMN9Q",
+            "outcome_class": "partial_failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 3,
+            "other_count": 1
+          }
+        ],
+        "counterexamples": null
+      },
+      {
+        "id": "inv_01M27M3A7YV9WNNT0PX1BW7MHC",
+        "predicate_fingerprint": "4a5f35fad24bbd1424f617b8496b6ebb24cb411ea66a019b0357f42135195def",
+        "predicate": "{\"schema\":\"invariant-predicate/v1\",\"root\":{\"op\":\"contains\",\"field\":\"preserves\",\"canonical_id\":\"domain.number_theory.property.confined_to_quadratic_nonresidues\"}}",
+        "statement": "failed approaches share preserves(domain.number_theory.property.confined_to_quadratic_nonresidues)",
+        "abstraction_level": "mechanism",
+        "state": "proposed",
+        "association_status": "recurring",
+        "obstruction_is_model_hypothesis": false,
+        "distinct_family_support": 5,
+        "failure_coverage_num": 5,
+        "failure_coverage_den": 7,
+        "contrast_violating_num": 0,
+        "contrast_eligible_den": 5,
+        "support_explicit_count": 1,
+        "support_inferred_count": 10,
+        "support_other_count": 3,
+        "family_evaluations": [
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKGZ3VP91",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 1,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKKFYE6ZH",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 2,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKPR3JFA8",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKPRX8WT3",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKPYZK1WP",
+            "outcome_class": "partial_failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 1,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKTBAWF4H",
+            "outcome_class": "partial_failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 4,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKVPD3MY1",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKWPCJ32D",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKXAYC2CA",
+            "outcome_class": "partial_failure",
+            "role": "support",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKXZJWGZP",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKYP5THAP",
+            "outcome_class": "partial_failure",
+            "role": "support",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPM0VKMN9Q",
+            "outcome_class": "partial_failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 3,
+            "other_count": 1
+          }
+        ],
+        "counterexamples": null
+      },
+      {
+        "id": "inv_01M27M3A7YV9WNNT0PX54RFH08",
+        "predicate_fingerprint": "6fa0c23021d7ca533cb80b5ef4b864eefc40c7332ed78968cb8cc17e41f2b223",
+        "predicate": "{\"schema\":\"invariant-predicate/v1\",\"root\":{\"op\":\"contains\",\"field\":\"preserves\",\"canonical_id\":\"domain.number_theory.property.class_union_construction\"}}",
+        "statement": "failed approaches share preserves(domain.number_theory.property.class_union_construction)",
+        "abstraction_level": "mechanism",
+        "state": "proposed",
+        "association_status": "recurring",
+        "obstruction_is_model_hypothesis": false,
+        "distinct_family_support": 2,
+        "failure_coverage_num": 2,
+        "failure_coverage_den": 7,
+        "contrast_violating_num": 0,
+        "contrast_eligible_den": 5,
+        "support_explicit_count": 0,
+        "support_inferred_count": 5,
+        "support_other_count": 2,
+        "family_evaluations": [
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKGZ3VP91",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKKFYE6ZH",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 2,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKPR3JFA8",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKPRX8WT3",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKPYZK1WP",
+            "outcome_class": "partial_failure",
+            "role": "support",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKTBAWF4H",
+            "outcome_class": "partial_failure",
+            "role": "support",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKVPD3MY1",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKWPCJ32D",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKXAYC2CA",
+            "outcome_class": "partial_failure",
+            "role": "support",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKXZJWGZP",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPKYP5THAP",
+            "outcome_class": "partial_failure",
+            "role": "support",
+            "verdict": "unknown",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M27M3A7094B87FPPM0VKMN9Q",
+            "outcome_class": "partial_failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 3,
+            "other_count": 1
+          }
+        ],
+        "counterexamples": null
+      }
+    ]
+  }
+}

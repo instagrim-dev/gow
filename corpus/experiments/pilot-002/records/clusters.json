@@ -1,0 +1,610 @@
+{
+  "ok": true,
+  "command": "cluster build",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-002/newf.db",
+  "created": true,
+  "cluster_run": {
+    "id": "clr_01M27M3A7094B87FPPKFY3M7AA",
+    "problem_id": "prb_01M27M1JE0K2YZ2KXFM2DEJWBZ",
+    "run_id": "run_01M27M3A7094B87FPPKDHG0DMN",
+    "schema_version": "mechanism/v1",
+    "vocabulary_version": "mechanism/v2",
+    "profile_version": "classify/v1",
+    "cluster_algo_version": "cluster/v1",
+    "thresholds_hash": "e92f44f22daf989433907704330391256d5d6956c3c5b2dbd978c8bdb8320412",
+    "input_set_hash": "aba377206aa7e566eef9773d393cd6cac60d285feb955a64027fe1cc9cd71b08",
+    "signature_count": 12,
+    "family_count": 12,
+    "status": "clean",
+    "clusters": [
+      {
+        "id": "mcl_01M27M3A7094B87FPPKGZ3VP91",
+        "fingerprint": "190f5bd6756260304209a659c0ecce53f4e82f01387884789add1e9368306000",
+        "representative_signature_id": "msig_01M27M3A5JGG7XS8Z3E6DWWWHB",
+        "member_count": 1,
+        "isolate": true,
+        "outcome_class": "failure",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M27M3A5JGG7XS8Z3E6DWWWHB",
+            "mechanism_id": "mech_01M27M1JG4XHM87B889RG8N9XC",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M27M3A7094B87FPPKKFYE6ZH",
+        "fingerprint": "1c59ab875bf47a760ade9276cfa817964ba8387ff3fd02f075112aa5925f35d5",
+        "representative_signature_id": "msig_01M27M3A4P5T2VKRZ2HBP10F4P",
+        "member_count": 1,
+        "isolate": true,
+        "outcome_class": "failure",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M27M3A4P5T2VKRZ2HBP10F4P",
+            "mechanism_id": "mech_01M27M1JG0BMVXCKQ2P98AK5F0",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M27M3A7094B87FPPKPR3JFA8",
+        "fingerprint": "2162ee5521a482ee090434713574b21e3e539c96c2d3fcae8c72df6726c8501c",
+        "representative_signature_id": "msig_01M27M3A5P8ARABMQXZB36V46V",
+        "member_count": 1,
+        "isolate": true,
+        "outcome_class": "partial_success",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M27M3A5P8ARABMQXZB36V46V",
+            "mechanism_id": "mech_01M27M1JG5MXE5AXNA04384RRA",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M27M3A7094B87FPPKPRX8WT3",
+        "fingerprint": "2fb612844ff3053b14cd08e155a1fe70b63d507c2b9d3f84ddf5ffe74687e809",
+        "representative_signature_id": "msig_01M27M3A63WT3BVKPW9TFFED1Z",
+        "member_count": 1,
+        "isolate": true,
+        "outcome_class": "partial_success",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M27M3A63WT3BVKPW9TFFED1Z",
+            "mechanism_id": "mech_01M27M1JG776S6VZC057HGA5X0",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M27M3A7094B87FPPKPYZK1WP",
+        "fingerprint": "411f8e020e44cb70911c4cd3e5f9df4a2e9be985723abcd9ff9a1c398dc389b3",
+        "representative_signature_id": "msig_01M27M3A4V2494WKH2357EYBM6",
+        "member_count": 1,
+        "isolate": true,
+        "outcome_class": "partial_failure",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M27M3A4V2494WKH2357EYBM6",
+            "mechanism_id": "mech_01M27M1JG1YAMNM5PV4E69QZCW",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M27M3A7094B87FPPKTBAWF4H",
+        "fingerprint": "4c6979fcb8087bbeaa799f67805f9d6b598962394a1b195d2b31a8881670168c",
+        "representative_signature_id": "msig_01M27M3A4HZW5M30KJPKMFWCC7",
+        "member_count": 1,
+        "isolate": true,
+        "outcome_class": "partial_failure",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M27M3A4HZW5M30KJPKMFWCC7",
+            "mechanism_id": "mech_01M27M1JFZQKQ0SYZPQXTAHADT",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M27M3A7094B87FPPKVPD3MY1",
+        "fingerprint": "4f261ae893f6fae4bb6d98cba18b281d1474d8d0920fb1973c9bafd48f7da847",
+        "representative_signature_id": "msig_01M27M3A57CXJCYB8W9F56A6XV",
+        "member_count": 1,
+        "isolate": true,
+        "outcome_class": "partial_success",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M27M3A57CXJCYB8W9F56A6XV",
+            "mechanism_id": "mech_01M27M1JG3MC54TNEEGE1K3883",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M27M3A7094B87FPPKWPCJ32D",
+        "fingerprint": "632b71c64b2f3bc34cada9d0dffa03ef8290ddaf1422e952d37624964270d3ce",
+        "representative_signature_id": "msig_01M27M3A5Y33PJNZTA8MSGMJH5",
+        "member_count": 1,
+        "isolate": true,
+        "outcome_class": "partial_success",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M27M3A5Y33PJNZTA8MSGMJH5",
+            "mechanism_id": "mech_01M27M1JG60RQGRHYD949CG4XF",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M27M3A7094B87FPPKXAYC2CA",
+        "fingerprint": "67a1ac724caa5d80daa30985684d6480e26e17faf541cfaab5e891265115cdac",
+        "representative_signature_id": "msig_01M27M3A539VH4XEVXN9A8138A",
+        "member_count": 1,
+        "isolate": true,
+        "outcome_class": "partial_failure",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M27M3A539VH4XEVXN9A8138A",
+            "mechanism_id": "mech_01M27M1JG268K16JVMX7XVHC6Y",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M27M3A7094B87FPPKXZJWGZP",
+        "fingerprint": "f02a46b991b915984fefdf81be14ae010c94f272c5972b7a1f7491f0a8278eb7",
+        "representative_signature_id": "msig_01M27M3A4ZG91AYPYHZHAACYEJ",
+        "member_count": 1,
+        "isolate": true,
+        "outcome_class": "partial_success",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M27M3A4ZG91AYPYHZHAACYEJ",
+            "mechanism_id": "mech_01M27M1JG1YAMNM5PV52Q5HPYR",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M27M3A7094B87FPPKYP5THAP",
+        "fingerprint": "f44ccebc4173b3ba2b37e30a01a7eb7300ca758c5716e752efb3bf34816c14cd",
+        "representative_signature_id": "msig_01M27M3A5D7ZBWKN517C6515Z3",
+        "member_count": 1,
+        "isolate": true,
+        "outcome_class": "partial_failure",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M27M3A5D7ZBWKN517C6515Z3",
+            "mechanism_id": "mech_01M27M1JG4XHM87B889B9Y6XH6",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M27M3A7094B87FPPM0VKMN9Q",
+        "fingerprint": "ff411c2b980c8741b21e52626636c86cc826b012de918a446cf2a40042c3e516",
+        "representative_signature_id": "msig_01M27M3A5TJZFJDRM4ETFXFJJN",
+        "member_count": 1,
+        "isolate": true,
+        "outcome_class": "partial_failure",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M27M3A5TJZFJDRM4ETFXFJJN",
+            "mechanism_id": "mech_01M27M1JG60RQGRHYD8NBJRR5D",
+            "redundant": false
+          }
+        ]
+      }
+    ],
+    "distances": [
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKGZ3VP91",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKKFYE6ZH",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKGZ3VP91",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKPR3JFA8",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKGZ3VP91",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKPRX8WT3",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKGZ3VP91",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKPYZK1WP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKGZ3VP91",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKTBAWF4H",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKGZ3VP91",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKVPD3MY1",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKGZ3VP91",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKWPCJ32D",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKGZ3VP91",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKXAYC2CA",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKGZ3VP91",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKXZJWGZP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKGZ3VP91",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKYP5THAP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKGZ3VP91",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPM0VKMN9Q",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKKFYE6ZH",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKPR3JFA8",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKKFYE6ZH",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKPRX8WT3",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKKFYE6ZH",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKPYZK1WP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKKFYE6ZH",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKTBAWF4H",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKKFYE6ZH",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKVPD3MY1",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKKFYE6ZH",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKWPCJ32D",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKKFYE6ZH",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKXAYC2CA",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKKFYE6ZH",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKXZJWGZP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKKFYE6ZH",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKYP5THAP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKKFYE6ZH",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPM0VKMN9Q",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPR3JFA8",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKPRX8WT3",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPR3JFA8",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKPYZK1WP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPR3JFA8",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKTBAWF4H",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPR3JFA8",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKVPD3MY1",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPR3JFA8",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKWPCJ32D",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPR3JFA8",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKXAYC2CA",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPR3JFA8",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKXZJWGZP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPR3JFA8",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKYP5THAP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPR3JFA8",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPM0VKMN9Q",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPRX8WT3",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKPYZK1WP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPRX8WT3",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKTBAWF4H",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPRX8WT3",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKVPD3MY1",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPRX8WT3",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKWPCJ32D",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPRX8WT3",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKXAYC2CA",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPRX8WT3",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKXZJWGZP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPRX8WT3",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKYP5THAP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPRX8WT3",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPM0VKMN9Q",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPYZK1WP",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKTBAWF4H",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPYZK1WP",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKVPD3MY1",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPYZK1WP",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKWPCJ32D",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPYZK1WP",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKXAYC2CA",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPYZK1WP",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKXZJWGZP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPYZK1WP",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKYP5THAP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKPYZK1WP",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPM0VKMN9Q",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKTBAWF4H",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKVPD3MY1",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKTBAWF4H",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKWPCJ32D",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKTBAWF4H",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKXAYC2CA",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKTBAWF4H",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKXZJWGZP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKTBAWF4H",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKYP5THAP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKTBAWF4H",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPM0VKMN9Q",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKVPD3MY1",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKWPCJ32D",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKVPD3MY1",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKXAYC2CA",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKVPD3MY1",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKXZJWGZP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKVPD3MY1",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKYP5THAP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKVPD3MY1",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPM0VKMN9Q",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKWPCJ32D",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKXAYC2CA",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKWPCJ32D",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKXZJWGZP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKWPCJ32D",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKYP5THAP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKWPCJ32D",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPM0VKMN9Q",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKXAYC2CA",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKXZJWGZP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKXAYC2CA",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKYP5THAP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKXAYC2CA",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPM0VKMN9Q",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKXZJWGZP",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPKYP5THAP",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKXZJWGZP",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPM0VKMN9Q",
+        "classification": "unknown"
+      },
+      {
+        "cluster_a_id": "mcl_01M27M3A7094B87FPPKYP5THAP",
+        "cluster_b_id": "mcl_01M27M3A7094B87FPPM0VKMN9Q",
+        "classification": "unknown"
+      }
+    ],
+    "coverage_axes": [
+      {
+        "axis": "representation",
+        "distinct_value_count": 1,
+        "under_sampled": true
+      },
+      {
+        "axis": "operator",
+        "distinct_value_count": 1,
+        "under_sampled": true
+      },
+      {
+        "axis": "assumption",
+        "distinct_value_count": 0,
+        "under_sampled": true
+      },
+      {
+        "axis": "preserves",
+        "distinct_value_count": 4,
+        "under_sampled": false
+      },
+      {
+        "axis": "breaks",
+        "distinct_value_count": 0,
+        "under_sampled": true
+      },
+      {
+        "axis": "auxiliary_object",
+        "distinct_value_count": 0,
+        "under_sampled": true
+      },
+      {
+        "axis": "posture.locality",
+        "distinct_value_count": 3,
+        "under_sampled": false
+      },
+      {
+        "axis": "posture.construction",
+        "distinct_value_count": 2,
+        "under_sampled": false
+      },
+      {
+        "axis": "posture.uncertainty",
+        "distinct_value_count": 2,
+        "under_sampled": false
+      },
+      {
+        "axis": "outcome",
+        "distinct_value_count": 3,
+        "under_sampled": false
+      }
+    ]
+  }
+}

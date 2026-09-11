@@ -1,0 +1,35 @@
+{
+  "ok": true,
+  "command": "invariant list",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-002/newf.db",
+  "state": "surviving",
+  "invariants": [
+    {
+      "invariant_id": "inv_01M27M3A7YV9WNNT0PWZ57MMED",
+      "state": "surviving",
+      "as_of": "2026-09-11T06:57:36.790422Z",
+      "statement": "failed approaches share preserves(domain.number_theory.property.identity_carried_solvability)",
+      "predicate_fingerprint": "43fc42831554e4abc499344f012b96585fd00c8e0085b57e382b585a593a302f",
+      "invariant_revision_id": "ivr_01M27M3A7YV9WNNT0PWXC6NG8X",
+      "association_status": "recurring"
+    },
+    {
+      "invariant_id": "inv_01M27M3A7YV9WNNT0PX1BW7MHC",
+      "state": "surviving",
+      "as_of": "2026-09-11T06:57:36.793998Z",
+      "statement": "failed approaches share preserves(domain.number_theory.property.confined_to_quadratic_nonresidues)",
+      "predicate_fingerprint": "4a5f35fad24bbd1424f617b8496b6ebb24cb411ea66a019b0357f42135195def",
+      "invariant_revision_id": "ivr_01M27M3A7YV9WNNT0PWXC6NG8X",
+      "association_status": "recurring"
+    },
+    {
+      "invariant_id": "inv_01M27M3A7YV9WNNT0PX54RFH08",
+      "state": "surviving",
+      "as_of": "2026-09-11T06:57:36.797746Z",
+      "statement": "failed approaches share preserves(domain.number_theory.property.class_union_construction)",
+      "predicate_fingerprint": "6fa0c23021d7ca533cb80b5ef4b864eefc40c7332ed78968cb8cc17e41f2b223",
+      "invariant_revision_id": "ivr_01M27M3A7YV9WNNT0PWXC6NG8X",
+      "association_status": "recurring"
+    }
+  ]
+}
