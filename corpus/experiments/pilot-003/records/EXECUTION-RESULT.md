@@ -34,9 +34,13 @@ Assessment-rule note: this pinned result was computed under `classify/v1`
 epistemic gap, never decisive negative evidence) now exists with a distinct
 profile hash; a reassessment under it would be a **corrected assessment
 with its own experiment identity**, reported separately — never substituted
-for this result. Under v2, decisive_no verdicts that depended on unrecorded
-(empty+unobserved) fields would instead be unknown; the reviewer should
-weigh the four decisive_no counts above with that caveat.
+for this result. Under v2 (whose
+missing-data contract also guards mutual silence and partial-subset
+mismatches), all four decisive_no counts above would degrade to unknown:
+this frozen corpus declares no completeness, so no recorded-subset conflict
+against it is decisive. The reviewer should weigh the decisive_no rows with
+that caveat; decisive automatic negatives against this target require a
+corpus revision with justified completeness (a research/protocol decision).
 
 ## Interpretation discipline (read before quoting any number)
 

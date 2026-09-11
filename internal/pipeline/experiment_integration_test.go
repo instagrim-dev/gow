@@ -89,10 +89,14 @@ func TestIntegrationExperimentEndToEnd(t *testing.T) {
 	if b3.ProposalCount == 0 || b3.FrontierGenerationRun == "" {
 		t.Fatalf("b3 must generate proposals: %+v", b3)
 	}
-	// The corpus target is mechanistically distinct from the break proposal, so
-	// the honest conclusion is no_recovery — computed by code, not asserted.
-	if exp.Conclusion != "no_recovery" {
-		t.Fatalf("conclusion = %q, want no_recovery for the distinct corpus target", exp.Conclusion)
+	// The corpus target's completeness is unobserved, so under the corrected
+	// missing-data contract (classify/v2) the recorded-set difference from the
+	// break proposal is NOT decisive: unrecorded members could overturn it.
+	// The honest conclusion is inconclusive — computed by code, not asserted.
+	// (The decisive-negative pipeline control lives in the positive-control
+	// matrix, where the target JUSTIFIES its fields complete.)
+	if exp.Conclusion != "inconclusive" {
+		t.Fatalf("conclusion = %q, want inconclusive for the unobserved-completeness corpus target", exp.Conclusion)
 	}
 	// Metrics carry exact counts for every arm.
 	if len(exp.Metrics) < 6 {
@@ -138,13 +142,15 @@ func TestIntegrationExperimentEndToEnd(t *testing.T) {
 	if len(exp.Targets) == 0 {
 		t.Fatalf("experiment must persist its frozen target manifest")
 	}
-	// F3/F5: budget consumption is persisted and the decisive counts add up —
-	// no_recovery above required every proposal decisively assessed.
+	// F3/F5: budget consumption is persisted; under the corrected contract the
+	// unobserved-completeness corpus target yields unknown (not decisive_no),
+	// so the inconclusive conclusion above pairs with a fully-consumed,
+	// non-decisive assessment — nothing is left unassessed.
 	if b3.EvaluationsConsumed == 0 {
 		t.Fatalf("b3 consumed no evaluations yet concluded: %+v", b3)
 	}
-	if b3.DecisiveCount != b3.ProposalCount || b3.UnknownCount != 0 || b3.UnassessedCount != 0 {
-		t.Fatalf("no_recovery requires fully decisive assessment: %+v", b3)
+	if b3.UnknownCount != b3.ProposalCount || b3.DecisiveCount != 0 || b3.UnassessedCount != 0 {
+		t.Fatalf("inconclusive here means assessed-but-unknown, never unassessed: %+v", b3)
 	}
 
 	// F2 regression: target material added AFTER definition (outside the

@@ -587,14 +587,50 @@ func TestIntegrationExternalProposalArms(t *testing.T) {
 	app.invariantMinerFn = minPreservesMiner{}
 	app.challengerFn = biasOnlyChallenger{}
 
-	trainProblem, targetProblem, invID := seedPositiveControl(t, ctx, app, dbPath, "residue locality")
+	trainProblem, invID, _ := mineOneCandidate(t, ctx, app, dbPath)
+	if resp, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID}); err != nil {
+		t.Fatalf("challenge: %v", err)
+	} else if resp.Reports[0].StateAfter != "surviving" {
+		t.Fatalf("state after campaign = %q", resp.Reports[0].StateAfter)
+	}
+	// A FULL-AXES withheld target (the real pilot shape: every decisive field
+	// records content). Under the corrected missing-data contract, untrusted
+	// proposals — whose completeness is stripped at admission — can be
+	// RECOVERED only through recorded agreement on every decisive axis, and
+	// can never earn decisive_no from recorded-subset conflicts (unrecorded
+	// members could overturn those), so a sparse target would make every
+	// external assessment unknown.
+	targetProblem, targetRun, targetSnap := seedOtherProblem(t, ctx, dbPath, now.Add(time.Hour))
+	seed, err := app.SeedMechanismFixture(ctx, MechanismFixtureSeedInput{
+		DBPath: dbPath, ProblemID: targetProblem, RunID: targetRun, SnapshotID: targetSnap,
+		Fixture: &MechanismFixture{Approaches: []MechanismFixtureApproach{{
+			LogicalIdentity: "withheld-full-axes", Label: "Withheld full-axes advance",
+			Locality: "global", ConstructionMode: "constructive", UncertaintyMode: "deterministic",
+			Representations:  []string{"congruence classes"},
+			Operators:        []string{"modular decomposition"},
+			Assumptions:      []string{"residue independence"},
+			Preserves:        []string{"residue locality"},
+			Breaks:           []string{"residue class locality"},
+			AuxiliaryObjects: []string{"affine sublattice"},
+			Outcome:          MechanismFixtureOutcome{Class: "success"},
+		}}},
+	})
+	if err != nil {
+		t.Fatalf("seed target: %v", err)
+	}
+	if _, err := app.SignatureMechanism(ctx, SignatureInput{DBPath: dbPath, MechanismID: seed.MechanismIDs[0], VocabVersion: canon.VocabularyMechanismV1}); err != nil {
+		t.Fatalf("target signature: %v", err)
+	}
 	if _, err := app.DefineExperiment(ctx, ExperimentDefineInput{DBPath: dbPath, ProblemID: trainProblem, TargetProblemID: targetProblem}); err != nil {
 		t.Fatalf("define: %v", err)
 	}
 
-	wire := func(preserves, claim string) string {
+	wire := func(preserves, operators, claim string) string {
 		return `{"schema_version": "proposal-wire/v1", "proposals": [{
-  "mechanism": {"preserves": ["` + preserves + `"], "locality": "global", "construction_mode": "constructive", "uncertainty_mode": "deterministic"},
+  "mechanism": {"preserves": ["` + preserves + `"], "operators": ["` + operators + `"],
+    "assumptions": ["residue independence"], "breaks": ["residue class locality"],
+    "auxiliary_objects": ["affine sublattice"], "representations": ["congruence classes"],
+    "locality": "global", "construction_mode": "constructive", "uncertainty_mode": "deterministic"},
   "structural_violation_claim": "` + claim + `",
   "novelty_argument": "captured external output",
   "cheapest_falsification_path": "compare against the withheld family"}]}`
@@ -604,12 +640,12 @@ func TestIntegrationExternalProposalArms(t *testing.T) {
 	b3Path := filepath.Join(dir, "b3-captured.json")
 	// B0 (no invariant context): proposes the mean-growth direction — distinct
 	// from the withheld residue-locality target.
-	if err := os.WriteFile(b0Path, []byte(wire("mean growth rate", "unguided direction")), 0o644); err != nil {
+	if err := os.WriteFile(b0Path, []byte(wire("mean growth rate", "density averaging", "unguided direction")), 0o644); err != nil {
 		t.Fatalf("write b0: %v", err)
 	}
 	// B3 (invariants in context): proposes the residue-locality structure —
 	// mechanism-near the withheld target.
-	if err := os.WriteFile(b3Path, []byte(wire("residue locality", "guided break of the shared property")), 0o644); err != nil {
+	if err := os.WriteFile(b3Path, []byte(wire("residue locality", "modular decomposition", "guided break of the shared property")), 0o644); err != nil {
 		t.Fatalf("write b3: %v", err)
 	}
 
@@ -626,10 +662,13 @@ func TestIntegrationExternalProposalArms(t *testing.T) {
 	}
 	b0, b3 := armByName(t, exp, "b0_undirected"), armByName(t, exp, "b3_invariant_guided")
 
-	// B0 is no longer honest-empty: it carries the captured unguided proposal,
-	// decisively assessed as non-recovering.
-	if b0.ProposalCount != 1 || b0.Recovered || b0.DecisiveCount != 1 {
-		t.Fatalf("B0 must carry the captured proposal, decisively non-recovering: %+v", b0)
+	// B0 carries the captured unguided proposal. Its recorded preserves/
+	// operators CONFLICT with the target, but neither side justifies
+	// completeness (untrusted completeness is stripped at admission), so
+	// under the corrected contract the conflict is not decisive: unknown,
+	// never a coerced decisive_no from recorded subsets.
+	if b0.ProposalCount != 1 || b0.Recovered || b0.UnknownCount != 1 || b0.DecisiveCount != 0 {
+		t.Fatalf("B0 must carry the captured proposal as non-decisive unknown: %+v", b0)
 	}
 	// B3 carries the captured guided proposal and recovers the target.
 	if b3.ProposalCount != 1 || !b3.Recovered {

@@ -166,8 +166,15 @@ func TestIntegrationRecoveryCalibrationAgainstFrozenTarget(t *testing.T) {
 	assertRecovery(t, ctx, app, dbPath, matching, target, true, canon.ClassMechanismNear)
 
 	// Case 3: a known mechanistically different representation — fully
-	// resolved congruence-family content — must be DECISIVELY non-recovering
-	// (mechanism-distinct), never merely unknown.
+	// resolved congruence-family content. Under the corrected missing-data
+	// contract the recorded conflict with THIS frozen target is NOT decisive:
+	// the frozen corpus declares no completeness, so unrecorded members could
+	// overturn the recorded-subset mismatch — the honest verdict is unknown.
+	// Decisive non-recovery against this target requires a corpus revision
+	// with justified completeness (a research/protocol decision, recorded in
+	// EXECUTION-RESULT.md). The legacy classify/v1 decisive verdict is pinned
+	// below; the complete-vs-complete decisive control lives at the canon
+	// level (TestCompletenessAwareAbsence).
 	different := calibSeedMechanism(t, ctx, app, dbPath, problemID, runID, snapshotID, &MechanismFixture{
 		Approaches: []MechanismFixtureApproach{{
 			LogicalIdentity:  "calibration/congruence-family",
@@ -184,7 +191,8 @@ func TestIntegrationRecoveryCalibrationAgainstFrozenTarget(t *testing.T) {
 			Outcome:          MechanismFixtureOutcome{Class: "failure"},
 		}},
 	})
-	assertRecovery(t, ctx, app, dbPath, different, target, false, canon.ClassMechanismDistinct)
+	assertRecovery(t, ctx, app, dbPath, different, target, false, canon.ClassUnknown)
+	assertRecoveryUnderProfile(t, ctx, app, dbPath, different, target, canon.ProfileMechanismV1(), false, canon.ClassMechanismDistinct)
 
 	// Case 4: an insufficiently represented case — matches the target on the
 	// other decisive fields but carries an unresolved operator label, making

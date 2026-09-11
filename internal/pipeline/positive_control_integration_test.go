@@ -180,7 +180,13 @@ func pcTargetFixture(preservesLabel string) *MechanismFixture {
 			ConstructionMode: "constructive",
 			UncertaintyMode:  "deterministic",
 			Preserves:        []string{preservesLabel},
-			Outcome:          MechanismFixtureOutcome{Class: "success"},
+			// The corrected missing-data contract (classify/v2) refuses
+			// decisive judgments that unrecorded members could overturn, so
+			// this synthetic target JUSTIFIES its empty decisive fields as
+			// complete — mutual justified absence keeps decisive recovery and
+			// decisive non-recovery reachable in the control.
+			CompleteFields: []string{"preserves", "operator", "assumption", "breaks", "auxiliary_object"},
+			Outcome:        MechanismFixtureOutcome{Class: "success"},
 		}},
 	}
 }
@@ -384,9 +390,14 @@ func TestIntegrationPositiveControlUnobservedCompletenessBreaksVerification(t *t
 	if b3.ProposalCount == 0 {
 		t.Fatalf("B3 must still generate: %+v", b3)
 	}
-	// Recovery is UNCHANGED: comparison reads resolved ids, not completeness.
-	if !b3.Recovered || b3.UnknownCount != 0 {
-		t.Fatalf("recovery must remain decisive under unobserved completeness: %+v", b3)
+	// Under the corrected missing-data contract (classify/v2), flipping the
+	// proposal's completeness to unobserved degrades the COMPARISON as well:
+	// its empty decisive axes no longer justify agreement with the target's
+	// complete-empty axes, so recovery degrades to unknown instead of being
+	// silently granted from unrecorded fields. (Under legacy classify/v1 the
+	// comparison read resolved ids only and recovery survived this flip.)
+	if b3.Recovered || b3.UnknownCount != 1 {
+		t.Fatalf("unobserved completeness must degrade recovery to unknown under classify/v2: %+v", b3)
 	}
 
 	// But the persisted violation verdict must degrade to UNKNOWN: absence of

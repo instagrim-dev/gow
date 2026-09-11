@@ -51,12 +51,19 @@ func (a *App) ValidateProposals(ctx context.Context, input ProposalsValidateInpu
 		}
 		defer repoStore.Close()
 		resp.Store = dbPath
-		rows, err := repoStore.ListInvariantStates(ctx, input.ProblemID, "surviving")
+		// The permitted-target set MUST come from the same eligibility-and-
+		// predicate-resolution function generation consumes (targetableStates:
+		// surviving + operator_attested, predicates resolved), not from a
+		// re-implemented state query. Sharing ParseWireProposals removed
+		// decoder drift; this removes drift in the inputs supplied to it — a
+		// proposal targeting an operator_attested invariant must preflight
+		// exactly as generation would admit it.
+		targets, err := a.survivingInvariants(ctx, repoStore, input.ProblemID)
 		if err != nil {
 			return ProposalsValidateResponse{}, err
 		}
-		for _, r := range rows {
-			allowed = append(allowed, r.InvariantID)
+		for _, t := range targets {
+			allowed = append(allowed, t.InvariantID)
 		}
 	}
 	resp.PermittedTargets = allowed

@@ -128,12 +128,20 @@ func (p ComparisonProfile) Hash() string {
 		DecisivePosture          bool     `json:"decisive_posture"`
 		DecisiveOutcome          bool     `json:"decisive_outcome"`
 		CompletenessAwareAbsence bool     `json:"completeness_aware_absence,omitempty"`
+		MissingDataContract      string   `json:"missing_data_contract,omitempty"`
 	}{
 		DecisiveSetFields:        fields,
 		SurfaceField:             string(p.SurfaceField),
 		DecisivePosture:          p.DecisivePosture,
 		DecisiveOutcome:          p.DecisiveOutcome,
 		CompletenessAwareAbsence: p.CompletenessAwareAbsence,
+	}
+	if p.CompletenessAwareAbsence {
+		// The full missing-data contract (mutual-silence + subset guards, not
+		// only one-empty absence) is part of the hashed meaning: strengthening
+		// it pre-first-use changed this value, so no persisted artifact can
+		// ambiguously reference the weaker draft semantics.
+		body.MissingDataContract = "absence-and-subset/v1"
 	}
 	raw, _ := json.Marshal(body)
 	sum := sha256.Sum256(raw)
@@ -265,23 +273,43 @@ func CompareWithProfile(a, b MechanismSignature, profile ComparisonProfile) Comp
 	for _, sf := range setFields {
 		fr := compareSetField(sf.kind, sf.a, sf.b)
 		if profile.CompletenessAwareAbsence && !fr.Incomparable {
-			// Corrected absence semantics (classify/v2): an EMPTY side whose
-			// completeness is not `complete`, against a nonempty side, is an
-			// epistemic gap — the recorded descriptions differ, but nothing
-			// establishes the mechanisms differ on the omitted property. Mark
-			// the axis incomparable instead of letting zero overlap read as a
-			// verified disagreement. Empty-and-COMPLETE still participates
-			// decisively (a justified absence is real evidence), and two empty
-			// sides remain "identical" (mutual silence is not a disagreement
-			// and is never NEGATIVE evidence).
+			// Missing-data contract (classify/v2, corrected): recorded-set
+			// similarity is always observable, but a DECISIVE judgment
+			// requires enough information that unrecorded members cannot
+			// overturn it. Concretely:
+			//
+			//   - both sides empty: `identical` only when BOTH are justified
+			//     complete (mutual justified absence is real agreement);
+			//     otherwise mutual silence is not positive evidence — an
+			//     entirely-unobserved pair must never read as recovered.
+			//   - exactly one side empty: decisive absence (none) only when
+			//     the empty side is justified complete; otherwise the
+			//     omission is an epistemic gap, not disagreement.
+			//   - both sides nonempty: recorded AGREEMENT (identical/high)
+			//     stands — affirmatively recorded shared members are
+			//     evidence. Recorded DISAGREEMENT (low/none) is decisive
+			//     only when BOTH sides are complete: a partial side's
+			//     unrecorded members could contain exactly the missing
+			//     elements, so a subset mismatch establishes that the
+			//     RECORDINGS differ, not that the mechanisms do.
 			aEmpty := len(resolvedIDs(sf.a)) == 0
 			bEmpty := len(resolvedIDs(sf.b)) == 0
-			if aEmpty != bEmpty {
-				unverified := (aEmpty && a.FieldCompleteness(sf.kind) != domain.CompletenessComplete) ||
-					(bEmpty && b.FieldCompleteness(sf.kind) != domain.CompletenessComplete)
-				if unverified {
-					fr = FieldResult{FieldKind: sf.kind, Incomparable: true, Ordinal: OrdinalIncomparable, AbsenceUnverified: true}
+			aComplete := a.FieldCompleteness(sf.kind) == domain.CompletenessComplete
+			bComplete := b.FieldCompleteness(sf.kind) == domain.CompletenessComplete
+			insufficient := false
+			switch {
+			case aEmpty && bEmpty:
+				insufficient = !(aComplete && bComplete)
+			case aEmpty != bEmpty:
+				emptyComplete := (aEmpty && aComplete) || (bEmpty && bComplete)
+				insufficient = !emptyComplete
+			default: // both nonempty
+				if fr.Ordinal == OrdinalLow || fr.Ordinal == OrdinalNone {
+					insufficient = !(aComplete && bComplete)
 				}
+			}
+			if insufficient {
+				fr = FieldResult{FieldKind: sf.kind, Incomparable: true, Ordinal: OrdinalIncomparable, AbsenceUnverified: true}
 			}
 		}
 		cmp.Fields = append(cmp.Fields, fr)

@@ -47,6 +47,12 @@ type MechanismFixtureApproach struct {
 	Outcome          MechanismFixtureOutcome   `json:"outcome"`
 	Boundaries       []string                  `json:"boundaries,omitempty"`
 	Support          []MechanismFixtureSupport `json:"support,omitempty"`
+	// CompleteFields lists set-valued field kinds this authored fixture
+	// declares exhaustively extracted (declared_payload scope). The fixture
+	// is deterministic in-repo data — the same trust class as the fixture
+	// normalizer's embedded-payload parser — so these declarations are
+	// admitted `accepted` by code. Live provider paths never route here.
+	CompleteFields []string `json:"complete_fields,omitempty"`
 }
 
 // MechanismFixtureOutcome is the normalized outcome for an approach.
@@ -354,6 +360,23 @@ func fixtureApproachToInput(fx MechanismFixtureApproach, revisionID, snapshotID 
 		})
 	}
 
+	completeness := make([]domain.MechanismFieldCompleteness, 0, len(fx.CompleteFields))
+	for _, kindStr := range fx.CompleteFields {
+		kind := domain.MechanismAttributeKind(kindStr)
+		if !kind.Valid() {
+			return store.ApproachInput{}, fmt.Errorf("complete_fields: invalid field kind %q", kindStr)
+		}
+		completeness = append(completeness, domain.MechanismFieldCompleteness{
+			MechanismID:    mechanismID,
+			Kind:           kind,
+			Completeness:   domain.CompletenessComplete,
+			Scope:          domain.ScopeDeclaredPayload,
+			Basis:          "authored fixture payload lists this field exhaustively",
+			Admission:      domain.CompletenessAccepted,
+			AdmissionBasis: "deterministic in-repo fixture payload (declared_payload scope)",
+		})
+	}
+
 	return store.ApproachInput{
 		LogicalIdentity: fx.LogicalIdentity,
 		Revision: domain.ApproachRevision{
@@ -373,8 +396,9 @@ func fixtureApproachToInput(fx MechanismFixtureApproach, revisionID, snapshotID 
 			BoundaryStatement:  fx.Outcome.BoundaryStatement,
 			Notes:              fx.Outcome.Notes,
 		},
-		Boundaries: boundaries,
-		Support:    support,
+		Boundaries:        boundaries,
+		Support:           support,
+		FieldCompleteness: completeness,
 	}, nil
 }
 

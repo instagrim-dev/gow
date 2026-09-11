@@ -524,18 +524,67 @@ func TestCompletenessAwareAbsence(t *testing.T) {
 	completeEmpty.SetFieldCompleteness = map[domain.FieldKind]domain.FieldCompleteness{
 		domain.FieldOperator: domain.CompletenessComplete,
 	}
-	if got := CompareWithProfile(completeEmpty, full, ProfileMechanismV2()).Classification; got != ClassSurfaceNearMechDistinct {
+	if got := CompareWithProfile(completeEmpty, full, ProfileMechanismV2()).Classification; got != ClassMechanismDistinct {
 		t.Fatalf("v2: justified-complete empty field must stay decisive, got %s", got)
 	}
 
-	// Both-empty stays identical under v2: mutual silence is not a
-	// disagreement and is never negative evidence.
-	bothEmpty := full
-	bothEmpty.Operators = nil
-	other := full
-	other.Operators = nil
-	if got := CompareWithProfile(bothEmpty, other, ProfileMechanismV2()).Classification; got != ClassMechanismNear {
-		t.Fatalf("v2: both-empty must not degrade a matching pair, got %s", got)
+	// Mutual silence is NOT positive evidence: two signatures sharing one
+	// recorded property with another decisive field unobserved-empty on BOTH
+	// sides must not classify near — missing information cannot supply the
+	// agreement a whole-profile match needs (sparse-signature case).
+	sparseA := full
+	sparseA.Operators = nil
+	sparseB := full
+	sparseB.Operators = nil
+	if got := CompareWithProfile(sparseA, sparseB, ProfileMechanismV2()).Classification; got != ClassUnknown {
+		t.Fatalf("v2: sparse shared-feature pair must be unknown, got %s", got)
+	}
+
+	// Entirely-unobserved pair: the comparator-level counterexample — nothing
+	// recorded on either side must never read as recovered.
+	empty := MechanismSignature{SchemaVersion: SchemaMechanismV1, VocabularyVersion: "mechanism/v1",
+		Posture: Posture{Locality: domain.LocalityLocal, Construction: domain.ConstructionConstructive, Uncertainty: domain.UncertaintyDeterministic}}
+	if got := CompareWithProfile(empty, empty, ProfileMechanismV2()).Classification; got != ClassUnknown {
+		t.Fatalf("v2: entirely-unobserved pair must be unknown, got %s", got)
+	}
+
+	// Mutual JUSTIFIED absence is real agreement: both-empty with both sides
+	// complete participates positively.
+	allComplete := map[domain.FieldKind]domain.FieldCompleteness{
+		domain.FieldOperator:        domain.CompletenessComplete,
+		domain.FieldAssumption:      domain.CompletenessComplete,
+		domain.FieldBreaks:          domain.CompletenessComplete,
+		domain.FieldAuxiliaryObject: domain.CompletenessComplete,
+	}
+	justifiedA := sparseA
+	justifiedA.SetFieldCompleteness = allComplete
+	justifiedB := sparseB
+	justifiedB.SetFieldCompleteness = allComplete
+	if got := CompareWithProfile(justifiedA, justifiedB, ProfileMechanismV2()).Classification; got != ClassMechanismNear {
+		t.Fatalf("v2: mutual justified absence must participate positively, got %s", got)
+	}
+
+	// Nonempty partial subsets: partial {A} vs complete {A,B,C} establishes
+	// that the RECORDINGS differ, not the mechanisms — never decisive.
+	subset := full
+	subset.Operators = []FieldClaim{full.Operators[0]}
+	superset := full
+	superset.Operators = []FieldClaim{
+		full.Operators[0],
+		{FieldKind: domain.FieldOperator, State: domain.ResolutionResolved, CanonicalID: "core.operator.density_averaging", Status: domain.ClaimExplicit},
+		{FieldKind: domain.FieldOperator, State: domain.ResolutionResolved, CanonicalID: "core.operator.lattice_enumeration", Status: domain.ClaimExplicit},
+	}
+	superset.SetFieldCompleteness = map[domain.FieldKind]domain.FieldCompleteness{domain.FieldOperator: domain.CompletenessComplete}
+	if got := CompareWithProfile(subset, superset, ProfileMechanismV2()).Classification; got != ClassUnknown {
+		t.Fatalf("v2: partial-subset mismatch must be unknown, got %s", got)
+	}
+
+	// Complete-set positive control for disagreement: with BOTH sides
+	// justified complete, a recorded conflict is decisive.
+	subsetComplete := subset
+	subsetComplete.SetFieldCompleteness = map[domain.FieldKind]domain.FieldCompleteness{domain.FieldOperator: domain.CompletenessComplete}
+	if got := CompareWithProfile(subsetComplete, superset, ProfileMechanismV2()).Classification; got != ClassMechanismDistinct {
+		t.Fatalf("v2: complete-vs-complete conflict must stay decisive, got %s", got)
 	}
 
 	// Hash discipline: v1's hash is byte-stable (the pinned pilot-003 value)

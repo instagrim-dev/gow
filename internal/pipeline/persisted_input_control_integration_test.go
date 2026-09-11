@@ -51,9 +51,17 @@ func controlApproach(id, label string, preserves, operators []string, locality d
 		UncertaintyMode:  domain.UncertaintyDeterministic,
 	}
 	if declare {
-		mech.FieldCompleteness = map[string]string{"preserves": "complete"}
+		// Every set-valued list of the declared payload is exhaustive by
+		// construction (including the empty ones): under the corrected
+		// missing-data contract (classify/v2) a decisive comparison needs
+		// justified completeness on every decisive axis — unobserved empty
+		// fields are epistemic gaps, not agreement.
+		mech.FieldCompleteness = map[string]string{
+			"preserves": "complete", "operator": "complete", "assumption": "complete",
+			"breaks": "complete", "auxiliary_object": "complete",
+		}
 		mech.CompletenessScope = string(domain.ScopeDeclaredPayload)
-		mech.CompletenessBasis = "synthetic control corpus: the declared payload's preserves list is exhaustive by construction"
+		mech.CompletenessBasis = "synthetic control corpus: the declared payload's set-valued lists are exhaustive by construction"
 	}
 	return normalize.Approach{
 		LogicalIdentity: id,
@@ -184,11 +192,24 @@ func TestIntegrationPersistedInputPositiveControl(t *testing.T) {
 		if err != nil {
 			t.Fatalf("approach detail: %v", err)
 		}
-		if len(detail.FieldCompleteness) != 1 || detail.FieldCompleteness[0].Kind != domain.AttrPreserves ||
-			detail.FieldCompleteness[0].Completeness != domain.CompletenessComplete ||
-			detail.FieldCompleteness[0].Basis == "" {
-			t.Fatalf("approach %s must persist the justified preserves declaration, got %+v",
+		// All five decisive-axis declarations persist (the corrected
+		// missing-data contract needs every decisive axis justified), with
+		// preserves verified explicitly.
+		if len(detail.FieldCompleteness) != 5 {
+			t.Fatalf("approach %s must persist five justified declarations, got %+v",
 				item.Approach.LogicalIdentity, detail.FieldCompleteness)
+		}
+		sawPreserves := false
+		for _, fc := range detail.FieldCompleteness {
+			if fc.Completeness != domain.CompletenessComplete || fc.Basis == "" {
+				t.Fatalf("approach %s declaration must be complete with a basis: %+v", item.Approach.LogicalIdentity, fc)
+			}
+			if fc.Kind == domain.AttrPreserves {
+				sawPreserves = true
+			}
+		}
+		if !sawPreserves {
+			t.Fatalf("approach %s missing the preserves declaration: %+v", item.Approach.LogicalIdentity, detail.FieldCompleteness)
 		}
 		// Boundary 3: the persisted signature ROUND-TRIPS the declaration and
 		// resolves labels through the pinned vocabulary. buildAndPersistSignature

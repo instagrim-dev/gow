@@ -158,16 +158,26 @@ declared importable; sealing checks alone (JSON parse + schema_version) are
 not wire validation — the pilot-003 B3 capture passed sealing and failed
 the importer on field nesting.
 
-Assessment runs under the corrected `classify/v2` profile
-(completeness-aware absence): an EMPTY decisive field without a `complete`
-justification, against a nonempty one, is an epistemic gap — never decisive
-negative evidence — because recorded descriptions differing does not
-establish the mechanisms differ on an omitted property. Justified-complete
-empty fields still participate decisively, and two empty sides are never
-negative evidence. The flag participates in the profile hash, so results
-pinned under `classify/v1` keep their identity; a reassessment under v2 is
-a corrected assessment with its own experiment identity, never a silent
-substitution.
+Assessment runs under the corrected `classify/v2` profile, whose
+missing-data contract is: **recorded-set similarity is always observable,
+but a decisive judgment requires enough information that unrecorded members
+cannot overturn it.** Concretely — one side empty without a `complete`
+justification is an epistemic gap (never decisive negative evidence); two
+empty unjustified sides are an epistemic gap (mutual silence is never
+POSITIVE evidence either — an unobserved pair must not read as recovered);
+recorded agreement on nonempty sets stands (affirmatively recorded shared
+members are evidence); recorded DISAGREEMENT is decisive only when both
+sides are justified complete (a partial side's unrecorded members could
+contain exactly the missing elements — a subset mismatch establishes that
+the recordings differ, not that the mechanisms do). Justified-complete
+empty fields participate decisively in both directions. Practical
+consequence: against a corpus target with no completeness declarations,
+untrusted proposals can be RECOVERED (full recorded agreement) or unknown,
+but never decisively non-recovering — decisive negatives require justified
+completeness, which admission strips from untrusted wire content. The
+contract participates in the profile hash, so results pinned under
+`classify/v1` keep their identity; a reassessment under v2 is a corrected
+assessment with its own experiment identity, never a silent substitution.
 
 ### Pilot freeze gate
 
