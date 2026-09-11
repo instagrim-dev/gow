@@ -55,6 +55,16 @@ distinction. Property claims reach signatures through `interpretation_claims`
 (migration `v33`, `docs/persistence.md`), entering as `inferred` claims with
 `interpretation:` provenance — never by editing sources.
 
+`mechanism/v3` (recovery-calibration correction) is a strict superset of v2
+adding terms that canonicalize what the withheld benchmark target's payload
+explicitly states, so its decisive fields become comparable and
+`recovery-rule/v1` can reach a positive match. These are ordinary
+canonicalizations, not interpretations; the breaks-kind QR-confinement term
+is a field-kind-scoped sibling of the v2 preserves-kind concept (following
+the v1 `residue_locality` / `residue_class_locality` precedent), and the
+documented alias additions to existing terms exist only in v3
+(`mechanismV3ExtraAliases`). A superset regression pins v2-in-v3.
+
 The set-valued field kinds (`representation`, `assumption`, `operator`,
 `preserves`, `breaks`, `auxiliary_object`) match the existing
 `mechanism_attributes.kind` values one-to-one, so canonicalization maps directly

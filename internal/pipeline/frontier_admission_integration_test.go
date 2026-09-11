@@ -841,7 +841,7 @@ func TestIntegrationExperimentReadiness(t *testing.T) {
 	for _, c := range ready.Checks {
 		status[c.Check] = c.Status
 	}
-	for _, check := range []string{"failure_cohort", "decisive_axis_resolution", "surviving_invariants", "withheld_target"} {
+	for _, check := range []string{"failure_cohort", "decisive_axis_resolution", "surviving_invariants", "withheld_target", "recovery_reachability"} {
 		if status[check] != "ready" {
 			t.Fatalf("check %s must be ready: %+v", check, ready.Checks)
 		}

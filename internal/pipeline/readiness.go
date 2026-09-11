@@ -3,6 +3,7 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/instagrim-dev/newf/internal/canon"
 	"github.com/instagrim-dev/newf/internal/domain"
@@ -183,6 +184,8 @@ func (a *App) ExperimentReadiness(ctx context.Context, input ExperimentReadiness
 			add("withheld_target", "blocked", "the withheld sources have no canonical signatures; normalize and run `mechanism signature` on the target problem")
 		} else {
 			targetResolved, targetUnresolved := 0, 0
+			reachableTargets := 0
+			var blockedFields []string
 			for _, m := range manifest {
 				rec, gerr := repoStore.GetSignature(ctx, m.SignatureID)
 				if gerr != nil {
@@ -191,12 +194,34 @@ func (a *App) ExperimentReadiness(ctx context.Context, input ExperimentReadiness
 				r, u := countDecisiveResolution(rec.FieldClaims)
 				targetResolved += r
 				targetUnresolved += u
+				if fields := unresolvedDecisiveFields(rec.FieldClaims); len(fields) == 0 {
+					reachableTargets++
+				} else if len(blockedFields) == 0 {
+					blockedFields = fields
+				}
 			}
 			detail := fmt.Sprintf("mode=%s targets=%d resolved-claims=%d unresolved-claims=%d", hs.Mode, len(manifest), targetResolved, targetUnresolved)
 			if targetResolved == 0 {
 				add("withheld_target", "blocked", detail+" — no resolved decisive content: every recovery assessment would be unknown/incomparable")
 			} else {
 				add("withheld_target", "ready", detail)
+			}
+
+			// 5b. Recovery reachability. recovery-rule/v1 requires
+			// mechanism-near, compareSetField marks a field incomparable when
+			// EITHER side carries an unresolved claim, and mechanism-near
+			// tolerates no incomparable decisive field — so a target with any
+			// unresolved claim on a decisive field cannot receive a positive
+			// match from ANY proposal (its own self-comparison classifies
+			// unknown). A merely-positive resolved count (check 5) is a weaker
+			// fact; this check encodes reachability itself. The correction is
+			// reviewer-side canonicalization of what the target states — never
+			// ignoring unresolved fields, and never interpretation claims on
+			// the target.
+			if reachableTargets == len(manifest) {
+				add("recovery_reachability", "ready", fmt.Sprintf("all %d target(s) have fully-resolved decisive fields; a positive match is reachable (self-comparison would classify mechanism-near)", len(manifest)))
+			} else {
+				add("recovery_reachability", "blocked", fmt.Sprintf("%d of %d target(s) carry unresolved claims on decisive field(s) %v — recovery-rule/v1 cannot classify ANY proposal as recovered against them; canonicalize the target's stated labels in a pinned vocabulary revision (do not ignore unresolved fields, do not add interpretation claims to the target)", len(manifest)-reachableTargets, len(manifest), blockedFields))
 			}
 		}
 	}
@@ -206,6 +231,32 @@ func (a *App) ExperimentReadiness(ctx context.Context, input ExperimentReadiness
 	add("recovery_criterion", "info", fmt.Sprintf("%s under %s (%s) — a reproducible classification; the pilot independently assesses whether it corresponds to the intended mechanism", experiment.RecoveryRuleV1, profile.Version, profile.Hash()))
 
 	return resp, nil
+}
+
+// unresolvedDecisiveFields returns the decisive set fields (pinned profile)
+// that carry at least one unresolved claim — exactly the fields
+// compareSetField would mark incomparable, each of which independently makes
+// mechanism-near (and therefore recovery-rule/v1) unreachable.
+func unresolvedDecisiveFields(claims []store.SignatureFieldClaimRow) []string {
+	decisive := map[string]bool{}
+	for _, k := range canon.ProfileMechanismV1().DecisiveSetFields {
+		decisive[string(k)] = true
+	}
+	blocked := map[string]bool{}
+	for _, c := range claims {
+		if !decisive[c.FieldKind] {
+			continue
+		}
+		if domain.ResolutionState(c.ResolutionState) != domain.ResolutionResolved || c.CanonicalID == "" {
+			blocked[c.FieldKind] = true
+		}
+	}
+	out := make([]string, 0, len(blocked))
+	for f := range blocked {
+		out = append(out, f)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // countDecisiveResolution counts resolved vs unresolved claims on the pinned

@@ -14,6 +14,14 @@ const (
 	// properties can be encoded without mutating v1 or disguising them as
 	// aliases of unrelated labels.
 	VocabularyMechanismV2 = "mechanism/v2"
+	// VocabularyMechanismV3 is the target-canonicalization revision for the
+	// recovery-calibration correction: a strict superset of mechanism/v2 adding
+	// terms that NAME what the withheld target's normalize payload explicitly
+	// states, so its decisive fields become comparable and recovery-rule/v1 can
+	// reach a positive match. This is ordinary canonicalization of stated
+	// content — no term is an interpretation, and none was chosen for its
+	// effect on B0/B3 outcomes (no captures existed when it was pinned).
+	VocabularyMechanismV3 = "mechanism/v3"
 	// VocabularyMechanismV0Lossy is a deliberately over-compressed vocabulary
 	// used only to exercise the abstraction-loss regression: it merges two
 	// outcome-predictive operators into one canonical ID.
@@ -177,6 +185,116 @@ func MechanismV2() *Vocabulary {
 	return mustBuild(seed)
 }
 
+// mechanismV3Terms canonicalize the withheld target's explicitly stated
+// content (recovery-calibration correction). Every alias below is a verbatim
+// (normalized) label from the target payload or an obvious wording variant of
+// the SAME stated concept; none merges distinct operations and none encodes an
+// interpretation. The breaks-kind QR term follows the existing v1 precedent of
+// field-kind-scoped IDs (preserves residue_locality vs breaks
+// residue_class_locality): the preserves-kind property concept from v2 cannot
+// carry a second field kind, so the break of that property is its own term.
+var mechanismV3Terms = []Term{
+	{
+		CanonicalID: "core.operator.lattice_enumeration",
+		FieldKind:   domain.FieldOperator,
+		Description: "Enumerate lattice points of a (typically affine) integer lattice.",
+		Aliases:     []string{"lattice enumeration"},
+	},
+	{
+		CanonicalID: "core.operator.geometry_of_numbers",
+		FieldKind:   domain.FieldOperator,
+		Description: "Attack existence questions via geometry-of-numbers arguments (Minkowski-style).",
+		Aliases:     []string{"geometry of numbers"},
+	},
+	{
+		CanonicalID: "core.operator.convergence_proof",
+		FieldKind:   domain.FieldOperator,
+		Description: "Establish convergence of an enumeration or iterative construction.",
+		Aliases:     []string{"convergence proof"},
+	},
+	{
+		CanonicalID: "core.operator.linearization",
+		FieldKind:   domain.FieldOperator,
+		Description: "Recast a condition as linear forms in the problem parameter.",
+		Aliases:     []string{"linearization in n", "linearization"},
+	},
+	{
+		CanonicalID: "domain.number_theory.property.denominator_positivity",
+		FieldKind:   domain.FieldPreserves,
+		Description: "The property that constructed denominators remain positive integers.",
+		Aliases:     []string{"positivity of denominators", "denominator positivity"},
+	},
+	{
+		CanonicalID: "domain.number_theory.property.quadratic_nonresidue_confinement",
+		FieldKind:   domain.FieldBreaks,
+		Description: "As a breaks-kind term: the confinement of congruence-carried methods to quadratic non-residue classes. A mechanism listing this BREAKS the confinement (crosses the QR wall). Field-kind-scoped sibling of the preserves-kind v2 concept.",
+		Aliases: []string{
+			"confinement to quadratic non-residues",
+			"confined to quadratic nonresidues",
+			"qr confinement",
+		},
+	},
+	{
+		CanonicalID: "core.assumption.affine_class_solution_set",
+		FieldKind:   domain.FieldAssumption,
+		Description: "Assumes the solution set forms an affine class (affine lattice) of integer points.",
+		Aliases:     []string{"solution set is an affine class"},
+	},
+	{
+		CanonicalID: "core.assumption.lattice_point_decidability",
+		FieldKind:   domain.FieldAssumption,
+		Description: "Assumes lattice-point existence in the relevant region is decidable via geometry of numbers.",
+		Aliases:     []string{"lattice point existence is decidable via geometry of numbers"},
+	},
+	{
+		CanonicalID: "core.auxiliary_object.convex_body",
+		FieldKind:   domain.FieldAuxiliaryObject,
+		Description: "A convex body (Minkowski-style) introduced for lattice-point existence arguments.",
+		Aliases:     []string{"minkowski style convex body", "convex body"},
+	},
+	{
+		CanonicalID: "core.representation.linear_forms",
+		FieldKind:   domain.FieldRepresentation,
+		Description: "Represent solvability conditions as linear forms in the problem parameter.",
+		Aliases:     []string{"linear forms in n", "linear forms"},
+	},
+	{
+		CanonicalID: "core.representation.convex_body",
+		FieldKind:   domain.FieldRepresentation,
+		Description: "Represent the admissible region as a convex body / positive cone.",
+		Aliases:     []string{"convex body positive cone", "convex body", "positive cone"},
+	},
+}
+
+// mechanismV3ExtraAliases adds wording variants of ALREADY-EXISTING terms for
+// labels the target states verbatim. v1/v2 stay immutable; these aliases exist
+// only in the v3 revision.
+var mechanismV3ExtraAliases = map[domain.CanonicalID][]string{
+	// The target writes "affine lattice in Z^3"; v1 already carries the term
+	// with aliases "affine lattice" / "affine class in z 3".
+	"core.representation.affine_lattice": {"affine lattice in z 3"},
+}
+
+// MechanismV3 builds the mechanism/v3 vocabulary: every mechanism/v2 term
+// (with the documented alias additions) plus the target-canonicalization terms.
+func MechanismV3() *Vocabulary {
+	base := append(append([]Term{}, mechanismV1Seed.terms...), mechanismV2Terms...)
+	terms := make([]Term, 0, len(base)+len(mechanismV3Terms))
+	for _, t := range base {
+		if extra, ok := mechanismV3ExtraAliases[t.CanonicalID]; ok {
+			t.Aliases = append(append([]string{}, t.Aliases...), extra...)
+		}
+		terms = append(terms, t)
+	}
+	terms = append(terms, mechanismV3Terms...)
+	seed := vocabularyBuilder{
+		version:  VocabularyMechanismV3,
+		terms:    terms,
+		rejected: append([]string{}, mechanismV1Seed.rejected...),
+	}
+	return mustBuild(seed)
+}
+
 // mechanismV0LossySeed merges the two distinct operators of mechanismV1 into one
 // canonical ID, deliberately erasing an outcome-predictive distinction. It is
 // used only by the abstraction-loss regression (U7 case 5).
@@ -224,7 +342,7 @@ func MechanismV0Lossy() *Vocabulary {
 
 // SeededVocabularies returns every in-repo vocabulary, used to seed persistence.
 func SeededVocabularies() []*Vocabulary {
-	return []*Vocabulary{MechanismV1(), MechanismV2(), MechanismV0Lossy()}
+	return []*Vocabulary{MechanismV1(), MechanismV2(), MechanismV3(), MechanismV0Lossy()}
 }
 
 func mustBuild(b vocabularyBuilder) *Vocabulary {

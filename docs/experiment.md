@@ -131,12 +131,21 @@ alongside the run.
 
 `newf experiment readiness --problem <id>` computes the MECHANICAL half of
 the readiness decision, read-only: eligible failure cohort (vs the mining
-support threshold), decisive-axis resolution on the train population,
-completeness admissions (informational — zero accepted means absence-based
-verification degrades to unknown, honestly), surviving invariants, and an
-assessable withheld target. The non-mechanical half is emitted as operator
-attestations, never assumed. The pilot template lives at
-`corpus/experiments/pilot-001/PROTOCOL.md`.
+support threshold), decisive-axis resolution on the train population (under
+`--vocab-version`, default `mechanism/v1`), completeness admissions
+(informational — zero accepted means absence-based verification degrades to
+unknown, honestly), surviving invariants, an assessable withheld target, and
+**recovery reachability**: a target with any unresolved claim on a decisive
+field cannot receive a positive match from ANY proposal under
+`recovery-rule/v1` (its own self-comparison classifies unknown), so the
+check blocks until the target's stated labels are canonicalized in a pinned
+vocabulary revision — never by ignoring unresolved fields, and never by
+adding interpretation claims to the target. The evaluator-side calibration
+against the actual frozen target (self-match reachable / known-match
+recovered / known-different decisively non-recovering / under-represented
+unknown) is pinned in `internal/pipeline/recovery_calibration_integration_test.go`.
+The non-mechanical half is emitted as operator attestations, never assumed.
+The pilot template lives at `corpus/experiments/pilot-001/PROTOCOL.md`.
 
 ### Pilot freeze gate
 
