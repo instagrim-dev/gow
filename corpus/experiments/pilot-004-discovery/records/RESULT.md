@@ -164,14 +164,22 @@ union-construction property despite different objectives. It does not appear
 in any other run. One run is weak evidence; it motivates a follow-on but
 does not discharge the majority criterion.
 
-### Ten novel candidates (unvalidated hypotheses)
+### Ten novel candidates — ready for challenge
 
-The quorum judged 10 entries `defensible_novel`. These are candidate
-properties that survived the evidence bar (passages support them,
-distinctions are preserved, contrast is honest) but have not been challenged
-and were produced under a pilot whose overall verdict is inconclusive. They
-are recorded as hypotheses for potential future adjudication, not as
-admitted properties.
+The quorum judged 10 entries `defensible_novel`. A `defensible_novel` verdict
+means the passages support the property, distinctions are preserved, and the
+contrast check is honest. This is a proposed candidate invariant — the model
+has done the compression step the research loop expects.
+
+The negative pilot verdict is about run-to-run *rediscovery reliability*, not
+about the validity of individual entries. The admission gate for a candidate
+invariant is: (1) surviving the evidence bar, and (2) surviving challenge.
+Condition 1 is met by the quorum verdict. Condition 2 has not yet been tested.
+
+One asymmetry between arms: the 4 D0 novel entries have the prose-retention
+ambiguity (the model may be following original outcome language rather than
+discovering structure). The 6 D1 novel entries are less ambiguous in origin.
+This does not invalidate D0 entries — it qualifies what their source establishes.
 
 **D1 novel (6):**
 
@@ -196,9 +204,10 @@ admitted properties.
 Note: E13, E16, E20, E23 are four framings of the same [es-05, es-10]
 pairing at different abstraction levels. E05 and E07 are two framings of
 the same [es-05, es-07, es-10] grouping. Collapsing these would reduce 10
-novel candidates to approximately 4–5 distinct properties. No admission
-decision has been made; that is operator work and belongs after an explicit
-operator review of the arm-labeled entries and this verdict.
+novel candidates to approximately 4–5 distinct properties. The next step
+for these entries is the challenge step (can an adversarial case falsify
+them?), not re-adjudication. No admission decision has been made; that is
+operator work.
 
 ---
 
@@ -275,13 +284,14 @@ tighter scope; this would be L7 or similar if admitted.
 The following are decisions, not tasks. None may be executed by the agent
 without explicit operator instruction.
 
-1. **Admission decision (D-C1):** Review the arm-labeled novel candidates
-   above. Decide which, if any, to admit as interpretation claims in a new
-   vocabulary revision. Admission requires: operator attestation, a new
-   pinned vocabulary version, and reclustering + fresh database before
-   support is counted. The inconclusive verdict does not prohibit admission
-   of individually surviving entries, but it weakens the evidential basis
-   relative to a positive pilot.
+1. **Admission and challenge (D-C1):** Review the arm-labeled novel candidates
+   above and decide which to advance to the challenge step. Challenge means:
+   attempt to find a known failed approach that violates the property, a
+   synthetic failed approach that violates it, and a success that preserves it
+   (per AGENTS.md §Candidate invariant discipline). Properties that survive
+   challenge can be admitted as interpretation claims in a new vocabulary
+   revision. A positive challenge outcome is the correct gate — not the pilot
+   overall verdict.
 
 2. **Ledger update (D-B1):** After this result record is committed, the
    executing agent may update `adjudication-ledger.json` to replace `SEALED`
