@@ -218,12 +218,12 @@ For each candidate theme the operator selects:
 
 ## 6. Open questions (bounded, resolvable)
 
-| ID | Question | Evidence needed |
-|---|---|---|
-| OQ1 | Is es-07's "finite verification" failure the same structural situation as es-02/es-10's proven-infinite survivor set? | Source passages from the frozen es-07 note |
-| OQ2 | Does E08's locality grouping preserve or erase the L6 distinct-role finding? | Statement of what predicate the grouping asserts vs. what L6 preserves |
-| OQ3 | Is E19's reference match L3, L4, or a conjunction? | Analyse whether the claim requires both class-union and identity-inheritance, or only one |
-| OQ4 | What is the correct scope of E15's claim? | Distinguish annotation-pattern observation from mechanism-level conservation |
+| ID | Question | Evidence needed | **Resolution** |
+|---|---|---|---|
+| OQ1 | Is es-07's "finite verification" failure the same structural situation as es-02/es-10's proven-infinite survivor set? | Source passages from the frozen es-07 note | **Resolved (2026-09-11): NO.** es-07's boundary is *epistemological*: a finite computation cannot certify a universal claim regardless of its size. es-02/es-10's boundary is *mathematical*: the QR-survivor set is proven non-empty and infinite by Dirichlet + quadratic reciprocity. These are structurally distinct. N2b (es-07 inclusion) and N1 (es-02/es-10 grouping with es-07) should exclude es-07 or explicitly split the es-07 membership into a separate epistemological-limitation claim. |
+| OQ2 | Does E08's locality grouping preserve or erase the L6 distinct-role finding? | Statement of what predicate the grouping asserts vs. what L6 preserves | **Deferred.** Requires reading the L6 predicate and what role distinction it preserves. |
+| OQ3 | Is E19's reference match L3, L4, or a conjunction? | Analyse whether the claim requires both class-union and identity-inheritance, or only one | **Resolved (2026-09-11):** E19 describes class-union construction as its primary operator and references identity-carried solvability as an upstream dependency. The quorum correctly assigned `matches_reference`; the match is to L3 (class_union_construction) as the asserted property; L4 (identity_carried_solvability) is a stated prerequisite, not the claim itself. The reference match is L3, not a conjunction, and the L4 reference does not require a separate match. |
+| OQ4 | What is the correct scope of E15's claim? | Distinguish annotation-pattern observation from mechanism-level conservation | **Resolved (2026-09-11):** E15's evidential basis is `breaks: []` annotations in three corpus notes. This supports a narrower claim: *"the annotation records no broken properties for these mechanisms."* It does not support a mechanism-level conservation claim ("the mechanisms break no relevant properties"), which would require evidence that the annotations are exhaustive. The correct scope is annotation-pattern observation. E15 also contains a contrast error: it lists es-05 among partial successes, but es-05 is annotated `partial_failure`. These two corrections (narrower claim + contrast fix) are required before E15 can be admitted; no challenge should proceed until they are applied. |
 
 These are bounded research questions. They do not require a new harness phase.
 
@@ -239,10 +239,11 @@ These are bounded research questions. They do not require a new harness phase.
 | Novel distinct themes | ~5 (N1–N5), from 10 occurrences |
 | Entries requiring scope correction before challenge | 2 (E15, E03/N2b es-07 inclusion) |
 | Entries requiring conservative-fallback resolution | 2 (E10, E22) |
-| Open bounded questions | 4 (OQ1–OQ4) |
-| Same-model-family quorum | Confirmed — within-family consistency, not independent validation |
-| Key seal gap | Confirmed — post-adjudication population; git history provides partial protection |
-| **Recommended next action** | **Challenge N5 or N2a — no scope corrections required for either** |
+| Open bounded questions | 4 (OQ1–OQ4); **OQ1/OQ3/OQ4 resolved 2026-09-11; OQ2 deferred** |
+| N2a admitted | Yes — `density_averaging_ceiling` (mechanism/v4); C4 boundary_delta recorded |
+| N5 admitted | Yes — `reorganisation_without_qr_existence` (mechanism/v5); C4 boundary_delta recorded |
+| Cluster revision under v5 | `clr_01M28W6AF7DBAX5363TVXSN3NR` (12 singletons, clean) |
+| **Recommended next action** | **Challenge E08 (N3) after OQ2; address E15 scope correction (OQ4 resolved); challenge N2a-child-1 and N5-child-1 after predicate formalization** |
 
 The negative pilot result limits the claim about the *method's reliability*.
 It does not invalidate the candidate invariants. A challenged and surviving

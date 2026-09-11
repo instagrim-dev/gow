@@ -91,7 +91,7 @@ that requires explicit evidence and is recorded separately as `claim_role`.
 proposed          — no challenge run
 challenged        — challenge open, no decisive negative yet
 surviving         — at least one completed_negative attack, no falsifying evidence
-weakened          — scope narrowed by a boundary_delta
+weaken            — scope narrowed by a boundary_delta
 falsified         — decisively refuted
 operator_attested — human-attached independent evidence (attestation, not verification)
 ```
