@@ -67,16 +67,26 @@ func newExperimentCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions
 		runArms    []string
 		runPBudget int
 		runEBudget int
+		runB0File  string
+		runB3File  string
 	)
 	runCmd := &cobra.Command{
 		Use:   "run",
 		Short: "Run the leakage-audited, equal-budget experiment over a holdout set",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			armFiles := map[string]string{}
+			if runB0File != "" {
+				armFiles["b0_undirected"] = runB0File
+			}
+			if runB3File != "" {
+				armFiles["b3_invariant_guided"] = runB3File
+			}
 			result, err := app.RunExperiment(cmd.Context(), pipeline.ExperimentRunInput{
 				DBPath: opts.dbPath, ProblemID: runProblem, HoldoutSetID: runSet,
 				Arms: runArms, ProposalBudget: runPBudget, EvaluationBudget: runEBudget,
-				JSONOutput: opts.jsonOutput,
+				ArmProposalFiles: armFiles,
+				JSONOutput:       opts.jsonOutput,
 			})
 			if err != nil {
 				return wrapCommandError("experiment run", err)
@@ -93,6 +103,8 @@ func newExperimentCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions
 	runCmd.Flags().StringSliceVar(&runArms, "arms", nil, "Arms to run (default b0_undirected,b3_invariant_guided)")
 	runCmd.Flags().IntVar(&runPBudget, "proposal-budget", 0, "Shared per-arm proposal budget (default 8)")
 	runCmd.Flags().IntVar(&runEBudget, "evaluation-budget", 0, "Shared per-arm evaluation budget (default = proposal budget)")
+	runCmd.Flags().StringVar(&runB0File, "b0-proposals-file", "", "Captured external proposals (proposal-wire/v1) for the B0 arm — the proposer's permitted context excludes invariant targets")
+	runCmd.Flags().StringVar(&runB3File, "b3-proposals-file", "", "Captured external proposals (proposal-wire/v1) for the B3 arm — surviving invariants were in the proposer's permitted context")
 	cmd.AddCommand(runCmd)
 
 	var showProblem string

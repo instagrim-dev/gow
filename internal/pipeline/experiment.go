@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -41,6 +42,17 @@ type ExperimentRunInput struct {
 	Arms             []string
 	ProposalBudget   int
 	EvaluationBudget int
+	// ArmProposalFiles routes an arm's generation through the UNTRUSTED
+	// proposer adapter (proposal-wire/v1, captured model output) instead of
+	// its deterministic fixture — the minimum genuine comparison: the SAME
+	// external proposer answers B0 (no invariant targets in its permitted
+	// context) and B3 (surviving invariants supplied), under the same
+	// predeclared budgets. Only b0_undirected and b3_invariant_guided accept
+	// files; B1/B2 stay scripted machinery controls. The harness retains the
+	// generation request (permitted context), the raw wire output, the
+	// admission audit, and assessed membership; the operator retains the
+	// prompts that produced the captured output.
+	ArmProposalFiles map[string]string
 	JSONOutput       bool
 }
 
@@ -335,7 +347,12 @@ func (a *App) RunExperiment(ctx context.Context, input ExperimentRunInput) (Expe
 		return ExperimentRunResponse{}, err
 	}
 
-	view, created, err := a.executeArmsAndPersist(ctx, repoStore, input.DBPath, hs, check, run.ID, arms, proposalBudget, evaluationBudget, now)
+	for arm := range input.ArmProposalFiles {
+		if arm != "b0_undirected" && arm != "b3_invariant_guided" {
+			return ExperimentRunResponse{}, fmt.Errorf("external proposals are accepted only for b0_undirected and b3_invariant_guided (got %q); B1/B2 remain scripted machinery controls", arm)
+		}
+	}
+	view, created, err := a.executeArmsAndPersist(ctx, repoStore, input.DBPath, hs, check, run.ID, arms, proposalBudget, evaluationBudget, input.ArmProposalFiles, now)
 	if err != nil {
 		a.failRun(ctx, repoStore, run.ID, err)
 		return ExperimentRunResponse{}, err
@@ -433,7 +450,7 @@ func armAssessmentIdentityPart(arm string, memberRank int, proposalHash, content
 	return strings.Join([]string{arm, fmt.Sprint(memberRank), proposalHash, contentHash, assessment}, "|")
 }
 
-func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore, dbPath string, hs store.HoldoutSetRecord, check store.LeakageCheckRecord, runID string, arms []string, proposalBudget, evaluationBudget int, now time.Time) (ExperimentView, bool, error) {
+func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore, dbPath string, hs store.HoldoutSetRecord, check store.LeakageCheckRecord, runID string, arms []string, proposalBudget, evaluationBudget int, armProposalFiles map[string]string, now time.Time) (ExperimentView, bool, error) {
 	// FROZEN target manifest (F2): scoring consumes EXACTLY the signatures
 	// derived from the REGISTERED withheld sources — the same population the
 	// leakage audit inspects. Target material added outside the registered set
@@ -471,7 +488,7 @@ func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore,
 	var b3 *store.ExperimentArmRow
 
 	for _, arm := range arms {
-		genID, contents, aerr := a.runArm(ctx, repoStore, dbPath, hs.ProblemID, arm, proposalBudget)
+		genID, contents, aerr := a.runArm(ctx, repoStore, dbPath, hs.ProblemID, arm, proposalBudget, armProposalFiles[arm])
 		if aerr != nil {
 			return ExperimentView{}, false, aerr
 		}
@@ -608,7 +625,7 @@ func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore,
 // rank + assessment and from keying experiment identity + membership on
 // (arm, proposal_hash) — the arm's own derivation — so a replay whose proposals
 // all dedup stays idempotent and no arm reuses another arm's rank.
-func (a *App) runArm(ctx context.Context, repoStore problemStore, dbPath, problemID, arm string, budget int) (string, []experiment.ProposalContent, error) {
+func (a *App) runArm(ctx context.Context, repoStore problemStore, dbPath, problemID, arm string, budget int, proposalsFile string) (string, []experiment.ProposalContent, error) {
 	var opts frontierArmOptions
 	switch arm {
 	case "b3_invariant_guided":
@@ -630,6 +647,16 @@ func (a *App) runArm(ctx context.Context, repoStore problemStore, dbPath, proble
 		opts = frontierArmOptions{noTargets: true, noPolicy: true, generator: provider.NewBrainstormer(), role: provider.BrainstormerRole}
 	default:
 		return "", nil, fmt.Errorf("unknown arm %q", arm)
+	}
+	// External-proposal arms (pilot): the SAME untrusted proposer route serves
+	// B0 (no invariant targets in its permitted context) and B3 (targets
+	// supplied) — captured output enters through the production admission
+	// boundary; the arm keeps its own target/policy shape.
+	if proposalsFile != "" {
+		opts.generator = provider.NewUntrustedProposer(
+			provider.FileProposalTransport{Path: proposalsFile},
+			provider.Metadata{ProviderName: "external-file", ProviderVersion: "v1", ModelName: filepath.Base(proposalsFile)},
+		)
 	}
 
 	_, result, err := a.generateFrontierWith(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID, Count: budget}, opts)

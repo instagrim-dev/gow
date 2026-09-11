@@ -570,3 +570,114 @@ func TestIntegrationAuditWriteFailureIsVisible(t *testing.T) {
 		t.Fatalf("the attempt must not be represented as captured: %+v", invs)
 	}
 }
+
+// TestIntegrationExternalProposalArms is the pilot's minimum genuine
+// comparison (package 3): the SAME external proposer route supplies B0
+// (captured output whose permitted context had NO invariant targets) and B3
+// (surviving invariants supplied), under equal predeclared budgets. Both
+// arms' proposals enter through the production admission boundary; the
+// harness retains the generation request, raw wire, admission audit, and
+// assessed membership. Here B3's captured proposal is mechanism-near the
+// withheld target and B0's is distinct — the harness must report exactly
+// that, from genuinely imported (non-fixture-generator) content.
+func TestIntegrationExternalProposalArms(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = minPreservesMiner{}
+	app.challengerFn = biasOnlyChallenger{}
+
+	trainProblem, targetProblem, invID := seedPositiveControl(t, ctx, app, dbPath, "residue locality")
+	if _, err := app.DefineExperiment(ctx, ExperimentDefineInput{DBPath: dbPath, ProblemID: trainProblem, TargetProblemID: targetProblem}); err != nil {
+		t.Fatalf("define: %v", err)
+	}
+
+	wire := func(preserves, claim string) string {
+		return `{"schema_version": "proposal-wire/v1", "proposals": [{
+  "mechanism": {"preserves": ["` + preserves + `"], "locality": "global", "construction_mode": "constructive", "uncertainty_mode": "deterministic"},
+  "structural_violation_claim": "` + claim + `",
+  "novelty_argument": "captured external output",
+  "cheapest_falsification_path": "compare against the withheld family"}]}`
+	}
+	dir := t.TempDir()
+	b0Path := filepath.Join(dir, "b0-captured.json")
+	b3Path := filepath.Join(dir, "b3-captured.json")
+	// B0 (no invariant context): proposes the mean-growth direction — distinct
+	// from the withheld residue-locality target.
+	if err := os.WriteFile(b0Path, []byte(wire("mean growth rate", "unguided direction")), 0o644); err != nil {
+		t.Fatalf("write b0: %v", err)
+	}
+	// B3 (invariants in context): proposes the residue-locality structure —
+	// mechanism-near the withheld target.
+	if err := os.WriteFile(b3Path, []byte(wire("residue locality", "guided break of the shared property")), 0o644); err != nil {
+		t.Fatalf("write b3: %v", err)
+	}
+
+	res, err := app.RunExperiment(ctx, ExperimentRunInput{
+		DBPath: dbPath, ProblemID: trainProblem,
+		ArmProposalFiles: map[string]string{"b0_undirected": b0Path, "b3_invariant_guided": b3Path},
+	})
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	exp := res.Experiment
+	if !exp.LeakageCheck.Passed {
+		t.Fatalf("leakage: %+v", exp.LeakageCheck)
+	}
+	b0, b3 := armByName(t, exp, "b0_undirected"), armByName(t, exp, "b3_invariant_guided")
+
+	// B0 is no longer honest-empty: it carries the captured unguided proposal,
+	// decisively assessed as non-recovering.
+	if b0.ProposalCount != 1 || b0.Recovered || b0.DecisiveCount != 1 {
+		t.Fatalf("B0 must carry the captured proposal, decisively non-recovering: %+v", b0)
+	}
+	// B3 carries the captured guided proposal and recovers the target.
+	if b3.ProposalCount != 1 || !b3.Recovered {
+		t.Fatalf("B3 must recover with the captured guided proposal: %+v", b3)
+	}
+	if exp.Conclusion != "structural_recovery" {
+		t.Fatalf("conclusion = %q", exp.Conclusion)
+	}
+
+	// Both arm generations went through admission (label-only wire claims are
+	// corrections) and the audit is persisted per arm.
+	repo := openTestStore(t, ctx, dbPath)
+	defer repo.Close()
+	for _, arm := range []ExperimentArmView{b0, b3} {
+		rec, gerr := repo.GetFrontierGeneration(ctx, arm.FrontierGenerationRun)
+		if gerr != nil {
+			t.Fatalf("generation %s: %v", arm.Arm, gerr)
+		}
+		if rec.AdmissionCorrected < 1 {
+			t.Fatalf("%s must show the admission audit (label re-resolution): %+v", arm.Arm, rec.AdmissionCorrected)
+		}
+	}
+	// B3's proposal genuinely targets the surviving invariant.
+	genB3, err := repo.GetFrontierGeneration(ctx, b3.FrontierGenerationRun)
+	if err != nil {
+		t.Fatalf("b3 gen: %v", err)
+	}
+	if len(genB3.Proposals) != 1 || len(genB3.Proposals[0].Targets) != 1 || genB3.Proposals[0].Targets[0].InvariantID != invID {
+		t.Fatalf("B3's captured proposal must target the surviving invariant: %+v", genB3.Proposals)
+	}
+
+	// Idempotent replay with the same captured files returns the SAME experiment.
+	again, err := app.RunExperiment(ctx, ExperimentRunInput{
+		DBPath: dbPath, ProblemID: trainProblem,
+		ArmProposalFiles: map[string]string{"b0_undirected": b0Path, "b3_invariant_guided": b3Path},
+	})
+	if err != nil {
+		t.Fatalf("replay: %v", err)
+	}
+	if again.Created || again.Experiment.ID != exp.ID {
+		t.Fatalf("replay must be idempotent: created=%v id=%s want %s", again.Created, again.Experiment.ID, exp.ID)
+	}
+
+	// A file for a scripted control arm is refused.
+	if _, err := app.RunExperiment(ctx, ExperimentRunInput{
+		DBPath: dbPath, ProblemID: trainProblem,
+		ArmProposalFiles: map[string]string{"b1_semantic_summary": b0Path},
+	}); err == nil {
+		t.Fatal("external proposals for a scripted control arm must be refused")
+	}
+}

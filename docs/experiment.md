@@ -88,6 +88,47 @@ OBSERVED recovery detections; when either compared arm is inconclusive
 `decisive_assessments`, `mechanistic_diversity`, `normalized_redundancy`;
 verdict-dependent metrics land with M5.2 evaluation volume).
 
+## External proposal arms (pilot)
+
+`experiment run --b0-proposals-file <path> --b3-proposals-file <path>` routes
+B0 and/or B3 through the untrusted proposer adapter instead of their
+deterministic fixtures — the **minimum genuine comparison**: the same external
+proposer answers B0 (its permitted context excludes the invariant targets) and
+B3 (surviving invariants supplied), under the same predeclared budgets, and
+both captured outputs enter through the production vocabulary-admission
+boundary. B1/B2 stay scripted machinery controls and refuse a file.
+
+The harness retains, per arm: the generation request (the permitted context),
+the raw wire output verbatim, the admission audit
+(`admission_corrected/downgraded/stripped/rejected/overflow`), and the
+assessed membership. The **operator** retains the prompts that produced the
+captured output — record them alongside the run in the experiment manifest.
+Replaying with the same files is idempotent; a changed file is a new
+assessment identity. For a cost-effectiveness claim, additionally account for
+the work spent deriving and challenging B3's invariants — the harness does not
+do that accounting for you.
+
+### Pilot freeze gate
+
+Harness development stops for the pilot when this chain demonstrably holds:
+
+```text
+one pinned, eligible split
+-> non-predetermined baseline and guided proposals
+-> bounded, attributable admission and assessment
+-> exact retained inputs, outputs, and uncertainty
+-> reproducible report
+-> evidence revision can withdraw or restore downstream guidance
+```
+
+The gate is not "B3 wins" — it is "the comparison is meaningful and the
+recorded result follows from the actual inputs." Findings after the freeze are
+classified by consequence: fix-before-interpreting (claim scope, target
+leakage, evidence misattribution, lost revisions, unjustified verdicts),
+fix-alongside (audit ergonomics, reporting, resource accounting), defer
+(generalized machinery whose absence does not change this experiment's
+conclusion).
+
 ## Persistence (migrations v21 + v22) and side-effect freedom
 
 `holdout_sets` (+ withheld-source links with problem-guard triggers,
