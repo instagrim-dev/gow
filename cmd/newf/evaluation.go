@@ -14,8 +14,9 @@ import (
 // newEvaluateCommand hosts `newf evaluate` (route proposals to verifiers).
 func newEvaluateCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cobra.Command {
 	var (
-		problem string
-		all     bool
+		problem    string
+		all        bool
+		generation string
 	)
 	cmd := &cobra.Command{
 		Use:   "evaluate [proposal-id]",
@@ -37,11 +38,12 @@ func newEvaluateCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) 
 				return wrapCommandError("evaluate", errors.New("--problem is required"))
 			}
 			result, err := app.Evaluate(cmd.Context(), pipeline.EvaluateInput{
-				DBPath:     opts.dbPath,
-				ProblemID:  problem,
-				ProposalID: proposalID,
-				All:        all,
-				JSONOutput: opts.jsonOutput,
+				DBPath:       opts.dbPath,
+				ProblemID:    problem,
+				ProposalID:   proposalID,
+				GenerationID: generation,
+				All:          all,
+				JSONOutput:   opts.jsonOutput,
 			})
 			if err != nil {
 				return wrapCommandError("evaluate", err)
@@ -55,6 +57,7 @@ func newEvaluateCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) 
 	}
 	cmd.Flags().StringVar(&problem, "problem", "", "Problem ID")
 	cmd.Flags().BoolVar(&all, "all", false, "Evaluate all un-evaluated proposals in the latest generation (default when no proposal id)")
+	cmd.Flags().StringVar(&generation, "generation", "", "Pin the assessment context to a specific frontier generation's occurrence membership (historical replay or a specific revised occurrence); default is the latest occurrence")
 	return cmd
 }
 

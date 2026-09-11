@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 25
+const currentSchemaVersion = 26
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -934,6 +934,24 @@ END;
 		// making absence-based verified negatives reachable from persisted
 		// inputs without letting an unqualified provider assert completeness.
 		apply: migrateV25FieldCompleteness,
+	},
+	{
+		version: 26,
+		// Declared vs ACCEPTED completeness + assessment-context break verdicts
+		// (review of 87759d9, findings 1 and 3).
+		// (1) mechanism_field_completeness gains scope / admission /
+		// admission_basis: the provider supplies a typed scope + basis (a
+		// CLAIM); code decides admission. Only accepted declarations influence
+		// predicate evaluation; declared_only rows are auditable claims with
+		// no evaluation authority. Existing v25 rows are backfilled
+		// declared_only (preserve the weaker type; re-normalize to re-admit).
+		// (2) evaluation_target_verdicts: the per-target break verdicts an
+		// evaluation ACTUALLY computed against its assessed content revision,
+		// so success-cohort admission can follow the selected assessment
+		// context instead of the origin-time frontier_target_invariants flag.
+		// Existing evaluations are backfilled from the origin rows they
+		// historically consumed.
+		apply: migrateV26CompletenessAdmissionAndTargetVerdicts,
 	},
 }
 
@@ -3066,5 +3084,72 @@ END;
 
 func migrateV25FieldCompleteness(ctx context.Context, tx *sql.Tx) error {
 	_, err := tx.ExecContext(ctx, fieldCompletenessSQL)
+	return err
+}
+
+// evaluationTargetVerdictsSQL is the additive DDL for assessment-context break
+// verdicts (migration v26): one immutable row per (evaluation, targeted
+// invariant) recording the verdict the evaluation ACTUALLY computed against
+// its assessed signature content revision.
+const evaluationTargetVerdictsSQL = `
+CREATE TABLE IF NOT EXISTS evaluation_target_verdicts (
+  evaluation_id TEXT NOT NULL REFERENCES evaluations(id),
+  invariant_id TEXT NOT NULL,
+  verdict TEXT NOT NULL CHECK (verdict IN ('satisfies', 'violates', 'unknown')),
+  violated INTEGER NOT NULL CHECK (violated IN (0, 1)),
+  PRIMARY KEY(evaluation_id, invariant_id)
+);
+
+CREATE TRIGGER IF NOT EXISTS evaluation_target_verdicts_immutable_update
+BEFORE UPDATE ON evaluation_target_verdicts
+BEGIN
+  SELECT RAISE(ABORT, 'evaluation target verdicts are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS evaluation_target_verdicts_immutable_delete
+BEFORE DELETE ON evaluation_target_verdicts
+BEGIN
+  SELECT RAISE(ABORT, 'evaluation target verdicts are immutable');
+END;
+`
+
+func migrateV26CompletenessAdmissionAndTargetVerdicts(ctx context.Context, tx *sql.Tx) error {
+	// (1) Admission split on mechanism_field_completeness. ALTER ... ADD COLUMN
+	// is DDL and does not fire the immutability triggers. Existing v25 rows
+	// carried no scope/admission, so they are backfilled DECLARED_ONLY —
+	// preserving the weaker epistemic type rather than granting retroactive
+	// evaluation authority; re-normalizing re-admits under the new contract.
+	for _, col := range []struct{ name, ddl string }{
+		{"scope", `ALTER TABLE mechanism_field_completeness ADD COLUMN scope TEXT NOT NULL DEFAULT 'declared_payload' CHECK (scope IN ('declared_payload', 'mechanism_exhaustive'))`},
+		{"admission", `ALTER TABLE mechanism_field_completeness ADD COLUMN admission TEXT NOT NULL DEFAULT 'declared_only' CHECK (admission IN ('accepted', 'declared_only'))`},
+		{"admission_basis", `ALTER TABLE mechanism_field_completeness ADD COLUMN admission_basis TEXT NOT NULL DEFAULT 'v26 backfill: pre-admission declaration; re-normalize to re-admit'`},
+	} {
+		has, err := columnExists(ctx, tx, "mechanism_field_completeness", col.name)
+		if err != nil {
+			return err
+		}
+		if !has {
+			if _, err := tx.ExecContext(ctx, col.ddl); err != nil {
+				return err
+			}
+		}
+	}
+
+	// (2) Assessment-context break verdicts + backfill: existing evaluations
+	// historically consumed the origin-time frontier_target_invariants
+	// verdicts (recomputation against occurrence bytes reproduced them for
+	// origin content), so those rows are copied per evaluation. Imperfect for
+	// any pre-v26 evaluation of a revised occurrence — the binding is
+	// unknowable there and the origin verdict is what the pre-v26 cohort
+	// query consumed anyway.
+	if _, err := tx.ExecContext(ctx, evaluationTargetVerdictsSQL); err != nil {
+		return err
+	}
+	_, err := tx.ExecContext(ctx, `
+INSERT OR IGNORE INTO evaluation_target_verdicts(evaluation_id, invariant_id, verdict, violated)
+SELECT e.id, t.invariant_id, t.verdict, t.violated
+FROM evaluations e
+JOIN frontier_target_invariants t ON t.proposal_id = e.proposal_id
+`)
 	return err
 }

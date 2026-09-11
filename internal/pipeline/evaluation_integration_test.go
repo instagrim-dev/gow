@@ -135,13 +135,13 @@ func TestIntegrationEvaluateEndToEnd(t *testing.T) {
 	}
 }
 
-// TestIntegrationEvaluateReachesDedupedProposal is the finding-2 regression:
-// generate a frontier twice with an unchanged substrate so the second
-// generation FULLY dedups (it owns zero proposal rows). A by-id evaluate of an
-// original proposal must still resolve it through its OWNING generation — not
-// the latest, which is empty — and must not fabricate another copy. A batch
-// evaluate must likewise reach the un-evaluated originals rather than going
-// blind on the empty latest generation.
+// TestIntegrationEvaluateReachesDedupedProposal is the finding-2 regression
+// (both rounds): generate a frontier twice with an unchanged substrate so the
+// second generation FULLY dedups (it owns zero proposal rows). A by-id
+// evaluate of an original proposal must resolve it through its latest
+// OCCURRENCE generation — not artifact ownership, and not a blind latest-owned
+// lookup — and must not fabricate another copy. A batch evaluate must likewise
+// reach the un-evaluated proposals via occurrence membership.
 func TestIntegrationEvaluateReachesDedupedProposal(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
@@ -175,8 +175,11 @@ func TestIntegrationEvaluateReachesDedupedProposal(t *testing.T) {
 		t.Fatalf("second generation should fully dedup (own zero rows), got %d", len(gen2.Generation.Proposals))
 	}
 
-	// By-id evaluate must reach the original through its owning generation even
-	// though the LATEST generation (gen2) owns nothing.
+	// By-id evaluate must reach the proposal through its LATEST OCCURRENCE
+	// generation (gen2, which emitted/deduped it) even though gen2 owns zero
+	// artifact rows — occurrence membership, not ownership, is the assessment
+	// context (87759d9 finding 2). Historical replay of the original occurrence
+	// remains explicitly selectable via GenerationID.
 	res, err := app.Evaluate(ctx, EvaluateInput{DBPath: dbPath, ProblemID: problemID, ProposalID: originalID})
 	if err != nil {
 		t.Fatalf("by-id evaluate of a deduped-away proposal must still resolve it: %v", err)
@@ -184,8 +187,17 @@ func TestIntegrationEvaluateReachesDedupedProposal(t *testing.T) {
 	if len(res.Run.Evaluations) != 1 {
 		t.Fatalf("want exactly one evaluation (no duplicate proposal created), got %d", len(res.Run.Evaluations))
 	}
-	if res.Run.FrontierGenerationRunID != gen1.Generation.ID {
-		t.Fatalf("by-id evaluate must run in the OWNING generation %s, got %s", gen1.Generation.ID, res.Run.FrontierGenerationRunID)
+	if res.Run.FrontierGenerationRunID != gen2.Generation.ID {
+		t.Fatalf("by-id evaluate must run in the LATEST OCCURRENCE generation %s, got %s", gen2.Generation.ID, res.Run.FrontierGenerationRunID)
+	}
+
+	// Historical replay: pinning the original generation still works.
+	replay, err := app.Evaluate(ctx, EvaluateInput{DBPath: dbPath, ProblemID: problemID, ProposalID: originalID, GenerationID: gen1.Generation.ID})
+	if err != nil {
+		t.Fatalf("generation-pinned replay of the original occurrence: %v", err)
+	}
+	if replay.Run.FrontierGenerationRunID != gen1.Generation.ID {
+		t.Fatalf("pinned replay must run in generation %s, got %s", gen1.Generation.ID, replay.Run.FrontierGenerationRunID)
 	}
 
 	// The proposal count is unchanged: no copy was fabricated.

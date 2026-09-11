@@ -17,16 +17,23 @@ import (
 	"github.com/instagrim-dev/newf/internal/verify"
 )
 
-// EvaluateInput requests an evaluation pass. Exactly one selector applies:
-// ProposalID evaluates a single proposal; otherwise the latest generation for
-// ProblemID is evaluated (All => every un-evaluated proposal; else the same).
+// EvaluateInput requests an evaluation pass. Selectors:
+//   - ProposalID: evaluate one proposal, by default in the context of its
+//     LATEST occurrence (the most recent generation that emitted an
+//     interpretation of it);
+//   - GenerationID: pin the assessment context to a specific generation's
+//     occurrence membership — historical replay (the original occurrence) or
+//     a specific revised occurrence are both explicitly selectable;
+//   - neither: the latest generation with occurrence membership is evaluated
+//     (every un-evaluated proposal it emitted).
 type EvaluateInput struct {
-	DBPath     string
-	ProblemID  string
-	ProposalID string
-	All        bool
-	Mode       string // 'proposal' (default); 'holdout' is refused (R9)
-	JSONOutput bool
+	DBPath       string
+	ProblemID    string
+	ProposalID   string
+	GenerationID string
+	All          bool
+	Mode         string // 'proposal' (default); 'holdout' is refused (R9)
+	JSONOutput   bool
 }
 
 // EvaluationListInput lists evaluation runs for a problem.
@@ -66,24 +73,31 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 		return EvaluateResponse{}, err
 	}
 
-	// Resolve the frontier generation to evaluate. By-id evaluation must reach
-	// the proposal's OWNING generation (the one that first wrote it), not the
-	// latest — cross-run dedup keeps the proposal under its original generation,
-	// so a later fully-deduped generation owns zero rows and would hide it
-	// (finding 2). Batch evaluation resolves the latest generation that actually
-	// owns proposal rows for the same reason.
+	// Resolve the ASSESSMENT CONTEXT (review of 87759d9, finding 2): artifact
+	// lookup and context selection are different questions. A generation's
+	// occurrence bindings say which interpretation it emitted; re-evaluation
+	// must be able to reach a REVISED occurrence (a later generation that
+	// deduped onto the artifact row but bound new content), and historical
+	// replay must be able to pin the ORIGINAL one. So:
+	//   - explicit GenerationID pins the context;
+	//   - by-id defaults to the proposal's LATEST occurrence generation;
+	//   - batch defaults to the latest generation WITH occurrence membership
+	//     (ownership would hide a fully-deduped latest generation).
 	var genID string
 	var found bool
-	if input.ProposalID != "" {
-		genID, found, err = repoStore.FindProposalGeneration(ctx, input.ProblemID, input.ProposalID)
+	switch {
+	case input.GenerationID != "":
+		genID, found = input.GenerationID, true
+	case input.ProposalID != "":
+		genID, found, err = repoStore.LatestProposalOccurrenceGeneration(ctx, input.ProblemID, input.ProposalID)
 		if err != nil {
 			return EvaluateResponse{}, err
 		}
 		if !found {
 			return EvaluateResponse{}, fmt.Errorf("proposal %s not found for problem %s", input.ProposalID, input.ProblemID)
 		}
-	} else {
-		genID, found, err = repoStore.LatestFrontierGenerationWithProposals(ctx, input.ProblemID)
+	default:
+		genID, found, err = repoStore.LatestFrontierGenerationWithOccurrences(ctx, input.ProblemID)
 		if err != nil {
 			return EvaluateResponse{}, err
 		}
@@ -95,10 +109,28 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 	if err != nil {
 		return EvaluateResponse{}, err
 	}
+	if gen.ProblemID != input.ProblemID {
+		return EvaluateResponse{}, fmt.Errorf("generation %s belongs to problem %s, not %s", gen.ID, gen.ProblemID, input.ProblemID)
+	}
 
-	// Select proposals: a single id, or all un-evaluated proposals in the gen.
-	selected := make([]store.FrontierProposalRow, 0, len(gen.Proposals))
-	for _, p := range gen.Proposals {
+	// Enumerate the generation's occurrence MEMBERSHIP (what it emitted), not
+	// its owned artifact rows: a fully-deduped generation owns nothing yet
+	// bound revised interpretations (finding 2). Pre-v24 generations without
+	// bindings fall back to owned rows.
+	membership, err := repoStore.ListOccurrenceProposalRows(ctx, gen.ID)
+	if err != nil {
+		return EvaluateResponse{}, err
+	}
+	if len(membership) == 0 {
+		membership = gen.Proposals
+	}
+
+	// Select proposals: a single id, or all un-evaluated proposals in the
+	// membership. (The un-evaluated filter reads the artifact-level result;
+	// re-evaluating an occurrence of an already-evaluated proposal is an
+	// explicit single-id / generation-pinned operation.)
+	selected := make([]store.FrontierProposalRow, 0, len(membership))
+	for _, p := range membership {
 		if input.ProposalID != "" {
 			if p.ID == input.ProposalID {
 				selected = append(selected, p)
@@ -111,9 +143,7 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 		selected = append(selected, p)
 	}
 	if input.ProposalID != "" && len(selected) == 0 {
-		// The proposal resolved to this generation but is absent from its owned
-		// rows — a store inconsistency, not a missing artifact.
-		return EvaluateResponse{}, fmt.Errorf("proposal %s resolved to generation %s but is absent from its owned proposals", input.ProposalID, gen.ID)
+		return EvaluateResponse{}, fmt.Errorf("proposal %s is not part of generation %s's occurrence membership", input.ProposalID, gen.ID)
 	}
 
 	// Target predicates are the parsed predicates of the CURRENTLY targetable
@@ -218,6 +248,25 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 			ConfidenceOrdinal:    decision.ConfidenceOrdinal,
 			Notes:                decision.Notes,
 			SignatureContentHash: contentHash,
+		}
+		// v26: persist the per-target break verdicts THIS assessment computed
+		// against the assessed content revision (sorted for determinism), so
+		// cohort admission can follow the assessment context instead of the
+		// origin-time frontier_target_invariants flags (finding 3). Stale
+		// (no-longer-targetable) invariants carry no recomputed verdict and
+		// are deliberately absent.
+		tvIDs := make([]string, 0, len(vc.TargetVerdicts))
+		for id := range vc.TargetVerdicts {
+			tvIDs = append(tvIDs, id)
+		}
+		sort.Strings(tvIDs)
+		for _, id := range tvIDs {
+			v := vc.TargetVerdicts[id]
+			row.TargetVerdicts = append(row.TargetVerdicts, store.EvaluationTargetVerdictRow{
+				InvariantID: id,
+				Verdict:     string(v),
+				Violated:    v == invariant.VerdictViolates,
+			})
 		}
 		if decision.Kind == verify.KindModelJudgment {
 			row.Invocation = a.evaluationInvocation(model, run.ID, now)

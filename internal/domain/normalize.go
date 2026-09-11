@@ -365,18 +365,74 @@ func (k MechanismAttributeKind) Valid() bool {
 	}
 }
 
+// CompletenessScope types WHAT a completeness declaration claims to be
+// exhaustive over. The scopes are deliberately unequal in strength:
+// declared_payload is a bounded-representation claim a deterministic parser
+// can establish mechanically; mechanism_exhaustive asserts exhaustiveness of
+// the underlying mechanism description itself — a far stronger claim no
+// parser can verify.
+type CompletenessScope string
+
+const (
+	// ScopeDeclaredPayload: "every entry of the declared payload's list for
+	// this field was parsed" — closed world over the authored representation.
+	ScopeDeclaredPayload CompletenessScope = "declared_payload"
+	// ScopeMechanismExhaustive: "the list exhaustively describes the
+	// mechanism" — an extraction judgment; never code-acceptable.
+	ScopeMechanismExhaustive CompletenessScope = "mechanism_exhaustive"
+)
+
+func (s CompletenessScope) Valid() bool {
+	switch s {
+	case ScopeDeclaredPayload, ScopeMechanismExhaustive:
+		return true
+	default:
+		return false
+	}
+}
+
+// CompletenessAdmission is the CODE-decided authority of a declaration
+// (ModelJudgment != Verification). Only accepted declarations may influence
+// predicate evaluation; declared_only rows are retained as auditable claims
+// with no evaluation authority.
+type CompletenessAdmission string
+
+const (
+	CompletenessAccepted     CompletenessAdmission = "accepted"
+	CompletenessDeclaredOnly CompletenessAdmission = "declared_only"
+)
+
+func (a CompletenessAdmission) Valid() bool {
+	switch a {
+	case CompletenessAccepted, CompletenessDeclaredOnly:
+		return true
+	default:
+		return false
+	}
+}
+
 // MechanismFieldCompleteness is one persisted, justified completeness
 // declaration: the extractor asserts that a set-valued mechanism field's value
 // list is an exhaustive extraction (so a later absence check is a verified
 // negative rather than an epistemic gap). It exists ONLY with a basis — the
 // scope and justification for the claim — persisted verbatim for audit.
-// Undeclared fields keep the conservative default (unobserved); this record
-// never weakens epistemic discipline, it makes a stronger claim auditable.
+// Undeclared fields keep the conservative default (unobserved).
+//
+// Declaration and authority are SEPARATE: the provider supplies scope + basis;
+// the pipeline (code) decides Admission. A provider-supplied declaration with
+// an arbitrary nonempty basis is persisted declared_only and never acquires
+// the evaluation authority of an accepted bounded-representation claim.
 type MechanismFieldCompleteness struct {
 	MechanismID  string
 	Kind         MechanismAttributeKind
 	Completeness FieldCompleteness
+	Scope        CompletenessScope
 	Basis        string
+	// Admission is decided by code at persistence time, never by the provider.
+	Admission CompletenessAdmission
+	// AdmissionBasis is the mechanism-neutral reason for the decision, e.g.
+	// "deterministic-embedded-payload-parser" or "unverified provider claim".
+	AdmissionBasis string
 }
 
 func (c MechanismFieldCompleteness) Validate() error {
@@ -389,8 +445,17 @@ func (c MechanismFieldCompleteness) Validate() error {
 	if !c.Completeness.Valid() || c.Completeness == CompletenessUnobserved {
 		return fmt.Errorf("invalid declared completeness %q (complete|partial)", c.Completeness)
 	}
+	if !c.Scope.Valid() {
+		return fmt.Errorf("invalid completeness scope %q (declared_payload|mechanism_exhaustive)", c.Scope)
+	}
 	if strings.TrimSpace(c.Basis) == "" {
 		return fmt.Errorf("field completeness declaration requires a non-empty basis")
+	}
+	if !c.Admission.Valid() {
+		return fmt.Errorf("invalid completeness admission %q (accepted|declared_only)", c.Admission)
+	}
+	if strings.TrimSpace(c.AdmissionBasis) == "" {
+		return fmt.Errorf("completeness admission requires a recorded basis")
 	}
 	return nil
 }

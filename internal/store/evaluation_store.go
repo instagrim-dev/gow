@@ -54,6 +54,14 @@ type EvaluationMetricRow struct {
 	Comparator          string
 }
 
+// EvaluationTargetVerdictRow is one per-target break verdict an evaluation
+// computed against its assessed signature content revision (v26).
+type EvaluationTargetVerdictRow struct {
+	InvariantID string
+	Verdict     string // 'satisfies'|'violates'|'unknown'
+	Violated    bool
+}
+
 // EvaluationRow is one persisted evaluation: the verdict PLUS its verifier kind
 // and verification strength (KTD-1/R1), optional confidence ordinal, and either
 // deterministic tool identity or a model-tier provider invocation.
@@ -74,6 +82,12 @@ type EvaluationRow struct {
 	// could stamp the result with bytes the verifier never saw. Empty for
 	// pre-v17 proposals without persisted content (attribution gap, recorded).
 	SignatureContentHash string
+	// TargetVerdicts are the per-target break verdicts this evaluation ACTUALLY
+	// computed against the assessed content revision (v26). Success-cohort
+	// admission consumes THESE, never the origin-time frontier_target_invariants
+	// flags, so a revised interpretation cannot ride an origin break verdict
+	// (or be excluded by one).
+	TargetVerdicts []EvaluationTargetVerdictRow
 	// Invocation, when set (model tier), is written to provider_invocations with
 	// role='evaluate' and its ID linked from the evaluation row.
 	Invocation *EvaluationProviderInvocation
@@ -148,6 +162,17 @@ INSERT INTO evaluations(id, evaluation_run_id, proposal_id, verdict, verifier_ki
 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `, e.ID, record.ID, nullIfEmpty(e.ProposalID), e.Verdict, e.VerifierKind, e.VerificationStrength, nullIfEmpty(e.ConfidenceOrdinal), nullIfEmpty(e.ToolName), nullIfEmpty(e.ToolVersion), providerInvocationID, nullIfEmpty(e.Notes), record.CreatedAt, e.SignatureContentHash); err != nil {
 			return EvaluationRunRecord{}, err
+		}
+		// v26: the per-target break verdicts computed against the assessed
+		// content revision — the assessment-context tuple cohort admission
+		// consumes.
+		for _, tv := range e.TargetVerdicts {
+			if _, err := tx.ExecContext(ctx, `
+INSERT INTO evaluation_target_verdicts(evaluation_id, invariant_id, verdict, violated)
+VALUES(?, ?, ?, ?)
+`, e.ID, tv.InvariantID, tv.Verdict, boolToInt(tv.Violated)); err != nil {
+				return EvaluationRunRecord{}, err
+			}
 		}
 		for _, m := range e.Metrics {
 			metricID := m.ID
@@ -227,8 +252,35 @@ FROM evaluations WHERE evaluation_run_id = ? ORDER BY id
 		if err := s.loadEvaluationMetrics(ctx, &rec.Evaluations[i]); err != nil {
 			return EvaluationRunRecord{}, err
 		}
+		if err := s.loadEvaluationTargetVerdicts(ctx, &rec.Evaluations[i]); err != nil {
+			return EvaluationRunRecord{}, err
+		}
 	}
 	return rec, nil
+}
+
+// loadEvaluationTargetVerdicts rehydrates the assessment-context break
+// verdicts (v26) so audit and regression paths can read exactly what the
+// evaluation computed.
+func (s *Store) loadEvaluationTargetVerdicts(ctx context.Context, e *EvaluationRow) error {
+	rows, err := s.db.QueryContext(ctx, `
+SELECT invariant_id, verdict, violated
+FROM evaluation_target_verdicts WHERE evaluation_id = ? ORDER BY invariant_id
+`, e.ID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var tv EvaluationTargetVerdictRow
+		var violated int
+		if err := rows.Scan(&tv.InvariantID, &tv.Verdict, &violated); err != nil {
+			return err
+		}
+		tv.Violated = violated != 0
+		e.TargetVerdicts = append(e.TargetVerdicts, tv)
+	}
+	return rows.Err()
 }
 
 func (s *Store) loadEvaluationMetrics(ctx context.Context, e *EvaluationRow) error {

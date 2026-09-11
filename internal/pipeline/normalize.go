@@ -261,7 +261,12 @@ func (a *App) normalizeOneSnapshot(
 		CreatedAt:            now,
 	}
 
-	approaches, buildErr := buildApproachInputs(revision, snapshot.ID, providerResult, now)
+	// Completeness admission (v26) is decided by CODE, never the provider: the
+	// deterministic in-repo embedded-payload parser consumes the authored block
+	// verbatim, so its declared_payload-scoped declarations are accepted;
+	// every other combination is retained declared_only.
+	_, trustedParser := normalizer.(*provider.FixtureNormalizer)
+	approaches, buildErr := buildApproachInputs(revision, snapshot.ID, providerResult, trustedParser, now)
 	if buildErr != nil {
 		result.Status = "failed"
 		result.Reason = "schema_validation_failed"
@@ -295,7 +300,7 @@ func (a *App) normalizeOneSnapshot(
 	return result
 }
 
-func buildApproachInputs(revision domain.NormalizationRevision, snapshotID string, result normalize.Result, now time.Time) ([]store.ApproachInput, error) {
+func buildApproachInputs(revision domain.NormalizationRevision, snapshotID string, result normalize.Result, trustedParser bool, now time.Time) ([]store.ApproachInput, error) {
 	inputs := make([]store.ApproachInput, 0, len(result.Approaches))
 	for _, approach := range result.Approaches {
 		approachRevisionID := domain.NewApproachRevisionID(now)
@@ -313,10 +318,26 @@ func buildApproachInputs(revision domain.NormalizationRevision, snapshotID strin
 
 		attributes := buildAttributes(mechanismID, approach.Mechanism)
 
-		// Justified completeness declarations (v25): schema validation already
-		// enforced valid keys/values + a non-empty basis; sort for determinism.
+		// Justified completeness declarations (v25/v26): schema validation
+		// already enforced valid keys/values, a typed scope, and a non-empty
+		// basis. ADMISSION is decided HERE by code (ModelJudgment !=
+		// Verification): accepted only for a declared_payload-scoped claim
+		// consumed by the deterministic embedded-payload parser — the one case
+		// where "every entry of the declared list was parsed" holds by
+		// construction. Everything else persists declared_only: an auditable
+		// claim with NO evaluation authority.
 		var completeness []domain.MechanismFieldCompleteness
 		if len(approach.Mechanism.FieldCompleteness) > 0 {
+			scope := domain.CompletenessScope(approach.Mechanism.CompletenessScope)
+			admission := domain.CompletenessDeclaredOnly
+			admissionBasis := "unverified provider claim; declaration retained without evaluation authority"
+			switch {
+			case scope == domain.ScopeMechanismExhaustive:
+				admissionBasis = "mechanism-exhaustive scope is an extraction judgment; never code-acceptable"
+			case scope == domain.ScopeDeclaredPayload && trustedParser:
+				admission = domain.CompletenessAccepted
+				admissionBasis = "deterministic embedded-payload parser: declared_payload scope holds by construction"
+			}
 			kinds := make([]string, 0, len(approach.Mechanism.FieldCompleteness))
 			for kind := range approach.Mechanism.FieldCompleteness {
 				kinds = append(kinds, kind)
@@ -324,10 +345,13 @@ func buildApproachInputs(revision domain.NormalizationRevision, snapshotID strin
 			sort.Strings(kinds)
 			for _, kind := range kinds {
 				completeness = append(completeness, domain.MechanismFieldCompleteness{
-					MechanismID:  mechanismID,
-					Kind:         domain.MechanismAttributeKind(kind),
-					Completeness: domain.FieldCompleteness(approach.Mechanism.FieldCompleteness[kind]),
-					Basis:        approach.Mechanism.CompletenessBasis,
+					MechanismID:    mechanismID,
+					Kind:           domain.MechanismAttributeKind(kind),
+					Completeness:   domain.FieldCompleteness(approach.Mechanism.FieldCompleteness[kind]),
+					Scope:          scope,
+					Basis:          approach.Mechanism.CompletenessBasis,
+					Admission:      admission,
+					AdmissionBasis: admissionBasis,
 				})
 			}
 		}

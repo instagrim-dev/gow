@@ -56,13 +56,18 @@ type Mechanism struct {
 	// FieldCompleteness declares, per set-valued field (keys are
 	// MechanismAttributeKind strings: representation|assumption|operator|
 	// preserves|breaks|auxiliary_object), that the field's value list is an
-	// EXHAUSTIVE extraction — so a later absence check is a verified negative,
-	// not an epistemic gap. A declaration is a strong claim: it is admissible
-	// only with a non-empty CompletenessBasis stating its scope and
-	// justification (e.g. "all entries of the declared payload's preserves
-	// list were parsed"). An unqualified provider must not set this; leaving a
-	// field undeclared keeps the conservative default (unobserved).
+	// EXHAUSTIVE extraction. A declaration is a CLAIM, not authority: it is
+	// admissible only with a typed CompletenessScope and a non-empty
+	// CompletenessBasis, and the pipeline — never the provider — decides
+	// whether the declaration is ACCEPTED for evaluation (absence-based
+	// verified negatives) or retained declared_only as an auditable claim.
 	FieldCompleteness map[string]string `json:"field_completeness,omitempty"`
+	// CompletenessScope types what the declaration is exhaustive over:
+	// "declared_payload" (bounded representation — every entry of this
+	// payload's list was parsed; mechanically establishable by a deterministic
+	// parser) or "mechanism_exhaustive" (an extraction judgment about the
+	// mechanism itself; never code-acceptable). Required with any declaration.
+	CompletenessScope string `json:"completeness_scope,omitempty"`
 	// CompletenessBasis is the required justification for any FieldCompleteness
 	// declaration. It is persisted verbatim for audit.
 	CompletenessBasis string `json:"completeness_basis,omitempty"`
@@ -180,11 +185,18 @@ func (a Approach) validate(index int) error {
 		return schemaErr("approach[%d] invalid outcome class %q", index, a.Outcome.Class)
 	}
 	// Completeness declarations are strong claims and must be scoped +
-	// justified: valid field keys, valid enum values, and a non-empty basis.
-	// "unobserved" is the default and may not be declared (a vacuous
-	// declaration would let a basis-free payload look justified).
-	if len(a.Mechanism.FieldCompleteness) > 0 && strings.TrimSpace(a.Mechanism.CompletenessBasis) == "" {
-		return schemaErr("approach[%d] field_completeness requires a non-empty completeness_basis", index)
+	// justified: valid field keys, valid enum values, a TYPED scope, and a
+	// non-empty basis. "unobserved" is the default and may not be declared (a
+	// vacuous declaration would let a basis-free payload look justified).
+	// NOTE: passing validation only makes the declaration ADMISSIBLE AS A
+	// CLAIM — acceptance for evaluation is decided by the pipeline.
+	if len(a.Mechanism.FieldCompleteness) > 0 {
+		if strings.TrimSpace(a.Mechanism.CompletenessBasis) == "" {
+			return schemaErr("approach[%d] field_completeness requires a non-empty completeness_basis", index)
+		}
+		if !domain.CompletenessScope(a.Mechanism.CompletenessScope).Valid() {
+			return schemaErr("approach[%d] field_completeness requires a typed completeness_scope (declared_payload|mechanism_exhaustive), got %q", index, a.Mechanism.CompletenessScope)
+		}
 	}
 	for key, value := range a.Mechanism.FieldCompleteness {
 		if !domain.MechanismAttributeKind(key).Valid() {

@@ -255,17 +255,17 @@ VALUES(?, ?, ?, ?)
 	}
 
 	for _, fc := range input.FieldCompleteness {
-		// Domain-validate before write: a declaration without a basis (or with
-		// a vacuous 'unobserved' value) must never reach the table.
+		// Domain-validate before write: a declaration without a scope, basis, or
+		// code-decided admission must never reach the table.
 		declared := fc
 		declared.MechanismID = input.Mechanism.ID
 		if err := declared.Validate(); err != nil {
 			return ApproachRef{}, fmt.Errorf("field completeness declaration: %w", err)
 		}
 		if _, err := tx.ExecContext(ctx, `
-INSERT INTO mechanism_field_completeness(mechanism_id, field_kind, completeness, basis)
-VALUES(?, ?, ?, ?)
-`, declared.MechanismID, string(declared.Kind), string(declared.Completeness), declared.Basis); err != nil {
+INSERT INTO mechanism_field_completeness(mechanism_id, field_kind, completeness, scope, basis, admission, admission_basis)
+VALUES(?, ?, ?, ?, ?, ?, ?)
+`, declared.MechanismID, string(declared.Kind), string(declared.Completeness), string(declared.Scope), declared.Basis, string(declared.Admission), declared.AdmissionBasis); err != nil {
 			return ApproachRef{}, err
 		}
 	}
@@ -643,10 +643,10 @@ func (s *Store) approachDetailForRevision(ctx context.Context, approach domain.A
 }
 
 // listFieldCompleteness loads the justified per-field exhaustiveness
-// declarations for one mechanism (v25). Deterministic order by field kind.
+// declarations for one mechanism (v25/v26). Deterministic order by field kind.
 func (s *Store) listFieldCompleteness(ctx context.Context, mechanismID string) ([]domain.MechanismFieldCompleteness, error) {
 	rows, err := s.db.QueryContext(ctx, `
-SELECT field_kind, completeness, basis
+SELECT field_kind, completeness, scope, basis, admission, admission_basis
 FROM mechanism_field_completeness WHERE mechanism_id = ? ORDER BY field_kind
 `, mechanismID)
 	if err != nil {
@@ -655,15 +655,18 @@ FROM mechanism_field_completeness WHERE mechanism_id = ? ORDER BY field_kind
 	defer rows.Close()
 	var out []domain.MechanismFieldCompleteness
 	for rows.Next() {
-		var kind, completeness, basis string
-		if err := rows.Scan(&kind, &completeness, &basis); err != nil {
+		var kind, completeness, scope, basis, admission, admissionBasis string
+		if err := rows.Scan(&kind, &completeness, &scope, &basis, &admission, &admissionBasis); err != nil {
 			return nil, err
 		}
 		out = append(out, domain.MechanismFieldCompleteness{
-			MechanismID:  mechanismID,
-			Kind:         domain.MechanismAttributeKind(kind),
-			Completeness: domain.FieldCompleteness(completeness),
-			Basis:        basis,
+			MechanismID:    mechanismID,
+			Kind:           domain.MechanismAttributeKind(kind),
+			Completeness:   domain.FieldCompleteness(completeness),
+			Scope:          domain.CompletenessScope(scope),
+			Basis:          basis,
+			Admission:      domain.CompletenessAdmission(admission),
+			AdmissionBasis: admissionBasis,
 		})
 	}
 	return out, rows.Err()

@@ -97,6 +97,18 @@ type problemStore interface {
 	// that actually OWNS >=1 proposal row for the problem, so batch evaluate does
 	// not go blind when a fully-deduped latest generation owns none (finding 2).
 	LatestFrontierGenerationWithProposals(context.Context, string) (string, bool, error)
+	// LatestProposalOccurrenceGeneration resolves the generation that most
+	// recently EMITTED an interpretation of the proposal (occurrence binding) —
+	// the default assessment context for by-id re-evaluation, so revised
+	// content is reachable (87759d9 finding 2).
+	LatestProposalOccurrenceGeneration(context.Context, string, string) (string, bool, error)
+	// LatestFrontierGenerationWithOccurrences resolves the most recent
+	// generation with >=1 occurrence binding — batch evaluation consumes
+	// occurrence membership, not artifact ownership (87759d9 finding 2).
+	LatestFrontierGenerationWithOccurrences(context.Context, string) (string, bool, error)
+	// ListOccurrenceProposalRows returns the full proposal rows for a
+	// generation's occurrence membership (what it emitted, owned or deduped).
+	ListOccurrenceProposalRows(context.Context, string) ([]store.FrontierProposalRow, error)
 	RedundantAttackKeys(context.Context, string, int) ([]string, error)
 	ListBreakCohortRows(context.Context, string) ([]store.BreakCohortRow, error)
 	PersistSuccessRevision(context.Context, store.SuccessRevisionRecord) (store.PersistSuccessRevisionResult, error)

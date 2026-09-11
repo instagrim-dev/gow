@@ -52,6 +52,7 @@ func controlApproach(id, label string, preserves, operators []string, locality d
 	}
 	if declare {
 		mech.FieldCompleteness = map[string]string{"preserves": "complete"}
+		mech.CompletenessScope = string(domain.ScopeDeclaredPayload)
 		mech.CompletenessBasis = "synthetic control corpus: the declared payload's preserves list is exhaustive by construction"
 	}
 	return normalize.Approach{
@@ -391,4 +392,116 @@ func TestIntegrationPersistedInputCompletenessDeclarationMatters(t *testing.T) {
 	if got := mined.Revision.Candidates[0].ContrastViolatingNum; got != 0 {
 		t.Fatalf("without a declaration, contrast absence must stay UNKNOWN (not a violation): got %d", got)
 	}
+}
+
+// cannedNormalizer simulates a MODEL normalizer: it returns an authored result
+// regardless of content. It is NOT the deterministic embedded-payload parser,
+// so its completeness declarations must never be code-accepted.
+type cannedNormalizer struct{ result normalize.Result }
+
+func (c cannedNormalizer) Normalize(_ context.Context, _ normalize.Request) (provider.NormalizeResponse, error) {
+	return provider.NormalizeResponse{
+		Result:          c.result,
+		Metadata:        provider.Metadata{ProviderName: "model-sim", ProviderVersion: "v1", ModelName: "simulated-model", SchemaVersion: normalize.SchemaVersion},
+		RequestPayload:  "req",
+		ResponsePayload: "resp",
+	}, nil
+}
+
+// TestIntegrationCompletenessAuthorityIsCodeDecided is the finding-1
+// regression (review of 87759d9): a provider-supplied declaration with an
+// arbitrary nonempty basis must NOT acquire the evaluation authority of a
+// validated closed-world parser result. Two inadmissible paths:
+//
+//	(a) an UNTRUSTED (model-simulating) normalizer declares declared_payload
+//	    scope with a confident basis -> persisted DECLARED_ONLY, signature
+//	    stays unobserved;
+//	(b) the trusted parser carries a mechanism_exhaustive-scoped declaration
+//	    (an extraction judgment) -> DECLARED_ONLY as well.
+//
+// In both cases the declaration is retained verbatim as an auditable claim —
+// never silently dropped, never granted absence-based verification authority.
+func TestIntegrationCompletenessAuthorityIsCodeDecided(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+
+	assertDeclaredOnly := func(t *testing.T, app *App, dbPath, problemID string) {
+		t.Helper()
+		repo := openTestStore(t, ctx, dbPath)
+		defer repo.Close()
+		approaches, err := repo.ListApproaches(ctx, problemID)
+		if err != nil || len(approaches) == 0 {
+			t.Fatalf("list approaches: %v (%d)", err, len(approaches))
+		}
+		for _, item := range approaches {
+			detail, err := repo.GetApproachDetail(ctx, item.Approach.ID)
+			if err != nil {
+				t.Fatalf("detail: %v", err)
+			}
+			if len(detail.FieldCompleteness) == 0 {
+				t.Fatalf("the declaration must be RETAINED as an auditable claim, got none for %s", item.Approach.LogicalIdentity)
+			}
+			for _, fc := range detail.FieldCompleteness {
+				if fc.Admission != domain.CompletenessDeclaredOnly {
+					t.Fatalf("admission must be declared_only, got %q (%s)", fc.Admission, fc.AdmissionBasis)
+				}
+			}
+			// The signature must keep the conservative default: no evaluation authority.
+			rec, _, err := app.buildAndPersistSignature(ctx, repo, detail.Mechanism.ID, "", "")
+			if err != nil {
+				t.Fatalf("signature: %v", err)
+			}
+			sig := signatureFromRecord(rec)
+			if got := sig.FieldCompleteness(domain.FieldPreserves); got != domain.CompletenessUnobserved {
+				t.Fatalf("a declared_only claim must NOT upgrade the signature, got %q", got)
+			}
+		}
+	}
+
+	// (a) Untrusted normalizer, confident arbitrary basis, declared_payload scope.
+	t.Run("untrusted_provider_claim", func(t *testing.T) {
+		app, dbPath := newRealStoreApp(t, now)
+		payload := controlTrainResult(true)
+		for i := range payload.Approaches {
+			payload.Approaches[i].Mechanism.CompletenessBasis = "The model believes extraction is exhaustive."
+		}
+		app.normalizers = map[string]provider.Normalizer{
+			provider.FixtureProviderName: provider.NewFixtureNormalizer(),
+			"model-sim":                  cannedNormalizer{result: payload},
+		}
+		doc := writeControlDoc(t, t.TempDir(), "untrusted.md", payload)
+		init, err := app.InitProblem(ctx, InitProblemInput{DBPath: dbPath, Statement: "authority (untrusted)", Slug: "pic-untrusted"})
+		if err != nil {
+			t.Fatalf("init: %v", err)
+		}
+		if _, err := app.IngestSources(ctx, IngestInput{DBPath: dbPath, ProblemID: init.ProblemID, Paths: []string{doc}}); err != nil {
+			t.Fatalf("ingest: %v", err)
+		}
+		if _, err := app.Normalize(ctx, NormalizeInput{DBPath: dbPath, ProblemID: init.ProblemID, All: true, Provider: "model-sim"}); err != nil {
+			t.Fatalf("normalize: %v", err)
+		}
+		assertDeclaredOnly(t, app, dbPath, init.ProblemID)
+	})
+
+	// (b) Trusted parser, but a mechanism-exhaustive scope (extraction judgment).
+	t.Run("mechanism_exhaustive_scope", func(t *testing.T) {
+		app, dbPath := newRealStoreApp(t, now)
+		app.normalizers = map[string]provider.Normalizer{provider.FixtureProviderName: provider.NewFixtureNormalizer()}
+		payload := controlTrainResult(true)
+		for i := range payload.Approaches {
+			payload.Approaches[i].Mechanism.CompletenessScope = string(domain.ScopeMechanismExhaustive)
+		}
+		doc := writeControlDoc(t, t.TempDir(), "exhaustive-scope.md", payload)
+		init, err := app.InitProblem(ctx, InitProblemInput{DBPath: dbPath, Statement: "authority (scope)", Slug: "pic-exhaustive"})
+		if err != nil {
+			t.Fatalf("init: %v", err)
+		}
+		if _, err := app.IngestSources(ctx, IngestInput{DBPath: dbPath, ProblemID: init.ProblemID, Paths: []string{doc}}); err != nil {
+			t.Fatalf("ingest: %v", err)
+		}
+		if _, err := app.Normalize(ctx, NormalizeInput{DBPath: dbPath, ProblemID: init.ProblemID, All: true}); err != nil {
+			t.Fatalf("normalize: %v", err)
+		}
+		assertDeclaredOnly(t, app, dbPath, init.ProblemID)
+	})
 }

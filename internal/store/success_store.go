@@ -29,9 +29,10 @@ type BreakCohortRow struct {
 	LatestContentHash string // the proposal's newest revision (pending detection)
 }
 
-// ListBreakCohortRows returns every code-verified break (violated=1) whose
-// proposal has been evaluated, joined with the persisted canonical content.
-// Two bindings make each row a coherent assessment tuple (round-2 F2):
+// ListBreakCohortRows returns every proposal whose SELECTED evaluation
+// supports a code-verified break (violated=1 in evaluation_target_verdicts),
+// joined with the persisted canonical content. Three bindings make each row a
+// coherent assessment tuple (round-2 F2 + v26 finding 3):
 //
 //   - The evaluation is selected under selection-policy/v2: DECISIVE outcomes
 //     (success/partial_success/failure/partial_failure) are eligible before
@@ -47,6 +48,12 @@ type BreakCohortRow struct {
 //     and mark the member pending instead of splicing old outcomes onto new
 //     evidence. Legacy evaluations without a recorded hash fall back to the
 //     latest revision (binding unknowable; mismatch undetectable).
+//   - Break admission comes from the SELECTED evaluation's own recomputed
+//     per-target verdicts (v26), never from the origin-time
+//     frontier_target_invariants flags: a revised interpretation whose break
+//     degraded to unknown is excluded even though the origin row says
+//     violated, and one whose break became verified is admitted even though
+//     the origin row says unknown.
 //
 // Verdict, strength, and evaluation id are taken from that ONE record (H1).
 func (s *Store) ListBreakCohortRows(ctx context.Context, problemID string) ([]BreakCohortRow, error) {
@@ -82,9 +89,9 @@ SELECT t.invariant_id, p.id, fe.evaluation_id, fe.verdict, COALESCE(fe.verificat
        COALESCE(ar.canonical_fingerprint, lr.canonical_fingerprint, ''),
        CASE WHEN fe.assessed_hash <> '' THEN fe.assessed_hash ELSE COALESCE(lr.content_hash, '') END,
        COALESCE(lr.content_hash, '')
-FROM frontier_target_invariants t
-JOIN frontier_proposals p ON p.id = t.proposal_id
+FROM frontier_proposals p
 JOIN selected_eval fe ON fe.proposal_id = p.id AND fe.rn = 1
+JOIN evaluation_target_verdicts t ON t.evaluation_id = fe.evaluation_id
 LEFT JOIN frontier_proposal_signature_revisions ar ON ar.proposal_id = p.id AND ar.content_hash = fe.assessed_hash
 LEFT JOIN latest_rev lr ON lr.proposal_id = p.id
 WHERE p.problem_id = ? AND t.violated = 1

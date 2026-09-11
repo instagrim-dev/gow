@@ -230,14 +230,20 @@ func mechanismInputFromDetail(detail store.ApproachDetail) canon.MechanismInput 
 		OutcomeProvenance: claimStatusForPaths(supportByField, domain.OutcomeSupportPaths()),
 	}
 
-	// Justified completeness declarations (v25): overlaying only DECLARED
-	// fields keeps the conservative unobserved default for everything else.
+	// Justified completeness declarations (v25/v26): only ACCEPTED declarations
+	// acquire evaluation authority; declared_only rows are auditable claims
+	// that keep the conservative unobserved default.
 	if len(detail.FieldCompleteness) > 0 {
-		in.DeclaredCompleteness = map[domain.FieldKind]domain.FieldCompleteness{}
 		for _, fc := range detail.FieldCompleteness {
+			if fc.Admission != domain.CompletenessAccepted {
+				continue
+			}
 			kind, err := domain.AttributeFieldKind(fc.Kind)
 			if err != nil {
 				continue
+			}
+			if in.DeclaredCompleteness == nil {
+				in.DeclaredCompleteness = map[domain.FieldKind]domain.FieldCompleteness{}
 			}
 			in.DeclaredCompleteness[kind] = fc.Completeness
 		}
@@ -455,15 +461,21 @@ func signatureFromRecord(rec store.SignatureRecord) canon.MechanismSignature {
 			Relation:     b.Relation,
 		})
 	}
-	// Rehydrate the justified completeness declarations (v25) so a persisted
-	// signature evaluates absence exactly as the build path did: declared
-	// fields are complete/partial, everything else stays unobserved.
+	// Rehydrate the justified completeness declarations (v25/v26) so a
+	// persisted signature evaluates absence exactly as the build path did:
+	// only ACCEPTED declarations upgrade a field; declared_only claims and
+	// undeclared fields stay unobserved.
 	if len(rec.FieldCompleteness) > 0 {
-		sig.SetFieldCompleteness = map[domain.FieldKind]domain.FieldCompleteness{}
 		for _, fc := range rec.FieldCompleteness {
+			if fc.Admission != domain.CompletenessAccepted {
+				continue
+			}
 			kind, err := domain.AttributeFieldKind(fc.Kind)
 			if err != nil {
 				continue
+			}
+			if sig.SetFieldCompleteness == nil {
+				sig.SetFieldCompleteness = map[domain.FieldKind]domain.FieldCompleteness{}
 			}
 			sig.SetFieldCompleteness[kind] = fc.Completeness
 		}

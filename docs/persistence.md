@@ -1242,21 +1242,47 @@ later model-judged "success" cannot displace a decisive deterministic
 completed reassessment exists. The earliest-result view stays in the
 append-only ledger.
 
-## Justified field completeness (migration `v25`)
+## Justified field completeness (migration `v25`, admission split `v26`)
 
 The signature builder's conservative default marks every set-valued field
 `unobserved`, so a `contains`-absence evaluates `unknown`. An extractor that
 can HONESTLY assert a field was exhaustively extracted persists that
 declaration in `mechanism_field_completeness` — one immutable row per
 `(mechanism, field_kind)` carrying `complete | partial` plus a **required
-basis** (the scope and justification, persisted verbatim for audit; a
-declaration without a basis is rejected at the schema boundary and again by a
-`CHECK`). The signature build path overlays declared fields onto the default,
-and every signature reader (`GetSignature`/`loadSignature`) rehydrates the
-declarations, so absence on a declared-complete field is a verified negative
-in mining contrast verdicts, challenge searches, and frontier violation
-checks. Undeclared fields are unaffected; the record strengthens what a
-justified claim can express without weakening the default.
+basis** (persisted verbatim for audit).
+
+`v26` separates **declared** from **accepted** completeness (ModelJudgment !=
+Verification): rows also carry a typed `scope`
+(`declared_payload | mechanism_exhaustive`) and a CODE-decided `admission`
+(`accepted | declared_only`) with its own recorded basis. Only a
+`declared_payload`-scoped declaration consumed by the deterministic in-repo
+embedded-payload parser is accepted; an untrusted provider's declaration —
+however confident its basis reads — and any mechanism-exhaustive scope persist
+`declared_only`. Only **accepted** rows overlay the signature default and
+rehydrate through `GetSignature`/`loadSignature`, so absence on an
+accepted-complete field is a verified negative in mining contrast verdicts,
+challenge searches, and frontier violation checks; `declared_only` rows are
+auditable claims with no evaluation authority. Pre-v26 rows are backfilled
+`declared_only` (preserve the weaker type; re-normalize to re-admit).
+
+## Assessment-context selection and break verdicts (migration `v26`)
+
+Artifact lookup and assessment-context selection are different questions.
+`evaluate` resolves its context by OCCURRENCE, not ownership: by-id defaults to
+the proposal's latest occurrence generation (so a revised interpretation bound
+by a fully-deduped later generation is reachable), batch evaluation consumes
+the latest generation with occurrence membership, and `--generation` pins a
+specific occurrence (historical replay of the original included).
+
+Each evaluation also persists `evaluation_target_verdicts` — the per-target
+break verdicts it ACTUALLY recomputed against its assessed content revision.
+Success-cohort admission (`ListBreakCohortRows`) joins the SELECTED
+evaluation's own verdict rows, never the origin-time
+`frontier_target_invariants` flags: a revised interpretation whose break
+degraded to `unknown` is excluded even though the origin row says violated,
+and one whose break became verified is admitted even though the origin row
+says unknown. Existing evaluations are backfilled from the origin rows they
+historically consumed.
 
 ## Immutable vs mutable/revisioned
 

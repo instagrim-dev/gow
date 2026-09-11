@@ -121,20 +121,29 @@ func TestResultValidateSkippedAcceptsTypedReason(t *testing.T) {
 }
 
 // Field-completeness declarations are strong claims: admissible only with a
-// non-empty basis, valid set-field keys, and non-vacuous values (v25).
-func TestResultValidateFieldCompletenessRequiresBasis(t *testing.T) {
+// typed scope, a non-empty basis, valid set-field keys, and non-vacuous values
+// (v25/v26). Validation admits the CLAIM; acceptance is decided by code.
+func TestResultValidateFieldCompletenessRequiresBasisAndScope(t *testing.T) {
 	t.Parallel()
 	approach := validApproach()
 	approach.Mechanism.FieldCompleteness = map[string]string{"preserves": "complete"}
+	approach.Mechanism.CompletenessScope = "declared_payload"
 	result := Result{SchemaVersion: SchemaVersion, Approaches: []Approach{approach}}
 	if err := result.Validate(); !errors.Is(err, ErrSchemaViolation) {
 		t.Fatalf("a basis-free completeness declaration must be rejected, got %v", err)
 	}
 
 	approach.Mechanism.CompletenessBasis = "all entries of the declared payload's preserves list were parsed"
+	approach.Mechanism.CompletenessScope = ""
+	result = Result{SchemaVersion: SchemaVersion, Approaches: []Approach{approach}}
+	if err := result.Validate(); !errors.Is(err, ErrSchemaViolation) {
+		t.Fatalf("a scope-free completeness declaration must be rejected, got %v", err)
+	}
+
+	approach.Mechanism.CompletenessScope = "declared_payload"
 	result = Result{SchemaVersion: SchemaVersion, Approaches: []Approach{approach}}
 	if err := result.Validate(); err != nil {
-		t.Fatalf("a justified declaration must validate, got %v", err)
+		t.Fatalf("a justified, scoped declaration must validate, got %v", err)
 	}
 }
 
@@ -142,6 +151,7 @@ func TestResultValidateFieldCompletenessRejectsBadKeyAndVacuousValue(t *testing.
 	t.Parallel()
 	approach := validApproach()
 	approach.Mechanism.CompletenessBasis = "basis"
+	approach.Mechanism.CompletenessScope = "declared_payload"
 	approach.Mechanism.FieldCompleteness = map[string]string{"outcome": "complete"} // not a set field
 	if err := (Result{SchemaVersion: SchemaVersion, Approaches: []Approach{approach}}).Validate(); !errors.Is(err, ErrSchemaViolation) {
 		t.Fatalf("a non-set-field key must be rejected, got %v", err)

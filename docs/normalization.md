@@ -72,7 +72,7 @@ A merely different vocabulary or notation must not create mechanistic novelty:
 two approaches with different prose but the same axes/attributes are comparable
 by construction.
 
-### Justified field-completeness declarations (v25)
+### Justified field-completeness declarations (v25/v26)
 
 By default every set-valued field is treated as **unobserved**: the extractor
 recorded the values it found but did not assert the list is exhaustive, so a
@@ -83,25 +83,39 @@ that CAN honestly assert exhaustiveness declares it in the payload:
 "mechanism": {
   "preserves": ["residue locality"],
   "field_completeness": { "preserves": "complete" },
+  "completeness_scope": "declared_payload",
   "completeness_basis": "all entries of the declared payload's preserves list were parsed"
 }
 ```
 
+**Declaration and authority are separate** (`ModelJudgment != Verification`).
+The payload supplies a typed scope + basis — a *claim*. Code decides the
+**admission**:
+
+- `accepted` — only a `declared_payload`-scoped declaration consumed by the
+  deterministic in-repo embedded-payload parser (the one case where "every
+  entry of the declared list was parsed" holds by construction);
+- `declared_only` — everything else: any declaration from an untrusted
+  (model) normalizer regardless of how confident its basis reads, and any
+  `mechanism_exhaustive`-scoped declaration (an extraction judgment about the
+  mechanism itself, which no parser can verify).
+
 Rules (enforced at the schema boundary and again at persistence):
 
-- a declaration **requires** a non-empty `completeness_basis` (persisted
-  verbatim for audit);
+- a declaration **requires** a typed `completeness_scope`
+  (`declared_payload | mechanism_exhaustive`) and a non-empty
+  `completeness_basis` (persisted verbatim for audit);
 - keys must be set-valued fields; values are `complete | partial` (declaring
   `unobserved` is vacuous and rejected);
-- the declaration is scoped: *"all entries in this declared field were parsed"*
-  is enforceable; *"all properties preserved by this method were identified"*
-  is a much stronger claim — an unqualified provider must not declare it.
+- the admission decision and its mechanism-neutral basis are persisted per
+  `(mechanism, field)` in immutable rows.
 
-Declarations persist per `(mechanism, field)` (immutable rows), overlay the
-conservative default at signature build time, and round-trip through
-`mechanism_signatures` readers — so `contains`-absence on a declared-complete
-field is a **verified violation** wherever that signature is evaluated
-(mining contrast verdicts, challenge searches, frontier violation checks).
+Only **accepted** declarations overlay the conservative default at signature
+build time and round-trip through `mechanism_signatures` readers — so
+`contains`-absence on an accepted-complete field is a **verified violation**
+wherever that signature is evaluated (mining contrast verdicts, challenge
+searches, frontier violation checks). `declared_only` rows are retained as
+auditable claims with **no evaluation authority**.
 
 ## Provider role and provenance
 

@@ -519,3 +519,94 @@ VALUES(?, ?, ?, ?)
 `, generationRunID, proposalID, contentHash, createdAt)
 	return err
 }
+
+// LatestProposalOccurrenceGeneration resolves the most recent generation that
+// EMITTED the proposal (occurrence binding) — the assessment-context selector
+// (review of 87759d9, finding 2). Artifact ownership answers "where does the
+// row live"; occurrence membership answers "which generation last produced an
+// interpretation of it", which is what re-evaluation must reach: a fully
+// deduped later generation owns zero rows but binds the REVISED content.
+// Falls back to the owning generation for pre-v24 history without bindings.
+func (s *Store) LatestProposalOccurrenceGeneration(ctx context.Context, problemID, proposalID string) (string, bool, error) {
+	if err := domain.ValidateProblemID(problemID); err != nil {
+		return "", false, err
+	}
+	row := s.db.QueryRowContext(ctx, `
+SELECT gc.generation_run_id
+FROM frontier_generation_contents gc
+JOIN frontier_generation_runs g ON g.id = gc.generation_run_id
+WHERE g.problem_id = ? AND gc.proposal_id = ?
+ORDER BY g.revision DESC, g.id DESC LIMIT 1
+`, problemID, proposalID)
+	var id string
+	if err := row.Scan(&id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return s.FindProposalGeneration(ctx, problemID, proposalID)
+		}
+		return "", false, err
+	}
+	return id, true, nil
+}
+
+// LatestFrontierGenerationWithOccurrences resolves the most recent generation
+// with >=1 occurrence binding — batch evaluation consumes occurrence
+// MEMBERSHIP, not artifact ownership, so a fully-deduped latest generation
+// (zero owned rows, revised bindings) is reachable (finding 2). Falls back to
+// the latest generation owning proposal rows for pre-v24 history.
+func (s *Store) LatestFrontierGenerationWithOccurrences(ctx context.Context, problemID string) (string, bool, error) {
+	if err := domain.ValidateProblemID(problemID); err != nil {
+		return "", false, err
+	}
+	row := s.db.QueryRowContext(ctx, `
+SELECT g.id FROM frontier_generation_runs g
+WHERE g.problem_id = ?
+  AND EXISTS (SELECT 1 FROM frontier_generation_contents gc WHERE gc.generation_run_id = g.id)
+ORDER BY g.revision DESC, g.id DESC LIMIT 1`, problemID)
+	var id string
+	if err := row.Scan(&id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return s.LatestFrontierGenerationWithProposals(ctx, problemID)
+		}
+		return "", false, err
+	}
+	return id, true, nil
+}
+
+// ListOccurrenceProposalRows returns the FULL proposal rows (targets, nearest
+// clusters, result) for every proposal the generation EMITTED — its occurrence
+// membership — regardless of which generation owns the artifact row. This is
+// the evaluation membership view (finding 2): owned-row enumeration hides
+// cross-generation-deduped proposals whose revised content this generation
+// bound. Deterministic order by proposal id.
+func (s *Store) ListOccurrenceProposalRows(ctx context.Context, generationRunID string) ([]FrontierProposalRow, error) {
+	rows, err := s.db.QueryContext(ctx, `
+SELECT p.id, p.proposal_hash, p.structural_violation_claim, p.novelty_argument, p.cheapest_falsification_path, p.mechanistic_distance_ordinal, p.expected_information_gain_ordinal, p.evaluation_cost_ordinal, p.violates_any_target, p.rank_ordinal, p.result
+FROM frontier_generation_contents gc
+JOIN frontier_proposals p ON p.id = gc.proposal_id
+WHERE gc.generation_run_id = ?
+ORDER BY p.id
+`, generationRunID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []FrontierProposalRow
+	for rows.Next() {
+		var p FrontierProposalRow
+		var violates int
+		if err := rows.Scan(&p.ID, &p.ProposalHash, &p.StructuralViolationClaim, &p.NoveltyArgument, &p.CheapestFalsificationPath, &p.MechanisticDistance, &p.ExpectedInformationGain, &p.EvaluationCost, &violates, &p.Rank, &p.Result); err != nil {
+			return nil, err
+		}
+		p.ViolatesAnyTarget = violates != 0
+		out = append(out, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	for i := range out {
+		if err := s.loadFrontierProposalDetail(ctx, &out[i]); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
