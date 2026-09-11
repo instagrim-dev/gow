@@ -180,21 +180,39 @@ is whether that breadth makes it prohibited. Conservative fallback: unsupported.
 
 ---
 
-## 5. Admission checklist for challenge step
+## 5. Challenge checklist — what determines individual candidate status
 
-For any candidate theme the operator selects for challenge:
+The pilot's aggregate verdict limits claims about *method reliability*. It
+does not gate individual candidate validity. A candidate from a negative
+pilot can be grounded, challenged, and survive; a candidate from a positive
+pilot can be falsified. What determines downstream use is the candidate's
+own challenge results, not whether the originating experiment succeeded.
 
-| Gate | Requirement |
-|---|---|
-| Evidence bar | Confirmed by quorum `defensible_novel` (passed for N1–N5 entries, subject to scope notes) |
-| Scope correction | E15: required; E03/N2b: es-07 inclusion must be justified; E10/E22: not applicable until conservative fallback resolved |
-| Challenge: known counterexample | Attempt to find a known failed approach in the corpus that violates the property |
-| Challenge: synthetic counterexample | Construct a synthetic failed approach that violates it |
-| Challenge: success-preserving | Identify a success that still preserves the property |
-| Admission | Operator attestation; new pinned vocabulary revision; reclustering + fresh database before support counted |
+For each candidate theme the operator selects:
 
-The negative pilot verdict does not gate the challenge step. Individual entry
-validity is independent of the pilot's run-to-run consistency result.
+| Step | Requirement | Notes |
+|---|---|---|
+| Scope resolution | Confirm shared_by set is coherent; settle any open scope question (OQ1–OQ4) | Do this *before* challenge, not during |
+| Challenge: known counterexample | Find a known failed approach in the corpus that violates the property | Per AGENTS.md §Candidate invariant discipline |
+| Challenge: synthetic counterexample | Construct a synthetic failed approach that violates it | — |
+| Challenge: success-preserving | Find a success that still preserves the property | — |
+| Challenge: abstraction level | Lower and raise abstraction; check if candidate splits or merges | — |
+| Challenge: sampling/redundancy | Distinguish correlation from causal obstruction | — |
+| Admission | Operator attestation; new pinned vocabulary revision; reclustering + fresh database before support counted | Only after surviving challenge |
+
+**Recommended starting points** (cleanest candidates, no open scope questions):
+
+1. **N5 — Reorganisation without added existence** (E21, D0, 3-0): es-09 and
+   es-11 deliver reorganisation at higher structural levels without adding
+   existence at the QR survivor classes. Unanimous, no scope objection, and
+   the contrast (es-06 adds representation lower bounds, so reorganisation
+   alone is not the success path) is clearly stated.
+
+2. **N2a — Intrinsic density/averaging ceiling** (E13, E16, E20, E23, mixed
+   arms, 3-0 each): es-05 and es-10 share a structural ceiling — the
+   almost-all gap cannot be closed within the method's own machinery. Four
+   independent formulations, all unanimous, appearing in both arms. The
+   recurrence strengthens the case that the property is real and reproducible.
 
 ---
 
@@ -219,8 +237,14 @@ These are bounded research questions. They do not require a new harness phase.
 | Predeclared success criterion | Not met (negative/inconclusive) |
 | Reference rediscovery consistency | 1/3 D1 runs; L3 once (D1 only); L4 not recovered |
 | Novel distinct themes | ~5 (N1–N5), from 10 occurrences |
-| Entries requiring scope correction before admission | 2 (E15, E03/N2b es-07 inclusion) |
+| Entries requiring scope correction before challenge | 2 (E15, E03/N2b es-07 inclusion) |
 | Entries requiring conservative-fallback resolution | 2 (E10, E22) |
 | Open bounded questions | 4 (OQ1–OQ4) |
 | Same-model-family quorum | Confirmed — within-family consistency, not independent validation |
 | Key seal gap | Confirmed — post-adjudication population; git history provides partial protection |
+| **Recommended next action** | **Challenge N5 or N2a — no scope corrections required for either** |
+
+The negative pilot result limits the claim about the *method's reliability*.
+It does not invalidate the candidate invariants. A challenged and surviving
+candidate is admissible regardless of whether the pilot that produced it met
+its aggregate endpoint.

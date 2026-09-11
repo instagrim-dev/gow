@@ -429,11 +429,26 @@ Quorum adjudication assigned seven reference matches and ten proposal
 occurrences with a `defensible_novel` disposition, with recurring themes and
 unresolved scope questions across the ten. D1 recovered an unnamed reference
 property (L3) in one of three runs, below the predeclared majority-of-runs
-requirement; the overall success criterion was not met. The result demonstrates
-candidate-generation capability and yields useful hypotheses and diagnostic
-disagreements. It does not establish ten distinct discoveries, reliable
-discrimination of failure structure from the control, or verification by
-reviewer consensus.
+requirement; the overall success criterion was not met. The result does not
+establish ten distinct discoveries, reliable discrimination of failure structure
+from the control, or verification by reviewer consensus.
+
+**What can be claimed:**
+
+> The model generated candidate shared properties not supplied as adjudicated
+> reference properties, and several received favorable substantive assessments.
+> Novel entries are model-generated candidate invariants absent from the
+> reference ledger. They remain hypotheses until individually grounded and
+> challenged. Their eligibility for downstream use depends on their own
+> evidence and challenge results, regardless of whether the originating pilot
+> met its aggregate endpoint.
+
+The negative pilot result limits claims about the **method's reliability and
+comparative effectiveness** — it does not invalidate potentially useful
+candidates produced during the run. A failed experiment does not invalidate
+every artifact it produced; a successful experiment does not validate every
+artifact it produced. The plan's challenge stage is what determines individual
+candidate status.
 
 **Operational milestone reached:** non-predetermined discovery proposals were
 captured, attributed, and subjected to structured criticism.
@@ -444,26 +459,42 @@ captured, attributed, and subjected to structured criticism.
 
 ## Next steps (operator-owned)
 
-1. **Closure scorecard:** Freeze the endpoint result; group repeated
-   hypotheses without deleting occurrences; distinguish reference agreement from
-   fidelity to each arm's supplied evidence; resolve specific scope objections
-   before promoting candidates into downstream guidance. See
-   `records/CLOSURE-SCORECARD.md`.
+1. **Challenge a candidate (primary next step):** Select a promising,
+   nonredundant novel candidate — N2a (intrinsic density/averaging ceiling,
+   [es-05, es-10]) or N5 (reorganisation without added existence, [es-09,
+   es-11]) are the cleanest starting points — and apply the predeclared
+   challenge discipline:
+   - Find a known failed approach in the corpus that violates the property.
+   - Construct a synthetic failed approach that violates it.
+   - Identify a success that still preserves it.
+   - Lower and raise the abstraction level; check whether the candidate splits
+     or merges.
+   A surviving challenged property may be admitted as an interpretation claim
+   in a new vocabulary revision. The negative pilot verdict does not gate this
+   step; it limits claims about the method's reliability, not individual
+   candidate validity.
 
-2. **Challenge step for novel candidates:** For each candidate theme selected
-   by the operator, apply the predeclared challenge discipline (known
-   counterexample, synthetic counterexample, success-preserving check). A
-   surviving challenged property may be admitted as an interpretation claim.
-   The negative pilot verdict does not gate this step; individual entry validity
-   is independent of pilot consistency.
+2. **Resolve open scope questions before challenging E03 or N2b:**
+   Answer OQ1 (does es-07's generality failure belong in the same structural
+   grouping as es-02/es-10's proven-infinite survivor set?) before advancing
+   those entries to challenge. Do not carry an unresolved scope question into
+   the challenge stage.
 
-3. **Scope corrections before any admission:** E15 requires narrowing before
-   pipeline admission (annotation pattern vs. mechanism-level claim; es-05
-   contrast status). E10/E22 require substantive resolution before any
-   downstream guidance use (do not rely on conservative fallback category).
+3. **Scope corrections before admitting E15:** Narrow E15's claim to the
+   annotation-pattern observation; correct the es-05 contrast-check status
+   (es-05 is `partial_failure`, not `partial_success`). Revised claim must be
+   separately attributed.
 
-4. **Follow-on protocol revisions:** Incorporate learnings L1–L5 before
-   designing the next pilot.
+4. **Resolve E10/E22 before any downstream guidance use:** These have no
+   majority verdict. Do not treat them as confirmed over-merges; do not use
+   them as guidance without substantive resolution of OQ2.
+
+5. **Ledger update (D-B1, now unblocked):** `adjudication-ledger.json` now
+   carries arm assignments. `key_sha256` populated post-adjudication — see
+   §Provenance limitations.
+
+6. **Future protocol revisions:** Incorporate learnings L1–L5 before designing
+   the next pilot.
 
 ---
 
