@@ -375,7 +375,7 @@ We make four claims, deliberately ordered from broadest to narrowest:
 
 Consider a research team that has spent several years attempting to prove the
 Erd\H{o}s--Straus conjecture ($4/n = 1/a + 1/b + 1/c$ has a solution for all
-$n \geq 2$) without success. They have accumulated roughly a dozen serious
+$n \geq 2$)~\cite{elsholtz2024erdos} without success. They have accumulated roughly a dozen serious
 approaches: algebraic identities, modular arithmetic constructions, sieve
 methods, class-number arguments, geometric interpretations, and analytic
 estimates. None has resolved the general case.
@@ -1557,11 +1557,16 @@ failure population, and what structural move would violate it?''
 \paragraph{Automated scientific discovery.}
 Systems in the BACON/Eureka tradition \citep{langley1987scientific} discover
 laws from data about physical objects. The AI Scientist \citep{lu2024aiscientist}
-generates hypotheses and runs experiments. The target of discovery is
-\emph{object-level} patterns in measurements. GoW's target is the geometry of
+generates hypotheses and runs experiments. FunSearch~\citep{romera2024funsearch}
+proposes candidate programs with an LLM and selects them against an external
+combinatorial-evaluation harness, achieving new results on specific
+mathematical problems. The target of discovery in these systems is
+\emph{object-level} patterns in measurements (or, for FunSearch, an
+object-level extremal construction). GoW's target is the geometry of
 \emph{prior work on a problem}: a meta-level object. The two can coexist
-(GoW can use scientific discovery methods inside a projection step), but
-they answer different questions.
+(GoW can use scientific discovery methods, including FunSearch-style
+proposer/evaluator loops, inside a projection step), but they answer
+different questions.
 
 \paragraph{Automated theorem proving and conjecture generation.}
 ATP systems (Lean, Isabelle, Metamath) \citep{harrison2014history} search proof
@@ -1841,10 +1846,13 @@ of the reported instrument, not an incidental drafting aid. Specifically:
 recorded in \path{corpus/experiments/pilot-003/} and
 \path{corpus/experiments/pilot-004-discovery/} were produced by
 large-language-model inference under the pinned prompts and pinned recovery
-rule; (b)~the blinded model reviewer described in Experiment~B is itself an
-LLM-family reviewer, distinct from the arms it scored, and its verdict is
-recorded as tier-5 (single-model judgment) per
-\cref{sec:epistemic}; (c)~the three quorum lanes in Pilot-004 are
+rule; (b)~the blinded model reviewer described in Experiment~B is an isolated
+session drawn from the \emph{same} model family as both proposer arms, blinded
+to arm labels, target-invariant IDs, and automatic classifications --- exactly
+the strongest assessment this run could obtain without an external reviewer,
+and recorded as tier-5 (single-model judgment) per
+\cref{sec:epistemic} (not tier-4 cross-family agreement); (c)~the three quorum
+lanes in Pilot-004 are
 independent LLM invocations reading the same 23 proposal occurrences under
 identical instructions. Per-invocation provider and model identifiers, along
 with request/response artifacts, are retained in the frozen experiment
