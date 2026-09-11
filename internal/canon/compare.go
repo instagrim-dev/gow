@@ -239,6 +239,23 @@ func Compare(a, b MechanismSignature, weightsVersion string) (Comparison, error)
 	return CompareWithProfile(a, b, ProfileMechanismV1()), nil
 }
 
+// ProfileForClassifyVersion resolves a classifier-contract version string to
+// its pinned profile. It exists so diagnostic surfaces (e.g. `mechanism
+// compare --classify-version`) can reproduce a verdict under the EXACT rule an
+// assessment used, instead of being locked to the default. Unknown versions
+// are refused — a verdict must never be produced under a profile the caller
+// cannot name.
+func ProfileForClassifyVersion(version string) (ComparisonProfile, error) {
+	switch version {
+	case "", ClassifyMechanismV1:
+		return ProfileMechanismV1(), nil
+	case ClassifyMechanismV2:
+		return ProfileMechanismV2(), nil
+	default:
+		return ComparisonProfile{}, fmt.Errorf("unknown classify version %q (known: %s, %s)", version, ClassifyMechanismV1, ClassifyMechanismV2)
+	}
+}
+
 // CompareWithProfile measures every axis and then applies the given profile to
 // decide the verdict. The measurement (Comparison.Fields for all six set
 // fields, Posture, OutcomeEqual, and per-field boundary results) is independent

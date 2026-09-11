@@ -198,10 +198,10 @@ func newMechanismCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions)
 	cmd.AddCommand(signatureCmd)
 
 	var (
-		cmpVocab   string
-		cmpSchema  string
-		cmpWeights string
-		cmpNoWrite bool
+		cmpVocab                string
+		cmpSchema               string
+		cmpWeights, cmpClassify string
+		cmpNoWrite              bool
 	)
 	compareCmd := &cobra.Command{
 		Use:   "compare <mechanism-a> <mechanism-b>",
@@ -209,14 +209,15 @@ func newMechanismCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions)
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			result, err := app.CompareMechanisms(cmd.Context(), pipeline.CompareInput{
-				DBPath:         opts.dbPath,
-				MechanismAID:   args[0],
-				MechanismBID:   args[1],
-				VocabVersion:   cmpVocab,
-				SchemaVersion:  cmpSchema,
-				WeightsVersion: cmpWeights,
-				NoWrite:        cmpNoWrite,
-				JSONOutput:     opts.jsonOutput,
+				DBPath:          opts.dbPath,
+				MechanismAID:    args[0],
+				MechanismBID:    args[1],
+				VocabVersion:    cmpVocab,
+				SchemaVersion:   cmpSchema,
+				WeightsVersion:  cmpWeights,
+				ClassifyVersion: cmpClassify,
+				NoWrite:         cmpNoWrite,
+				JSONOutput:      opts.jsonOutput,
 			})
 			if err != nil {
 				return wrapCommandError("mechanism compare", err)
@@ -231,6 +232,7 @@ func newMechanismCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions)
 	compareCmd.Flags().StringVar(&cmpVocab, "vocab-version", "", "Canonical vocabulary version (default mechanism/v1)")
 	compareCmd.Flags().StringVar(&cmpSchema, "schema-version", "", "Signature schema version (default mechanism/v1)")
 	compareCmd.Flags().StringVar(&cmpWeights, "weights-version", "", "Comparison weights version (default weights/v1)")
+	compareCmd.Flags().StringVar(&cmpClassify, "classify-version", "", "Classifier contract (classify/v1 default; classify/v2 reproduces the production assessment rule)")
 	compareCmd.Flags().BoolVar(&cmpNoWrite, "no-write", false, "Do not persist the comparison run")
 	cmd.AddCommand(compareCmd)
 

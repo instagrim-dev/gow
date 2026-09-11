@@ -233,3 +233,113 @@ func TestIntegrationInterpretationWithoutClaimsChangesNothing(t *testing.T) {
 		t.Fatalf("want exactly the fixture's own claim, got %d", preserves)
 	}
 }
+
+// TestIntegrationCompareClassifyVersionParity pins the diagnostic-parity
+// contract: `mechanism compare --classify-version classify/v2` reproduces the
+// production assessment rule ad hoc. The same pair — one mechanism omitting
+// its operators (empty, completeness unobserved) against one recording them —
+// is a decisive mismatch under legacy classify/v1 and an epistemic gap
+// (unknown) under classify/v2. Unknown versions are refused.
+func TestIntegrationCompareClassifyVersionParity(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 9, 11, 11, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+
+	problemID, runID, snapshotID := seedProblemAndSnapshot(t, ctx, dbPath, now)
+	full := calibSeedMechanism(t, ctx, app, dbPath, problemID, runID, snapshotID, &MechanismFixture{
+		Approaches: []MechanismFixtureApproach{{
+			LogicalIdentity: "parity/full", Label: "Full",
+			Locality: "local", ConstructionMode: "constructive", UncertaintyMode: "deterministic",
+			Preserves: []string{"residue locality"},
+			Operators: []string{"modular decomposition"},
+			Outcome:   MechanismFixtureOutcome{Class: "failure"},
+		}},
+	})
+	omitted := calibSeedMechanism(t, ctx, app, dbPath, problemID, runID, snapshotID, &MechanismFixture{
+		Approaches: []MechanismFixtureApproach{{
+			LogicalIdentity: "parity/omitted", Label: "Omitted operators",
+			Locality: "local", ConstructionMode: "constructive", UncertaintyMode: "deterministic",
+			Preserves: []string{"residue locality"},
+			Outcome:   MechanismFixtureOutcome{Class: "failure"},
+		}},
+	})
+
+	classify := func(version string) string {
+		res, err := app.CompareMechanisms(ctx, CompareInput{
+			DBPath: dbPath, MechanismAID: omitted, MechanismBID: full,
+			ClassifyVersion: version, NoWrite: true,
+		})
+		if err != nil {
+			t.Fatalf("compare (%q): %v", version, err)
+		}
+		return res.Comparison.Classification
+	}
+
+	v1 := classify("classify/v1")
+	if v1 != string(canon.ClassSurfaceNearMechDistinct) && v1 != string(canon.ClassMechanismDistinct) {
+		t.Fatalf("v1 must read the omission as decisive, got %s", v1)
+	}
+	if got := classify("classify/v2"); got != string(canon.ClassUnknown) {
+		t.Fatalf("v2 must read the omission as an epistemic gap, got %s", got)
+	}
+	if got := classify(""); got != v1 {
+		t.Fatalf("default must stay classify/v1: %s vs %s", got, v1)
+	}
+	if _, err := app.CompareMechanisms(ctx, CompareInput{DBPath: dbPath, MechanismAID: omitted, MechanismBID: full, ClassifyVersion: "classify/v9", NoWrite: true}); err == nil {
+		t.Fatal("unknown classify version must be refused")
+	}
+}
+
+// TestIntegrationInterpretationListByProblem pins the problem-wide audit
+// surface: claims across mechanisms are listed with the owning approach's
+// logical identity (pilot preparations previously hand-assembled mechanism-id
+// maps for this), and exactly one selector (mechanism id XOR --problem) is
+// required.
+func TestIntegrationInterpretationListByProblem(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 9, 11, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+
+	problemID, runID, snapshotID := seedProblemAndSnapshot(t, ctx, dbPath, now)
+	var mechIDs []string
+	for _, f := range []struct{ identity, label string }{
+		{"audit/alpha", "Alpha"}, {"audit/beta", "Beta"},
+	} {
+		id := calibSeedMechanism(t, ctx, app, dbPath, problemID, runID, snapshotID, &MechanismFixture{
+			Approaches: []MechanismFixtureApproach{{
+				LogicalIdentity: f.identity, Label: f.label,
+				Locality: "global", ConstructionMode: "constructive", UncertaintyMode: "deterministic",
+				Preserves: []string{"some label"},
+				Outcome:   MechanismFixtureOutcome{Class: "failure"},
+			}},
+		})
+		mechIDs = append(mechIDs, id)
+		if _, err := app.AddInterpretation(ctx, InterpretationAddInput{
+			DBPath: dbPath, MechanismID: id, Field: "preserves",
+			Label: interpProperty, ProvenanceRef: "pilot-001/adjudication-ledger:L1",
+		}); err != nil {
+			t.Fatalf("add: %v", err)
+		}
+	}
+
+	res, err := app.ListInterpretations(ctx, InterpretationListInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("list by problem: %v", err)
+	}
+	if len(res.Claims) != 2 {
+		t.Fatalf("want 2 claims, got %d", len(res.Claims))
+	}
+	if res.Claims[0].LogicalIdentity != "audit/alpha" || res.Claims[1].LogicalIdentity != "audit/beta" {
+		t.Fatalf("claims must carry approach identity in identity order: %+v", res.Claims)
+	}
+
+	// Selector contract: both or neither is refused.
+	if _, err := app.ListInterpretations(ctx, InterpretationListInput{DBPath: dbPath}); err == nil {
+		t.Fatal("no selector must be refused")
+	}
+	if _, err := app.ListInterpretations(ctx, InterpretationListInput{DBPath: dbPath, ProblemID: problemID, MechanismID: mechIDs[0]}); err == nil {
+		t.Fatal("both selectors must be refused")
+	}
+}

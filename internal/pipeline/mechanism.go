@@ -27,8 +27,13 @@ type CompareInput struct {
 	VocabVersion   string
 	SchemaVersion  string
 	WeightsVersion string
-	NoWrite        bool
-	JSONOutput     bool
+	// ClassifyVersion selects the classifier contract (classify/v1 default;
+	// classify/v2 reproduces the production ASSESSMENT rule). Diagnostic
+	// parity: an operator must be able to reproduce an assessment verdict
+	// ad hoc without rerunning an experiment.
+	ClassifyVersion string
+	NoWrite         bool
+	JSONOutput      bool
 }
 
 // SignatureMechanism builds (or returns the existing) signature for a mechanism.
@@ -153,10 +158,14 @@ func (a *App) CompareMechanisms(ctx context.Context, input CompareInput) (Compar
 	sigA := signatureFromRecord(recordA)
 	sigB := signatureFromRecord(recordB)
 
-	cmp, err := canon.Compare(sigA, sigB, input.WeightsVersion)
+	profile, err := canon.ProfileForClassifyVersion(input.ClassifyVersion)
 	if err != nil {
 		return CompareResponse{}, err
 	}
+	if input.WeightsVersion != "" && input.WeightsVersion != canon.WeightsMechanismV1 {
+		return CompareResponse{}, fmt.Errorf("unknown weights version %q", input.WeightsVersion)
+	}
+	cmp := canon.CompareWithProfile(sigA, sigB, profile)
 
 	resp := CompareResponse{
 		OK:           true,
