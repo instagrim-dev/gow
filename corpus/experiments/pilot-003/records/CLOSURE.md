@@ -29,7 +29,7 @@ another capture and not another general harness phase.
 | Curated properties can enter the pipeline and guide an external proposal exercise | Demonstrated in this exploratory run |
 | Captures can be retained, assessed, and traced through a separate review | Demonstrated, with recorded protocol deviations |
 | A reviewer judged one guided proposal to recover the intended move | Observed |
-| That proposal satisfies the original criterion on independent scrutiny | Provisional |
+| That proposal satisfies the original criterion on independent scrutiny | Provisional — corroborated by a second cue-reduced model adjudication under the no-completion discipline (`SECOND-ADJUDICATION-RESULT.md`: P10 recovers on described content; P04/P07 fail the threshold); human-external confirmation still open |
 | Guidance caused better search performance | Not established by this single paired run |
 | The system discovered the failure invariants itself | Not tested; those features were adjudicated inputs |
 
@@ -66,13 +66,16 @@ proposer would produce across repeated runs) is unidentified.
 
 ## Next steps (ordered)
 
-1. **External human review** of the frozen material: all thirteen
-   proposals, without the prior judgments, tally, or key; the original
-   criterion; a recorded treatment of procedural cues; passage-level
-   reasons for representation / proposed mapping / follow-through /
-   obligations per proposal. Key question: whether P10 clears the
-   specificity threshold P04 and P07 do not. P10 is not highlighted to
-   the reviewer. Packet: `../review-derivative/`.
+1. **External human review** of the frozen material — the operational
+   review was executed 2026-09-11 as a second, cue-reduced MODEL
+   adjudication (`SECOND-ADJUDICATION-RESULT.md`): full verdict
+   concordance with review 1 on the criterion question (P10 recovers on
+   described content with objections recorded; P04/P07 fail the
+   no-completion threshold; both prior partials resolve to
+   does_not_recover under the three-category schema). Same-model-family
+   limitation recorded; the HUMAN slot remains open and the packet
+   (`../review-derivative/`) remains valid for it, with this review's P12
+   equivalence flag preserved as an explicit question for that reviewer.
 2. A corrected-rule (classify/v2) reassessment may proceed as a separate
    accounting exercise; it cannot resolve the P10 prose question, and any
    vocabulary change selected after seeing P10 remains explicitly post
