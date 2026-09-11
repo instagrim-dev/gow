@@ -1,0 +1,1325 @@
+{
+  "schema": "pilot-quorum-lane-brief/v1",
+  "full_packet_sha256": "fbb692cb07e14350134455a9d4c40645fecd80a95e7a22116118d3c4595a9f22",
+  "instructions": "You are one independent adjudicator in a quorum. Judge EACH of the 23 proposed shared properties below on its own text against (a) the REFERENCE STANDARD (six operator-adjudicated entries from a prior mapping review of the same corpus) and (b) the TRUE CORPUS NOTES supplied at the end. Assign exactly one category per entry:\n  matches_reference — asserts the same property as a reference entry (scope may differ; name the entry and record scope deltas)\n  defensible_novel — not in the reference; survives the same evidence bar (passages support it, distinctions preserved, contrast checked honestly)\n  over_merge — erases a reference-preserved distinction (e.g. treats covering and assembly as one identity, or merges mechanisms the reference kept distinct)\n  prohibited_promotion — a rejected abstraction with no predictive discrimination (the reference explicitly rejected \"uses modular arithmetic\"-style properties that hold corpus-wide)\n  unsupported — fails the evidence bar: passages do not support the statement, the contrast check is wrong against the true notes, or the claimed sharing set is wrong\nJudge on substance against the TRUE notes (some entries may have been generated against altered annotations; if an entry's claims contradict the true notes' outcomes or content, that bears on unsupported). Quote-presence was already mechanically verified; your job is whether the evidence SUPPORTS the property. Do not rank entries, do not group them, do not guess their origin. Return ONE JSON document, no Markdown fence: {\"schema\": \"pilot-quorum-lane/v1\", \"votes\": [{\"entry_id\", \"category\", \"reference_match\", \"scope_deltas\", \"reason\"}]} with exactly one vote per entry; reference_match is an L-id for matches_reference and null otherwise; reason is 1-3 sentences.",
+  "aggregation_rule": "Three independent lanes. Per entry: majority (>=2/3) cements the category; for matches_reference the modal L-id among matching votes cements reference_match. No majority => the MOST CONSERVATIVE vote cements, ordered unsupported > prohibited_promotion > over_merge > defensible_novel > matches_reference, and the entry is flagged disputed. All per-lane votes are retained verbatim.",
+  "reference_standard": {
+    "schema": "pilot-001-adjudication-ledger/v1",
+    "commissioned_by": "records/STOP-readiness-2026-09-10.md (revision 2)",
+    "protocol": "MAPPING-REVIEW.md",
+    "inputs": {
+      "corpus_pin": "a868dec70e6cb0f5ab6000ec89bbd36e12f43ec4",
+      "train_tree": "da49ddcf8bbe89ba2f51627ff7c4a6c7f6f03cf6",
+      "target_read": false,
+      "note": "All passages extracted from the twelve frozen train notes only. The withheld target was not read by the proposer."
+    },
+    "proposer": {
+      "role": "model",
+      "identity": "cursor-agent (claude), pilot-001 preparation session",
+      "date_utc": "2026-09-11",
+      "discipline": "Proposals are GeneratedInterpretation, not evidence. Nothing here is self-approved; entries have downstream effect only after operator adjudication."
+    },
+    "entries": [
+      {
+        "id": "L1",
+        "kind": "shared_property",
+        "labels": [
+          {
+            "field_kind": "operator",
+            "label": "polynomial identity",
+            "source": "es-01"
+          },
+          {
+            "field_kind": "operator",
+            "label": "congruence covering",
+            "source": "es-02"
+          },
+          {
+            "field_kind": "operator",
+            "label": "factorization identity",
+            "source": "es-03"
+          },
+          {
+            "field_kind": "operator",
+            "label": "class assembly",
+            "source": "es-10"
+          },
+          {
+            "field_kind": "preserves",
+            "label": "confinement of congruence methods to non-residues",
+            "source": "es-08"
+          }
+        ],
+        "claim": "Distinct mechanisms (per-class identities, finite covering, divisor factorization, class assembly with density) share the restriction that their congruence-carried reach eliminates only quadratic non-residue classes; quadratic-residue survivor classes remain outside all of them.",
+        "proposed_property": "confined_to_quadratic_nonresidues (working name): the method's coverage is carried by congruence relations that, by quadratic reciprocity, cannot catch quadratic-residue classes.",
+        "scope": "Asserted for es-01, es-02, es-03, es-10 (failure-side) with es-08 as the note that names the property as an obstruction. NOT asserted for es-05 (fails on growth rate, see L5) or es-07 (fails by definitional finiteness; its QR mention is about what remains beyond the bound, not about its mechanism's carrier).",
+        "evidence": [
+          {
+            "source": "es-01",
+            "passage": "They resolve every class except those where n behaves like a perfect square to small moduli."
+          },
+          {
+            "source": "es-02",
+            "passage": "the congruence relations that carry polynomial identities can only eliminate quadratic *non*-residues. By quadratic reciprocity, no finite covering built from these identities can catch the quadratic-residue classes (see es-08)."
+          },
+          {
+            "source": "es-03",
+            "passage": "the factorization view gives no global lattice organization of the solution set ... existence unforced for QR primes (boundary_statement)."
+          },
+          {
+            "source": "es-08",
+            "passage": "the note that explains why the identity/covering families (es-01, es-02) all stall on the same classes ... It preserves — indeed pinpoints — the invariant that the whole identity/covering program confines to non-residues."
+          },
+          {
+            "source": "es-10",
+            "passage": "the exceptional set is thin but non-empty and infinite, and it is exactly the quadratic-residue survivor family."
+          }
+        ],
+        "preserves_distinctions": "es-01/es-02/es-03/es-10 remain four distinct mechanisms (local identity vs global covering vs divisor construction vs density assembly). This entry asserts a shared restriction, not sameness.",
+        "counterevidence": [
+          {
+            "source": "es-09",
+            "note": "partial_success that explicitly 'adds no positivity for QR primes' — a non-failure outcome still preserving the property; relevant to challenge step 3 (success that preserves the invariant)."
+          },
+          {
+            "source": "es-12",
+            "note": "partial_success that designs around the restriction ('none of the admitted congruences is a quadratic residue', preserves 'Mordell non-residue restriction'); conjectural coverage. Mandatory contrast for any candidate built from this property."
+          }
+        ],
+        "status": "accepted",
+        "adjudication": {
+          "decision": "accepted",
+          "by": "operator (adjudication form, 2026-09-11 UTC)",
+          "date_utc": "2026-09-11",
+          "reason": "Accepted as proposed: encode confined_to_quadratic_nonresidues as a source-grounded hypothesis (canonical concept), scope excluding es-05/es-07; support earned only via mine -> challenge at unchanged threshold."
+        }
+      },
+      {
+        "id": "L2",
+        "kind": "component_of",
+        "labels": [
+          {
+            "field_kind": "operator",
+            "label": "class union",
+            "source": "es-02"
+          },
+          {
+            "field_kind": "operator",
+            "label": "congruence covering",
+            "source": "es-02"
+          }
+        ],
+        "claim": "In es-02, 'class union' is a constituent operation of the 'congruence covering' method: the covering system is built by unioning identity-admitting classes. Co-occurrence on one note is not evidence of interchangeability.",
+        "scope": "es-02 only. No alias is proposed; a support merge would double-count one note.",
+        "evidence": [
+          {
+            "source": "es-02",
+            "passage": "it seeks a finite family of congruences whose union is all of Z."
+          },
+          {
+            "source": "es-02",
+            "passage": "notes: 'Seeks a finite union of solvable classes covering Z.' — the union is the means; the covering is the objective."
+          }
+        ],
+        "preserves_distinctions": "The global covering objective vs the class-level union operation, which es-02 itself distinguishes.",
+        "counterevidence": [],
+        "status": "accepted",
+        "adjudication": {
+          "decision": "accepted",
+          "by": "operator (adjudication form, 2026-09-11 UTC)",
+          "date_utc": "2026-09-11",
+          "reason": "Accepted: relationship recorded, identities preserved, no support merge."
+        }
+      },
+      {
+        "id": "L3",
+        "kind": "shared_property",
+        "labels": [
+          {
+            "field_kind": "operator",
+            "label": "congruence covering",
+            "source": "es-02"
+          },
+          {
+            "field_kind": "operator",
+            "label": "class assembly",
+            "source": "es-10"
+          }
+        ],
+        "claim": "es-02's covering and es-10's assembly both construct unions of identity-admitting congruence classes; they differ on the demand placed on the union (exhaustive cover of Z vs bounded-density leftover). Not proposed as an alias.",
+        "proposed_property": "class_union_construction (working name): builds a union of congruence classes each admitting a polynomial identity.",
+        "scope": "es-02 and es-10. The exhaustive/existential vs density/estimative distinction is load-bearing: es-02 fails outright where es-10 reaches a thin-but-infinite exceptional set.",
+        "evidence": [
+          {
+            "source": "es-02",
+            "passage": "choose finitely many moduli and residue classes so that every integer n falls into at least one class that admits an identity."
+          },
+          {
+            "source": "es-10",
+            "passage": "it works class by class (local identities) but its payoff is a global density statement about how thin the unsolved set is."
+          }
+        ],
+        "preserves_distinctions": "Exhaustive covering (existential, all of Z) vs density-driven assembly (counts survivors). Merging these as an alias would erase the variable that separates their outcome boundaries.",
+        "counterevidence": [
+          {
+            "source": "es-12",
+            "note": "uses the exact label 'congruence covering' under partial_success (form-indexed, respecting the non-residue restriction). Any candidate involving covering must face this occurrence."
+          }
+        ],
+        "status": "accepted",
+        "adjudication": {
+          "decision": "accepted",
+          "by": "operator (adjudication form, 2026-09-11 UTC)",
+          "date_utc": "2026-09-11",
+          "reason": "Accepted: encode class_union_construction as hypothesis; exhaustive-vs-density distinction preserved as load-bearing."
+        }
+      },
+      {
+        "id": "L4",
+        "kind": "shared_property",
+        "labels": [
+          {
+            "field_kind": "operator",
+            "label": "polynomial identity",
+            "source": "es-01"
+          },
+          {
+            "field_kind": "preserves",
+            "label": "polynomial-identity solvability per class",
+            "source": "es-02"
+          },
+          {
+            "field_kind": "assumption",
+            "label": "many classes admit identities",
+            "source": "es-10"
+          }
+        ],
+        "claim": "es-01, es-02 and es-10 all depend on class-local polynomial identities as the carrier of solvability; the dependency appears as operator (es-01), preserved property (es-02) and assumption (es-10).",
+        "proposed_property": "identity_carried_solvability (working name): solvability inside a congruence class is supplied by a fixed polynomial identity keyed to that class.",
+        "scope": "es-01, es-02, es-10 (failure-side). es-12 shares the dependency in form-indexed shape (partial_success contrast).",
+        "evidence": [
+          {
+            "source": "es-01",
+            "passage": "For many residue classes of n, a fixed polynomial identity in n writes down 4/n = 1/x + 1/y + 1/z directly."
+          },
+          {
+            "source": "es-02",
+            "passage": "preserves: 'polynomial-identity solvability per class'."
+          },
+          {
+            "source": "es-10",
+            "passage": "estimates the number of n ≤ N for which the conjecture is not yet settled by known congruence identities."
+          }
+        ],
+        "preserves_distinctions": "How each method uses the identities (locally, unioned, counted) stays distinct; only the dependency is shared.",
+        "counterevidence": [
+          {
+            "source": "es-12",
+            "note": "associates a general polynomial to each of two solution forms — the same dependency arranged by form rather than by producing congruence, under partial_success."
+          }
+        ],
+        "status": "accepted",
+        "adjudication": {
+          "decision": "accepted",
+          "by": "operator (adjudication form, 2026-09-11 UTC)",
+          "date_utc": "2026-09-11",
+          "reason": "Accepted: encode identity_carried_solvability as hypothesis; es-12 form-indexed contrast retained."
+        }
+      },
+      {
+        "id": "L5",
+        "kind": "distinct_on_tested_property",
+        "labels": [
+          {
+            "field_kind": "operator",
+            "label": "averaging",
+            "source": "es-05"
+          },
+          {
+            "field_kind": "operator",
+            "label": "sieve estimation",
+            "source": "es-05"
+          }
+        ],
+        "claim": "es-05 fails for a different structural reason than the congruence family: its boundary is intrinsic growth rate (polylog average too slow to force existence), not quadratic-residue confinement. This distinction is potential counterevidence against over-generalizing L1.",
+        "scope": "es-05 vs the L1 cohort. If a future candidate claims 'all failure-side methods are QR-confined', es-05 refutes the universal reading.",
+        "evidence": [
+          {
+            "source": "es-05",
+            "passage": "the average grows only polylogarithmically. For some Diophantine problems a positive average forces a solution to exist, but that argument needs at least polynomial growth."
+          },
+          {
+            "source": "es-05",
+            "passage": "it reasons about the distribution of solution counts across a large ensemble of primes rather than about any single n."
+          }
+        ],
+        "preserves_distinctions": "Ensemble/probabilistic posture vs congruence-carried constructive posture; growth-rate boundary vs residue-class boundary.",
+        "counterevidence": [],
+        "status": "accepted",
+        "adjudication": {
+          "decision": "accepted",
+          "by": "operator (adjudication form, 2026-09-11 UTC)",
+          "date_utc": "2026-09-11",
+          "reason": "Accepted: preserved as counterevidence against universal QR-confinement claims."
+        }
+      },
+      {
+        "id": "L6",
+        "kind": "distinct_on_tested_property",
+        "labels": [
+          {
+            "field_kind": "operator",
+            "label": "local congruence filter",
+            "source": "es-03"
+          },
+          {
+            "field_kind": "operator",
+            "label": "modular decomposition",
+            "source": "es-01"
+          }
+        ],
+        "claim": "The two operations have affirmatively distinct roles: es-01's modular decomposition partitions the problem inputs by residue class of n and dispatches per-class identities; es-03's local congruence filter selects among candidate denominators for positivity within a single instance. No alias, component, or shared property beyond those already carried by L1/L4 is admissible from train evidence.",
+        "scope": "es-01 vs es-03. The distinction is preserved as potential counterevidence against any future candidate that would merge congruence-based problem partitioning with congruence-based candidate filtering.",
+        "evidence": [
+          {
+            "source": "es-03",
+            "passage": "enumerating divisors of a quantity depending on n and applying local congruence filters to keep the denominators positive integers."
+          },
+          {
+            "source": "es-01",
+            "passage": "Because these identities are keyed to fixed moduli, they reason one class at a time and never couple classes."
+          }
+        ],
+        "preserves_distinctions": "Problem-space partition (global class structure over n) vs candidate-solution filtering (instance-local positivity selection).",
+        "counterevidence": [],
+        "prohibited_promotions": [
+          "'uses modular arithmetic' as a shared property: rejected on abstraction-safety grounds — nearly every note in this corpus, including partial successes es-04 and es-12, uses modular arithmetic, so the property has no predictive discrimination and would erase the variable separating outcomes."
+        ],
+        "status": "accepted",
+        "adjudication": {
+          "decision": "accepted_as_reclassified",
+          "by": "operator via holistic-design-decision-resolver invocation (adjudication form, question L6)",
+          "date_utc": "2026-09-11",
+          "reason": "Resolver decision D-L6, option B: train evidence affirmatively establishes distinct roles, which is stronger than 'no relationship established'. Original 'unresolved' kind superseded; over-broad abstraction recorded as prohibited promotion.",
+          "reopen_trigger": "If a future proposer or reviewer supplies train-grounded evidence that the positivity filter and the class decomposition compose into or specialize one another, this entry must be re-adjudicated before any merged concept is encoded."
+        }
+      }
+    ],
+    "adjudication_summary": {
+      "date_utc": "2026-09-11",
+      "result": "L1-L5 accepted as proposed by operator form response; L6 reclassified unresolved -> distinct_on_tested_property and accepted via holistic-design-decision-resolver (decision D-L6, option B).",
+      "downstream": "Per MAPPING-REVIEW.md freeze rules: accepted shared properties (L1, L3, L4) enter as GeneratedInterpretation hypotheses in a NEW pinned vocabulary revision; no alias was accepted, so no identity merge occurs; reclustering + fresh database + new protocol revision required before support is counted again."
+    }
+  },
+  "entries": [
+    {
+      "entry_id": "E01",
+      "statement": "Each failed identity/covering-family approach transports solvability exclusively through fixed-modulus congruence relations, which quadratic reciprocity confines to eliminating non-residues, so every one of them stalls on exactly the quadratic-residue survivor classes.",
+      "shared_by": [
+        "es-01-mordell-polynomial-identities.md",
+        "es-02-covering-system-attempt.md",
+        "es-10-vaughan-congruence-density.md",
+        "es-08-quadratic-reciprocity-obstruction.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-01-mordell-polynomial-identities.md",
+          "quote": "quadratic-residue survivor classes remain uncovered"
+        },
+        {
+          "note": "es-02-covering-system-attempt.md",
+          "quote": "no finite covering eliminates quadratic-residue classes"
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "exceptional set is thin but infinite and protected by the QR wall"
+        },
+        {
+          "note": "es-08-quadratic-reciprocity-obstruction.md",
+          "quote": "every failed family here preserves the quadratic-residue wall."
+        }
+      ],
+      "preserved_distinctions": "It does not merge the local single-identity mechanism (es-01, one class at a time, constructive), the global existential covering search (es-02), and the density-aggregation posture (es-10, counts survivors rather than covering them); es-08 remains a meta-level obstruction analysis, not a construction. They share only the congruence-carried transport of solvability.",
+      "contrast_check": "The partial-success es-12 also builds a congruence system, but it explicitly designs its admitted congruences to avoid quadratic residues ('admitted congruences avoid quadratic residues') and its coverage remains self-declared conjectural — consistent with the property marking a real wall rather than a shared topic. Other partial successes (es-04, es-09, es-11) do not rely on congruence transport as their solvability carrier.",
+      "falsification": "Exhibiting a fixed-modulus congruence identity family in the notes (or a new one) that provably covers a quadratic-residue class, or a failed approach in this family whose stall point is unrelated to the quadratic-residue classes, would refute the property.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E02",
+      "statement": "The approach sources solvability exclusively from fixed-modulus congruence/identity relations, whose eliminative power is confined to quadratic non-residues, so it stalls exactly on the quadratic-residue classes it cannot touch.",
+      "shared_by": [
+        "es-01-mordell-polynomial-identities.md",
+        "es-02-covering-system-attempt.md",
+        "es-08-quadratic-reciprocity-obstruction.md",
+        "es-10-vaughan-congruence-density.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-02-covering-system-attempt.md",
+          "quote": "relations that carry polynomial identities can only eliminate quadratic"
+        },
+        {
+          "note": "es-08-quadratic-reciprocity-obstruction.md",
+          "quote": "these relations can eliminate quadratic **non**-residues but never quadratic"
+        },
+        {
+          "note": "es-01-mordell-polynomial-identities.md",
+          "quote": "They resolve every class **except** those where"
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "the surviving classes are protected by the"
+        }
+      ],
+      "preserved_distinctions": "It does not merge the mechanisms behind the shared reliance: es-01 is local and constructive (per-class explicit denominators), es-02 is global and existential (seeks a finite covering), es-10 aggregates local identities into a global density statement, and es-08 is a meta-level obstruction analysis that constructs nothing. Same wall, four structurally different operators.",
+      "contrast_check": "The partial-success es-12 also builds a congruence system, but it is designed so that 'by construction none of the admitted congruences is a quadratic' residue — i.e., it explicitly routes around this property rather than sharing it, and its remaining gap is self-declared conjectural coverage, not the reciprocity block. es-04, es-09, and es-11 do not source solvability from fixed-modulus congruences at all, so the property discriminates.",
+      "falsification": "Exhibiting a fixed-modulus polynomial-identity congruence family that provably eliminates a quadratic-residue class (e.g., a covered class in which n is a quadratic residue to the relevant small moduli) would refute the claimed confinement.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E03",
+      "statement": "The approach spends a finite resource (finite covering family, finite verification range, finite battery of classes) against a survivor set that is demonstrated to be infinite, so exhaustion is structurally impossible rather than merely unfinished.",
+      "shared_by": [
+        "es-02-covering-system-attempt.md",
+        "es-07-computational-verification.md",
+        "es-10-vaughan-congruence-density.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-02-covering-system-attempt.md",
+          "quote": "is therefore non-empty for every candidate covering, and it contains infinitely"
+        },
+        {
+          "note": "es-07-computational-verification.md",
+          "quote": "It cannot certify the infinitely many quadratic-residue"
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "but **non-empty and infinite**, and it is exactly the quadratic-residue survivor"
+        }
+      ],
+      "preserved_distinctions": "The finite resources differ in kind: es-02 seeks a finite system of moduli covering Z (existential, global), es-07 enumerates and certifies instances up to a bound (constructive, empirical, per-n), and es-10 assembles many identity-bearing classes to shrink a density (mixed local-to-global). These remain distinct search modes despite the common finite-vs-infinite mismatch.",
+      "contrast_check": "The partial-success es-12 also proposes a finite congruence system, but its leftover is only conjecturally empty ('coverage of all primes by Type A/B is conjectural'), whereas in the three failed notes the infinite leftover is established. es-04, es-09, and es-11 do not attempt exhaustion by a finite family at all, so the property still separates proven-insufficient finite programs from the open one.",
+      "falsification": "A proof that the survivor set of one of these finite families is actually finite (for instance, a candidate covering or class battery whose exceptional set is provably finite or empty) would refute the property.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E04",
+      "statement": "These approaches operate in an aggregate or characterizing (existential) mode that explicitly gives up per-n construction, so they cannot certify a solution for any individual survivor prime even when their global statements are strong.",
+      "shared_by": [
+        "es-05-averaging-bombieri-vinogradov.md",
+        "es-10-vaughan-congruence-density.md",
+        "es-11-monks-velingker-structure.md",
+        "es-09-higher-dimensional-variety-lift.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-05-averaging-bombieri-vinogradov.md",
+          "quote": "per-n constructivity"
+        },
+        {
+          "note": "es-05-averaging-bombieri-vinogradov.md",
+          "quote": "Distributional statement about many primes at once."
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "Local identities aggregated into a global thinness statement."
+        },
+        {
+          "note": "es-11-monks-velingker-structure.md",
+          "quote": "Constraint geometry of solutions; upstream of Type A/B systems."
+        },
+        {
+          "note": "es-09-higher-dimensional-variety-lift.md",
+          "quote": "Abstraction/transfer move; compression without added positivity."
+        }
+      ],
+      "preserved_distinctions": "The property does not merge their operators or uncertainty modes: es-05 is probabilistic ensemble averaging over primes, es-10 is deterministic density aggregation of identity-bearing classes, es-11 is algebraic constraint analysis of the solution set, and es-09 is an algebraic re-representation lift. They remain structurally distinct methods that share only the abandonment of per-n certification.",
+      "contrast_check": "Partial successes es-04 and es-06 are also existential in mode, so existential posture alone does not discriminate. The sharper contrast is es-07 (partial success), which is constructive and deterministic per n and produces certified per-instance solutions — exactly the capability the partial failures lack while still aiming at all n.",
+      "falsification": "An approach sharing this aggregate or characterizing posture that nonetheless yields a per-prime existence proof — for example an averaging bound with growth strong enough to force f(p) > 0 for every prime — would refute the claim that this posture participates in the stall.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E05",
+      "statement": "Several failed approaches produce quantitative evidence of an intrinsically bounded type — a polylog average, a shrinking-but-positive density, or a finite verified range — whose limiting form structurally cannot be upgraded to universal existence.",
+      "shared_by": [
+        "es-05-averaging-bombieri-vinogradov.md",
+        "es-07-computational-verification.md",
+        "es-10-vaughan-congruence-density.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-05-averaging-bombieri-vinogradov.md",
+          "quote": "polylog average growth is too slow to force existence"
+        },
+        {
+          "note": "es-05-averaging-bombieri-vinogradov.md",
+          "quote": "argument needs at least polynomial growth"
+        },
+        {
+          "note": "es-07-computational-verification.md",
+          "quote": "is **not a proof** for all `n`."
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "density never reaches zero"
+        }
+      ],
+      "preserved_distinctions": "es-05 is probabilistic ensemble averaging over primes, es-07 is deterministic per-instance certification by search, and es-10 is deterministic class assembly; the shared ceiling on their evidence type does not merge their distinct operators (averaging/sieve vs. bounded search vs. class assembly) or uncertainty modes.",
+      "contrast_check": "The partial-success es-06 also yields almost-all coverage ('covers almost all primes but degrades for perfect-square-like primes'), so 'almost-all coverage' alone would not discriminate; the property is therefore stated as the structural upgrade barrier of the evidence type itself (average growth rate, finite bound, positive residual density), which the notes assert explicitly only for these three.",
+      "falsification": "A demonstration that one of these evidence types does admit an upgrade path — e.g., an averaging argument whose growth rate forces per-prime existence, or a density argument reaching zero exceptional density — or a note showing the stall was due to effort or computation limits rather than the evidence type.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E06",
+      "statement": "Two approaches share a compression-without-positivity structure: they unify or reorganize previously separate mechanisms into one object, and the unification preserves known solution structure while adding no new existence for the survivor classes.",
+      "shared_by": [
+        "es-09-higher-dimensional-variety-lift.md",
+        "es-11-monks-velingker-structure.md",
+        "es-12-type-a-b-congruence-system.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-09-higher-dimensional-variety-lift.md",
+          "quote": "compression without added positivity"
+        },
+        {
+          "note": "es-11-monks-velingker-structure.md",
+          "quote": "prove that every prime admits at least one solution."
+        },
+        {
+          "note": "es-12-type-a-b-congruence-system.md",
+          "quote": "advances the organization of the problem"
+        }
+      ],
+      "preserved_distinctions": "es-09 compresses by algebraic lift (parameterizations become slices of one variety), es-11 by constraint relations linking residue classes, es-12 by coupling solution forms to a proposed covering; the shared property is the outcome shape (organization gained, existence not gained), not the unification operator.",
+      "contrast_check": "es-04 and es-06 (partial successes) also reorganize ('Better organization, same wall'), so reorganization itself is outcome-neutral; the failed members are distinguished by explicitly conceding the unified object is conjectural or non-positivity-adding at the QR classes, e.g. es-12's admission it may be 'as difficult or more difficult' than the original.",
+      "falsification": "Evidence that one of these unifications transported an existence argument onto a survivor class it did not previously cover would refute the property for that pair.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E07",
+      "statement": "Several failed approaches measure progress by a quantity (finite verification bound, average solution count, exceptional-set density) whose mode of improvement structurally cannot reach the universal 'every n' statement, so improving the number never closes the conjecture.",
+      "shared_by": [
+        "es-05-averaging-bombieri-vinogradov.md",
+        "es-07-computational-verification.md",
+        "es-10-vaughan-congruence-density.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-05-averaging-bombieri-vinogradov.md",
+          "quote": "polylog average growth is too slow to force existence"
+        },
+        {
+          "note": "es-07-computational-verification.md",
+          "quote": "finite verification is not a proof for all n"
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "Sharpens almost-all; does not reach all."
+        }
+      ],
+      "preserved_distinctions": "It does not merge the mechanisms: es-05 is global, probabilistic ensemble averaging over primes; es-07 is local, deterministic per-instance certification by bounded search; es-10 is local-to-global class assembly with a density payoff. Only the shape of the boundary (quantitative measure cannot reach universality) is shared, not the operators.",
+      "contrast_check": "The partial-success es-06 partially shares this property ('Almost-all, not all.'), which weakens it as pure failure structure; however es-06 is the only contrast case, and the other partial successes (es-04, es-09, es-11, es-12) do not have quantitative-measure boundaries, so the property retains some discrimination.",
+      "falsification": "Showing that one of these measures can in principle force universality (e.g., upgrading the averaging bound to at least polynomial growth so a positive average forces existence, or a density argument that provably reaches zero) would refute the property.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E08",
+      "statement": "Two or more stalled approaches reason strictly per-class or per-instance and supply no global organization of the solution set, so their outputs never compose into a statement about all n.",
+      "shared_by": [
+        "es-01-mordell-polynomial-identities.md",
+        "es-03-factorization-scheme.md",
+        "es-07-computational-verification.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-01-mordell-polynomial-identities.md",
+          "quote": "Because these identities are keyed to fixed moduli, they reason one class at a"
+        },
+        {
+          "note": "es-01-mordell-polynomial-identities.md",
+          "quote": "Per-class explicit denominators; classes never coupled."
+        },
+        {
+          "note": "es-03-factorization-scheme.md",
+          "quote": "gives no **global lattice organization** of the solution set."
+        },
+        {
+          "note": "es-07-computational-verification.md",
+          "quote": "The mechanism is local and deterministic per `n`, and empirical in character: it"
+        }
+      ],
+      "preserved_distinctions": "es-01 computes denominators from a closed-form identity with no search, es-03 enumerates divisors of an n-dependent quantity with local congruence filters, and es-07 performs bounded empirical search with certificates; the shared locality does not merge identity evaluation, divisor enumeration, and brute search, which remain distinct mechanisms.",
+      "contrast_check": "The partial successes are predominantly global or mixed in locality (es-04 mixed, es-06 global, es-09 global, es-11 mixed, es-12 global), so strict per-class/per-instance locality without global organization is held by these stalled approaches and not by the partially successful ones, making it a discriminating property.",
+      "falsification": "A note showing one of these three approaches derives a genuinely global statement about the full solution set from its local mechanism, or a partially successful approach in the corpus that is equally class-local and unorganized globally yet crosses the survivor classes.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E09",
+      "statement": "Every congruence-identity-based failed approach draws its eliminating power from fixed-modulus congruence relations whose reach is structurally confined to quadratic non-residues, so the quadratic-residue classes survive every configuration of the method.",
+      "shared_by": [
+        "es-01-mordell-polynomial-identities.md",
+        "es-12-type-a-b-congruence-system.md",
+        "es-10-vaughan-congruence-density.md",
+        "es-08-quadratic-reciprocity-obstruction.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-01-mordell-polynomial-identities.md",
+          "quote": "Progress stops"
+        },
+        {
+          "note": "es-01-mordell-polynomial-identities.md",
+          "quote": "the QR wall is preserved by every congruence method"
+        },
+        {
+          "note": "es-12-type-a-b-congruence-system.md",
+          "quote": "Blocked by the quadratic-reciprocity obstruction, not by search effort."
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "quadratic-residue survivor classes"
+        },
+        {
+          "note": "es-08-quadratic-reciprocity-obstruction.md",
+          "quote": "every failed family here preserves the quadratic-residue wall."
+        }
+      ],
+      "preserved_distinctions": "It does not merge the approaches' loci or operators: es-01 is class-local and constructive per residue class, es-12 is a global covering built on transversal solution forms, es-10 aggregates classes into a density statement, and es-08 is a meta-level obstruction analysis rather than a construction. They share only the confinement of congruence elimination to non-residues.",
+      "contrast_check": "The partial successes also touch this wall but differently: es-02 shares the congruence machinery and correspondingly reaches only almost-all primes, while es-07 dispatches 'Mordell-exceptional' quadratic-residue primes within its finite range, showing the confinement is a property of congruence-elimination methods rather than of the primes themselves. So the property discriminates by mechanism, not merely by topic.",
+      "falsification": "Exhibiting a fixed-modulus congruence identity family, or a finite covering assembled from such identities, that provably eliminates a quadratic-residue class would refute the claimed confinement.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E10",
+      "statement": "The failed and partially failed constructive approaches reason class-locally or instance-locally and provide no global organization that couples residue classes or solved instances into a structure bearing on the unsolved ones.",
+      "shared_by": [
+        "es-01-mordell-polynomial-identities.md",
+        "es-03-factorization-scheme.md",
+        "es-07-computational-verification.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-01-mordell-polynomial-identities.md",
+          "quote": "Per-class explicit denominators; classes never coupled."
+        },
+        {
+          "note": "es-03-factorization-scheme.md",
+          "quote": "Per-n divisor search; no global organization of the solution set."
+        },
+        {
+          "note": "es-07-computational-verification.md",
+          "quote": "The mechanism is local and deterministic per `n`"
+        }
+      ],
+      "preserved_distinctions": "It does not merge the operations: es-01 applies a closed-form polynomial identity per residue class with no search; es-03 enumerates divisors of an n-dependent quantity through a nonlinear factorization identity; es-07 performs exhaustive bounded search with sieving. Their locality is shared; their operators, auxiliary objects, and search character are not.",
+      "contrast_check": "The partial successes lean the other way: es-04 is mixed-locality, es-06 and es-09 are global, es-11 is mixed and explicitly links classes ('structural constraints link residue classes'). This asymmetry supports locality-without-coupling as failure-associated structure, though es-04's mixed locality shows locality alone is not the whole story.",
+      "falsification": "Demonstrating that one of these three mechanisms in fact induces cross-class or cross-instance coupling that constrains the survivor classes (e.g., a factorization-scheme lattice organization with global consequences) would refute the property.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E11",
+      "statement": "The failed/partially failed approaches operate in a characterizing, non-constructive posture: they classify, bound, obstruct, or re-represent the solution space without producing denominators for any survivor prime, and each note locates its stall exactly at the missing existence step.",
+      "shared_by": [
+        "es-08-quadratic-reciprocity-obstruction.md",
+        "es-09-higher-dimensional-variety-lift.md",
+        "es-11-monks-velingker-structure.md",
+        "es-05-averaging-bombieri-vinogradov.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-08-quadratic-reciprocity-obstruction.md",
+          "quote": "an obstruction is not a solution"
+        },
+        {
+          "note": "es-09-higher-dimensional-variety-lift.md",
+          "quote": "not a new source of existence"
+        },
+        {
+          "note": "es-11-monks-velingker-structure.md",
+          "quote": "an existence argument the structure alone does not supply"
+        },
+        {
+          "note": "es-05-averaging-bombieri-vinogradov.md",
+          "quote": "per-n constructivity"
+        }
+      ],
+      "preserved_distinctions": "The property does not collapse what is characterized: es-08 reasons about the space of methods (a negative meta-result), es-05 about the statistical ensemble of solution counts, es-09 about an algebraic unification of parameterizations, es-11 about constraint geometry of solution triples. These remain structurally distinct operations that happen to share the non-constructive mode.",
+      "contrast_check": "es-04 (partial success) is also existential ('characterizes rather than constructs'), so the posture alone is shared across outcome classes and is weaker evidence; the discriminating refinement is that in the failed notes the non-construction is itself the declared boundary, whereas es-07 and es-03 (partial successes) are constructive per instance.",
+      "falsification": "A passage showing one of these approaches directly producing certified (x, y, z) for a previously unsettled quadratic-residue prime would refute the property for that member.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E12",
+      "statement": "The failed and partially failed congruence-family approaches all operate through fixed-modulus congruence identities whose eliminating power is structurally confined to quadratic non-residues, so their coverage halts at the same quadratic-residue survivor classes rather than degrading gradually.",
+      "shared_by": [
+        "es-01-mordell-polynomial-identities.md",
+        "es-12-type-a-b-congruence-system.md",
+        "es-10-vaughan-congruence-density.md",
+        "es-08-quadratic-reciprocity-obstruction.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-01-mordell-polynomial-identities.md",
+          "quote": "these identities are keyed to fixed moduli"
+        },
+        {
+          "note": "es-01-mordell-polynomial-identities.md",
+          "quote": "exactly at those survivor classes."
+        },
+        {
+          "note": "es-12-type-a-b-congruence-system.md",
+          "quote": "Blocked by the quadratic-reciprocity obstruction, not by search effort."
+        },
+        {
+          "note": "es-12-type-a-b-congruence-system.md",
+          "quote": "no finite covering eliminates quadratic-residue classes"
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "exceptional set is thin but infinite and protected by the QR wall"
+        },
+        {
+          "note": "es-08-quadratic-reciprocity-obstruction.md",
+          "quote": "every failed family here preserves the quadratic-residue wall."
+        }
+      ],
+      "preserved_distinctions": "It does not merge the structurally different uses of congruence identities: es-01 is class-local and constructive (one identity per residue class, classes never coupled), es-12 is global and form-first (Type A/B forms chosen to avoid quadratic residues, then assembled toward coverage), and es-10 is an aggregate density bound over many classes rather than a coverage claim. es-08 is not a construction at all but the meta-level diagnosis of the shared confinement.",
+      "contrast_check": "The property does not cleanly discriminate: the partial-success covering-system attempt (es-02) is also built from these identities and stalls on the same wall ('no finite covering built from these identities can catch the quadratic-residue classes'). However, the other partial successes (es-03 divisor factorization, es-04 Type I/II classification, es-06 two-fraction bounds, es-07 computational verification) do not depend on fixed-modulus identity solvability, and es-07 even dispatches QR primes within its finite range, so the confinement tracks the identity-carrying mechanism rather than the problem as a whole.",
+      "falsification": "Exhibiting, within the corpus's terms, a fixed-modulus congruence identity or identity-built covering that eliminates a quadratic-residue class (or a note recording that one of these approaches stalled somewhere other than the QR survivor classes) would refute the property.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E13",
+      "statement": "The two density/averaging approaches share an intrinsically capped coverage profile: they prove strong 'almost all' statements whose gap to 'all n' is a structural feature of the method (polylogarithmic average growth, exceptional-set density with a nonzero floor), not a shortfall of effort.",
+      "shared_by": [
+        "es-05-averaging-bombieri-vinogradov.md",
+        "es-10-vaughan-congruence-density.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-05-averaging-bombieri-vinogradov.md",
+          "quote": "Its boundary is intrinsic to the method: the average grows only polylogarithmically."
+        },
+        {
+          "note": "es-05-averaging-bombieri-vinogradov.md",
+          "quote": "prime has few solutions, and rare primes could in principle have none."
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "the number of exceptional `n` up to `N` is small"
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "density never reaches zero"
+        }
+      ],
+      "preserved_distinctions": "It does not collapse the two mechanisms: es-05 is probabilistic in posture, averaging a solution-count function over an ensemble of primes with sieve machinery (Bombieri–Vinogradov, Brun–Titchmarsh), while es-10 is deterministic, assembling identity-bearing congruence classes and bounding the leftover. One measures typical solution abundance, the other measures thinness of the unsolved set; they cap out for different structural reasons (slow average growth vs reciprocity-protected survivors).",
+      "contrast_check": "The partial-success two-fraction bounds (es-06) also yield results holding 'for almost all primes' that degrade at quadratic-residue primes, so 'almost all coverage' alone does not discriminate. What separates the partially failed pair is the recorded intrinsic impossibility of upgrade: es-05 states its bound 'cannot' be upgraded because the growth is only polylog, and es-10 states its density can never reach zero; es-06 carries no such internal ceiling claim.",
+      "falsification": "Evidence that either method's bound can be upgraded within its own machinery to an empty exceptional set — e.g., a note showing polynomial rather than polylog average growth, or a class assembly whose leftover density provably reaches zero — would refute the property.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E14",
+      "statement": "Several partially failed approaches perform an existential re-organization of the problem — characterizing, unifying, or obstructing — that preserves known solution structure but adds no positivity, so no new existence is forced on the survivor classes.",
+      "shared_by": [
+        "es-09-higher-dimensional-variety-lift.md",
+        "es-11-monks-velingker-structure.md",
+        "es-08-quadratic-reciprocity-obstruction.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-09-higher-dimensional-variety-lift.md",
+          "quote": "Abstraction/transfer move; compression without added positivity."
+        },
+        {
+          "note": "es-11-monks-velingker-structure.md",
+          "quote": "constraint geometry of solutions rather than constructing them for a fixed `n`."
+        },
+        {
+          "note": "es-08-quadratic-reciprocity-obstruction.md",
+          "quote": "an obstruction is not a solution"
+        }
+      ],
+      "preserved_distinctions": "The property does not merge the distinct operations involved: es-09 re-represents at a higher abstraction level (algebraic lift of parameterizations onto one variety), es-11 works at ground level on algebraic relations and symmetries among denominators, and es-08 reasons about the space of methods to prove a negative structural fact. Their operators (lift/unification vs constraint analysis vs reciprocity obstruction) and abstraction levels remain different; they share only the existential, non-constructive posture with zero added existence.",
+      "contrast_check": "The partial-success Type I/II classification (es-04) also 'characterizes what solutions *must* look like without constructing them', so an existential characterizing posture alone is present on the partial-success side too. The discriminating refinement is that the partially failed notes explicitly record that the re-organization contributed no positivity ('not a new source of existence'), whereas es-04 is credited as a productive foundation for the counting and averaging work.",
+      "falsification": "A note showing that one of these re-organization moves by itself produced a new existence result (positivity) for quadratic-residue survivor primes — e.g., the variety lift forcing a solution on a previously uncovered class — would refute the property.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E15",
+      "statement": "Several stalled approaches break nothing about the underlying congruence/residue structure — their normalized mechanism records list no broken properties — consistent with the obstruction note's claim that every failed family preserves the quadratic-residue wall.",
+      "shared_by": [
+        "es-01-mordell-polynomial-identities.md",
+        "es-03-factorization-scheme.md",
+        "es-10-vaughan-congruence-density.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-01-mordell-polynomial-identities.md",
+          "quote": "\"breaks\": []"
+        },
+        {
+          "note": "es-03-factorization-scheme.md",
+          "quote": "\"breaks\": []"
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "\"breaks\": []"
+        },
+        {
+          "note": "es-08-quadratic-reciprocity-obstruction.md",
+          "quote": "every failed family here preserves the quadratic-residue wall."
+        }
+      ],
+      "preserved_distinctions": "The property concerns only what these mechanisms conserve, not how they operate: es-01 (polynomial identities), es-03 (divisor factorization), and es-10 (density assembly) remain structurally distinct; it also deliberately excludes es-02, a failure that does break class-local isolation yet still stalls, showing break-nothing is not the whole failure story.",
+      "contrast_check": "The partial successes each record a non-empty break — es-04 and es-12 break 'classification by producing congruence', es-05 breaks per-n constructivity, es-09 breaks surface distinctions between parameterizations — so breaking some inherited structural commitment co-occurs with partial success in this corpus, though es-02 shows a break alone is insufficient.",
+      "falsification": "A failed approach in the corpus that explicitly breaks the residue/congruence structure it inherits and still stalls at the same wall for that reason, or a partial success whose mechanism record breaks nothing yet crosses the quadratic-residue survivor classes.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E16",
+      "statement": "The analytic/density approaches share an asymptotic-thinning structure whose guarantee weakens exactly where it matters: the bound improves 'almost all' indefinitely but is structurally incapable of driving the exceptional set to empty.",
+      "shared_by": [
+        "es-05-averaging-bombieri-vinogradov.md",
+        "es-10-vaughan-congruence-density.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-05-averaging-bombieri-vinogradov.md",
+          "quote": "rare primes could in principle have none"
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "Sharpens almost-all; does not reach all."
+        }
+      ],
+      "preserved_distinctions": "es-05 is probabilistic in posture (sieve averaging over a prime ensemble, polylog mean growth) while es-10 is deterministic class assembly whose payoff happens to be a density statement; the property names the shared limit shape, not a shared operator.",
+      "contrast_check": "es-06 (partial success) also proves lower bounds only 'for almost all primes', so almost-all coverage per se does not separate outcomes; what the two failed notes add is an internal reason the gap cannot close (polylog growth too slow; survivor classes reciprocity-protected), which es-06 does not claim about itself.",
+      "falsification": "A note showing the density or average bound reaching zero exceptions, or a valid inference from positive average to per-prime existence at polylog growth, would refute the property.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E17",
+      "statement": "The failed identity/covering-family approaches transmit solvability only through fixed-modulus congruence relations, which by quadratic reciprocity can eliminate quadratic non-residues but never quadratic residues, so each stalls on the same survivor classes.",
+      "shared_by": [
+        "es-01-mordell-polynomial-identities.md",
+        "es-02-covering-system-attempt.md",
+        "es-10-vaughan-congruence-density.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-02-covering-system-attempt.md",
+          "quote": "relations that carry polynomial identities can only eliminate quadratic"
+        },
+        {
+          "note": "es-01-mordell-polynomial-identities.md",
+          "quote": "exactly at those survivor classes."
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "smaller never reaches zero, because the surviving classes are protected by the"
+        },
+        {
+          "note": "es-08-quadratic-reciprocity-obstruction.md",
+          "quote": "these relations can eliminate quadratic **non**-residues but never quadratic"
+        }
+      ],
+      "preserved_distinctions": "es-01 is class-local and constructive (one identity per residue class, never coupling classes), es-02 is global and existential (seeking a finite covering union), and es-10 is mixed local-to-global (aggregating classes into a density bound); sharing the congruence-carrier property does not merge these structurally different postures or operators.",
+      "contrast_check": "The partial-success es-12 also builds on congruences but explicitly restricts to forms where none of the admitted congruences is a quadratic residue, and its coverage remains self-declared conjectural rather than achieved; es-04, es-09, and es-11 do not transmit solvability through fixed-modulus congruences at all, so the property discriminates failures from the transversal/structural partial successes.",
+      "falsification": "Exhibiting a fixed-modulus polynomial-identity congruence family that provably solves a quadratic-residue class (e.g., an identity covering an n ≡ 1 (mod 24) survivor class), or a note showing one of these three approaches stalls somewhere other than the quadratic-residue survivor classes.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E18",
+      "statement": "Every failed or partially failed congruence-family mechanism preserves the quadratic-residue wall: its solvability relations can only eliminate quadratic non-residues, so the QR survivor classes are conserved rather than attacked.",
+      "shared_by": [
+        "es-01-mordell-polynomial-identities.md",
+        "es-12-type-a-b-congruence-system.md",
+        "es-10-vaughan-congruence-density.md",
+        "es-08-quadratic-reciprocity-obstruction.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-01-mordell-polynomial-identities.md",
+          "quote": "Candidate failure invariant: the QR wall is preserved by every congruence method."
+        },
+        {
+          "note": "es-12-type-a-b-congruence-system.md",
+          "quote": "Blocked by the quadratic-reciprocity obstruction, not by search effort."
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "exceptional set is thin but infinite and protected by the QR wall"
+        },
+        {
+          "note": "es-08-quadratic-reciprocity-obstruction.md",
+          "quote": "every failed family here preserves the quadratic-residue wall."
+        }
+      ],
+      "preserved_distinctions": "It does not merge the mechanisms: es-01 is class-local and constructive (fixed identities per residue class), es-12 is a global covering built from new solution forms explicitly designed to avoid quadratic residues, es-10 is a mixed local-to-global density aggregation, and es-08 is a meta-level obstruction analysis. They share the conserved wall, not the operator set.",
+      "contrast_check": "The partial-success notes (es-02, es-04, es-06) also name quadratic-residue primes as their boundary, so QR-boundedness alone does not discriminate; but only in the failed family is the wall tied to the mechanism's own congruence relations (Jacobi-symbol governed), and es-07 even dispatches QR primes within its finite range, showing non-congruence mechanisms are not confined the same way.",
+      "falsification": "Exhibiting a fixed-modulus polynomial identity or finite congruence covering in the notes that provably yields solutions on a quadratic-residue class would refute the claim that these mechanisms conserve the wall.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E19",
+      "statement": "The class-aggregation approaches inherit solvability only from the per-class polynomial identities they assemble and create no solvability in any class that lacks its own identity, so aggregation enlarges coverage but cannot touch the survivor classes.",
+      "shared_by": [
+        "es-02-covering-system-attempt.md",
+        "es-10-vaughan-congruence-density.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-02-covering-system-attempt.md",
+          "quote": "polynomial-identity solvability per class"
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "solvability on the assembled classes"
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "Local identities aggregated into a global thinness statement."
+        }
+      ],
+      "preserved_distinctions": "It does not merge their goals or modes: es-02 seeks an exact finite covering of all of Z (existential, all-or-nothing), while es-10 accepts a non-empty leftover and bounds its density. They share only that assembly preserves, rather than generates, per-class solvability.",
+      "contrast_check": "The partial-success es-12 shares the inheritance pattern (it preserves 'polynomial-identity solvability per form'), and its completeness is correspondingly self-declared conjectural — it has not demonstrably escaped the property, so the contrast neither refutes nor cleanly strengthens it; this is the main reason the property is ranked last.",
+      "falsification": "Exhibiting an aggregation or covering construction that yields a certified solution for an n in a class covered by no member identity (solvability created by the assembly itself) would refute the property.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E20",
+      "statement": "The approach replaces per-n existence with a global quantitative statement (an average or a density) whose growth or decay is intrinsically too weak to force a solution for every prime, so rare survivors are structurally permitted.",
+      "shared_by": [
+        "es-05-averaging-bombieri-vinogradov.md",
+        "es-10-vaughan-congruence-density.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-05-averaging-bombieri-vinogradov.md",
+          "quote": "Its boundary is intrinsic to the method: the average grows only polylogarithmically."
+        },
+        {
+          "note": "es-05-averaging-bombieri-vinogradov.md",
+          "quote": "rare primes could in principle have none"
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "smaller never reaches zero"
+        }
+      ],
+      "preserved_distinctions": "es-05 is probabilistic in posture, averaging the solution-count function over primes with sieve machinery (Bombieri–Vinogradov, Brun–Titchmarsh, Turán–Kubilius); es-10 is deterministic, assembling identity-bearing congruence classes and bounding the exceptional density. Averaging solution counts and thinning an exceptional set remain different operations on different objects.",
+      "contrast_check": "The partial-success es-06 shares the almost-all ceiling ('covers almost all primes but degrades for perfect-square-like primes'), which weakens this property as pure failure structure: it marks a family-wide quantitative ceiling that even a partially successful method hits, rather than a trait unique to the failed notes. It is retained, at lower confidence, because in es-05 and es-10 the too-weak bound is the terminal boundary rather than an intermediate tool.",
+      "falsification": "Producing an averaging or density argument within this family whose bound is quantitatively strong enough (e.g., the at-least-polynomial growth es-05 says such an upgrade needs) to force existence for every prime would refute the claimed intrinsic weakness.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E21",
+      "statement": "The approach's payload is reorganization or compression of already-known mechanisms at a higher structural level, and by its own account this reorganization adds no new existence ('positivity') at the quadratic-residue wall.",
+      "shared_by": [
+        "es-09-higher-dimensional-variety-lift.md",
+        "es-11-monks-velingker-structure.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-09-higher-dimensional-variety-lift.md",
+          "quote": "the compression does **not** add positivity"
+        },
+        {
+          "note": "es-11-monks-velingker-structure.md",
+          "quote": "prove that every prime admits at least one solution."
+        },
+        {
+          "note": "es-11-monks-velingker-structure.md",
+          "quote": "Strong evidence, not an existence proof."
+        }
+      ],
+      "preserved_distinctions": "es-09 unifies parameterizations as rational slices of one higher-dimensional variety (a representation change), while es-11 derives relations and symmetries within the solution set of the original representation (a constraint analysis); the property does not collapse re-representation into constraint mining.",
+      "contrast_check": "The partial-success note es-06 carries a near-identical annotation ('unifies methods but adds no positivity for QR primes'), so reorganization-without-positivity also occurs on the partial-success side. The difference is that es-06 additionally delivers representation lower bounds for almost all primes, whereas for es-09 and es-11 the reorganization is essentially the entire payload. This weakens the property from failure-cause to failure-symptom, which is why it ranks below the first two.",
+      "falsification": "A structural unification or lift in this family that produces an existence proof for a class previously uncovered — i.e., compression that demonstrably adds positivity — would refute the property.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E22",
+      "statement": "The approach reasons one class or one instance at a time and never couples classes into any global organization of the solution set, leaving it no leverage over survivor classes as a whole.",
+      "shared_by": [
+        "es-01-mordell-polynomial-identities.md",
+        "es-03-factorization-scheme.md",
+        "es-07-computational-verification.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-01-mordell-polynomial-identities.md",
+          "quote": "Because these identities are keyed to fixed moduli, they reason one class at a"
+        },
+        {
+          "note": "es-03-factorization-scheme.md",
+          "quote": "gives no **global lattice organization** of the solution set."
+        },
+        {
+          "note": "es-07-computational-verification.md",
+          "quote": "The mechanism is local and deterministic per `n`"
+        }
+      ],
+      "preserved_distinctions": "The local operators are structurally different: es-01 computes denominators by closed-form identity per residue class with no search, es-03 enumerates divisors of an n-dependent quantity with local congruence filters, and es-07 performs bounded exhaustive search with certificates. The property names only the shared uncoupled locality, not a shared construction.",
+      "contrast_check": "The partial successes are global or mixed in locality: es-04 'cuts across the residue-class families', es-09 lifts the parameterizations onto one unifying variety, es-11 links classes through shared solution forms, and es-12 couples the form view with the covering goal. None is purely class- or instance-local, so the property discriminates failure-side structure.",
+      "falsification": "Demonstrating that a purely class-local, uncoupled identity or search mechanism certifies an entire infinite quadratic-residue survivor class — or evidence that one of the three cited approaches in fact couples classes globally — would refute the property.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    },
+    {
+      "entry_id": "E23",
+      "statement": "The method's quantitative guarantee improves coverage monotonically (thinner exceptional sets, bounded averages) but its rate is structurally too weak to reach all n, leaving an infinite uncovered residue rather than a finite remainder.",
+      "shared_by": [
+        "es-05-averaging-bombieri-vinogradov.md",
+        "es-10-vaughan-congruence-density.md"
+      ],
+      "supporting_passages": [
+        {
+          "note": "es-05-averaging-bombieri-vinogradov.md",
+          "quote": "the average grows only polylogarithmically"
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "density never reaches zero"
+        },
+        {
+          "note": "es-10-vaughan-congruence-density.md",
+          "quote": "Sharpens almost-all; does not reach all."
+        }
+      ],
+      "preserved_distinctions": "es-05 bounds an average of solution counts over a prime ensemble via sieve inequalities, while es-10 bounds the density of unsolved n by assembling identity-bearing classes; the shared asymptotic ceiling does not merge averaging with class assembly.",
+      "contrast_check": "Partial successes es-02 and es-06 also top out at almost-all coverage, so the ceiling itself is shared across outcome classes; what differs is that the partial-failure notes attribute the ceiling to an intrinsic rate limit of the method ('intrinsic to the method', 'never reaches zero'), not to unfinished work. The property therefore discriminates weakly and is ranked last.",
+      "falsification": "Showing that either bound can be strengthened past its stated rate limit — e.g., an average with polynomial growth or an exceptional-set bound reaching zero — would refute the claim that the ceiling is structural.",
+      "occurrence_count": 1,
+      "capture_refs": [
+        "SEALED — see adjudication key after unblinding"
+      ],
+      "category": null,
+      "reference_match": null,
+      "scope_deltas": null,
+      "evidence_notes": null
+    }
+  ],
+  "true_corpus_facts": {
+    "es-01-mordell-polynomial-identities.md": {
+      "outcome": "partial_failure",
+      "boundary": "quadratic-residue survivor classes remain uncovered",
+      "operators": [
+        "polynomial identity",
+        "modular decomposition"
+      ],
+      "preserves": [
+        "residue locality",
+        "fixed-modulus structure"
+      ],
+      "breaks": []
+    },
+    "es-02-covering-system-attempt.md": {
+      "outcome": "failure",
+      "boundary": "no finite covering eliminates quadratic-residue classes",
+      "operators": [
+        "congruence covering",
+        "class union"
+      ],
+      "preserves": [
+        "polynomial-identity solvability per class"
+      ],
+      "breaks": [
+        "class-local isolation"
+      ]
+    },
+    "es-03-factorization-scheme.md": {
+      "outcome": "partial_failure",
+      "boundary": "no global lattice organization; existence unforced for QR primes",
+      "operators": [
+        "divisor enumeration",
+        "local congruence filter",
+        "factorization identity"
+      ],
+      "preserves": [
+        "local divisor structure"
+      ],
+      "breaks": []
+    },
+    "es-04-type-i-ii-classification.md": {
+      "outcome": "partial_success",
+      "boundary": "characterizes solution shape but does not force existence for QR primes",
+      "operators": [
+        "structural classification",
+        "divisibility partition"
+      ],
+      "preserves": [
+        "solution divisibility invariants"
+      ],
+      "breaks": [
+        "classification by producing congruence"
+      ]
+    },
+    "es-05-averaging-bombieri-vinogradov.md": {
+      "outcome": "partial_failure",
+      "boundary": "polylog average growth is too slow to force existence",
+      "operators": [
+        "averaging",
+        "sieve estimation",
+        "divisor bound"
+      ],
+      "preserves": [
+        "mean solution density"
+      ],
+      "breaks": [
+        "per-n constructivity"
+      ]
+    },
+    "es-06-two-fraction-representation-bounds.md": {
+      "outcome": "partial_success",
+      "boundary": "covers almost all primes but degrades for perfect-square-like primes",
+      "operators": [
+        "reduction to two fractions",
+        "representation counting"
+      ],
+      "preserves": [
+        "existence via representation lower bounds"
+      ],
+      "breaks": []
+    },
+    "es-07-computational-verification.md": {
+      "outcome": "partial_failure",
+      "boundary": "finite verification is not a proof for all n",
+      "operators": [
+        "bounded search",
+        "sieving",
+        "divisor test"
+      ],
+      "preserves": [
+        "certified per-instance solutions"
+      ],
+      "breaks": [
+        "claim of generality"
+      ]
+    },
+    "es-08-quadratic-reciprocity-obstruction.md": {
+      "outcome": "failure",
+      "boundary": "an obstruction locates the wall but constructs no solution",
+      "operators": [
+        "quadratic reciprocity",
+        "obstruction argument"
+      ],
+      "preserves": [
+        "confinement of congruence methods to non-residues"
+      ],
+      "breaks": []
+    },
+    "es-09-higher-dimensional-variety-lift.md": {
+      "outcome": "partial_success",
+      "boundary": "unifies methods but adds no positivity for QR primes",
+      "operators": [
+        "algebraic lift",
+        "re-representation",
+        "unification"
+      ],
+      "preserves": [
+        "solution sets of unified parameterizations"
+      ],
+      "breaks": [
+        "surface distinctions between parameterizations"
+      ]
+    },
+    "es-10-vaughan-congruence-density.md": {
+      "outcome": "partial_failure",
+      "boundary": "exceptional set is thin but infinite and protected by the QR wall",
+      "operators": [
+        "class assembly",
+        "density estimation"
+      ],
+      "preserves": [
+        "solvability on the assembled classes"
+      ],
+      "breaks": []
+    },
+    "es-11-monks-velingker-structure.md": {
+      "outcome": "partial_success",
+      "boundary": "structural constraints do not prove coverage of all primes",
+      "operators": [
+        "structural constraint analysis",
+        "symmetry exploitation"
+      ],
+      "preserves": [
+        "algebraic relations among denominators"
+      ],
+      "breaks": []
+    },
+    "es-12-type-a-b-congruence-system.md": {
+      "outcome": "partial_success",
+      "boundary": "coverage of all primes by Type A/B is conjectural",
+      "operators": [
+        "form classification",
+        "polynomial association",
+        "congruence covering"
+      ],
+      "preserves": [
+        "Mordell non-residue restriction",
+        "polynomial-identity solvability per form"
+      ],
+      "breaks": [
+        "classification by producing congruence"
+      ]
+    }
+  },
+  "note": "true_corpus_facts is a compact extraction of outcome/boundary/operators/preserves/breaks per note; full note text is in the full packet. Use these facts to verify whether entry claims about outcomes, stall reasons, and shared sets are accurate. Any quote is already validated to appear in the named note by checker v2."
+}
