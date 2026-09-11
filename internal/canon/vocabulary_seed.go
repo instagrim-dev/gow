@@ -24,9 +24,14 @@ const (
 	VocabularyMechanismV3 = "mechanism/v3"
 	// VocabularyMechanismV4 is the pilot-004 N2a challenge revision: a strict
 	// superset of mechanism/v3 adding the density_averaging_ceiling
-	// GeneratedInterpretation property. This property survived all seven
-	// challenge probes (see
-	// corpus/experiments/pilot-004-discovery/records/N2a-challenge.md).
+	// GeneratedInterpretation property. A seven-probe challenge campaign was
+	// recorded (model-assisted, operator-recorded; see
+	// corpus/experiments/pilot-004-discovery/records/N2a-challenge.md and its
+	// attributed reassessment): the property survived at model-judgment
+	// strength with one required refinement (rate-ceiling vs reach-ceiling
+	// boundary delta at C4); C2 produced no completed counterexample search
+	// and C7 remains a proposed explanation, not a checked mathematical
+	// argument.
 	// Scope: es-05 (averaging/Bombieri–Vinogradov) and es-10 (Vaughan
 	// congruence density), both partial_failure. The claim is that each
 	// method's almost-all statement has an intrinsic ceiling that cannot be
@@ -38,15 +43,20 @@ const (
 	VocabularyMechanismV4 = "mechanism/v4"
 	// VocabularyMechanismV5 is the pilot-004 N5 challenge revision: a strict
 	// superset of mechanism/v4 adding the reorganisation_without_qr_existence
-	// GeneratedInterpretation property. This property survived all seven
-	// challenge probes (see
-	// corpus/experiments/pilot-004-discovery/records/N5-challenge.md).
+	// GeneratedInterpretation property. A seven-probe challenge campaign was
+	// recorded (model-assisted, operator-recorded; see
+	// corpus/experiments/pilot-004-discovery/records/N5-challenge.md and its
+	// attributed reassessment): six probes were consistent with the property
+	// at model-judgment strength; C3 (success discrimination) was
+	// inapplicable by corpus construction and remains an open obligation.
 	// Scope: es-09 (higher-dimensional variety lift) and es-11
 	// (Monks–Velingker structural analysis), both partial_success.
 	// The claim is that reorganisation/re-representation operators deliver
 	// structural improvements but add no new existence at the QR survivor
-	// classes; the absence is caused by the operator type (reorganisation
-	// cannot generate positivity). C4 found that the property holds
+	// classes; the proposed explanation attributes the absence to the
+	// operator type (reorganisation cannot generate positivity) — a
+	// source-grounded proposal for the two in-scope members, not an
+	// established general impossibility. C4 found that the property holds
 	// independently at two structural levels (parameterisation-family
 	// unification for es-09; solution-constraint geometry for es-11),
 	// which strengthens rather than splits the claim. C3 caveat: the

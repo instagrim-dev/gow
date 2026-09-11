@@ -5,6 +5,7 @@
 **Alternate subtitle:** Search in Shape-Space, Verify in Domain-Space
 **Format:** LaTeX, single-column, ~15–20 main-text pages + appendices
 **Categories:** cs.AI primary; cs.LG, math.HO cross-list candidates
+**Author-reported inception:** 2026-09-10 03:49 PDT (UTC−7) — initial insight (shared structure from failed-attempt histories); the broader GoW formulation, implementation, experiments, and release carry separate stage timestamps (see `paper/HISTORY.md`)
 
 **Core thesis:**
 
@@ -39,11 +40,11 @@ $$
 | **3. Formalize the method** | Algorithm box | Reader can reconstruct Map→Boundary→Move→Measure from definitions | ✅ **Done** — Algorithm 1 + full step-by-step prose walkthrough + recursive-refinement discussion; Figure 2 (shape-space / domain-space loop) |
 | **4. Position against prior work** | Related-work section | Matrix complete; narrow novelty claim stated | ✅ **Done** — 12 traditions compared paragraph-by-paragraph, narrow novelty claim stated as conjunction of features no single tradition fills |
 | **5. Reduce `newf` to paper-relevant** | System architecture section | Only machinery necessary to instantiate GoW | ✅ **Done** — LaTeX §6 has 9-layer architecture + three epistemic guarantees + Figure 4 (architecture diagram) |
-| **6. Finish empirical evidence** | Experiment section + frozen artifacts | Claims match what Pilot-003/004 establish; no result promoted beyond evidence | ✅ **Done** — §8A negative controls, §8B Pilot-003, §8C Pilot-004 (7/10/4/2 counts from quorum-result.json), §8D N2a challenge lifecycle; Appendix D claim/evidence ledger maps every empirical claim to artifact |
-| **7. One novel-shape loop closed** | One reference-absent hypothesis challenged end-to-end | At least one model-generated shape grounded and challenged, survive or fail | ✅ **Done** — N2a (`density_averaging_ceiling`) challenged end-to-end; survived with boundary_delta (C4); N5 (`reorganisation_without_qr_existence`) also challenged; both admitted to vocabulary |
+| **6. Finish empirical evidence** | Experiment section + frozen artifacts | Every empirical sentence **agrees with** the identified frozen artifact (not merely "has a path to" one) | 🔄 **Reopened 2026-09-11** — source-faithfulness review (`docs/reviews/2026-09-11-manuscript-source-faithfulness.md`, finding 1) found the manuscript misstating pilot-003 arms/budget/classifier and pilot-004 inputs/treatment/endpoint; methods/results rebuilt from frozen protocols same day; gate closes after external re-review confirms sentence-level agreement |
+| **7. One novel-shape loop closed** | One reference-absent hypothesis challenged end-to-end | At least one model-generated shape grounded and challenged, survive or fail; probe coverage and evidential character stated accurately | 🔄 **Reopened 2026-09-11** — N2a and N5 campaigns stand, but the review (finding 2) required attributed reassessments (now appended to both challenge records) qualifying C2/C7 (N2a) and C2/C3 (N5); manuscript Experiment D and vocabulary seed comments corrected; gate closes after re-review |
 | **8. Limitations / falsifiability** | Explicit failure conditions | Paper states what evidence would make GoW uninteresting or wrong | ✅ **Done** — LaTeX §11 (7 limitations); Appendix E (F1–F5 falsification conditions with test procedures) |
-| **9. Produce submission manuscript** | LaTeX + figures + bibliography | Clean compilation; artifact references; external review | 🔄 **Mostly done** — `paper/geometry-of-work.tex` **compiles cleanly under tectonic** (PDF ~200 KB, 28 pages); all 5 mandatory figures done as inline TikZ (`fig:gow-schematic`, `fig:loop`, `fig:epistemic-decomp`, `fig:newf-arch`, `fig:progression`); revised abstract in place; acknowledgments template drafted (specific attributions pending); author metadata and external review pending |
-| **10. Freeze arXiv v1** | Tagged paper/repo release | Every empirical number traceable to immutable artifact | 🔄 **Ready-modulo-user** — traceability is established (Appendix D); only user-owned steps remain: author metadata, external review pass, git tag |
+| **9. Produce submission manuscript** | LaTeX + figures + bibliography | Clean compilation **and** structural consistency (no duplicate sections/labels; appendix tables agree with source records); artifact references; external review | 🔄 **Reopened 2026-09-11** — duplicate section declarations/labels removed and Appendix C lineage corrected per review finding 5; epistemic section (finding 3) and architecture statuses (finding 4) rewritten; external review and author-owned metadata still pending |
+| **10. Freeze arXiv v1** | Tagged paper/repo release | Every empirical number traceable to an immutable artifact **and consistent with it**; findings 1–5 of the 2026-09-11 review closed by re-review | 🔄 **Blocked on re-review** — empirical consistency, epistemic consistency, and implementation traceability were reopened by the 2026-09-11 review; these are manuscript-consistency obligations, not author metadata; freeze only after an external pass confirms the reconciliation |
 
 ---
 
@@ -54,9 +55,9 @@ The paper is ready to submit when ALL of these are true:
 1. A skeptical reader can explain GoW without mentioning `newf`.
 2. Every named construct has exactly one meaning (no "candidate invariant" / "failure invariant" semantic sludge in the paper prose).
 3. The method is operational enough that another person could perform a small GoW analysis manually.
-4. The software architecture clearly implements the theory rather than defining it.
-5. Every empirical claim points to an immutable experiment artifact.
-6. At least one model-generated reference-absent shape has undergone an actual challenge lifecycle. (**Done: N2a, N5**)
+4. The software architecture clearly implements the theory rather than defining it, with each capability annotated implemented-and-exercised / performed-externally-with-artifacts / specified-extension.
+5. Every empirical claim points to an immutable experiment artifact **and agrees with that artifact sentence-by-sentence** (a path alone is insufficient when the sentence contradicts its source).
+6. At least one model-generated reference-absent shape has undergone an actual challenge lifecycle, with probe coverage and per-probe evidential character stated accurately. (**N2a, N5 campaigns recorded; reassessed 2026-09-11**)
 7. Related work identifies the nearest intellectual ancestors and states a narrow novelty claim.
 8. The paper contains explicit falsification conditions for the thesis.
 9. A technically competent outsider reviews it without having participated in these conversations.
@@ -113,6 +114,7 @@ These sections are fully writable from existing artifacts. No new experiments ne
 | `paper/geometry-of-work.tex` | Main manuscript (LaTeX) |
 | `paper/references.bib` | Bibliography |
 | `paper/PUBLICATION-PLAN.md` | This file |
+| `paper/HISTORY.md` | Provenance timeline (inception → milestones, commit-anchored) |
 | `docs/theory/00-paper-claims.md` | Claim registry (stage 0 authority) |
 | `docs/research/related-work-matrix.md` | Related-work comparison matrix |
 | `docs/theory/06-situated-in-the-literature.md` | Literature positioning (draft §10 source) |

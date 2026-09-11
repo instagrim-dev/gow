@@ -365,3 +365,75 @@ Admission requires:
 
 Provenance: `GeneratedInterpretation`, source occurrences E13/E16/E20/E23 from
 pilot-004-discovery quorum, challenge record this file.
+
+---
+
+## Attributed reassessment (2026-09-11, source-faithfulness review)
+
+*Appended per the external review recorded at
+`docs/reviews/2026-09-11-manuscript-source-faithfulness.md` (finding 2). The
+original record above is retained unchanged. This reassessment reclassifies
+the evidential character of specific steps; it does not withdraw the
+candidate.*
+
+Classification legend used below:
+
+```text
+SGO  Source-grounded observation
+PE   Proposed explanation
+CCS  Completed counterexample search
+IIP  Inapplicable or inconclusive probe
+CMA  Checked mathematical argument
+```
+
+**R-1 (C2): "reconfirms" is withdrawn.** The C2 verdict above states "no
+falsifying synthetic construction exists; the synthetic target reconfirms the
+property." The first half is a true report of what was and was not produced;
+the second half is not supported. No synthetic construction was completed —
+the section characterizes what a counterexample *would require* (polynomial
+rather than polylogarithmic growth of the averaged quantity). That is **PE**,
+not **CCS**, and failing to construct a falsifying example does not reconfirm
+a hypothesis. C2's honest status: **IIP** (no completed search), with a useful
+**PE** describing the shape of the missing construction.
+
+**R-2 (C2/C7): average growth does not imply pointwise existence.** The record
+treats polynomial growth of a solution-count average as sufficient to cross an
+existence threshold. As a general implication this is false. Counterexample:
+
+```text
+f(n) = 2n  (n even),  0  (n odd)
+```
+
+For even N the average of f over 1..N is N/2 + 1 — polynomial growth — while
+f vanishes on half of all inputs. This does not refute any particular
+Erdős–Straus statement; it shows the record must state the *additional
+assumptions* (e.g. on the distribution of the mass of the average) connecting
+the averaged quantity to existence at every input. Until those assumptions
+and the connecting argument are written and checked, "polynomial rather than
+polylogarithmic" is **PE**, not **CMA**.
+
+**R-3 (C4): the exceptional-set expression does not "decay to zero."** The
+record writes `|{n ≤ N : n unsolved}| ≤ N·exp(−c(log N)^{2/3})` and describes
+it as decaying to zero. For fixed c > 0 the displayed bound **grows without
+bound** in N; it is the *ratio to N* (the density) that tends to zero.
+Vanishing density, an empty exceptional set, and a positive density floor are
+three different statements and must not be interchanged. The C4 split
+(rate-ceiling vs reach-ceiling) survives this correction — it never depended
+on the erroneous decay reading — but the es-10 concrete-level sentence is
+reclassified from **SGO** to **SGO with an incorrect gloss, corrected here**.
+
+**R-4 (C7): causal status.** C7's conclusion ("polylog main-term growth is
+structurally insufficient for existence-forcing") rests on **SGO** (the
+corpus notes' own statements about BV/BT/TK-type machinery) plus **PE** (the
+threshold reading). No step in this record is **CMA**. Two source
+descriptions do not, by themselves, establish a general causal impossibility.
+
+**Net effect.** The disposition "survives challenge with one refinement
+required" stands *as a statement about this corpus at model-judgment
+strength*, with C2 reclassified IIP+PE and C7 reclassified SGO+PE. The
+candidate remains worth investigating; what is withdrawn is the advertised
+strength of its survival and causal grounding. The vocabulary entry
+(`density_averaging_ceiling`, mechanism/v4) remains admitted as a
+`GeneratedInterpretation`; its seed comment must not claim unqualified
+seven-probe survival (corrected in `internal/canon/vocabulary_seed.go`, same
+date).

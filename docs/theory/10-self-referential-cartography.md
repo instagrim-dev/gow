@@ -1,4 +1,4 @@
-# 09 — Self-Referential Programmatic Cartography
+# 10 — Self-Referential Programmatic Cartography
 
 *Theory-series extension stating what it means, and does not mean, for a GoW
 implementation to map its own problem-solving activity — including its own

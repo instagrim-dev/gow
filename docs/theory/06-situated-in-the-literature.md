@@ -342,6 +342,14 @@ GoW:                   shape of attempt → outcome
 eventually:            history of shapes/outcomes → geometry → next attempt
 ```
 
+Stated through the [naming canon](glossary.md#naming-canon-roles-not-synonyms)
+(roles, not synonyms — a naming assignment, not an evidentiary change):
+
+> **Geometry of Work studies the structure of problem-solving attempts. The
+> Grammar of Attempts describes their composition and possible
+> transformations. Consequential Cartography uses those descriptions to choose
+> subsequent Work through the Cartographer's Loop.**
+
 ## Four missing rigorous pieces (the research program)
 
 If GoW is the larger pattern, the theory currently lacks four things. These are

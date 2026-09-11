@@ -372,3 +372,50 @@ pilot-004-discovery quorum, challenge record this file.
 **C3 caveat to include in the vocabulary entry description**: this property is
 non-discriminating within the partial_success regime by construction; discrimination
 against success outcomes is untestable until a success appears in the corpus.
+
+---
+
+## Attributed reassessment (2026-09-11, source-faithfulness review)
+
+*Appended per the external review recorded at
+`docs/reviews/2026-09-11-manuscript-source-faithfulness.md` (finding 2). The
+original record above is retained unchanged. Classification legend: SGO
+(source-grounded observation), PE (proposed explanation), CCS (completed
+counterexample search), IIP (inapplicable or inconclusive probe), CMA
+(checked mathematical argument).*
+
+**R-1 (C3): untestable is not passed.** C3 correctly records that success
+discrimination *cannot be tested* on this corpus (no `success` outcomes
+exist). Any downstream summary that counts C3 among probes the property
+"survived" converts an **IIP** into a passed test. The accurate statement:
+six probes produced results consistent with N5; C3 was structurally
+inapplicable and remains an open obligation that activates when a success
+outcome enters the corpus.
+
+**R-2 (C2): hypothetical reasoning is not a completed search.** The C2
+section argues that a violating construction "would no longer be purely
+reorganisational" — a claim about the *definition* of the property's scope,
+reached by reasoning over note quotations. No synthetic approach was
+constructed or checked. C2's status is **PE** (a useful characterization of
+the research target), not **CCS**. Its conclusion that "no vacuous synthetic
+violation is possible" is definitional scoping, not a searched-and-exhausted
+result.
+
+**R-3: the operator-type implication is not established.** Downstream
+comments state that absence of added existence *follows from* the
+reorganisation operator type. The record supports: the two in-scope corpus
+members (es-09, es-11) each *describe themselves* as reorganising without
+adding positivity (**SGO**), and a proposed account of why that might be
+inherent to the operator type (**PE**). A general causal impossibility —
+*no* reorganisation-type operator can add existence — is not established by
+two source descriptions and is not claimed at **CMA** strength anywhere in
+this record.
+
+**Net effect.** The verdict "property survives challenge, no refinement
+required beyond the C3 caveat" stands *at model-judgment strength for this
+corpus*, with the caveat promoted from a footnote to a coverage limit: probe
+coverage is six-of-seven, C3 inapplicable by corpus construction. The
+vocabulary entry (`reorganisation_without_qr_existence`, mechanism/v5)
+remains admitted as a `GeneratedInterpretation`; its seed comment must not
+claim unqualified seven-probe survival (corrected in
+`internal/canon/vocabulary_seed.go`, same date).

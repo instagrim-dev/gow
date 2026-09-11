@@ -7,16 +7,16 @@
 \documentclass[11pt]{article}
 
 % ── Packages ──────────────────────────────────────────────────────────
-\usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage{amsmath,amssymb,amsthm}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amsthm}       % amssymb omitted: libertinus math (unicode-math) supplies AMS symbols
 \usepackage{mathtools}
+\usepackage{libertinus}          % elegant book-grade serif + matching math + true small caps
+\usepackage{microtype}           % character protrusion + font expansion for even color
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage{booktabs}
 \usepackage{graphicx}
-\usepackage{hyperref}
-\usepackage{cleveref}
 \usepackage{xcolor}
 \usepackage{enumitem}
 \usepackage{natbib}
@@ -26,10 +26,147 @@
 \usepackage{tikz}
 \usepackage{url}
 \usepackage{orcidlink}
+\usepackage{fancyhdr}            % running heads for a book-like page
+\usepackage{titlesec}           % designed section headings
+\usepackage{tocloft}            % styled table of contents
+\usepackage{hyperref}           % load late
+\usepackage{cleveref}           % after hyperref
 \urlstyle{tt}
 \usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, backgrounds, calc, decorations.pathreplacing}
 
+% ── Book design: palette, page geometry, heads, headings ──────────────
+\geometry{letterpaper, margin=1.1in, headheight=14pt, headsep=18pt}
+
+% Restrained editorial palette (ink + a single structural accent).
+\definecolor{gowink}{HTML}{1A1A1A}      % near-black text
+\definecolor{gowaccent}{HTML}{7A1F2B}   % deep oxblood accent
+\definecolor{gowrule}{HTML}{B9A6A0}      % muted rule
+\definecolor{gowsoft}{HTML}{6B6B6B}     % secondary/soft text
+\definecolor{gowteal}{HTML}{2E5A63}     % complementary muted teal (structural "positive")
+\definecolor{gowsand}{HTML}{B08A4F}     % warm neutral (intermediate/model)
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=gowaccent,
+  citecolor=gowaccent,
+  urlcolor=gowaccent,
+  linktoc=all,
+  bookmarksnumbered=true,
+  pdftitle={Geometry of Work: Shape-Guided Search over Failed and Partial Solution Attempts},
+  pdfauthor={Jonathan Maye-Hobbs},
+}
+
+% Running heads: author verso feel, short title recto, hairline rule.
+\renewcommand{\headrulewidth}{0.4pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\footnotesize\textsc{Geometry of Work}}
+\fancyhead[R]{\footnotesize\textsc{\leftmark}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\sectionmark}[1]{\markboth{#1}{}}
+
+% Section headings: small-caps, accent section numbers, thin rule under \section.
+\titleformat{\section}
+  {\normalfont\Large\scshape\color{gowink}}
+  {\color{gowaccent}\thesection}{0.75em}{}[{\color{gowrule}\titlerule[0.6pt]}]
+\titleformat{\subsection}
+  {\normalfont\large\scshape\color{gowink}}
+  {\color{gowaccent}\thesubsection}{0.6em}{}
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\itshape\color{gowink}}
+  {\color{gowaccent}\thesubsubsection}{0.5em}{}
+\titlespacing*{\section}{0pt}{2.2ex plus 1ex minus .2ex}{1.2ex plus .2ex}
+
+% Run-in \paragraph heads: ink italic for a quiet, consistent lead-in.
+\titleformat{\paragraph}[runin]
+  {\normalfont\normalsize\bfseries\color{gowink}}
+  {}{0pt}{}
+\titlespacing*{\paragraph}{0pt}{1.1ex plus .4ex}{0.6em}
+
+% Captions: small-caps accent label, compact measure, hanging body.
+\captionsetup{
+  labelfont={sc, color=gowaccent},
+  labelsep=period,
+  textfont={small},
+  font=small,
+  width=0.92\textwidth,
+  justification=justified,
+  singlelinecheck=true,
+}
+
+% Body rhythm: gentle leading, book-ish indent, kinder line breaking.
+\usepackage{setspace}
+\setstretch{1.06}
+\setlength{\parindent}{1.4em}
+\setlength{\emergencystretch}{2.2em}
+\tolerance=1200
+\hyphenpenalty=200
+\widowpenalty=10000
+\clubpenalty=10000
+
+% Table of contents styling (small-caps title, accent numbers, light leaders).
+\renewcommand{\cfttoctitlefont}{\normalfont\Large\scshape\color{gowink}}
+\renewcommand{\cftsecfont}{\normalfont\scshape}
+\renewcommand{\cftsecpagefont}{\normalfont\color{gowsoft}}
+\renewcommand{\cftsecleader}{\color{gowrule}\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsecnumwidth}{2.4em}
+\renewcommand{\cftsubsecfont}{\normalfont}
+\renewcommand{\cftsubsecpagefont}{\normalfont\color{gowsoft}}
+\setlength{\cftbeforesecskip}{0.55em}
+
+% ── Designed title page (monograph feel) ──────────────────────────────
+\newcommand{\gowtitlepage}{%
+  \begin{titlepage}
+  \thispagestyle{empty}
+  \centering
+  \vspace*{\stretch{1}}
+  {\color{gowaccent}\rule{0.34\textwidth}{1.2pt}}\\[2.2em]
+  {\normalfont\scshape\fontsize{15}{18}\selectfont\color{gowsoft}%
+    A Discipline for Progress on Hard Problems}\\[2.4em]
+  {\normalfont\fontsize{34}{40}\selectfont\color{gowink}%
+    Geometry of Work}\\[0.9em]
+  {\normalfont\itshape\fontsize{16}{20}\selectfont\color{gowink}%
+    Shape-Guided Search over\\ Failed and Partial Solution Attempts}\\[2.6em]
+  {\color{gowrule}\rule{0.16\textwidth}{0.5pt}}\\[2.4em]
+  {\normalfont\large Jonathan Maye-Hobbs\,\orcidlink{0009-0007-9831-2465}}\\[0.6em]
+  {\footnotesize\color{gowsoft} Independent researcher}\\[0.2em]
+  {\footnotesize\ttfamily\color{gowsoft} jonmhobbs@gmail.com}\\[0.2em]
+  {\footnotesize\color{gowsoft} ORCID: \href{https://orcid.org/0009-0007-9831-2465}{0009-0007-9831-2465}}
+  \vspace{\stretch{1.4}}
+  {\footnotesize\color{gowsoft} September 11, 2026}\\[0.8em]
+  {\color{gowaccent}\rule{0.34\textwidth}{1.2pt}}
+  \vspace*{\stretch{0.4}}
+  \end{titlepage}%
+}
+
+% ── Abstract as a quiet, inset front-matter block ─────────────────────
+\renewenvironment{abstract}{%
+  \begin{center}
+  \begin{minipage}{0.86\textwidth}
+  \begin{center}{\normalfont\scshape\color{gowaccent}Abstract}\end{center}
+  \vspace{0.4em}
+  {\color{gowrule}\hrule height 0.4pt}
+  \vspace{0.9em}
+  \small\noindent\ignorespaces
+}{%
+  \vspace{0.9em}
+  {\color{gowrule}\hrule height 0.4pt}
+  \end{minipage}
+  \end{center}
+  \vspace{1.2em}
+}
+
 % ── Theorem environments ──────────────────────────────────────────────
+% ── Theorem environments ──────────────────────────────────────────────
+\newtheoremstyle{gowthm}%
+  {1.1em}{1.1em}%           space above / below
+  {\itshape}%               body font
+  {0pt}%                    indent
+  {\scshape\color{gowaccent}}% head font
+  {.}%                      punctuation after head
+  {0.5em}%                  space after head
+  {\thmname{#1}\thmnumber{ #2}\thmnote{ \normalfont\upshape(#3)}}%
+\theoremstyle{gowthm}
 \newtheorem{definition}{Definition}[section]
 \newtheorem{claim}{Claim}[section]
 \newtheorem{remark}{Remark}[section]
@@ -39,24 +176,22 @@
 \newcommand{\claimnote}[1]{\textcolor{blue}{\textbf{[CLAIM: #1]}}}
 \newcommand{\evidence}[1]{\textcolor{teal}{\textbf{[EVIDENCE: #1]}}}
 
-% ── Title ─────────────────────────────────────────────────────────────
-\title{%
-  Geometry of Work:\\
-  Shape-Guided Search over Failed and Partial Solution Attempts%
-}
-
-\author{%
-  Jonathan Maye-Hobbs\,\orcidlink{0009-0007-9831-2465}\\
-  \small Independent researcher\\
-  \small \texttt{jonmhobbs@gmail.com}\\
-  \small ORCID: \href{https://orcid.org/0009-0007-9831-2465}{0009-0007-9831-2465}
-}
-
-\date{\today}
+% ── Title metadata ────────────────────────────────────────────────────
+% The visible title is set by \gowtitlepage (below). PDF metadata is set in
+% \hypersetup. The stock \title/\author/\date are intentionally unused.
+\frenchspacing
 
 % ══════════════════════════════════════════════════════════════════════
 \begin{document}
-\maketitle
+\gowtitlepage
+
+% Front-matter contents (roman page numbers), then reset to arabic for body.
+\clearpage
+\pagenumbering{roman}
+\thispagestyle{empty}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
 
 % ── Abstract ──────────────────────────────────────────────────────────
 \begin{abstract}
@@ -94,7 +229,6 @@ constituent set of capabilities.
 \label{sec:intro}
 
 \subsection{The problem with repeated hard work}
-\subsection{The problem with repeated hard work}
 
 Some problems resist sustained effort not because they are poorly understood,
 but because the effort itself is not producing new information. A research team
@@ -124,8 +258,12 @@ We call this framework \emph{Geometry of Work} (GoW). The methodology separates
 shape-space reasoning from domain-space verification: the geometry is
 constructed and explored in shape-space (the space of structural descriptions),
 and proposed crossings are projected back into domain-space for classical
-evaluation. Shape-space search is inherently uncertain; domain-space verification
-is inherently authoritative. Keeping them separate is the epistemic core of the
+evaluation. Shape-space search is inherently uncertain; domain-space evaluation
+applies the strongest verifier available to the projected candidate. Its
+authority is not intrinsic: a domain-space check is authoritative only about
+what it checked, against which claim, under which assumptions --- an
+incomplete or misdirected check confers nothing. Keeping the two spaces
+separate, with the verifier's coverage recorded, is the epistemic core of the
 framework.
 \[
 W
@@ -143,19 +281,19 @@ W'
 \centering
 \begin{tikzpicture}[
   every node/.style={font=\small},
-  regime/.style={draw, rounded corners=8pt, minimum width=28mm, minimum height=18mm},
-  fail/.style={regime, fill=red!8},
-  part/.style={regime, fill=yellow!12},
-  succ/.style={regime, fill=green!10},
-  work/.style={circle, draw, inner sep=1pt, minimum size=3mm, font=\tiny},
+  regime/.style={draw=gowrule, rounded corners=8pt, minimum width=28mm, minimum height=18mm, line width=0.6pt},
+  fail/.style={regime, fill=gowaccent!8},
+  part/.style={regime, fill=gowsoft!12},
+  succ/.style={regime, fill=gowaccent!3, draw=gowaccent!35},
+  work/.style={circle, draw=gowsoft, inner sep=1pt, minimum size=3mm, font=\tiny},
   ->,>={Stealth[length=2mm]}, thick,
 ]
 \node[fail]  (F) {};
-\node[above=1mm of F, font=\scriptsize]{failure regime};
+\node[above=1mm of F, font=\scriptsize\scshape, text=gowsoft]{failure regime};
 \node[part, right=8mm of F] (P) {};
-\node[above=1mm of P, font=\scriptsize]{partial-success regime};
+\node[above=1mm of P, font=\scriptsize\scshape, text=gowsoft]{partial-success regime};
 \node[succ, right=8mm of P] (S) {};
-\node[above=1mm of S, font=\scriptsize]{success regime};
+\node[above=1mm of S, font=\scriptsize\scshape, text=gowsoft]{success regime};
 
 % work items
 \foreach \x/\y in {-0.6/-0.2, -0.2/0.3, 0.3/-0.3, 0.7/0.1, -0.5/0.5} {
@@ -165,26 +303,26 @@ W'
   \node[work] at ($(P.center)+(\x,\y)$) {};
 }
 \foreach \x/\y in {0.1/0.1, -0.3/-0.3} {
-  \node[work, fill=green!30] at ($(S.center)+(\x,\y)$) {};
+  \node[work, fill=gowaccent!25, draw=gowaccent] at ($(S.center)+(\x,\y)$) {};
 }
 
 % boundary
-\draw[dashed, thick, red!60!black] ($(F.north east)+(0,3mm)$) --
+\draw[dashed, thick, gowaccent] ($(F.north east)+(0,3mm)$) --
   ($(F.south east)+(0,-3mm)$)
-  node[midway, right, font=\scriptsize, red!60!black]{$B$};
+  node[midway, right, font=\scriptsize, text=gowaccent]{$B$};
 
 % delta
-\draw[->, thick, blue!70!black, bend left=20]
+\draw[->, thick, gowink, bend left=20]
   ($(F.center)+(0.7,0.1)$) to
-  node[midway, above, font=\scriptsize, blue!70!black]{$\Delta S$}
+  node[midway, above, font=\scriptsize, text=gowink]{$\Delta S$}
   ($(P.center)+(-0.3,0.2)$);
 
 % delta continuation to success
-\draw[->, thick, blue!70!black, bend left=20, dashed]
+\draw[->, thick, gowink, bend left=20, dashed]
   ($(P.center)+(0.5,0.4)$) to
   ($(S.center)+(-0.3,-0.3)$);
 
-\node[below=8mm of P, font=\scriptsize, align=center]
+\node[below=8mm of P, font=\scriptsize, align=center, text=gowsoft]
   {Conserved shape $H$: shared structural property\\
    Structural delta $\Delta S$: proposed crossing};
 \end{tikzpicture}
@@ -220,9 +358,6 @@ We make four claims, deliberately ordered from broadest to narrowest:
 \end{enumerate}
 
 % ── 2. Motivating Example ────────────────────────────────────────────
-\section{Motivating Example}
-\label{sec:example}
-
 \section{Motivating Example}
 \label{sec:example}
 
@@ -268,9 +403,17 @@ boundary in the failure geometry. If the attempt fails, the landing point is
 re-ingested and the geometry is updated. Failure is still failure; but now it
 is a measurement.
 
-This example is drawn from the Pilot-003 and Pilot-004 experiments reported in
-\cref{sec:results}. The fiberwise lattice-point proposal in Pilot-003 (B3 rank 4)
-is the domain-space analog of the crossing described above.
+This example is a \emph{stylized composite}, not a report of an executed run.
+Its elements correspond to real artifacts at substantially reduced scope: in
+Pilot-004 a density/averaging-ceiling hypothesis (N2a) was proposed for
+\emph{two} corpus approaches (es-05, es-10) --- not for every stalled attempt
+--- and was refined into rate-ceiling vs.\ reach-ceiling sub-mechanisms under
+challenge (\cref{sec:results-challenge}); in Pilot-003 a fiberwise
+lattice-point proposal (B3 rank 4) was judged a full criterion recovery by a
+blinded model reviewer (\cref{sec:results-pilot003}). The four-family
+clustering, the ceiling shared by \emph{all} stalled approaches, and the
+specific boundary-crossing construction above are illustrative inventions and
+appear in no experiment record.
 
 % ── 3. Semantic Model ────────────────────────────────────────────────
 \section{Semantic Model: The Geometry of Work}
@@ -419,9 +562,9 @@ where the four components are orthogonal axes, not a single confidence scalar.
   every node/.style={font=\small},
   axis/.style={draw, thick, rounded corners=2pt, minimum width=32mm,
                minimum height=6mm, align=center},
-  shapebox/.style={axis, fill=blue!8},
-  cond/.style={axis, fill=orange!12},
-  role/.style={axis, fill=green!10},
+  shapebox/.style={axis, fill=gowteal!10},
+  cond/.style={axis, fill=gowsand!18},
+  role/.style={axis, fill=gowaccent!8},
   state/.style={axis, fill=violet!8},
   ex/.style={font=\scriptsize\itshape, align=center, text=black!65},
   ->,>={Stealth[length=2mm]},
@@ -482,9 +625,14 @@ obstruction. Roles:
 
 \paragraph{3. Model judgment $\neq$ verification.}
 A provider may propose any claim. Consensus among models is still model judgment.
-Verification requires a mechanism stronger than the claim's source: a
-deterministic computation, a reproducible experiment, an independent proof, or
-at minimum an independent model family that did not generate the original claim.
+Verification requires a mechanism stronger than model judgment: a
+deterministic computation, a reproducible experiment, or an independent proof.
+Criticism from an independent model family that did not generate the original
+claim can strengthen or weaken confidence, but it remains model judgment
+(tier~4 below); it does not verify. What any evidence contributes is described
+by what was checked, against which claim, under which assumptions, and with
+what unresolved coverage --- provider independence is one useful attribute of
+that account, not a substitute for it.
 
 \begin{definition}[Verification hierarchy]
 Claims are strengthened through the following ordered tiers (higher tiers
@@ -515,12 +663,17 @@ follows:
 \text{proposed}
 \xrightarrow{\text{adversarial challenge}}
 \begin{cases}
-  \text{surviving} & \text{(all probes failed to falsify)} \\
+  \text{surviving} & \text{(no completed probe falsified; coverage recorded)} \\
   \text{weakened} & \text{(scope narrowed; boundary delta found)} \\
   \text{split} & \text{(claim decomposes into two non-trivially distinct children)} \\
   \text{falsified} & \text{(counterexample found and verified)}
 \end{cases}
 \]
+\emph{Surviving} is a coverage claim, not a completeness claim: the
+implemented contract requires at least one adversarial attack completed with
+a negative result, while other probes may individually be inapplicable or
+inconclusive on the given corpus. The per-probe record --- which attacks
+completed, which could not be executed, and why --- travels with the status.
 A \emph{surviving} or \emph{weakened} claim may be independently verified,
 which advances it toward \emph{operator-attested} or (with proof-level evidence)
 toward an established result. No transition may occur automatically; each
@@ -591,11 +744,11 @@ more independently motivated instances of the delta exist in the corpus.
 \begin{tikzpicture}[
   node distance=6mm and 6mm,
   every node/.style={font=\small},
-  stage/.style={draw, rounded corners=2pt, align=center,
-                minimum width=22mm, minimum height=8mm, fill=blue!5},
-  space/.style={draw, dashed, rounded corners=6pt,
-                inner sep=3mm, fill=gray!2},
-  ->,>={Stealth[length=2mm]}, thick,
+  stage/.style={draw=gowrule, rounded corners=2pt, align=center, line width=0.6pt,
+                minimum width=22mm, minimum height=8mm, fill=gowteal!8},
+  space/.style={draw=gowrule, dashed, rounded corners=6pt,
+                inner sep=3mm, fill=gowsoft!5},
+  ->,>={Stealth[length=2mm]}, thick, gowink,
 ]
 \node[stage] (map)      {\textsc{Map} \\ \scriptsize $W \to S(W)$};
 \node[stage, right=of map] (bound)   {\textsc{Boundary} \\ \scriptsize $\mathcal{G} \to B$};
@@ -612,8 +765,8 @@ more independently motivated instances of the delta exist in the corpus.
 \draw (update.west) -- ++(-3mm,0) |- (map.west);
 
 \begin{scope}[on background layer]
-  \node[space, fit=(map)(bound)(move), label={[font=\scriptsize, blue!60!black]above:shape-space}] {};
-  \node[space, fit=(proj)(verify)(update), label={[font=\scriptsize, blue!60!black]below:domain-space}] {};
+  \node[space, fit=(map)(bound)(move), label={[font=\scriptsize\scshape, text=gowaccent]above:shape-space}] {};
+  \node[space, fit=(proj)(verify)(update), label={[font=\scriptsize\scshape, text=gowaccent]below:domain-space}] {};
 \end{scope}
 \end{tikzpicture}
 \caption{The GoW loop: shape-space reasoning (top row) is separated from
@@ -692,9 +845,6 @@ this recursion from expanding indefinitely.
 \section{System: \texttt{newf}}
 \label{sec:system}
 
-\section{System: \texttt{newf}}
-\label{sec:system}
-
 \texttt{newf} is an instrumented realization of the GoW loop. Its technical
 contribution is not the methodology itself but the answer to a specific
 engineering question:
@@ -738,14 +888,26 @@ first). The layers are:
     reads the failure-space record and proposes shape claims (candidate
     invariants) as hypotheses about what is conserved across the failure
     population. These enter with epistemic status \emph{proposed}.
-  \item \textbf{Challenge lifecycle.} Each candidate is subjected to the
-    seven-probe adversarial challenge. Probe outcomes are recorded with
-    evidence; status transitions require explicit operator or model attestation;
-    boundary deltas are persisted as first-class records. The status transition
+  \item \textbf{Challenge lifecycle.} Each candidate enters the challenge
+    lifecycle. Probe outcomes are recorded with typed evidence
+    (\texttt{inadmissible} / \texttt{inapplicable} / \texttt{inconclusive} /
+    \texttt{completed\_negative} / \texttt{confirmed}); status transitions
+    require explicit evidence records; boundary deltas are recorded within the
+    challenge record's typed evidence links and detail fields (a dedicated
+    typed \texttt{boundary\_delta} persistence contract is a specified
+    extension, not yet implemented). The status transition
     graph is enforced in code: a proposed claim cannot move to surviving
-    without a completed challenge record.
-  \item \textbf{Boundary / frontier generation.} Surviving or weakened claims,
-    together with their boundary deltas, feed a frontier step: a model-native
+    without a completed challenge record, and survival requires at least one
+    \texttt{completed\_negative} attack over a nonempty eligible population.
+    The in-code default challenger proposes a deliberately narrower attack set
+    than the seven-probe methodology contract and does not synthesize
+    counterexamples; the complete seven-probe campaigns reported for N2a and
+    N5 were performed as model-assisted, operator-recorded analyses with
+    retained artifacts, outside the CLI challenger.
+  \item \textbf{Boundary / frontier generation.} Claims in the
+    \texttt{surviving} or \texttt{operator\_attested} states --- and only
+    those (weakened claims are excluded by the implemented eligibility
+    predicate) --- feed a frontier step: a model-native
     \emph{project} operation proposes structural deltas that cross the surviving
     boundaries. Each proposal states its target claim, claimed structural
     violation, nearest failure family, and mechanistic distance argument.
@@ -762,15 +924,38 @@ first). The layers are:
     and inform the next search-policy revision.
 \end{enumerate}
 
+\paragraph{Implementation status.}
+The nine layers do not share one evidentiary status, and the distinction
+matters for the systems claim. Each capability above is one of:
+\begin{itemize}[nosep]
+  \item \textbf{Implemented and exercised} --- enforced in code and exercised
+    by the experiments of \cref{sec:results} (ingestion, normalization,
+    shape-space construction, shape proposal, the challenge state machine and
+    its survival gate, frontier eligibility gating, assessment routing and
+    abstention, re-ingestion);
+  \item \textbf{Performed externally with retained artifacts} --- part of the
+    methodology executed as model-assisted, operator-recorded analysis rather
+    than by the CLI (the seven-probe N2a/N5 challenge campaigns; the blinded
+    judgment-level review in Pilot-003);
+  \item \textbf{Specified extension, not yet demonstrated} --- described by
+    the methodology and the repository's design documents but not implemented
+    as a typed contract (dedicated \texttt{boundary\_delta} persistence; the
+    full self-referential loop of comparing representational bases,
+    prospectively selecting a revision, and testing whether it improves
+    subsequent search).
+\end{itemize}
+Where a capability below or in \cref{fig:newf-arch} is not tied to a cited
+artifact, it should be read at the weakest of these statuses.
+
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}[
   node distance=3mm and 5mm,
   every node/.style={font=\scriptsize},
   layer/.style={draw, rounded corners=2pt, minimum width=32mm,
-                minimum height=6mm, align=center, fill=gray!5},
-  model/.style={fill=orange!15},
-  det/.style={fill=blue!8},
+                minimum height=6mm, align=center, fill=gowsoft!6},
+  model/.style={fill=gowsand!20},
+  det/.style={fill=gowteal!10},
   ->,>={Stealth[length=1.8mm]},
 ]
 \node[layer, det]   (ing)    {1.\ Work ingestion (immutable, content-addressed)};
@@ -799,7 +984,10 @@ first). The layers are:
 \caption{\texttt{newf} architecture as nine layers. Model-native operations
 (orange) produce claims and candidates; deterministic layers (blue) enforce
 provenance, canonicalization, and verifier routing. No layer may promote
-epistemic status without an explicit evidence record from the layer above it.}
+epistemic status without an explicit evidence record from the layer above it.
+The diagram shows the intended loop; per-capability implementation status
+(implemented and exercised / performed externally with retained artifacts /
+specified extension) is given in the text.}
 \label{fig:newf-arch}
 \end{figure}
 
@@ -829,9 +1017,6 @@ They do not affect the theory.
 \section{Experimental Method}
 \label{sec:method-exp}
 
-\section{Experimental Method}
-\label{sec:method-exp}
-
 \paragraph{Corpus.}
 All experiments use a project-authored study corpus on the Erd\H{o}s--Straus
 conjecture: whether $4/n = 1/a + 1/b + 1/c$ has a positive integer solution
@@ -852,7 +1037,11 @@ Each experiment predeclares its success criterion before generation begins.
 For curated-feature and discovery experiments, the criterion is
 \emph{criterion recovery}: at least one generated proposal must structurally
 match the withheld target move under the code-owned recovery rule
-(\texttt{recovery-rule/v1}, \texttt{classify/v3}). The rule abstains on
+(\texttt{recovery-rule/v1}). The classification profile is pinned per
+experiment: Pilot-003 was assessed under \texttt{classify/v1} (a post-hoc
+\texttt{classify/v2} reassessment was recorded under a separate experiment
+identity and replaces nothing); the M7 blinded benchmark runs under
+\texttt{classify/v3}. The rule abstains on
 out-of-vocabulary wording rather than guessing; it does not recover proposals
 that are mechanistically distinct from the target. Judgment-level review is
 separately recorded and distinguished from rule-based assessment.
@@ -871,16 +1060,16 @@ section is traceable to a specific file and row in those artifacts.
 \begin{tikzpicture}[
   every node/.style={font=\scriptsize},
   exp/.style={draw, rounded corners=2pt, minimum width=28mm,
-              minimum height=14mm, align=center, fill=blue!5},
-  negexp/.style={exp, fill=red!8},
-  posexp/.style={exp, fill=green!8},
-  mixexp/.style={exp, fill=yellow!12},
+              minimum height=14mm, align=center, fill=gowteal!8},
+  negexp/.style={exp, fill=gowaccent!8},
+  posexp/.style={exp, fill=gowteal!12},
+  mixexp/.style={exp, fill=gowsand!16},
   ->,>={Stealth[length=2mm]}, thick,
 ]
 \node[negexp] (A) {\textbf{A. Negative controls}\\ \scriptsize empty failure pop.\\ \scriptsize M7 Stage 1 (pristine)\\[1pt] \tiny \emph{inconclusive}};
-\node[mixexp, right=8mm of A] (B) {\textbf{B. Curated features}\\ \scriptsize Pilot-003 B0/B1/B3\\ \scriptsize target withheld\\[1pt] \tiny \emph{rule: inconclusive}\\ \tiny \emph{review: 1 recovery (B3)}};
+\node[mixexp, right=8mm of A] (B) {\textbf{B. Curated features}\\ \scriptsize Pilot-003 B0/B3\\ \scriptsize target withheld\\[1pt] \tiny \emph{rule: inconclusive}\\ \tiny \emph{review: 1 recovery (B3)}};
 \node[mixexp, right=8mm of B] (C) {\textbf{C. Shape discovery}\\ \scriptsize Pilot-004 (23 entries)\\ \scriptsize reference withheld\\[1pt] \tiny \emph{aggregate criterion:}\\ \tiny \emph{not met}\\ \tiny \emph{10 defensible novel}};
-\node[posexp, right=8mm of C] (D) {\textbf{D. Novel challenge}\\ \scriptsize N2a: 7-probe lifecycle\\ \scriptsize reference-absent\\[1pt] \tiny \emph{disposition: weakened}\\ \tiny \emph{boundary\_delta @ C4}};
+\node[posexp, right=8mm of C] (D) {\textbf{D. Novel challenge}\\ \scriptsize N2a: 7-probe lifecycle\\ \scriptsize reference-absent\\[1pt] \tiny \emph{survived + refinement}\\ \tiny \emph{boundary\_delta @ C4}};
 
 \draw (A) -- (B);
 \draw (B) -- (C);
@@ -940,20 +1129,29 @@ framework distinguishes \texttt{inconclusive} (undecidable) from
 \label{sec:results-pilot003}
 
 \paragraph{Design.}
-Three arms, equal budget of 6 proposals each:
+Two arms, predeclared budgets of 8 proposal slots each (submitted: 7 and 6):
 \begin{itemize}[nosep]
-  \item B0 (undirected baseline): no structural context supplied.
-  \item B1 (semantic summary): plain prose summary of corpus themes.
+  \item B0 (undirected baseline): no structural context supplied. 7 proposals
+    submitted; the capture passed the production wire importer as captured.
   \item B3 (invariant-guided): failure-conditioned structural hypotheses
-    (L1, L3, L4) supplied and challenged before generation.
+    (L1, L3, L4) supplied and challenged before generation. 6 proposals
+    submitted; the primary capture is \emph{wire-invalid} (optional enums
+    nested inside \texttt{mechanism}), so what was assessed is a recorded
+    lossless repaired-input derivative, retained separately from --- and never
+    substituting for --- the primary capture. The repair policy was symmetric
+    across arms; B0 required none.
 \end{itemize}
 Target: a withheld fiberwise lattice-point / geometry-of-numbers structural move.
 
 \paragraph{Automatic assessment.}
-All arms: \texttt{inconclusive}. The target's completeness was not
-operator-attested at run time; the code-owned recovery rule abstained. The
-B0 vs.\ B3 comparison concluded \texttt{inconclusive} for the same reason
-(see M7 Stage 1 reproduction above).
+Under the pinned profile (\texttt{recovery-rule/v1}, \texttt{classify/v1},
+\texttt{mechanism/v3}): no proposal recovered the target in either arm
+(B0: 2 \texttt{decisive\_no}, 5 \texttt{unknown}; B3: 2 \texttt{decisive\_no},
+4 \texttt{unknown}); the recorded automatic conclusion is
+\texttt{inconclusive}. A post-hoc \texttt{classify/v2} reassessment ---
+recorded under a separate experiment identity, replacing nothing --- degraded
+all four \texttt{decisive\_no} rows to \texttt{unknown} and remained
+\texttt{inconclusive}.
 
 \paragraph{Judgment-level review.}
 A blinded model reviewer scored all proposals against the target without access
@@ -991,11 +1189,24 @@ epistemic status}, not an established result.
 \label{sec:results-pilot004}
 
 \paragraph{Design.}
-Predeclared discovery criterion: the model must propose shared structural
-properties not explicitly supplied from the reference ledger, and the
-aggregate rate of such properties must exceed a predeclared threshold.
-Generation proceeded without supplying curated reference properties; all
-structural context was drawn from the corpus signatures and vocabulary alone.
+Two arms, three runs per arm, at most 5 proposals per run. Arm D1 (discovery)
+received the 12 frozen train notes --- the train-note bundle was the
+\emph{entire} permitted context; the reference ledger, mapping review,
+mechanism vocabularies, and interpretation claims were all withheld. Arm D0
+(permuted control) received the same instructions over a bundle whose complete
+outcome objects (class, boundary statement, outcome notes) were permuted
+across the 12 payloads under a fixed recorded seed. D0 is a conservative
+control: D1${\approx}$D0 is uninterpretable in D1's favor; only a clear
+D1${\gg}$D0 separation counts. The predeclared success criteria (aggregated
+across the three runs per arm) were:
+\begin{itemize}[nosep]
+  \item[C1:] D1 recovers at least 2 of $\{$L1, L3, L4$\}$ as
+    \texttt{matches\_reference} in a majority of its runs, including at least
+    one of $\{$L3, L4$\}$;
+  \item[C2:] D1's aggregate over-merge $+$ prohibited-promotion count is
+    $\leq$ D0's;
+  \item[C3:] D0 does not match the unnamed properties at D1's rate.
+\end{itemize}
 
 \paragraph{Results.}
 23 proposal occurrences were generated and adjudicated by a three-lane quorum.
@@ -1008,11 +1219,14 @@ Matches reference (L1--L6) & 7 \\
 Defensible novel (not in reference) & 10 (collapsed to $\approx$6 distinct themes) \\
 Unsupported & 4 \\
 Over-merge / prohibited promotion & 2 \\
-\midrule
-Predeclared criterion & \textbf{Not met} \\
 \bottomrule
 \end{tabular}
 \end{center}
+Against the predeclared criteria: C1 \emph{failed} (the required
+majority-of-runs reference recovery held in 1 of 3 D1 runs); C2 \emph{failed}
+(D1 recorded 2 over-merge/prohibited-promotion entries against D0's 0, both
+conservative fallbacks); C3 \emph{met} (D0 novel rate 36\% vs.\ D1 50\%).
+Predeclared verdict: \textbf{negative / inconclusive}.
 
 Of the 10 defensible-novel occurrences, five recurring themes were identified,
 including density-averaging ceiling (N2a), reorganization without existence
@@ -1021,11 +1235,12 @@ was highest at the reference-match / novel boundary, partly due to wording
 sensitivity and unstable category edges.
 
 \paragraph{Key distinction.}
-The experiment was \textbf{negative under its predeclared effectiveness endpoint}
-(the aggregate novel rate did not meet the predeclared threshold) while
+The experiment was \textbf{negative under its predeclared composite endpoint}
+(majority-of-runs reference recovery failed and the error-count comparison
+failed, though the novel-rate comparison was met) while
 \textbf{positive on a constituent capability observation}: models generated
 plausible structural hypotheses absent from the reference ledger. These two
-statements are compatible. The predeclared criterion tested method reliability;
+statements are compatible. The predeclared criteria tested method reliability;
 the capability observation records that reference-absent shape generation occurred.
 
 \paragraph{Conclusion.}
@@ -1037,53 +1252,76 @@ depend on the pilot's aggregate result.
 \label{sec:results-challenge}
 
 \paragraph{Candidate.}
-N2a (\emph{density averaging ceiling}): the hypothesis that all stalled
-Erd\H{o}s--Straus mechanisms are subject to an intrinsic rate ceiling,
-specifically that polylogarithmic-or-slower sieve-average growth is
-structurally insufficient to force the existence of a solution, independent
-of parameter optimization.
+N2a (\emph{density averaging ceiling}): the hypothesis that two stalled
+density/averaging approaches in the corpus --- es-05 (averaging via
+Bombieri--Vinogradov) and es-10 (Vaughan congruence density), both
+\texttt{partial\_failure} --- are subject to an intrinsic ceiling in their
+rate arguments: polylogarithmic-or-slower sieve-average growth is claimed to
+be structurally insufficient to force the existence of a solution,
+independent of parameter optimization. The claim's scope is
+$[$es-05, es-10$]$; it does not cover the corpus's other stalled mechanisms.
 
 This hypothesis was proposed by a model during Pilot-004 and was absent from
 the reference ledger (L1--L6). It was selected for end-to-end challenge on the
 criterion of high quorum confidence and no obvious scope objection.
 
 \paragraph{Challenge outcomes.}
-All seven probes were completed:
+All seven probes were executed; their evidential characters differ and are
+reported per probe:
 \begin{itemize}[nosep]
-  \item \textbf{C1} (known counterexample): None found. es-01 and es-02 are
-    partial successes but do not violate the density framing.
-  \item \textbf{C2} (synthetic counterexample): A hypothetical dense-sieve
-    variant was constructed; it does not exist in the corpus and would need
-    independent verification.
-  \item \textbf{C3} (success-preserving): es-01 preserves the ceiling in a
-    consistent way; contrast stable.
+  \item \textbf{C1} (known counterexample): none found. The corpus's other
+    mechanism families (es-01, es-02, es-03, es-07, es-08) fall outside the
+    claim's density/averaging scope rather than violating it.
+  \item \textbf{C2} (synthetic counterexample): \emph{no falsifying synthetic
+    construction was produced.} The record reasons that a violating approach
+    would need polynomial (not polylogarithmic) growth of the averaged
+    quantity --- i.e., it characterizes what a counterexample would require.
+    This is an argument about the shape of a hypothetical construction, not a
+    completed counterexample search, and the absence of a construction does
+    not re-confirm the hypothesis.
+  \item \textbf{C3} (success-preserving contrast): the critical contrast case
+    is es-06 (\texttt{partial\_success}), assessed as a genuine contrast that
+    does not falsify N2a --- its ceiling is the quadratic-residue wall, not a
+    rate ceiling internal to an averaging argument.
   \item \textbf{C4} (lower abstraction --- splits?): \textbf{Partial split found.}
     es-05 (Bombieri--Vinogradov / Titchmarsh--Korobov type) exhibits a
     density-rate ceiling; es-10 (\path{confined_to_quadratic_nonresidues})
     exhibits a reach ceiling. These are distinct sub-mechanisms. A boundary
     delta $\delta_{\text{N2a}}$ was identified: \emph{rate-framing vs.\
     reach-framing of the same exhaustion argument.}
-  \item \textbf{C5} (higher abstraction --- merges?): Merges with a general
-    ``finite-resource exhaustion'' theme, but the rate-specific sub-claim
-    survives at lower level.
-  \item \textbf{C6} (sampling bias): Population limited; the claim should be
+  \item \textbf{C5} (higher abstraction --- merges?): a candidate merge into a
+    general ``finite-resource exhaustion'' theme was examined and assessed
+    \emph{defective}: it erases the mechanistic distinction (confinement of
+    reach vs.\ rate of convergence) that carries the claim's predictive
+    content. No merge was performed.
+  \item \textbf{C6} (sampling bias): population limited; the claim should be
     read as holding \emph{for this corpus}, not universally.
-  \item \textbf{C7} (causality): Causal reading supported by BV/BT/TK
-    machinery analysis; polylog main-term growth is structurally insufficient
-    for existence-forcing by the relevant number-theoretic mechanisms.
+  \item \textbf{C7} (causality): the causal reading rests on source-grounded
+    observations from the corpus notes about BV/BT/TK-type machinery plus a
+    proposed explanation. It is not a checked mathematical argument: in
+    particular, growth of an \emph{averaged} solution-count alone cannot
+    establish pointwise existence, and the record's exceptional-set expression
+    $N\exp[-c(\log N)^{2/3}]$ grows unboundedly (it is the \emph{density}
+    ratio that vanishes). The additional assumptions connecting the averaged
+    quantity to pointwise existence remain unstated; see the attributed
+    reassessment appended to the challenge record.
 \end{itemize}
 
 \paragraph{Disposition.}
-\textbf{Weakened, with boundary delta.} N2a survives as a valid
-failure-conditioned regularity in this corpus, refined to distinguish rate-ceiling
-(es-05) from reach-ceiling (es-10) sub-mechanisms. A child hypothesis (N2a-child-1)
-was derived but not yet independently motivated by two corpus instances and
-therefore not yet admitted.
+\textbf{Survived with one required refinement (boundary delta), at
+model-judgment strength.} N2a stands as a failure-conditioned regularity
+proposal for this corpus, refined to distinguish rate-ceiling (es-05) from
+reach-ceiling (es-10) sub-mechanisms. Probe coverage is mixed: C1/C3/C4/C6
+are corpus-grounded, C2 characterizes a hypothetical construction, and C7 is
+a proposed explanation with known unchecked mathematical steps. A child
+hypothesis (N2a-child-1) was derived but not yet independently motivated by
+two corpus instances and therefore not yet admitted.
 
 \paragraph{Significance for C4.}
 This experiment provides the evidence required for Claim C4: a reference-absent,
-model-generated structural hypothesis underwent the complete challenge lifecycle
-and survived with a resolution-gaining boundary refinement. Whether the hypothesis
+model-generated structural hypothesis underwent an explicit seven-probe challenge
+lifecycle --- with per-probe evidential character recorded --- and survived with
+a resolution-gaining boundary refinement. Whether the hypothesis
 is mathematically correct is outside the scope of this paper; the claim is that
 the framework can subject such a hypothesis to explicit evidentiary challenge.
 
@@ -1114,8 +1352,9 @@ The most important epistemic lesson from Pilot-004 is the distinction between
 two results that superficially look like the same negative result:
 
 \begin{itemize}[nosep]
-  \item \textbf{Method reliability endpoint not met} (aggregate novel rate below
-    predeclared threshold): \emph{negative} result.
+  \item \textbf{Method reliability endpoint not met} (majority-of-runs
+    reference recovery and the error-count comparison both failed):
+    \emph{negative} result.
   \item \textbf{Reference-absent shape generation observed}: \emph{positive}
     capability finding within the negative-effectiveness run.
 \end{itemize}
@@ -1389,15 +1628,30 @@ literature. It is a narrow claim, and it is the claim we hold.
 \section{Limitations and Threats to Validity}
 \label{sec:limitations}
 
-\section{Limitations and Threats to Validity}
-\label{sec:limitations}
-
 \paragraph{Single domain.}
 All experiments use a project-authored corpus on a single open number-theory
 problem. No claim about GoW's effectiveness on other domains or problem types
 is supported by this evidence. Whether the shape vocabulary, challenge
 operations, and boundary concept transfer to other disciplines remains an
 empirical question.
+
+\paragraph{Compressed development window.}
+The line of inquiry began at 2026-09-10 03:49 (UTC$-$7, author-reported),
+with an initial focus on extracting shared structure from histories of
+unsuccessful attempts; the broader formulation, the \texttt{newf}
+implementation, the study corpus, all experiments, and this manuscript
+emerged within roughly 33 hours of that timestamp, each stage carrying its
+own commit-anchored timestamp (\path{paper/HISTORY.md}). The inception
+timestamp attaches to the initial insight only --- the present framework is
+not retrodated to it. Three consequences follow. First, the corpus, the
+system that analyzes it, and the evaluation were authored by the same
+operator-plus-model process in the same window --- the strongest form of the
+practitioner-curation threat that falsification condition F5 tests. Second,
+no longitudinal claim is possible: nothing here shows the method's outputs
+survive contact with time, independent replication, or an external corpus.
+Third, the compression is a throughput observation about the development
+process, not evidence for any scientific claim in this paper, and it is
+never cited as such.
 
 \paragraph{LLM-dependent structural descriptions.}
 Structural normalization is model-assisted. Different model families may produce
@@ -1439,9 +1693,6 @@ loop improves the proposal quality in any measurable sense. These are research
 questions, not established properties.
 
 % ── 12. Future Work ──────────────────────────────────────────────────
-\section{Future Work}
-\label{sec:future}
-
 \section{Future Work}
 \label{sec:future}
 
@@ -1488,9 +1739,6 @@ outperforms static context supply over multiple rounds would test whether the
 geometry's feedback loop is productive.
 
 % ── 13. Conclusion ───────────────────────────────────────────────────
-\section{Conclusion}
-\label{sec:conclusion}
-
 \section{Conclusion}
 \label{sec:conclusion}
 
@@ -1554,6 +1802,19 @@ in the earlier drafts of this manuscript. Large-language-model providers used
 for generation and adjudication are recorded per-invocation in the frozen
 experiment artifacts cited in \cref{app:claims}; specific provider identities
 are not load-bearing for any claim in this paper.
+
+\paragraph{Provenance (author-reported inception).} The line of inquiry that
+developed into Geometry of Work began on September 10, 2026, at 03:49 PDT
+(UTC$-$7). Its initial focus was extracting shared structure from histories
+of unsuccessful problem-solving attempts. The broader formulation emerged
+through subsequent discussion, implementation, and experimental scrutiny.
+The inception timestamp is author-reported and attaches to the initial
+insight only; the formalization, implementation, experiments, and manuscript
+carry separate commit-anchored timestamps, and the public release is gated
+separately. The complete dated timeline is maintained at
+\path{paper/HISTORY.md} in the project repository. See the compressed
+development window limitation in \cref{sec:limitations} for what this
+timeline does and does not support.
 
 % ── Bibliography ─────────────────────────────────────────────────────
 \bibliographystyle{plainnat}
@@ -1643,17 +1904,23 @@ verifying $W'$ in the domain, with the verifier tier recorded.
 \paragraph{Arms.}
 \begin{itemize}[nosep]
   \item B0 (undirected): base prompt, no structural context.
-  \item B1 (semantic summary): plain-language summary of the corpus.
   \item B3 (invariant-guided): failure-conditioned shape claims L1, L3, L4 supplied.
     L1 is the fixed-modulus congruence-elimination claim; L3 is the
     class-union-construction reference; L4 is the identity-carried-solvability
     reference.
 \end{itemize}
 
-\paragraph{Budgets.} Equal per-arm budget of 6--7 proposal slots.
+\paragraph{Budgets.} Predeclared 8 proposal slots and 8 evaluations per arm.
+Submitted: B0 7 proposals (wire-valid as captured); B3 6 proposals (primary
+capture wire-invalid; a recorded lossless repaired-input derivative was
+assessed, retained separately from the primary capture).
 
-\paragraph{Recovery rule.} \texttt{recovery-rule/v1}, \texttt{classify/v3}.
-Code-owned; abstains on out-of-vocabulary wording; does not manufacture verdicts.
+\paragraph{Recovery rule.} \texttt{recovery-rule/v1} under \texttt{classify/v1}
+(\texttt{mechanism/v3}); code-owned; abstains on out-of-vocabulary wording; does
+not manufacture verdicts. A post-hoc \texttt{classify/v2} reassessment was
+recorded under a separate experiment identity (all four \texttt{decisive\_no}
+rows degraded to \texttt{unknown}; conclusion unchanged: \texttt{inconclusive});
+it replaces nothing.
 
 \paragraph{Assessment layers.}
 (1) Automatic rule-based recovery classification. (2) Blinded model reviewer
@@ -1665,15 +1932,23 @@ scoring proposals against target without arm labels.
 \subsection{Pilot-004 (Shape discovery)}
 
 \paragraph{Design.} Discovery predeclared success criteria (from
-\texttt{PROTOCOL-DRAFT.md}):
+\texttt{PROTOCOL-DRAFT.md}), aggregated across the three runs per arm:
 \begin{itemize}[nosep]
-  \item C1: at least $k$ reference matches recovered without curated reference input.
-  \item C2: D1 (over-merge + prohibited promotion) $\leq$ D0.
-  \item C3: D0 novel rate $<$ D1 novel rate.
+  \item C1: D1 produces $\geq 2$ of $\{$L1, L3, L4$\}$ as
+    \texttt{matches\_reference} in a majority of its runs, including at least
+    one of $\{$L3, L4$\}$.
+  \item C2: D1 aggregate (over-merge + prohibited promotion) $\leq$ D0.
+  \item C3: D0 does not match the unnamed properties at D1's rate.
 \end{itemize}
 
-\paragraph{Arms.} D0 (unmentored discovery), D1 (mentored discovery with
-challenge scaffolding). Both blinded to reference ledger.
+\paragraph{Arms.} D1 (discovery): three isolated runs, each receiving the 12
+frozen train notes (train-only bundle, pilot-003 assembly rule) as the entire
+permitted context, with instructions to propose up to 5 candidate shared
+properties. D0 (permuted control): the same instructions over a bundle whose
+complete outcome objects (class, boundary statement, outcome notes) were
+permuted across the 12 payloads under a fixed recorded seed. Both arms were
+blinded to the reference ledger, mapping review, mechanism vocabularies, and
+interpretation claims.
 
 \paragraph{Adjudication.} Three-lane quorum (A, B, C), each lane an
 independent adjudication subagent scoring the same 23 proposal occurrences.
@@ -1759,18 +2034,23 @@ E23 & defensible\_novel & --- & 3/3 & no \\
 Total: 23. Disputed: 3 (E04, E10, E22). Total lane votes: 69.
 
 \paragraph{Defensible-novel themes.}
-The 10 defensible-novel entries collapse into approximately six distinct
-themes:
+Per the closure scorecard
+(\path{records/CLOSURE-SCORECARD.md}), the 10 defensible-novel entries
+collapse into the following themes:
 \begin{itemize}[nosep]
-  \item \textbf{N1} finite resource against infinite survivor set (E13, E20).
-  \item \textbf{N2a} intrinsic density-averaging ceiling (E13, E16, E20, E23) ---
+  \item \textbf{N1} finite resource against infinite survivor set (E03;
+    contested --- open scope question, 2--1 vote).
+  \item \textbf{N2a} intrinsic density-averaging ceiling, scope
+    $[$es-05, es-10$]$ (E13, E16, E20, E23 are four framings) ---
     challenged end-to-end in \cref{sec:results-challenge}.
-  \item \textbf{N2b} reach-ceiling variant (subset of N2a's population).
-  \item \textbf{N3} locality without global coupling (E08).
-  \item \textbf{N5} reorganization without existence forcing (E15, E21) ---
+  \item \textbf{N2b} intrinsically bounded evidence type, scope
+    $[$es-05, es-07, es-10$]$ (E05, E07 are two framings).
+  \item \textbf{N3} locality without global coupling (E08 accepted; E10 and
+    E22 recorded as conservative over-merges, open).
+  \item \textbf{N4} structural \texttt{breaks=[]} annotation-pattern
+    observation (E15; scope correction required before admission).
+  \item \textbf{N5} reorganization without existence forcing (E21) ---
     also challenged (\path{records/N5-challenge.md}).
-  \item \textbf{N6} annotation-pattern observation (E15, subject to scope
-    correction).
 \end{itemize}
 
 \subsection{Pilot-003: proposal-level judgment table}
@@ -1796,7 +2076,10 @@ visible to the blinded model reviewer.
 \label{app:claims}
 
 Every empirical sentence in this paper is traceable to a frozen artifact.
-This ledger enumerates the mapping. Artifact paths are relative to the
+This ledger enumerates the mapping. Traceability is necessary but not
+sufficient: the completion gate for this ledger is that every sentence
+\emph{agrees with} the identified source, verified by re-reading the artifact,
+not merely that a path exists. Artifact paths are relative to the
 project repository root.
 
 \begin{center}
@@ -1812,15 +2095,15 @@ M7 Stage 2: operator-attested target yields \texttt{no\_recovery} & \cref{sec:re
 B0 7 proposals, 0 full recovery, 1 rank-2 partial & \cref{sec:results-pilot003} & \path{corpus/experiments/pilot-003/records/INDEPENDENT-REVIEW-RESULT.md} \\
 B3 6 proposals, 1 full recovery (rank 4), 1 rank-5 partial & \cref{sec:results-pilot003} & idem. \\
 B3 rank 4 = fiberwise lattice-point / geometry-of-numbers proposal & \cref{sec:results-pilot003,sec:example} & idem., cross-checked \path{records/CLOSURE.md} \\
-Automatic recovery rule abstained (out-of-vocabulary wording) & \cref{sec:results-pilot003} & \path{corpus/experiments/pilot-003/records/reassessment-v2/} \\
+Automatic assessment: no recovery in either arm under \texttt{classify/v1}; conclusion \texttt{inconclusive}; \texttt{classify/v2} reassessment post-hoc, separate identity & \cref{sec:results-pilot003} & \path{corpus/experiments/pilot-003/records/EXECUTION-RESULT.md}, \path{records/reassessment-v2/} \\
 Pilot-004: 23 proposal occurrences, three-lane quorum & \cref{sec:results-pilot004} & \path{corpus/experiments/pilot-004-discovery/quorum-result.json} \\
 7 matches\_reference / 10 defensible\_novel / 4 unsupported / 2 over\_merge & \cref{sec:results-pilot004}, \cref{app:tables} & idem. \\
-Predeclared success criterion not met (C2 fail: 2 vs 0) & \cref{sec:results-pilot004} & \path{corpus/experiments/pilot-004-discovery/records/CLOSURE-SCORECARD.md} \\
+Predeclared composite endpoint not met (C1 fail: 1/3 runs; C2 fail: 2 vs 0; C3 met: 36\% vs 50\%) & \cref{sec:results-pilot004} & \path{corpus/experiments/pilot-004-discovery/records/CLOSURE-SCORECARD.md} \\
 Reference-absent shape generation observed (10 defensible\_novel) & \cref{sec:results-pilot004}, \cref{sec:conclusion} & \path{docs/findings/001-unencoded-shape-generation.md} \\
 N2a (density-averaging ceiling) proposed as reference-absent hypothesis & \cref{sec:results-challenge} & \path{corpus/experiments/pilot-004-discovery/quorum-result.json} (E13, E16, E20, E23) \\
-N2a survived 7-probe challenge with boundary delta at C4 & \cref{sec:results-challenge}, \cref{sec:discussion} & \path{corpus/experiments/pilot-004-discovery/records/N2a-challenge.md} \\
+N2a seven-probe campaign: survived with required refinement (boundary delta at C4), model-judgment strength; C2/C7 evidential character qualified & \cref{sec:results-challenge}, \cref{sec:discussion} & \path{corpus/experiments/pilot-004-discovery/records/N2a-challenge.md} incl.\ attributed reassessment \\
 Boundary delta: rate-ceiling (es-05) vs reach-ceiling (es-10) sub-mechanisms & \cref{sec:results-challenge}, \cref{sec:example} & idem. \\
-N5 (reorganization without existence forcing) similarly challenged & \cref{sec:results-pilot004}, \cref{app:tables} & \path{corpus/experiments/pilot-004-discovery/records/N5-challenge.md} \\
+N5 seven-probe campaign: six probes consistent; C3 inapplicable by corpus construction (no success outcomes) & \cref{sec:results-pilot004}, \cref{app:tables} & \path{corpus/experiments/pilot-004-discovery/records/N5-challenge.md} incl.\ attributed reassessment \\
 N2a admitted to \path{mechanism/v4} vocabulary & \cref{sec:results-challenge} & \path{internal/canon/vocabulary\_seed.go} \\
 N5 admitted to \path{mechanism/v5} vocabulary & \cref{sec:results-pilot004} & idem. \\
 Blinding audit clean (0 leakage across snapshots/normalizations/signatures) & \cref{sec:results-negative} & \path{corpus/experiments/m7-blinded-run/RESULT.md} \\

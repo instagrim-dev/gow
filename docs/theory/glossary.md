@@ -73,6 +73,95 @@ the [epistemic model](02-epistemic-model.md) exists to prevent.
 4. Any future rename is a scheduled migration with its own plan — not a
    side effect of a docs change.
 
+## Naming canon (roles, not synonyms)
+
+The project's names are **assigned different jobs rather than treated as
+interchangeable names for the whole theory**. Each name changes what is
+promised to the reader; none changes the evidentiary status of the research
+(promoting a name is a naming revision, not evidence). Geometry of Work
+remains the umbrella.
+
+| Role | Canonical name | Owning artifact(s) |
+|---|---|---|
+| Broad theory (umbrella) | **Geometry of Work** | [00-geometry-of-work](00-geometry-of-work.md); the theory series |
+| Compositional and relational model | **The Grammar of Attempts** | [01-semantic-model](01-semantic-model.md), [07-relational-structure](07-relational-structure.md) |
+| Method | **Consequential Cartography** | [03-shape-guided-search](03-shape-guided-search.md), [How to Map the Work](../thesis/how-to-map-the-work.md) |
+| Operational cycle | **The Cartographer's Loop** | The C2 algorithm (`Map → Boundary → Move → Project → Measure`); reflexive form in [10-self-referential-cartography](10-self-referential-cartography.md) |
+| Practitioner instruction | **Map the Work** | [Why](../thesis/why-map-the-work.md) / [When](../thesis/when-to-map-the-work.md) / [How](../thesis/how-to-map-the-work.md) to Map the Work |
+| Authored thesis / book | **The Shape of Trying** | [docs/thesis/](../thesis/) as a collection |
+| Complement extension | **Counterform** | [05-complement-geometry](05-complement-geometry.md) |
+| Implementation | **`newf`** | this repository |
+
+**Retired alternative:** *Cartographic Search* is not used as the method name.
+It said how search is organized; **Consequential Cartography** says what makes
+that organization worth using. Public-facing subtitle when clarity is needed:
+*"A Method for Choosing Work through Maps of Prior Attempts."*
+
+### The jobs, precisely
+
+- **The Grammar of Attempts** — how Work is composed, constrained, and
+  transformed. Emphasizes composition and transformation *within and between*
+  attempts, where geometry emphasizes relationships *across a population*.
+  The grammar describes the moves from which the geometry is constructed —
+  a proposed connection, not a claim that the implementation already supplies
+  a complete generative grammar. "Grammar" here is a **conceptual model**, not
+  yet an executable formalism; "attempts" include successful constructions,
+  partial results, experiments, and attempts to improve the map itself — not
+  merely failed solution proposals.
+- **Consequential Cartography** — why a map deserves to influence subsequent
+  Work: **maps are evaluated through the predictions, decisions, and checked
+  consequences they support — not merely their descriptive elegance.** A map
+  can earn its cost by selecting a discriminating experiment, exposing an
+  invalid assumption, or supporting a justified stopping decision; an
+  increasingly elaborate retrospective explanation earns no automatic credit.
+  This deliberately gives up counting *better organization alone* as evidence
+  of a better search method (the anti-curation constraint; falsification
+  conditions 3 and 5).
+- **The Cartographer's Loop** — how mapping, action, observation, and revision
+  operate together. Its promise is temporal: *the result of an attempt changes
+  subsequent mapping or action.* A static atlas, one-off analysis, or batch of
+  proposals may be stages in the loop; none is the feedback cycle itself. Two
+  uses stay distinct: the **ordinary loop** (revise the map after observing
+  new Work) and the **reflexive loop** (examine whether the map's own
+  representation caused a bad prediction, then test an alternative —
+  [10-self-referential-cartography](10-self-referential-cartography.md)). The
+  name promises neither convergence, autonomous self-improvement, nor eventual
+  success: a loop can terminate on budget or because its map is not helping.
+
+### What the grammar name obligates (and where each obligation already lives)
+
+| Obligation | Question | Existing artifact |
+|---|---|---|
+| Constituents | What are the meaningful parts of an attempt? | `StructuralShape` fields (operators, assumptions, representation, preserves, breaks, auxiliary objects) |
+| Composition | How do their arrangements and dependencies matter? | signature axes + [07](07-relational-structure.md)'s relational claims (Proposition R: composition can carry what no part carries) |
+| Transformations | Which changes produce a meaningfully different attempt? | `StructuralDelta`; mechanistic-novelty-over-surface-novelty rule |
+| Conditions | Under what assumptions is a transformation applicable? | `assumptions` field; `Boundary`; challenge dispositions |
+| Interpretation | What concrete Work would realize the description? | `Projection` (classical projection) |
+
+A load-bearing distinction the grammar must keep explicit:
+
+> **A well-formed description of an attempt is not necessarily a realizable
+> attempt. A realizable attempt is not necessarily a successful one.**
+
+(Description → realizability is decided at `Projection`; realizability →
+success is decided at `LandingPoint`. The grammar proposes constructions;
+checking decides them.)
+
+### Usage rules
+
+1. The one-paragraph coherent description:
+   > **Geometry of Work studies the structure of problem-solving attempts.
+   > The Grammar of Attempts describes their composition and possible
+   > transformations. Consequential Cartography uses those descriptions to
+   > choose subsequent Work through the Cartographer's Loop.**
+2. **Public-facing identity uses only Geometry of Work and Consequential
+   Cartography**; introduce the grammar and loop when explaining the method —
+   otherwise the terminology becomes harder to learn than the idea.
+3. These names create **no new software subsystems or research milestones**;
+   they name different commitments within the same undertaking.
+4. The database and code keep their legacy terms (naming policy above applies
+   unchanged).
+
 ## Complement geometry terms (hypothesis-status)
 
 *These terms are introduced in [05-complement-geometry.md](05-complement-geometry.md).

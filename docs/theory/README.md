@@ -61,6 +61,22 @@ authored position pieces:
 Everything else in the series elaborates, constrains, or operationalizes that
 one sentence.
 
+## Naming canon
+
+Project names carry **roles, not synonyms** — each promises the reader
+something different, and none changes the evidentiary status of the research.
+The full canon (with the obligations each name carries) lives in the
+[glossary](glossary.md#naming-canon-roles-not-synonyms). In brief:
+**Geometry of Work** is the umbrella theory; **The Grammar of Attempts** names
+the compositional/relational model (01, 07); **Consequential Cartography**
+names the method (03, [How to Map the Work](../thesis/how-to-map-the-work.md));
+**The Cartographer's Loop** names the operational cycle (C2's
+`Map → Boundary → Move → Project → Measure`, reflexive form in 10);
+**Counterform** names the complement extension (05); **Map the Work** is the
+practitioner instruction (thesis guides); **The Shape of Trying** is the
+authored thesis collection. Public-facing identity uses only Geometry of Work
+and Consequential Cartography.
+
 ## Reading order
 
 Read [00-geometry-of-work.md](00-geometry-of-work.md) first; it is the

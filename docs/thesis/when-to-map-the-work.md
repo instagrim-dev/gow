@@ -330,9 +330,14 @@ Pilot-004 is the first experimental evidence that **shape generation** — the
 `compress` operation, extracting candidate conserved shapes from a failure
 corpus — may be model-native enough to automate. Four formulations of the same
 structural regularity (N2a: density/averaging ceiling) emerged independently
-from multiple blind runs and survived quorum criticism. One of those candidates
-then survived all seven challenge probes and was admitted as a
-`GeneratedInterpretation` claim.
+from multiple blind runs and survived quorum criticism. That candidate was
+then run through a recorded seven-probe challenge campaign and survived at
+model-judgment strength with one required refinement (a rate-ceiling vs
+reach-ceiling boundary delta), and was admitted as a
+`GeneratedInterpretation` claim — with two probes' evidential character
+qualified in the record's attributed reassessment (no completed
+counterexample search at C2; causal probe C7 remains a proposed
+explanation).
 
 That matters for the field guide because it means Level 3 is no longer
 hypothetical for at least one operation. **Shape proposal occurred.** The

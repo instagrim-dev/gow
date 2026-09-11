@@ -170,3 +170,35 @@ The wager is small to state and large if true:
 > The history of failed work on a hard problem has usable shape, and the cheapest
 > way to make progress is often to reconstruct that shape and cross one of its
 > boundaries on purpose.
+
+## Origin
+
+*Author-reported inception.*
+
+> The line of inquiry that developed into Geometry of Work began on
+> September 10, 2026, at 03:49 PDT. Its initial focus was extracting shared
+> structure from histories of unsuccessful problem-solving attempts. The
+> broader formulation emerged through subsequent discussion, implementation,
+> and experimental scrutiny.
+
+The distinction the note preserves matters: the initial insight (shared
+structure across failed attempts) is what carries the inception timestamp;
+the framework that developed from it — the shape-space/domain-space
+separation, the epistemic model, the challenge lifecycle, the boundary
+concept — earned its own later timestamps through implementation and
+experiment. The stage-level record is:
+
+| Stage | Window (PDT) | Anchor |
+|---|---|---|
+| Author-reported inception (initial insight) | 2026-09-10 03:49 | pre-repository; author-reported |
+| Formalization of the initial focus (failure-space contracts, toolbox DSL) | 2026-09-10 04:52–05:43 | `dfb441c`…`3a8cd7a` |
+| Implementation (v0 CLI through hardening v32) | 2026-09-10 05:51–22:26 | `260c74e`…`3607965` |
+| Experiments (pilot-001 STOP through N5 admission) | 2026-09-10 22:43 – 2026-09-11 11:22 | `a868dec`…`9af3376` |
+| Broader GoW formulation (theory series, thesis docs, manuscript) | 2026-09-11 10:26–12:47 | `259c593`…`bde6d88` |
+| Public release | pending — arXiv freeze blocked on external re-review | `paper/PUBLICATION-PLAN.md` stage 10 |
+
+The full commit-anchored timeline is maintained at
+[`paper/HISTORY.md`](../../paper/HISTORY.md). Retrospectively placing the
+entire present theory at the starting timestamp would be exactly the kind of
+evidence-laundering this project prohibits elsewhere; the progression is more
+informative than the origin point.
