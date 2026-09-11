@@ -1,0 +1,39 @@
+{
+  "schema": "pilot-supplementary-validation/v1",
+  "checker": "tools/validate_discovery_wire_v2.py (note-scoped quotations; distinct shared_by)",
+  "checker_sha256": "94ad6a755272342ecdab245a3c6a4c70bbc8848237c1615f35ed0a7668f35113",
+  "ran_at_utc": "2026-09-11T13:50:54.341249+00:00",
+  "note": "The frozen v1 validator, its pinned digest, and its recorded per-capture results stand untouched; sealed capture bytes unchanged (digests re-verified below). This report supplements, never replaces.",
+  "results": {
+    "d1-run1": {
+      "sha256_verified": true,
+      "v2_result": "valid: 4 property proposal(s) [checker v2, note-scoped]",
+      "v2_pass": true
+    },
+    "d1-run2": {
+      "sha256_verified": true,
+      "v2_result": "valid: 4 property proposal(s) [checker v2, note-scoped]",
+      "v2_pass": true
+    },
+    "d1-run3": {
+      "sha256_verified": true,
+      "v2_result": "valid: 4 property proposal(s) [checker v2, note-scoped]",
+      "v2_pass": true
+    },
+    "d0-run1": {
+      "sha256_verified": true,
+      "v2_result": "valid: 4 property proposal(s) [checker v2, note-scoped]",
+      "v2_pass": true
+    },
+    "d0-run2": {
+      "sha256_verified": true,
+      "v2_result": "valid: 4 property proposal(s) [checker v2, note-scoped]",
+      "v2_pass": true
+    },
+    "d0-run3": {
+      "sha256_verified": true,
+      "v2_result": "valid: 3 property proposal(s) [checker v2, note-scoped]",
+      "v2_pass": true
+    }
+  }
+}
