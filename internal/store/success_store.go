@@ -34,7 +34,15 @@ type BreakCohortRow struct {
 // joined with the persisted canonical content. Three bindings make each row a
 // coherent assessment tuple (round-2 F2 + v26 finding 3):
 //
-//   - The evaluation is selected under selection-policy/v2: DECISIVE outcomes
+//   - The evaluation is selected under selection-policy/v3: CONTENT
+//     COMPATIBILITY ranks first — an evaluation whose assessed revision is the
+//     proposal's CURRENT (latest) revision outranks every stale-content
+//     evaluation, however decisive or strong the stale one is. Stronger stale
+//     evidence must never override a completed reassessment of the current
+//     interpretation: it remains history/replay, not current guidance. A
+//     legacy evaluation with no recorded hash ranks as compatible (its binding
+//     is unknowable and it already falls back to the latest revision below).
+//     WITHIN a compatibility tier the v2 ordering holds: DECISIVE outcomes
 //     (success/partial_success/failure/partial_failure) are eligible before
 //     non-decisive ones (unknown/verification_blocked) — certainty that
 //     evaluation was BLOCKED is not stronger evidence about the outcome —
@@ -61,12 +69,23 @@ func (s *Store) ListBreakCohortRows(ctx context.Context, problemID string) ([]Br
 		return nil, err
 	}
 	rows, err := s.db.QueryContext(ctx, `
-WITH selected_eval AS (
+WITH latest_rev AS (
+  SELECT r.proposal_id, r.content_hash, r.signature_json, r.canonical_fingerprint
+  FROM frontier_proposal_signature_revisions r
+  JOIN (SELECT proposal_id, MAX(revision) AS mr FROM frontier_proposal_signature_revisions GROUP BY proposal_id) lr
+    ON lr.proposal_id = r.proposal_id AND lr.mr = r.revision
+),
+selected_eval AS (
   SELECT e.proposal_id, e.id AS evaluation_id, e.verdict, e.verification_strength,
          COALESCE(e.signature_content_hash, '') AS assessed_hash,
          ROW_NUMBER() OVER (
            PARTITION BY e.proposal_id
-           ORDER BY CASE WHEN e.verdict IN ('success','partial_success','failure','partial_failure') THEN 0 ELSE 1 END ASC,
+           ORDER BY CASE
+                      WHEN COALESCE(e.signature_content_hash, '') = '' THEN 0
+                      WHEN e.signature_content_hash = lr.content_hash THEN 0
+                      ELSE 1
+                    END ASC,
+                    CASE WHEN e.verdict IN ('success','partial_success','failure','partial_failure') THEN 0 ELSE 1 END ASC,
                     CASE e.verification_strength
                       WHEN 'deterministic' THEN 0
                       WHEN 'reproducible' THEN 1
@@ -77,12 +96,7 @@ WITH selected_eval AS (
                     e.created_at DESC, e.id DESC
          ) AS rn
   FROM evaluations e
-),
-latest_rev AS (
-  SELECT r.proposal_id, r.content_hash, r.signature_json, r.canonical_fingerprint
-  FROM frontier_proposal_signature_revisions r
-  JOIN (SELECT proposal_id, MAX(revision) AS mr FROM frontier_proposal_signature_revisions GROUP BY proposal_id) lr
-    ON lr.proposal_id = r.proposal_id AND lr.mr = r.revision
+  LEFT JOIN latest_rev lr ON lr.proposal_id = e.proposal_id
 )
 SELECT t.invariant_id, p.id, fe.evaluation_id, fe.verdict, COALESCE(fe.verification_strength, ''),
        COALESCE(ar.signature_json, lr.signature_json, ''),

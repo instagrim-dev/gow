@@ -1234,13 +1234,19 @@ interpretation lacks a compatible reassessment is excluded and counted in
 `success_invariant_revisions.pending_reassessment`.
 
 Success compression selects its per-proposal evaluation under
-`selection-policy/v2`: decisive outcomes are eligible before non-decisive
-blockers, then the strongest verification class wins with ties to the latest —
-an accepted deterministic reassessment displaces an earlier model judgment, a
-later model-judged "success" cannot displace a decisive deterministic
-"failure", and a stale-target refusal cannot monopolize selection once a
-completed reassessment exists. The earliest-result view stays in the
-append-only ledger.
+`selection-policy/v3`: **content compatibility ranks first** — an evaluation
+whose assessed revision is the proposal's current (latest) revision outranks
+every stale-content evaluation, however decisive or strong, so stronger stale
+evidence can never override a completed reassessment of the current
+interpretation (it remains history/replay; a legacy evaluation with no
+recorded hash ranks as compatible since its binding is unknowable). Within a
+compatibility tier the v2 ordering holds: decisive outcomes are eligible
+before non-decisive blockers, then the strongest verification class wins with
+ties to the latest — an accepted deterministic reassessment displaces an
+earlier model judgment, a later model-judged "success" cannot displace a
+decisive deterministic "failure" of the same revision, and a stale-target
+refusal cannot monopolize selection once a completed reassessment exists. The
+earliest-result view stays in the append-only ledger.
 
 ## Justified field completeness (migration `v25`, admission split `v26`)
 

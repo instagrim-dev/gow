@@ -478,3 +478,126 @@ func TestListBreakCohortRowsAdmitsWhenAssessedBreakVerified(t *testing.T) {
 		t.Fatalf("a verified assessed break must be ADMITTED despite the stale origin flag; got %+v", rows)
 	}
 }
+
+// selection-policy/v3 regression: content compatibility outranks the strength
+// hierarchy. A DETERMINISTIC, decisive evaluation of STALE content must not
+// shadow a weaker (model-judgment) but CURRENT-revision reassessment — the
+// current one is selected, its bytes are the cohort content, and the member is
+// not pending (assessed == latest).
+func TestListBreakCohortRowsCurrentContentOutranksStrongerStale(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+
+	rec := sampleFrontier(t, st)
+	res, err := st.PersistFrontierGeneration(ctx, rec)
+	if err != nil {
+		t.Fatalf("persist frontier: %v", err)
+	}
+	problemID := res.Record.ProblemID
+	proposalID := res.Record.Proposals[0].ID
+	targetInvID := res.Record.Proposals[0].Targets[0].InvariantID
+
+	// Revision A (stale after B lands) and revision B (current).
+	aJSON := `{"schema_version":"mechanism/v1","rev":"A"}`
+	insertTestSignatureContent(t, st, proposalID, aJSON, "cfp-a")
+	sumA := sha256.Sum256([]byte(aJSON))
+	hashA := hex.EncodeToString(sumA[:])
+	bJSON := `{"schema_version":"mechanism/v1","rev":"B"}`
+	insertTestSignatureContent(t, st, proposalID, bJSON, "cfp-b")
+	sumB := sha256.Sum256([]byte(bJSON))
+	hashB := hex.EncodeToString(sumB[:])
+
+	now := time.Now().UTC()
+	staleID := domain.NewEvaluationID(now)
+	currentID := domain.NewEvaluationID(now.Add(time.Second))
+	run := EvaluationRunRecord{
+		ID:        domain.NewEvaluationRunID(now),
+		ProblemID: problemID,
+		RunID:     res.Record.RunID,
+		Mode:      "proposal",
+		CreatedAt: formatTime(now),
+		Evaluations: []EvaluationRow{
+			{
+				// STALE content, decisive, STRONGEST tier, even LATER timestamp
+				// below via direct insert would not help it — compatibility is
+				// ranked first.
+				ID: staleID, ProposalID: proposalID, Verdict: "failure",
+				VerifierKind: "deterministic-check", VerificationStrength: "deterministic",
+				ConfidenceOrdinal: "high", ToolName: "d", ToolVersion: "v1",
+				SignatureContentHash: hashA,
+				TargetVerdicts:       []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "violates", Violated: true}},
+			},
+			{
+				// CURRENT content, decisive, weaker (model) tier.
+				ID: currentID, ProposalID: proposalID, Verdict: "partial_success",
+				VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment",
+				ConfidenceOrdinal: "medium", ToolName: "m", ToolVersion: "v1",
+				SignatureContentHash: hashB,
+				TargetVerdicts:       []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "violates", Violated: true}},
+			},
+		},
+	}
+	if _, err := st.PersistEvaluationRun(ctx, run); err != nil {
+		t.Fatalf("persist evaluations: %v", err)
+	}
+
+	rows, err := st.ListBreakCohortRows(ctx, problemID)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("want 1 row, got %d", len(rows))
+	}
+	r := rows[0]
+	if r.EvaluationID != currentID || r.Result != "partial_success" {
+		t.Fatalf("the CURRENT-revision reassessment must be selected over stronger stale evidence; got %+v", r)
+	}
+	if r.ContentHash != hashB || r.SignatureJSON != bJSON {
+		t.Fatalf("cohort content must be the current assessed bytes (B); got hash=%s", r.ContentHash)
+	}
+	if r.ContentHash != r.LatestContentHash {
+		t.Fatalf("current-compatible selection must not read as pending: %s vs %s", r.ContentHash, r.LatestContentHash)
+	}
+
+	// Control: with ONLY the stale evaluation available, it is still selected
+	// (strongest among what exists) and the hash pair exposes pending-ness —
+	// stale evidence is reachable as history, never silently current.
+	st2 := openMigratedStore(t)
+	rec2 := sampleFrontier(t, st2)
+	res2, err := st2.PersistFrontierGeneration(ctx, rec2)
+	if err != nil {
+		t.Fatalf("persist frontier 2: %v", err)
+	}
+	p2 := res2.Record.Proposals[0].ID
+	inv2 := res2.Record.Proposals[0].Targets[0].InvariantID
+	insertTestSignatureContent(t, st2, p2, aJSON, "cfp-a2")
+	insertTestSignatureContent(t, st2, p2, bJSON, "cfp-b2")
+	staleOnly := domain.NewEvaluationID(now)
+	run2 := EvaluationRunRecord{
+		ID:        domain.NewEvaluationRunID(now),
+		ProblemID: res2.Record.ProblemID,
+		RunID:     res2.Record.RunID,
+		Mode:      "proposal",
+		CreatedAt: formatTime(now),
+		Evaluations: []EvaluationRow{{
+			ID: staleOnly, ProposalID: p2, Verdict: "failure",
+			VerifierKind: "deterministic-check", VerificationStrength: "deterministic",
+			ConfidenceOrdinal: "high", ToolName: "d", ToolVersion: "v1",
+			SignatureContentHash: hashA,
+			TargetVerdicts:       []EvaluationTargetVerdictRow{{InvariantID: inv2, Verdict: "violates", Violated: true}},
+		}},
+	}
+	if _, err := st2.PersistEvaluationRun(ctx, run2); err != nil {
+		t.Fatalf("persist stale-only: %v", err)
+	}
+	rows2, err := st2.ListBreakCohortRows(ctx, res2.Record.ProblemID)
+	if err != nil {
+		t.Fatalf("list 2: %v", err)
+	}
+	if len(rows2) != 1 || rows2[0].EvaluationID != staleOnly {
+		t.Fatalf("with no current-compatible assessment the stale one is still selected: %+v", rows2)
+	}
+	if rows2[0].ContentHash != hashA || rows2[0].LatestContentHash != hashB {
+		t.Fatalf("stale-only selection must expose the hash mismatch for pending detection: %+v", rows2[0])
+	}
+}

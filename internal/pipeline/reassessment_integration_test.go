@@ -21,10 +21,12 @@ import (
 //     unknown (absence undecidable without accepted completeness);
 //  2. generation-pinned replay of the ORIGINAL occurrence names A's hash with
 //     the verified violates verdict;
-//  3. success-cohort admission selects ONE coherent assessment tuple: the
-//     decisive evaluation's bytes + ITS break assessment, with the latest
-//     hash exposed for pending detection — never A's origin break flag
-//     spliced onto B's content or vice versa.
+//  3. success-cohort admission ranks CONTENT COMPATIBILITY before
+//     decisiveness/strength (selection-policy/v3): B's completed
+//     reassessment (break unknown) governs current guidance, and the
+//     stronger, decisive, but STALE A-evaluation cannot override it —
+//     the proposal is excluded from the break cohort, with A retained as
+//     history/replay.
 func TestIntegrationReassessRevisedOccurrence(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
@@ -118,24 +120,18 @@ func TestIntegrationReassessRevisedOccurrence(t *testing.T) {
 		t.Fatalf("A's recomputed break verdict must be violates: %+v", eA.TargetVerdicts)
 	}
 
-	// (3) Cohort admission: ONE coherent tuple. The decisive A-evaluation is
-	// selected; admission follows ITS violates verdict; the content is A's
-	// assessed bytes; and B's newer hash is exposed for pending detection.
+	// (3) Cohort admission under selection-policy/v3: content compatibility
+	// ranks BEFORE decisiveness/strength. B is the current interpretation and
+	// its completed reassessment (EB) says the break is unknown — so the
+	// STRONGER, DECISIVE, but STALE A-evaluation must NOT override it and
+	// resurrect cohort support. The proposal is excluded from the break
+	// cohort entirely: stale evidence is history/replay, never current
+	// guidance.
 	rows, err := repo.ListBreakCohortRows(ctx, problemID)
 	if err != nil {
 		t.Fatalf("cohort rows: %v", err)
 	}
-	if len(rows) != 1 {
-		t.Fatalf("want one coherent cohort row, got %d", len(rows))
-	}
-	r := rows[0]
-	if r.EvaluationID != eA.ID || r.TargetInvariantID != invID {
-		t.Fatalf("cohort must select the decisive evaluation's own break assessment: %+v", r)
-	}
-	if r.ContentHash != hashA {
-		t.Fatalf("cohort content must be the ASSESSED bytes (A), got %s", r.ContentHash)
-	}
-	if r.LatestContentHash != hashB {
-		t.Fatalf("latest hash must expose B for pending detection, got %s", r.LatestContentHash)
+	if len(rows) != 0 {
+		t.Fatalf("stronger stale evidence must not override the current reassessment; want 0 cohort rows, got %+v", rows)
 	}
 }
