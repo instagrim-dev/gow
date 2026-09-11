@@ -72,3 +72,19 @@ the [epistemic model](02-epistemic-model.md) exists to prevent.
    conceptual term and cites the legacy term in parentheses on first use.
 4. Any future rename is a scheduled migration with its own plan — not a
    side effect of a docs change.
+
+## Complement geometry terms (hypothesis-status)
+
+*These terms are introduced in [05-complement-geometry.md](05-complement-geometry.md).
+They are at hypothesis status — formally stated but not experimentally tested.
+No legacy implementation terms exist yet.*
+
+| Term | Meaning |
+|---|---|
+| `PossibilitySpace` (Ω) | The ambient space of structurally plausible work on a problem, before evidence is accumulated. Defining Ω rigorously is itself a research problem. |
+| `Constraint` (C_i) | The region of Ω excluded or constrained by the evidence from a single piece of work W_i. |
+| `ResidualRegion` (Ω_W) | The surviving possibility-space after accumulated work: Ω \ ⋃ F_i. Its shape is determined by the collective constraints of all prior work. |
+| `AntiVacuum` | A residual region that is unoccupied by prior work but structurally determined by everything that surrounds it — a void whose geometry is informative. |
+| `ConstraintCollapse` (C) | The operator C(Ω | W) → R that computes the residual structural region from accumulated work. Not probabilistic collapse — constraint collapse: progressive removal of degrees of freedom. |
+| `ComplementGeometry` | The dual reading of a work population: inferring shape from the space work eliminates rather than from the space work occupies. |
+| `ForwardGeometry` | The ordinary GoW reading: inferring shape from the structure of completed work (clusters, invariants, regimes). Named retroactively to distinguish it from its dual. |

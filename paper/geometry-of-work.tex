@@ -1,0 +1,452 @@
+% geometry-of-work.tex — Manuscript skeleton
+% Geometry of Work: Shape-Guided Search over Failed and Partial Solution Attempts
+%
+% Target: arXiv submission (cs.AI / cs.LG / math.HO cross-list)
+% Format: single-column, ~15–20 pages main text + appendices
+%
+\documentclass[11pt]{article}
+
+% ── Packages ──────────────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{natbib}
+\usepackage[margin=1in]{geometry}
+\usepackage{caption}
+\usepackage{subcaption}
+
+% ── Theorem environments ──────────────────────────────────────────────
+\newtheorem{definition}{Definition}[section]
+\newtheorem{claim}{Claim}[section]
+\newtheorem{remark}{Remark}[section]
+
+% ── Draft annotations ────────────────────────────────────────────────
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+\newcommand{\claimnote}[1]{\textcolor{blue}{\textbf{[CLAIM: #1]}}}
+\newcommand{\evidence}[1]{\textcolor{teal}{\textbf{[EVIDENCE: #1]}}}
+
+% ── Title ─────────────────────────────────────────────────────────────
+\title{%
+  Geometry of Work:\\
+  Shape-Guided Search over Failed and Partial Solution Attempts%
+}
+
+\author{%
+  \todo{Author names and affiliations}
+}
+
+\date{\today}
+
+% ══════════════════════════════════════════════════════════════════════
+\begin{document}
+\maketitle
+
+% ── Abstract ──────────────────────────────────────────────────────────
+\begin{abstract}
+When repeated work on a hard problem stops producing information, we propose
+treating the work itself as data. \emph{Geometry of Work} (GoW) represents a
+history of problem-solving attempts as a structured search space---a
+\emph{shape-space}---whose regions, boundaries, and conserved properties contain
+information about how search is failing or progressing. The methodology
+separates structural shape from outcome and epistemic status, searches by
+inferring and traversing regime boundaries in shape-space, and projects proposed
+structural moves back into the original domain for verification. We formalize
+the GoW loop (\textsc{Map}~$\to$~\textsc{Boundary}~$\to$~\textsc{Move}~$\to$
+\textsc{Project}~$\to$~\textsc{Measure}), describe \texttt{newf}---an
+instrumented realization with typed representations, immutable provenance, and
+adversarial challenge---and report exploratory experiments on an Erd\H{o}s--Straus
+study corpus. In curated-feature trials, shape-guided context produced proposals
+judged closer to a withheld structural move. In discovery trials, large language
+models proposed structural regularities absent from the reference ledger, though
+the predeclared aggregate endpoint was not met. One model-generated hypothesis
+underwent a full challenge lifecycle, surviving with a resolution-gaining
+boundary refinement. The experiments do not establish mathematical validity or
+general discovery effectiveness; they demonstrate the framework's epistemic
+behavior and constituent capabilities.
+
+\todo{Revise abstract after all sections are drafted.}
+\end{abstract}
+
+% ── 1. Introduction ──────────────────────────────────────────────────
+\section{Introduction}
+\label{sec:intro}
+
+\subsection{The problem with repeated hard work}
+\todo{Motivate: when linear search exhausts its information yield, what do
+you do with the accumulated history of attempts?}
+
+\subsection{Geometry of Work}
+\todo{Core thesis in one paragraph:}
+
+\begin{quote}
+When repeated work stops producing information, treat the work itself as data.
+\end{quote}
+
+Given work items~$W$, structural descriptions~$S(W)$, and observed
+outcomes~$O(W)$, reconstruct a geometry over work, identify boundaries between
+outcome regimes, propose a structural move~$\Delta S$, and project that move
+back into the domain:
+\[
+W
+\xrightarrow{S}
+\mathcal{G}(W)
+\xrightarrow{B}
+\Delta S
+\xrightarrow{\Pi}
+W'
+\xrightarrow{O}
+\mathcal{G}'(W \cup \{W'\})
+\]
+
+\subsection{Contributions}
+
+We make four claims, deliberately ordered from broadest to narrowest:
+
+\begin{enumerate}[label=\textbf{C\arabic*.}]
+  \item \textbf{Conceptual.} A history of problem-solving work can itself be
+    represented as a structured search space whose geometry contains useful
+    information about how search is failing or progressing.
+  \item \textbf{Methodological.} Conserved shapes, outcome regimes, boundaries,
+    and structural deltas provide a disciplined way to choose informative next
+    work rather than continuing linear search.
+  \item \textbf{Systems.} \texttt{newf} operationalizes this methodology using
+    typed, provenance-carrying representations, epistemic state tracking,
+    adversarial challenge, and domain projection.
+  \item \textbf{Empirical (narrow).} In project-authored Erd\H{o}s--Straus study
+    corpora, LLMs can propose structural regularities not explicitly supplied as
+    reference properties, and shape-guided context can produce domain proposals
+    judged closer to a withheld structural move; the experiments do \emph{not}
+    establish mathematical validity, general discovery effectiveness, or
+    autonomous theorem solving.
+\end{enumerate}
+
+% ── 2. Motivating Example ────────────────────────────────────────────
+\section{Motivating Example}
+\label{sec:example}
+
+\todo{Concrete before/after: conventional search vs.\ shape-guided search on a
+small worked example. Use Erd\H{o}s--Straus or a simpler toy problem.}
+
+% ── 3. Semantic Model ────────────────────────────────────────────────
+\section{Semantic Model: The Geometry of Work}
+\label{sec:semantic}
+
+\begin{definition}[Work item]
+A \emph{work item} is a triple $W_i = (S_i, O_i, E_i)$ where $S_i$ is a
+structural description (\emph{shape}), $O_i \in \mathcal{O}$ is an observed
+outcome, and $E_i$ is the evidence supporting the description and outcome.
+\end{definition}
+
+\begin{definition}[Structural shape]
+A \emph{structural shape} $S$ is an outcome-blind description of a piece of
+work: its representation, assumptions, operators, and preserved properties.
+Two attempts with the same shape are the same point in shape-space even if
+written in different notation; two attempts with different shapes are different
+points even if they use the same words.
+\end{definition}
+
+\begin{definition}[Geometry of Work]
+Given a population of work items $\{W_1, \ldots, W_n\}$, the \emph{Geometry
+of Work} is the tuple
+\[
+\mathcal{G}(W) = (R, B, H, V, T)
+\]
+where:
+\begin{itemize}[nosep]
+  \item $R$: regimes---regions of shape-space associated with an outcome
+    distribution;
+  \item $B$: boundaries---structural conditions separating regimes;
+  \item $H$: shape claims---conserved or discriminating structural properties;
+  \item $V$: voids---unoccupied or under-sampled structural combinations;
+  \item $T$: trajectories---paths through shape-space traced by successive work.
+\end{itemize}
+\end{definition}
+
+\todo{Develop regime, boundary, structural delta, projection, landing point
+definitions. Keep self-contained---a reader must reconstruct GoW from this
+section alone.}
+
+% ── 4. Epistemic Model ──────────────────────────────────────────────
+\section{Epistemic Model: Claims, Evidence, and Promotion}
+\label{sec:epistemic}
+
+\todo{Formalize:}
+
+\begin{definition}[Shape claim]
+A \emph{shape claim} is a tuple
+$\text{ShapeClaim} = (\text{shape}, \text{conditioning}, \text{role},
+\text{epistemic state})$
+where the four components are orthogonal axes, not a single confidence ladder.
+\end{definition}
+
+\todo{The four separations:}
+\begin{enumerate}[nosep]
+  \item Shape $\neq$ outcome-conditioning
+  \item Observed regularity $\neq$ obstruction
+  \item Model judgment $\neq$ verification
+  \item Absence $\neq$ negation
+\end{enumerate}
+
+\todo{Verification hierarchy. Epistemic state transitions. Challenge operations.
+Anti-fractal discipline.}
+
+% ── 5. Shape-Guided Search ───────────────────────────────────────────
+\section{Shape-Guided Search}
+\label{sec:method}
+
+\begin{algorithm}[t]
+\caption{Shape-Guided Search: \textsc{Map $\to$ Boundary $\to$ Move $\to$
+  Project $\to$ Measure}}
+\label{alg:gow}
+\begin{algorithmic}[1]
+\Require Population of prior work $W$; observations $O$; domain verifier $V$
+\Ensure Updated geometry $\mathcal{G}'$ and (possibly) improved candidate $W'$
+\Statex
+\State \textsc{Map}: Infer structural descriptions $S(W)$; reconstruct
+  $\mathcal{G}(W) = (R, B, H, V, T)$
+\State \textsc{Regime}: Identify outcome-conditioned regions in $\mathcal{G}$
+\State \textsc{Shape}: Propose conserved or discriminating structure $H'$
+\State \textsc{Challenge}: Seek counterexamples, success contrasts,
+  abstraction splits, redundancy, bias
+\State \textsc{Boundary}: Identify minimal structural distinction separating
+  relevant regimes
+\State \textsc{Move}: Choose structural delta $\Delta S$ crossing the boundary
+\State \textsc{Project}: Compile $\Delta S$ into domain-native candidate
+  $W' = \Pi_{\text{domain}}(\Delta S)$
+\State \textsc{Verify}: Evaluate $W'$ using domain verifier $V$; record
+  landing point $(O(W'), \text{strength})$
+\State \textsc{Update}: Insert $W'$, $S(W')$, $O(W')$ into $\mathcal{G}$;
+  mutate search policy
+\State \Return to Step~1 with updated $\mathcal{G}'$
+\end{algorithmic}
+\end{algorithm}
+
+\todo{Prose walkthrough of each step. Recursive challenge refinement.
+Why failed crossings are informative. Failure invariants as one instrument
+among several.}
+
+% ── 6. System ────────────────────────────────────────────────────────
+\section{System: \texttt{newf}}
+\label{sec:system}
+
+\todo{Architecture figure. 20--25\% of paper, not 60\%. Frame the systems
+contribution as: how do you build software that lets fuzzy model-native
+operations coexist with deterministic evidence and immutable provenance?}
+
+\todo{Layers:}
+\begin{enumerate}[nosep]
+  \item Work ingestion (immutable, content-addressed)
+  \item Structural normalization (model-assisted, epistemic status tracked)
+  \item Shape-space construction (deterministic canonicalization + clustering)
+  \item Shape proposal (model-native: compress, contrast, abstract)
+  \item Challenge lifecycle (adversarial, code-verified)
+  \item Boundary / frontier generation
+  \item Domain projection
+  \item Assessment (strongest-decisive-first verifier routing)
+  \item Map update (re-entry + policy mutation)
+\end{enumerate}
+
+% ── 7. Experimental Method ───────────────────────────────────────────
+\section{Experimental Method}
+\label{sec:method-exp}
+
+\todo{Corpus description (Erd\H{o}s--Straus synthetic blinded benchmark).
+Train/target split. Assessment protocol. Provenance guarantees.}
+
+% ── 8. Results ───────────────────────────────────────────────────────
+\section{Results}
+\label{sec:results}
+
+\subsection{Experiment A: Negative controls}
+\label{sec:results-negative}
+\todo{System refuses to manufacture structure when no eligible failure
+population exists, vocabulary resolution is inadequate, or recovery is
+epistemically undecidable. Purpose: demonstrate epistemic behavior.}
+
+\subsection{Experiment B: Curated-feature guided search (Pilot-003)}
+\label{sec:results-pilot003}
+\todo{Curated-feature structural hypotheses supplied and challenged.
+B0 (baseline) vs B3 (structure-informed). Automatic assessment inconclusive.
+Separate model review: B3 matched intended structural move. Same-family caveat.
+Criterion recovery, not mathematical validity.}
+
+\subsection{Experiment C: Shape discovery (Pilot-004)}
+\label{sec:results-pilot004}
+\todo{23 proposal occurrences. Reference matches. Provisionally defensible
+novel occurrences. Repeated themes. Quorum disagreement. Predeclared aggregate
+criterion not met. Capability finding: unencoded shape generation occurred.}
+
+The experiment was negative under its predeclared effectiveness endpoint while
+positive on a constituent capability observation: models generated plausible,
+previously unencoded shape hypotheses.
+
+\subsection{Experiment D: Novel-hypothesis challenge}
+\label{sec:results-challenge}
+\todo{One reference-absent Pilot-004 hypothesis (N2a or similar) through full
+challenge lifecycle: ground $\to$ challenge $\to$ \{falsify, weaken, split,
+survive\}. Report outcome regardless of direction.}
+
+% ── 9. Discussion ────────────────────────────────────────────────────
+\section{Discussion}
+\label{sec:discussion}
+
+\todo{What the evidence does and does not establish. Micro-failures and
+recursive geometry. Human use of GoW. The interesting distinction: experiment
+negative on method reliability, positive on constituent capability.}
+
+\subsection{Complement geometry: the dual reading}
+\label{sec:complement}
+
+The forward geometry developed in \cref{sec:semantic} reads shape from the
+structure of completed work---what is \emph{present} in shape-space. A dual
+reading is available: infer shape from the regions of possibility-space that
+accumulated work \emph{excludes}.
+
+Let $\Omega$ denote an ambient possibility-space of structurally plausible
+work on a problem. Each work item $W_i$ imposes a constraint $C_i$ on this
+space---a mechanism shown not to work, a scope demonstrated to be insufficient,
+a combination established as unproductive. The surviving space after $n$ pieces
+of work is:
+\[
+\Omega_W \;=\; \Omega \;\setminus\; \bigcup_{i=1}^{n} F_i
+\]
+where each $F_i$ is the region excluded by the evidence from $W_i$. As work
+accumulates, the residual region $\Omega_W$ may acquire a non-trivial
+shape---determined not by any single attempt but by the \emph{collective
+constraints} of all attempts.
+
+We call this the \textbf{anti-vacuum}: a region that is unoccupied by prior work
+but structurally determined by everything that surrounds it.
+
+\begin{remark}[Complementarity Principle]
+Work informs search in two ways: through the structures instantiated by completed
+attempts (\emph{forward geometry}) and through the regions of possibility-space
+those attempts exclude or constrain (\emph{complement geometry}). Sufficiently
+structured negative evidence can induce a residual geometry whose conserved
+properties specify candidate directions not instantiated by prior Work.
+\end{remark}
+
+The forward and complement readings yield different objects:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+& \textbf{Forward geometry} & \textbf{Complement geometry} \\
+\midrule
+Input & occupied work & excluded possibility-space \\
+Yields & clusters, invariants, regimes & forbidden regions, cavities, corridors \\
+Key object & conserved shape & residual structural requirements \\
+Generator prompt & ``cross this boundary'' & ``occupy this constrained void'' \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The complement view reinterprets the three outcome types as different kinds of
+geometric force:
+\begin{itemize}[nosep]
+  \item \textbf{Failure} imposes \emph{exclusion}---structural constraints on
+    what remains possible.
+  \item \textbf{Partial success} imposes \emph{gradient}---directional evidence
+    about where improvement lies within the surviving region.
+  \item \textbf{Success} imposes \emph{attractor evidence}---direct constraint
+    on what structural features a solution possesses.
+\end{itemize}
+
+Under this reading, a heavily worked problem with many diverse, well-characterized
+failures is not hopeless but \emph{highly constrained}: $\dim(\Omega_n) \ll
+\dim(\Omega)$. Community resistance becomes an asset rather than a discouragement,
+because the residual cavity may be increasingly well defined.
+
+This gives the three modes of failed work:
+\begin{quote}
+Conventional search treats failed work as \emph{consumed effort}.\\
+Geometry of Work treats failed work as \emph{material}.\\
+Complement geometry treats failed work as \emph{pressure}.
+\end{quote}
+
+A formal \emph{constraint-collapse operator} $\mathcal{C}(\Omega \mid W) \to R$
+that computes the residual region and extracts its structural properties is a
+natural next primitive, but remains a hypothesis: we have not implemented or
+tested it. The complement view is stated here as a theoretically motivated
+extension, not as a demonstrated capability.
+
+\todo{Expand with connection to existing void concept in forward geometry.
+Note that rigorous definition of $\Omega$ is itself a research problem.}
+
+% ── 10. Related Work ─────────────────────────────────────────────────
+\section{Related Work}
+\label{sec:related}
+
+\todo{Serious comparison against: metaheuristics, novelty search /
+quality-diversity, case-based reasoning, automated scientific discovery,
+automated theorem proving / conjecture generation, program synthesis / CEGAR,
+meta-learning, failure analysis, design-space exploration, LLM self-reflection /
+debate / verifier architectures. See docs/research/related-work-matrix.md.}
+
+% ── 11. Limitations and Threats to Validity ──────────────────────────
+\section{Limitations and Threats to Validity}
+\label{sec:limitations}
+
+\todo{Single domain. LLM-dependent structural descriptions. Same-model-family
+quorum. Curated corpus. No statistical power claims. Projection bottleneck.
+No convergence guarantee.}
+
+% ── 12. Future Work ──────────────────────────────────────────────────
+\section{Future Work}
+\label{sec:future}
+
+\todo{Second domain. Statistical comparison against undirected search.
+Formal convergence analysis. Human-in-the-loop GoW. Micro-failure geometry.
+Search-policy mutation evaluation. Cross-model verification.}
+
+% ── 13. Conclusion ───────────────────────────────────────────────────
+\section{Conclusion}
+\label{sec:conclusion}
+
+\todo{Restate thesis. Summarize contributions C1--C4. Restate what the
+evidence does and does not establish.}
+
+% ── Acknowledgments ──────────────────────────────────────────────────
+\section*{Acknowledgments}
+\todo{Acknowledge tools, models, reviewers.}
+
+% ── Bibliography ─────────────────────────────────────────────────────
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+% ══════════════════════════════════════════════════════════════════════
+% APPENDICES
+% ══════════════════════════════════════════════════════════════════════
+\appendix
+
+\section{Formal Definitions}
+\label{app:formal}
+\todo{Complete formal definitions of all objects and operators.}
+
+\section{Protocol Details}
+\label{app:protocol}
+\todo{Full experiment protocols for Pilots 003 and 004.}
+
+\section{Complete Experiment Tables}
+\label{app:tables}
+\todo{Full result tables with all entries, dispositions, quorum votes.}
+
+\section{Claim/Evidence Ledger}
+\label{app:claims}
+\todo{Every empirical sentence in the paper mapped to its frozen artifact.}
+
+\section{Falsification Conditions}
+\label{app:falsification}
+\todo{Full statement of what evidence would make GoW uninteresting or wrong.
+See docs/theory/00-paper-claims.md for the five conditions.}
+
+\end{document}

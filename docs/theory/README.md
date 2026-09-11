@@ -25,6 +25,7 @@ practitioner field guide is the reach-for-it-Monday-morning companion to both.
 | 02 | [Epistemic Model](02-epistemic-model.md) | Epistemic | What may we believe, and how does belief strengthen? |
 | 03 | [Shape-Guided Search](03-shape-guided-search.md) | Operational | What is the recursive algorithm over the geometry? |
 | 04 | [Classical Projection](04-classical-projection.md) | Operational | How does a shape-space move get verified in domain-space? |
+| 05 | [Complement Geometry](05-complement-geometry.md) | Semantic (dual) | What shape does accumulated Work force the remaining possibility-space to take? |
 | — | [Glossary / ontology](glossary.md) | Anchor | What does each term mean, and its legacy implementation name? |
 
 Alongside the theory series, the [thesis](../thesis/) directory holds the
