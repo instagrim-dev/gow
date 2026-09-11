@@ -44,6 +44,9 @@ type SummarizeNextProposer struct{}
 // NewSummarizeNextProposer constructs the B1 baseline generator.
 func NewSummarizeNextProposer() *SummarizeNextProposer { return &SummarizeNextProposer{} }
 
+// TrustedStructureAuthor: deterministic, code-derived baseline (not model output).
+func (*SummarizeNextProposer) TrustedStructureAuthor() {}
+
 // Generate derives one restatement proposal per known failure family. With no
 // families it returns an empty proposal set (a legitimate empty outcome).
 func (g *SummarizeNextProposer) Generate(_ context.Context, req GenerationRequest) (GenerationResponse, error) {
@@ -72,6 +75,9 @@ type Brainstormer struct{}
 
 // NewBrainstormer constructs the B2 baseline generator.
 func NewBrainstormer() *Brainstormer { return &Brainstormer{} }
+
+// TrustedStructureAuthor: deterministic, code-derived baseline (not model output).
+func (*Brainstormer) TrustedStructureAuthor() {}
 
 // Generate emits up to Count generic proposals (at least one), independent of
 // targets and families.

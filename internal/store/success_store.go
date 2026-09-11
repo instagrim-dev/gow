@@ -264,6 +264,15 @@ WHERE problem_id = ? AND cohort_hash = ? AND compressor_version = ? AND predicat
 		if lerr != nil {
 			return PersistSuccessRevisionResult{}, lerr
 		}
+		// v28: dedup preserves the immutable artifact, but THIS execution still
+		// happened and SELECTED it — record the selection so "current guidance"
+		// follows the latest compression operation, never MAX(revision).
+		if _, serr := s.db.ExecContext(ctx, `
+INSERT OR IGNORE INTO success_compression_selections(run_id, problem_id, success_revision_id, created_at)
+VALUES(?, ?, ?, ?)
+`, record.RunID, record.ProblemID, existingID, record.CreatedAt); serr != nil {
+			return PersistSuccessRevisionResult{}, serr
+		}
 		return PersistSuccessRevisionResult{Record: full, Created: false}, nil
 	case !errors.Is(err, sql.ErrNoRows):
 		return PersistSuccessRevisionResult{}, err
@@ -292,6 +301,13 @@ VALUES(?, ?, 'success-compress', ?, ?, ?, ?, ?, ?, ?, ?)
 INSERT INTO success_invariant_revisions(id, problem_id, run_id, provider_invocation_id, compressor_version, predicate_schema, min_support, cohort_hash, ineligible_unpersisted, pending_reassessment, ambiguous_members, inadmissible_conditions, revision, invariant_count, created_at)
 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `, record.ID, record.ProblemID, record.RunID, inv.ID, record.CompressorVersion, record.PredicateSchema, record.MinSupport, record.CohortHash, record.IneligibleUnpersisted, record.PendingReassessment, record.AmbiguousMembers, record.InadmissibleConditions, record.Revision, record.InvariantCount, record.CreatedAt); err != nil {
+		return PersistSuccessRevisionResult{}, err
+	}
+	// v28: the creating execution selects its own artifact.
+	if _, err := tx.ExecContext(ctx, `
+INSERT OR IGNORE INTO success_compression_selections(run_id, problem_id, success_revision_id, created_at)
+VALUES(?, ?, ?, ?)
+`, record.RunID, record.ProblemID, record.ID, record.CreatedAt); err != nil {
 		return PersistSuccessRevisionResult{}, err
 	}
 
@@ -445,6 +461,30 @@ func (s *Store) LatestSuccessRevision(ctx context.Context, problemID string) (st
 	if err := row.Scan(&id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return "", false, nil
+		}
+		return "", false, err
+	}
+	return id, true, nil
+}
+
+// LatestSelectedSuccessRevision resolves the artifact chosen by the MOST
+// RECENT compression execution (v28) — the current-guidance selector. Dedup
+// means the largest revision number is NOT the current state: after support
+// appears (R2) and then disappears (reusing empty R1), the latest SELECTION is
+// R1 while MAX(revision) is still R2. Falls back to the highest revision for
+// pre-v28 history without selection rows.
+func (s *Store) LatestSelectedSuccessRevision(ctx context.Context, problemID string) (string, bool, error) {
+	if err := domain.ValidateProblemID(problemID); err != nil {
+		return "", false, err
+	}
+	row := s.db.QueryRowContext(ctx, `
+SELECT success_revision_id FROM success_compression_selections
+WHERE problem_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1
+`, problemID)
+	var id string
+	if err := row.Scan(&id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return s.LatestSuccessRevision(ctx, problemID)
 		}
 		return "", false, err
 	}

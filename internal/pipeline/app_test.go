@@ -474,6 +474,9 @@ func (f *fakeProblemStore) ListSuccessRevisions(context.Context, string) ([]stor
 func (f *fakeProblemStore) LatestSuccessRevision(context.Context, string) (string, bool, error) {
 	return "", false, errors.New("unexpected call")
 }
+func (f *fakeProblemStore) LatestSelectedSuccessRevision(context.Context, string) (string, bool, error) {
+	return "", false, errors.New("unexpected call")
+}
 
 func (f *fakeProblemStore) PersistHoldoutSet(context.Context, store.HoldoutSetRecord) (store.HoldoutSetRecord, bool, error) {
 	return store.HoldoutSetRecord{}, false, errors.New("unexpected call")

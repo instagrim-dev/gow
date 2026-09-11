@@ -294,3 +294,81 @@ func TestIntegrationGenerationBatchReachesRevisedContent(t *testing.T) {
 		t.Fatalf("an assessed occurrence must not be re-selected by batch, got %d", len(again.Run.Evaluations))
 	}
 }
+
+// TestIntegrationCompressionSelectionGovernsPolicy is the 040b8c9 finding-1
+// regression: compress empty (R1) -> support appears -> compress (R2,
+// supported) -> support is retracted -> compress again (identity matches R1,
+// artifact REUSED) -> mutate policy. Current guidance must follow the latest
+// compression SELECTION (empty R1), never MAX(revision) (stale-supported R2):
+// the old success preference must be absent from the new policy revision.
+func TestIntegrationCompressionSelectionGovernsPolicy(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = minPreservesMiner{}
+	app.challengerFn = biasOnlyChallenger{}
+	app.generatorFn = pcGenerator{signatures: []canon.MechanismSignature{pcSignature(pcResidueLocality, "", true)}}
+
+	problemID, invID, _ := mineOneCandidate(t, ctx, app, dbPath)
+	if resp, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID}); err != nil || resp.Reports[0].StateAfter != "surviving" {
+		t.Fatalf("challenge: %v / %+v", err, resp.Reports)
+	}
+
+	// R1: empty cohort (no proposals yet).
+	c1, err := app.CompressSuccesses(ctx, SuccessCompressInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("compress empty: %v", err)
+	}
+	if c1.Revision.InvariantCount != 0 {
+		t.Fatalf("R1 must be empty, got %d invariants", c1.Revision.InvariantCount)
+	}
+
+	// Support appears: generate A, evaluate decisively, compress -> R2.
+	if _, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID}); err != nil {
+		t.Fatalf("generate A: %v", err)
+	}
+	app.modelVerifierFn = provider.NewFixtureModelVerifier(verify.VerdictPartialSuccess, "medium")
+	if _, err := app.Evaluate(ctx, EvaluateInput{DBPath: dbPath, ProblemID: problemID}); err != nil {
+		t.Fatalf("evaluate A: %v", err)
+	}
+	c2, err := app.CompressSuccesses(ctx, SuccessCompressInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("compress supported: %v", err)
+	}
+	if c2.Revision.InvariantCount == 0 || c2.Revision.ID == c1.Revision.ID {
+		t.Fatalf("R2 must be a new, supported revision: %+v", c2.Revision)
+	}
+
+	// Retraction: emit revised B (break degrades to unknown), reassess it with
+	// an abstaining model tier -> the cohort is empty again.
+	app.generatorFn = pcGenerator{signatures: []canon.MechanismSignature{pcSignature(pcResidueLocality, "", false)}}
+	if _, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID}); err != nil {
+		t.Fatalf("generate B: %v", err)
+	}
+	app.modelVerifierFn = provider.NewFixtureModelVerifier(verify.VerdictUnknown, "low")
+	if _, err := app.Evaluate(ctx, EvaluateInput{DBPath: dbPath, ProblemID: problemID}); err != nil {
+		t.Fatalf("evaluate B: %v", err)
+	}
+
+	// R3 == R1: the empty-cohort identity matches, so the artifact is REUSED —
+	// and that reuse is the latest SELECTION.
+	c3, err := app.CompressSuccesses(ctx, SuccessCompressInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("compress retracted: %v", err)
+	}
+	if c3.Created || c3.Revision.ID != c1.Revision.ID {
+		t.Fatalf("retraction must reuse the empty artifact R1: created=%v id=%s want %s", c3.Created, c3.Revision.ID, c1.Revision.ID)
+	}
+
+	// Policy follows the latest selection (empty R1), not MAX(revision) (R2):
+	// the stale success preference must be absent.
+	mut, err := app.MutatePolicy(ctx, PolicyMutateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("mutate policy: %v", err)
+	}
+	for _, d := range mut.Revision.Directives {
+		if d.Kind == "prefer" && d.TargetKind == "success_invariant" {
+			t.Fatalf("policy must not follow R2's stale support after retraction: %+v", d)
+		}
+	}
+}

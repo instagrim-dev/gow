@@ -971,6 +971,7 @@ func validateSchemaTables(ctx context.Context, tx *sql.Tx) error {
 		"frontier_proposal_signatures", "frontier_proposal_signature_revisions", "frontier_generation_contents", "success_invariant_revisions",
 		"success_invariants", "success_invariant_predicates",
 		"success_invariant_broken_targets", "success_invariant_cohort_evaluations",
+		"success_compression_selections",
 		"search_policy_revisions", "search_policy_directives",
 		"search_policy_provenance", "frontier_generation_policy",
 	} {

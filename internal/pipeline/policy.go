@@ -138,7 +138,7 @@ func (a *App) buildPolicyEvidence(ctx context.Context, repoStore problemStore, p
 
 	// Successes: the latest compression revision's invariants (M6.1). Dominant
 	// strength = the strongest class present in the support composition.
-	if latest, found, lerr := repoStore.LatestSuccessRevision(ctx, problemID); lerr == nil && found {
+	if latest, found, lerr := repoStore.LatestSelectedSuccessRevision(ctx, problemID); lerr == nil && found {
 		rec, gerr := repoStore.GetSuccessRevision(ctx, latest)
 		if gerr != nil {
 			return policy.Evidence{}, resolvableEvidence{}, gerr
@@ -427,7 +427,7 @@ func (a *App) preferredSuccessPredicates(ctx context.Context, repoStore problemS
 	if len(want) == 0 {
 		return out, nil
 	}
-	latest, found, err := repoStore.LatestSuccessRevision(ctx, problemID)
+	latest, found, err := repoStore.LatestSelectedSuccessRevision(ctx, problemID)
 	if err != nil || !found {
 		return out, err
 	}

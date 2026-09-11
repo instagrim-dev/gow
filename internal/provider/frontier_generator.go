@@ -91,6 +91,18 @@ type Generator interface {
 	Generate(ctx context.Context, req GenerationRequest) (GenerationResponse, error)
 }
 
+// TrustedStructureAuthor marks a generator whose proposal signatures are
+// CODE-DERIVED (deterministic, in-repo, or test-authored ground truth) rather
+// than model output. The frontier pipeline admits untrusted generators'
+// signatures through the vocabulary-admission boundary
+// (canon.AdmitProposalSignature): labels are re-resolved under the pinned
+// vocabulary and provider-declared completeness is stripped. A live model
+// adapter must NOT implement this interface — its authored structure is
+// ModelJudgment, never Verification.
+type TrustedStructureAuthor interface {
+	TrustedStructureAuthor()
+}
+
 // FixtureGeneratorVersion identifies the deterministic fixture generator build.
 const FixtureGeneratorVersion = "v1"
 
@@ -112,6 +124,11 @@ type DerivingFixtureGenerator struct{}
 
 // NewDerivingFixtureGenerator constructs the deriving fixture generator.
 func NewDerivingFixtureGenerator() *DerivingFixtureGenerator { return &DerivingFixtureGenerator{} }
+
+// TrustedStructureAuthor marks the deriving fixture as a code-derived author:
+// its signatures (incl. the deliberate out-of-vocabulary break complement and
+// its exhaustive completeness) are fixture ground truth, not model output.
+func (*DerivingFixtureGenerator) TrustedStructureAuthor() {}
 
 // derivingGeneratorModelName distinguishes derived-fixture provenance.
 const derivingGeneratorModelName = "deterministic-fixture-deriving"

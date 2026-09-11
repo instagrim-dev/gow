@@ -109,6 +109,12 @@ promoted. M6.2 can weight policy by strength; this slice only reports honestly.
   where `cohort_hash` is a content hash over the sorted
   (target, proposal, **evaluation_id**, result, strength) tuples — a new
   evaluation changes the hash and yields the next revision, never a rewrite.
+  Every compression EXECUTION additionally appends an immutable selection row
+  (v28) — also when it reuses an existing artifact — and **current guidance
+  (policy evidence, `successes show` default) follows the latest selection,
+  never `MAX(revision)`**: after support is retracted and the empty artifact
+  is reused, the higher-numbered stale-supported revision is history, not
+  current state.
 - Candidates enter and stay **`proposed`** (`CHECK`-enforced); the challenge
   lifecycle for success invariants is a follow-up slice.
 - v17 also closes a substrate gap: `frontier_proposal_signatures` persists each

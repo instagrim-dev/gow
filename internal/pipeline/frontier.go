@@ -168,14 +168,46 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 		return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
 	}
 
+	// Production proposal-admission boundary (040b8c9 finding 2). Deterministic
+	// in-repo / test-authored generators (TrustedStructureAuthor) supply
+	// code-derived ground truth and bypass admission. Everything else is an
+	// UNTRUSTED provider: its authored resolution state is never consumed —
+	// every claim is re-resolved from its surface label under the PINNED
+	// vocabulary (the cluster run's), provider-declared completeness is
+	// stripped (declaration != acceptance), and a schema/vocabulary version
+	// mismatch rejects the proposal outright. The raw provider response stays
+	// auditable verbatim in the persisted invocation payload; the admitted
+	// signature is what code compares, hashes, and evaluates.
+	admittedProposals := resp.Proposals
+	if _, trusted := generator.(provider.TrustedStructureAuthor); !trusted {
+		vocab, verr := a.loadVocabulary(ctx, repoStore, clusterRun.VocabularyVersion)
+		if verr != nil {
+			a.failRun(ctx, repoStore, run.ID, verr)
+			return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, verr
+		}
+		admittedProposals = make([]provider.FrontierProposal, 0, len(resp.Proposals))
+		for _, p := range resp.Proposals {
+			sig := p.ProposedSignature
+			if (sig.SchemaVersion != "" && sig.SchemaVersion != canon.SchemaMechanismV1) ||
+				(sig.VocabularyVersion != "" && sig.VocabularyVersion != clusterRun.VocabularyVersion) {
+				continue // version-incompatible: rejected, auditable in the invocation payload
+			}
+			admitted, _ := canon.AdmitProposalSignature(sig, vocab)
+			admitted.SchemaVersion = canon.SchemaMechanismV1
+			admitted.VocabularyVersion = clusterRun.VocabularyVersion
+			p.ProposedSignature = admitted
+			admittedProposals = append(admittedProposals, p)
+		}
+	}
+
 	// Convert provider proposals + surviving targets into engine inputs. Code
 	// owns distance, violation verification, hashing, and ranking.
 	targets := make(map[string]frontier.SurvivingInvariant, len(survivors))
 	for _, s := range survivors {
 		targets[s.InvariantID] = s
 	}
-	enginePropos := make([]frontier.Proposal, 0, len(resp.Proposals))
-	for _, p := range resp.Proposals {
+	enginePropos := make([]frontier.Proposal, 0, len(admittedProposals))
+	for _, p := range admittedProposals {
 		enginePropos = append(enginePropos, frontier.Proposal{
 			ProposedSignature:         p.ProposedSignature,
 			TargetInvariantIDs:        p.TargetInvariantIDs,

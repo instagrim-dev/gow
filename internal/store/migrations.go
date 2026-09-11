@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 27
+const currentSchemaVersion = 28
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -966,6 +966,19 @@ END;
 		// occurrences (selection resolved the owning generation), so their
 		// origin-flag backfills with establishable bindings remain valid.
 		apply: migrateV27TargetVerdictProvenance,
+	},
+	{
+		version: 28,
+		// Compression execution/selection log (review of 040b8c9, finding 1).
+		// PersistSuccessRevision deduplicates by cohort/configuration identity
+		// (correct), but "current guidance" was read as MAX(revision) — so
+		// after support appeared (R2) and then disappeared (reusing empty R1),
+		// policy still consumed R2's stale support. v28 separates the
+		// immutable artifact from the operation that SELECTED it: every
+		// compression execution appends a selection row (also when the
+		// artifact is reused), and policy consumes the latest selection.
+		// Existing revisions are backfilled as their own creating selection.
+		apply: migrateV28CompressionSelections,
 	},
 }
 
@@ -3206,4 +3219,46 @@ END`,
 		}
 	}
 	return nil
+}
+
+// compressionSelectionsSQL is the additive DDL for the compression
+// execution/selection log (migration v28): one immutable row per compression
+// execution recording which artifact that execution selected — created OR
+// reused. "Current guidance" is the latest selection, never MAX(revision).
+const compressionSelectionsSQL = `
+CREATE TABLE IF NOT EXISTS success_compression_selections (
+  run_id TEXT PRIMARY KEY REFERENCES runs(id),
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  success_revision_id TEXT NOT NULL REFERENCES success_invariant_revisions(id),
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_success_compression_selections_problem
+ON success_compression_selections(problem_id, created_at);
+
+CREATE TRIGGER IF NOT EXISTS success_compression_selections_immutable_update
+BEFORE UPDATE ON success_compression_selections
+BEGIN
+  SELECT RAISE(ABORT, 'compression selections are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS success_compression_selections_immutable_delete
+BEFORE DELETE ON success_compression_selections
+BEGIN
+  SELECT RAISE(ABORT, 'compression selections are immutable');
+END;
+`
+
+func migrateV28CompressionSelections(ctx context.Context, tx *sql.Tx) error {
+	if _, err := tx.ExecContext(ctx, compressionSelectionsSQL); err != nil {
+		return err
+	}
+	// Backfill: each existing revision was selected by the execution that
+	// created it. Pre-v28 reuse executions left no durable trace, so their
+	// selections are unrecoverable; the creating selection is the honest floor.
+	_, err := tx.ExecContext(ctx, `
+INSERT OR IGNORE INTO success_compression_selections(run_id, problem_id, success_revision_id, created_at)
+SELECT run_id, problem_id, id, created_at FROM success_invariant_revisions
+`)
+	return err
 }

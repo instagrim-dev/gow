@@ -83,6 +83,11 @@ type pcGenerator struct {
 	signatures []canon.MechanismSignature
 }
 
+// TrustedStructureAuthor: the positive-control generator authors SYNTHETIC
+// GROUND TRUTH (incl. deliberate completeness), so it bypasses the untrusted
+// proposal-admission boundary exactly like the in-repo deterministic fixtures.
+func (pcGenerator) TrustedStructureAuthor() {}
+
 func (g pcGenerator) Generate(_ context.Context, req provider.GenerationRequest) (provider.GenerationResponse, error) {
 	var proposals []provider.FrontierProposal
 	if len(req.Targets) > 0 {

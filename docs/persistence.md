@@ -1261,6 +1261,21 @@ hash, or hash-less on a single-revision proposal) remain authoritative;
 pre-v26 evaluations could not reach revised occurrences, so their
 establishable origin-flag backfills stay valid.
 
+## Compression selections (migration `v28`)
+
+`PersistSuccessRevision` deduplicates by cohort/configuration identity —
+correct for the immutable artifact, but the artifact returned by the MOST
+RECENT compression is not the one with the largest revision number: after
+support appears (R2) and then disappears (reusing empty R1), `MAX(revision)`
+still points at R2's stale support. `v28` separates the artifact from the
+operation that selected it: every compression execution appends an immutable
+row to `success_compression_selections` (also when the artifact is REUSED),
+and current guidance (`LatestSelectedSuccessRevision` — consumed by policy
+evidence and `successes show`) follows the latest selection, falling back to
+the highest revision only for pre-v28 history. Dedup is preserved; old
+artifacts are never rewritten; retracted support genuinely leaves the policy
+loop.
+
 ## Justified field completeness (migration `v25`, admission split `v26`)
 
 The signature builder's conservative default marks every set-valued field

@@ -118,6 +118,11 @@ type problemStore interface {
 	GetSuccessRevision(context.Context, string) (store.SuccessRevisionRecord, error)
 	ListSuccessRevisions(context.Context, string) ([]store.SuccessRevisionRecord, error)
 	LatestSuccessRevision(context.Context, string) (string, bool, error)
+	// LatestSelectedSuccessRevision resolves the artifact chosen by the most
+	// recent compression EXECUTION (v28) — current guidance follows the latest
+	// selection, never MAX(revision), so a reused older (e.g. empty) artifact
+	// displaces a higher-numbered stale one.
+	LatestSelectedSuccessRevision(context.Context, string) (string, bool, error)
 	PersistHoldoutSet(context.Context, store.HoldoutSetRecord) (store.HoldoutSetRecord, bool, error)
 	GetHoldoutSet(context.Context, string) (store.HoldoutSetRecord, error)
 	LatestHoldoutSet(context.Context, string) (string, bool, error)

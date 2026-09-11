@@ -94,6 +94,30 @@ For each targeted surviving invariant, code evaluates the invariant's
 A proposal violating ≥1 target on a code-decidable axis is flagged
 `violates_any_target`.
 
+## Proposal admission (untrusted providers)
+
+Before comparison and predicate evaluation, proposals from a generator that is
+NOT a `provider.TrustedStructureAuthor` (a live model adapter, as opposed to
+the deterministic in-repo fixtures) pass the production admission boundary
+(`canon.AdmitProposalSignature`, stamped `proposal-admission/v1` on each
+claim):
+
+- every set-field/boundary claim is **re-resolved from its surface label**
+  under the pinned (cluster run's) vocabulary — a provider-supplied `resolved`
+  status or canonical id is never consumed; disagreement is corrected to the
+  code result, which may be a downgrade to unknown, never a convenient
+  substitution;
+- a claim carrying a resolution but no surface label is unverifiable and is
+  downgraded to unknown;
+- provider-declared `SetFieldCompleteness` is **stripped** to the conservative
+  default (declaration is not acceptance), so an absence-based verified
+  violation can never arise from a provider's self-granted `complete` flag;
+- a schema/vocabulary version mismatch rejects the proposal outright.
+
+The raw provider response remains auditable verbatim in the persisted
+provider-invocation payload; the admitted signature is what code hashes,
+compares, and evaluates.
+
 ## Ranking objective
 
 Proposals are ranked lexicographically over ordinal components (no fabricated

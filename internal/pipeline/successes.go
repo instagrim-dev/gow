@@ -523,7 +523,7 @@ func (a *App) ShowSuccess(ctx context.Context, input SuccessShowInput) (SuccessS
 
 	id := input.SuccessRevisionID
 	if id == "" {
-		latest, found, lerr := repoStore.LatestSuccessRevision(ctx, input.ProblemID)
+		latest, found, lerr := repoStore.LatestSelectedSuccessRevision(ctx, input.ProblemID)
 		if lerr != nil {
 			return SuccessShowResponse{}, lerr
 		}
