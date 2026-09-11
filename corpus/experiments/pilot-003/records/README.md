@@ -58,8 +58,20 @@ verified violations unreachable; assessments degrade to unknown honestly).
 
 ## Remaining before capture (operator)
 
-The non-mechanical attestations: source/mapping review sign-off freeze,
-capture config recording, blinded prompt assembly (train-only context;
-survivor IDs/statements/ASTs to B3 only), and the independent assessment
-arrangement. The DB snapshot (`pre-capture.db`) is retained locally with its
-digest in `runtime.json`, not committed pending a data-retention decision.
+The permitted capture inputs are ASSEMBLED (`../captures/`,
+`../context/`; digests in `../captures/assembly-record.json`): the pinned
+train bundle (12 notes, sorted), the frozen survivor list with predicate
+ASTs (B3 only), and the complete submitted prompts for both arms. Blinding
+was asserted mechanically (no target content, file names, or protocol paths
+in either prompt). The assembling agent session has read the withheld
+target and is therefore DISQUALIFIED as a proposer; captures must come from
+isolated sessions receiving only the assembled prompt bytes.
+
+Still operator-owned: fill `../captures/config.json` with the actual model
+identity/configuration before the first call; capture B0 once and seal it,
+then B3; retain raw outputs + provider timestamps; hash everything into
+`../captures/capture-record.json`; record the pre-capture attestations
+(source/mapping review sign-off freeze, independent assessment
+arrangement). The DB snapshot (`pre-capture.db`) is retained locally with
+its digest in `runtime.json`, not committed pending a data-retention
+decision.

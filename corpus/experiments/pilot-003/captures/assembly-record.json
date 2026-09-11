@@ -1,0 +1,15 @@
+{
+  "schema": "pilot-capture-assembly/v1",
+  "assembled_at_utc": "2026-09-11T07:36:06.840737+00:00",
+  "assembly_rule": "prompts/<arm>.md (inherited verbatim from pilot-001) + pinned train-source bundle (sorted filename order); B3 additionally receives context/b3-survivors.json (frozen IDs, statements, predicate ASTs from the pilot-003 database)",
+  "artifacts": {
+    "prompts/b0.md": "9aadfdd1f40824761bbb6ccffe05e905c6594387f067fc64c7b7e9d645cfe652",
+    "prompts/b3.md": "3765e4558688dfbcd69163b4a36483870201159ed3db5e86480236928c85d074",
+    "context/train-only.md": "a1c95a6637fbc6f04e9718d5c65af2d9014d98ef048fd6fb57c969b750c018c8",
+    "context/b3-survivors.json": "4aac4181724d26e7b83183a73bf3d57df88f2f38b12dda57e4ef24c569ace365",
+    "captures/b0-prompt.txt": "0026e8a3da39a130254c41b274b5dc518d1367f2bdcce51644d6ba25c13a481d",
+    "captures/b3-prompt.txt": "05d4746c95ec64a1e43ef6ca0f0e0e3624fa9ad18f527a5eaeb86098f2b9e8a1"
+  },
+  "capture_status": "not_captured",
+  "proposer_disqualification_note": "The agent session that assembled these inputs has read the withheld target and is disqualified as a proposer; captures must come from isolated sessions that receive ONLY the assembled prompt bytes."
+}

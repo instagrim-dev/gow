@@ -1,0 +1,12 @@
+{
+  "schema": "pilot-capture-config/v1",
+  "note": "Operator fills ACTUAL values before the first call; identical configuration in isolated sessions for both arms; capture B0 first, seal, then B3.",
+  "model_identity": null,
+  "model_version": null,
+  "temperature": null,
+  "max_output_tokens": null,
+  "other_exposed_settings": null,
+  "unavailable_settings": null,
+  "session_isolation": null,
+  "captured_at_utc": null
+}

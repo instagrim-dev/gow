@@ -1,0 +1,53 @@
+{
+  "schema": "pilot-b3-survivors/v1",
+  "survivors": [
+    {
+      "invariant_id": "inv_01M27NK7WSTSW3GKJFVDE0XZGC",
+      "state": "surviving",
+      "statement": "failed approaches share preserves(domain.number_theory.property.identity_carried_solvability)",
+      "predicate_fingerprint": "43fc42831554e4abc499344f012b96585fd00c8e0085b57e382b585a593a302f",
+      "predicate": {
+        "schema": "invariant-predicate/v1",
+        "root": {
+          "op": "contains",
+          "field": "preserves",
+          "canonical_id": "domain.number_theory.property.identity_carried_solvability"
+        }
+      },
+      "association_status": "recurring",
+      "note": "surviving means the hypothesis survived the recorded checks (support recount); known-counterexample and success-preserving checks were unconfirmed \u2014 not a proved universal obstruction"
+    },
+    {
+      "invariant_id": "inv_01M27NK7WSTSW3GKJFVEK43SQD",
+      "state": "surviving",
+      "statement": "failed approaches share preserves(domain.number_theory.property.confined_to_quadratic_nonresidues)",
+      "predicate_fingerprint": "4a5f35fad24bbd1424f617b8496b6ebb24cb411ea66a019b0357f42135195def",
+      "predicate": {
+        "schema": "invariant-predicate/v1",
+        "root": {
+          "op": "contains",
+          "field": "preserves",
+          "canonical_id": "domain.number_theory.property.confined_to_quadratic_nonresidues"
+        }
+      },
+      "association_status": "recurring",
+      "note": "surviving means the hypothesis survived the recorded checks (support recount); known-counterexample and success-preserving checks were unconfirmed \u2014 not a proved universal obstruction"
+    },
+    {
+      "invariant_id": "inv_01M27NK7WSTSW3GKJFVEVJKYNE",
+      "state": "surviving",
+      "statement": "failed approaches share preserves(domain.number_theory.property.class_union_construction)",
+      "predicate_fingerprint": "6fa0c23021d7ca533cb80b5ef4b864eefc40c7332ed78968cb8cc17e41f2b223",
+      "predicate": {
+        "schema": "invariant-predicate/v1",
+        "root": {
+          "op": "contains",
+          "field": "preserves",
+          "canonical_id": "domain.number_theory.property.class_union_construction"
+        }
+      },
+      "association_status": "recurring",
+      "note": "surviving means the hypothesis survived the recorded checks (support recount); known-counterexample and success-preserving checks were unconfirmed \u2014 not a proved universal obstruction"
+    }
+  ]
+}
