@@ -23,6 +23,8 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{caption}
 \usepackage{subcaption}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, backgrounds, calc}
 
 % ── Theorem environments ──────────────────────────────────────────────
 \newtheorem{definition}{Definition}[section]
@@ -125,6 +127,64 @@ W'
 \xrightarrow{O}
 \mathcal{G}'(W \cup \{W'\})
 \]
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  every node/.style={font=\small},
+  regime/.style={draw, rounded corners=8pt, minimum width=28mm, minimum height=18mm},
+  fail/.style={regime, fill=red!8},
+  part/.style={regime, fill=yellow!12},
+  succ/.style={regime, fill=green!10},
+  work/.style={circle, draw, inner sep=1pt, minimum size=3mm, font=\tiny},
+  ->,>={Stealth[length=2mm]}, thick,
+]
+\node[fail]  (F) {};
+\node[above=1mm of F, font=\scriptsize]{failure regime};
+\node[part, right=8mm of F] (P) {};
+\node[above=1mm of P, font=\scriptsize]{partial-success regime};
+\node[succ, right=8mm of P] (S) {};
+\node[above=1mm of S, font=\scriptsize]{success regime};
+
+% work items
+\foreach \x/\y in {-0.6/-0.2, -0.2/0.3, 0.3/-0.3, 0.7/0.1, -0.5/0.5} {
+  \node[work] at ($(F.center)+(\x,\y)$) {};
+}
+\foreach \x/\y in {-0.3/0.2, 0.2/-0.2, 0.5/0.4} {
+  \node[work] at ($(P.center)+(\x,\y)$) {};
+}
+\foreach \x/\y in {0.1/0.1, -0.3/-0.3} {
+  \node[work, fill=green!30] at ($(S.center)+(\x,\y)$) {};
+}
+
+% boundary
+\draw[dashed, thick, red!60!black] ($(F.north east)+(0,3mm)$) --
+  ($(F.south east)+(0,-3mm)$)
+  node[midway, right, font=\scriptsize, red!60!black]{$B$};
+
+% delta
+\draw[->, thick, blue!70!black, bend left=20]
+  ($(F.center)+(0.7,0.1)$) to
+  node[midway, above, font=\scriptsize, blue!70!black]{$\Delta S$}
+  ($(P.center)+(-0.3,0.2)$);
+
+% delta continuation to success
+\draw[->, thick, blue!70!black, bend left=20, dashed]
+  ($(P.center)+(0.5,0.4)$) to
+  ($(S.center)+(-0.3,-0.3)$);
+
+\node[below=8mm of P, font=\scriptsize, align=center]
+  {Conserved shape $H$: shared structural property\\
+   Structural delta $\Delta S$: proposed crossing};
+\end{tikzpicture}
+\caption{Geometry of Work as a schematic. Work items (dots) cluster into
+outcome-conditioned regimes. A boundary $B$ separates the failure regime from
+the partial/success regimes; a conserved shape $H$ characterizes the failure
+regime. A structural delta $\Delta S$ is a proposed crossing of $B$, projected
+back into domain-space for verification. Successful landing points update the
+regime membership.}
+\label{fig:gow-schematic}
+\end{figure}
 
 \subsection{Contributions}
 
@@ -477,6 +537,43 @@ more independently motivated instances of the delta exist in the corpus.
 \end{algorithmic}
 \end{algorithm}
 
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  node distance=6mm and 6mm,
+  every node/.style={font=\small},
+  stage/.style={draw, rounded corners=2pt, align=center,
+                minimum width=22mm, minimum height=8mm, fill=blue!5},
+  space/.style={draw, dashed, rounded corners=6pt,
+                inner sep=3mm, fill=gray!2},
+  ->,>={Stealth[length=2mm]}, thick,
+]
+\node[stage] (map)      {\textsc{Map} \\ \scriptsize $W \to S(W)$};
+\node[stage, right=of map] (bound)   {\textsc{Boundary} \\ \scriptsize $\mathcal{G} \to B$};
+\node[stage, right=of bound] (move)  {\textsc{Move} \\ \scriptsize $B \to \Delta S$};
+\node[stage, below=of move] (proj)   {\textsc{Project} \\ \scriptsize $\Delta S \to W'$};
+\node[stage, left=of proj] (verify)  {\textsc{Verify} \\ \scriptsize $W' \to \Lambda$};
+\node[stage, left=of verify] (update) {\textsc{Update} \\ \scriptsize $\mathcal{G} \to \mathcal{G}'$};
+
+\draw (map) -- (bound);
+\draw (bound) -- (move);
+\draw (move) -- (proj);
+\draw (proj) -- (verify);
+\draw (verify) -- (update);
+\draw (update.west) -- ++(-3mm,0) |- (map.west);
+
+\begin{scope}[on background layer]
+  \node[space, fit=(map)(bound)(move), label={[font=\scriptsize, blue!60!black]above:shape-space}] {};
+  \node[space, fit=(proj)(verify)(update), label={[font=\scriptsize, blue!60!black]below:domain-space}] {};
+\end{scope}
+\end{tikzpicture}
+\caption{The GoW loop: shape-space reasoning (top row) is separated from
+domain-space verification (bottom row). Structural deltas are proposed in
+shape-space; only the projected candidate is evaluated in domain-space.
+The landing point re-enters shape-space via the update step.}
+\label{fig:loop}
+\end{figure}
+
 \paragraph{Step 1 (Map).}
 Normalize heterogeneous work into outcome-blind structural shapes; canonicalize
 labels to stable, versioned vocabulary identifiers; fingerprint each shape
@@ -615,6 +712,47 @@ first). The layers are:
     re-ingested into the corpus; their landing points update the failure-space
     and inform the next search-policy revision.
 \end{enumerate}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  node distance=3mm and 5mm,
+  every node/.style={font=\scriptsize},
+  layer/.style={draw, rounded corners=2pt, minimum width=32mm,
+                minimum height=6mm, align=center, fill=gray!5},
+  model/.style={fill=orange!15},
+  det/.style={fill=blue!8},
+  ->,>={Stealth[length=1.8mm]},
+]
+\node[layer, det]   (ing)    {1.\ Work ingestion (immutable, content-addressed)};
+\node[layer, model, below=of ing]     (norm)   {2.\ Structural normalization};
+\node[layer, det, below=of norm]      (space)  {3.\ Shape-space (canonicalize, cluster, partition)};
+\node[layer, model, below=of space]   (prop)   {4.\ Shape proposal (compress)};
+\node[layer, below=of prop]           (chal)   {5.\ Challenge lifecycle};
+\node[layer, model, below=of chal]    (front)  {6.\ Boundary / frontier generation};
+\node[layer, model, below=of front]   (dom)    {7.\ Domain projection};
+\node[layer, det, below=of dom]       (asmt)   {8.\ Assessment (strongest-decisive-first)};
+\node[layer, det, below=of asmt]      (upd)    {9.\ Map update + policy mutation};
+
+\foreach \a/\b in {ing/norm, norm/space, space/prop, prop/chal, chal/front,
+                   front/dom, dom/asmt, asmt/upd} {
+  \draw (\a) -- (\b);
+}
+\draw[->,dashed] (upd.west) -- ++(-8mm,0) |- (space.west)
+  node[midway, sloped, above, font=\tiny]{re-entry};
+
+\node[right=8mm of chal, align=left, font=\scriptsize]
+  {\textbf{Legend}\\
+   \tikz\node[layer, det, minimum width=8mm, minimum height=3mm]{}; deterministic\\
+   \tikz\node[layer, model, minimum width=8mm, minimum height=3mm]{}; model-native\\
+   \tikz\node[layer, minimum width=8mm, minimum height=3mm]{}; hybrid};
+\end{tikzpicture}
+\caption{\texttt{newf} architecture as nine layers. Model-native operations
+(orange) produce claims and candidates; deterministic layers (blue) enforce
+provenance, canonicalization, and verifier routing. No layer may promote
+epistemic status without an explicit evidence record from the layer above it.}
+\label{fig:newf-arch}
+\end{figure}
 
 \subsection{Epistemic guarantees}
 
@@ -1000,8 +1138,44 @@ natural next primitive, but remains a hypothesis: we have not implemented or
 tested it. The complement view is stated here as a theoretically motivated
 extension, not as a demonstrated capability.
 
-\todo{Expand with connection to existing void concept in forward geometry.
-Note that rigorous definition of $\Omega$ is itself a research problem.}
+\subsubsection*{Connection to the void concept in the forward geometry}
+
+The forward geometry (\cref{sec:semantic}) already contains \emph{voids}: the
+component $V \subset \mathcal{G}$ of unoccupied or under-sampled structural
+combinations. Complement geometry extends this idea in two directions.
+
+First, forward voids are \emph{empirical}: they are the structural combinations
+that the observed work population happens not to occupy. They may be absent
+because they are unproductive, because they are difficult, or simply because
+no one has attempted them. The forward reading does not distinguish these cases.
+
+Complement geometry attempts to distinguish them by asking what
+constraint each work item imposes on the surrounding possibility-space. A void
+that persists under many independent, well-characterized failures --- each of
+which excludes overlapping regions of $\Omega$ --- is qualitatively different
+from a void that merely lacks samples. The former is a \emph{constrained cavity};
+the latter is a \emph{sampling gap}. The forward geometry alone cannot make
+this distinction; the complement view provides the machinery.
+
+Second, forward geometry proposes \emph{structural deltas} that cross observed
+boundaries. Complement geometry proposes structural moves that \emph{occupy
+constrained cavities} --- regions whose shape is determined by what surrounds
+them rather than by what has been tried inside them. The two proposal
+strategies are complementary: the first targets shape claims that hold across
+failure regimes; the second targets shape claims that are \emph{forced by
+external constraint} even though no attempt has instantiated them.
+
+\paragraph{Why $\Omega$ is a research problem.}
+The complement view relies on an ambient possibility-space $\Omega$ of
+``structurally plausible work.'' Defining this space rigorously is nontrivial:
+it must be broad enough to contain the work that has not been tried, narrow
+enough to be structurally meaningful, and constructible enough that the
+constraint-collapse operator $\mathcal{C}(\Omega \mid W)$ has a computable
+output. In practice, $\Omega$ may need to be defined implicitly, via the
+vocabulary of the forward geometry --- $\Omega$ as the closure of all
+type-consistent combinations of the vocabulary's canonical labels. This is a
+theoretical open problem that must be addressed before complement geometry can
+be operationalized.
 
 % ── 10. Related Work ─────────────────────────────────────────────────
 \section{Related Work}
@@ -1091,9 +1265,9 @@ assumes the space is parametric and fixed; GoW allows the representation itself
 to move (normalizing and abstracting as the geometry is refined).
 
 \paragraph{LLM self-reflection, debate, and process reward models.}
-Reflexion \citep{shinn2023reflexion} and debate \citep{irving2018ai} let models
+Reflexion \citep{shinn2023reflexion} and debate \citep{irving2018debate} let models
 reflect on or challenge their own single generation. Process reward models
-\citep{lightman2023lets} supervise individual reasoning steps. These operate
+\citep{lightman2023process} supervise individual reasoning steps. These operate
 at the generation level, on a single attempt, in a single session. GoW operates
 at the meta level, over a persistent geometry that outlasts any single session
 and is not owned by any single model.
@@ -1298,23 +1472,321 @@ exploratory evidence sufficient to make the framework refereeable.
 
 \section{Formal Definitions}
 \label{app:formal}
-\todo{Complete formal definitions of all objects and operators.}
+
+This appendix consolidates the definitions introduced across
+\cref{sec:semantic,sec:epistemic,sec:method} into a single reference.
+
+\begin{definition}[Work item, restated]
+$W_i = (S_i, O_i, E_i)$: structural description, observed outcome, evidence.
+\end{definition}
+
+\begin{definition}[Structural shape, restated]
+Outcome-blind description with fields:
+\emph{representation}, \emph{assumptions}, \emph{operators},
+\emph{preserved properties}, \emph{axes} (mechanistic-diversity coordinates).
+Shapes are canonicalized to order-independent fingerprints under a versioned
+vocabulary.
+\end{definition}
+
+\begin{definition}[Shape claim, restated]
+$\text{ShapeClaim} = (\text{shape},\, \text{conditioning},\, \text{role},\,
+\text{epistemic state})$; four orthogonal axes, never collapsed into a scalar.
+Conditioning $\in$ \{failure, success, mixed, frontier\}. Role $\in$ \{regularity,
+obstruction, enabling\_condition, boundary\_hypothesis\}. Epistemic state $\in$
+\{proposed, challenged, surviving, weakened, split, falsified, operator\_attested\}.
+\end{definition}
+
+\begin{definition}[Geometry, restated]
+$\mathcal{G}(W) = (R, B, H, V, T)$: regimes, boundaries, shape claims, voids,
+trajectories.
+\end{definition}
+
+\begin{definition}[Boundary delta]
+$\delta(b)$: minimal structural condition separating a counterexample (or
+observed split) from a claim's support population; produced during adversarial
+challenge; itself a first-class record.
+\end{definition}
+
+\begin{definition}[Structural delta]
+$\Delta S$: a proposed change in structural shape crossing a boundary. Must
+state at least one non-cosmetic field change and identify its nearest failure
+family.
+\end{definition}
+
+\begin{definition}[Projection]
+$\Pi_{\text{domain}}: \Delta S \mapsto W'$: model-assisted translation of a
+structural delta into a domain-native candidate.
+\end{definition}
+
+\begin{definition}[Landing point]
+$\Lambda(W') = (O(W'),\, E(W'),\, \text{strength})$: observed result of
+verifying $W'$ in the domain, with the verifier tier recorded.
+\end{definition}
+
+\paragraph{Operators.}
+\begin{itemize}[nosep]
+  \item $\text{normalize}: \text{raw work} \to S$ (model-assisted, vocabulary-resolved)
+  \item $\text{cluster}: \{S_i\} \to \{R_j\}$ (deterministic under signature + regime)
+  \item $\text{compress}: R_j \to H$ (model-native shape claim generation)
+  \item $\text{challenge}: H \to (H',\, \delta)$ (seven probes; disposition
+    $\in$ \{survive, weaken, split, falsify\})
+  \item $\text{project}: (H, \delta) \to \Delta S$ (structural move against a
+    surviving boundary)
+  \item $\text{compile}: \Delta S \to W'$ (domain projection)
+  \item $\text{verify}: W' \to \Lambda(W')$ (strongest decisive verifier first)
+  \item $\text{update}: (\mathcal{G}, W', \Lambda) \to \mathcal{G}'$ (re-entry
+    plus search-policy mutation)
+\end{itemize}
 
 \section{Protocol Details}
 \label{app:protocol}
-\todo{Full experiment protocols for Pilots 003 and 004.}
+
+\subsection{Pilot-003 (Curated-feature guided search)}
+
+\paragraph{Corpus.} \texttt{corpus/train/} plus quarantined target
+\texttt{corpus/target/}. Twelve serious Erd\H{o}s--Straus approaches, outcome-annotated.
+
+\paragraph{Arms.}
+\begin{itemize}[nosep]
+  \item B0 (undirected): base prompt, no structural context.
+  \item B1 (semantic summary): plain-language summary of the corpus.
+  \item B3 (invariant-guided): failure-conditioned shape claims L1, L3, L4 supplied.
+    L1 is the fixed-modulus congruence-elimination claim; L3 is the
+    class-union-construction reference; L4 is the identity-carried-solvability
+    reference.
+\end{itemize}
+
+\paragraph{Budgets.} Equal per-arm budget of 6--7 proposal slots.
+
+\paragraph{Recovery rule.} \texttt{recovery-rule/v1}, \texttt{classify/v3}.
+Code-owned; abstains on out-of-vocabulary wording; does not manufacture verdicts.
+
+\paragraph{Assessment layers.}
+(1) Automatic rule-based recovery classification. (2) Blinded model reviewer
+scoring proposals against target without arm labels.
+
+\paragraph{Frozen artifacts.} \texttt{corpus/experiments/pilot-003/}, including
+\texttt{captures/}, \texttt{records/}, and \texttt{records/INDEPENDENT-REVIEW-RESULT.md}.
+
+\subsection{Pilot-004 (Shape discovery)}
+
+\paragraph{Design.} Discovery predeclared success criteria (from
+\texttt{PROTOCOL-DRAFT.md}):
+\begin{itemize}[nosep]
+  \item C1: at least $k$ reference matches recovered without curated reference input.
+  \item C2: D1 (over-merge + prohibited promotion) $\leq$ D0.
+  \item C3: D0 novel rate $<$ D1 novel rate.
+\end{itemize}
+
+\paragraph{Arms.} D0 (unmentored discovery), D1 (mentored discovery with
+challenge scaffolding). Both blinded to reference ledger.
+
+\paragraph{Adjudication.} Three-lane quorum (A, B, C), each lane an
+independent adjudication subagent scoring the same 23 proposal occurrences.
+Aggregation rule: 2-of-3 majority determines \texttt{cemented\_category};
+non-unanimous outcomes recorded as \texttt{disputed}.
+
+\paragraph{Frozen artifacts.} \texttt{corpus/experiments/pilot-004-discovery/}:
+\texttt{quorum-result.json} (23 entries, all lane votes), \texttt{quorum-adjudication-packet.json},
+\texttt{records/RESULT.md}, \texttt{records/CLOSURE-SCORECARD.md}, and per-lane
+vote files.
+
+\subsection{M7 blinded benchmark}
+
+\paragraph{Mode.} \texttt{blinded} (not historical; no chronological claim).
+Leakage audit gates the run.
+
+\paragraph{Two-stage design.}
+\begin{itemize}[nosep]
+  \item \emph{Stage 1 (pristine target)}: target's completeness declaration is
+    provider-declared only. \texttt{classify/v3} marks every field axis
+    \texttt{incomparable}. Result: \texttt{inconclusive} for all arms.
+  \item \emph{Stage 2 (operator-attested target)}: a byte-distinct attestation
+    overlay adds only (a) explicit posture support rows and (b) a
+    \texttt{declared\_payload}-scoped \texttt{field\_completeness} declaration.
+    No structural claim is changed. Result: \texttt{no\_recovery} for all
+    assessed arms; B0 vs B3 comparison remains \texttt{inconclusive} because
+    B0 emits zero proposals.
+\end{itemize}
+
+\paragraph{Reproducibility.} \texttt{bash corpus/experiments/m7-blinded-run/run.sh},
+fully offline and deterministic.
 
 \section{Complete Experiment Tables}
 \label{app:tables}
-\todo{Full result tables with all entries, dispositions, quorum votes.}
+
+\subsection{Pilot-004: all 23 quorum entries}
+
+Source: \texttt{corpus/experiments/pilot-004-discovery/quorum-result.json}.
+Column \emph{Agree} shows how many of the three lanes voted for the cemented
+category; \emph{Disp.} marks entries where at least one lane objected to the
+majority. Reference matches cite the ledger label (L1--L6) where the majority
+identified a match.
+
+\begin{center}
+\begin{tabular}{lllll}
+\toprule
+Entry & Category & Ref & Agree & Disp. \\
+\midrule
+E01 & matches\_reference & L1 & 3/3 & no \\
+E02 & matches\_reference & L1 & 3/3 & no \\
+E03 & defensible\_novel & --- & 2/3 & no \\
+E04 & unsupported & --- & 1/3 & yes \\
+E05 & defensible\_novel & --- & 3/3 & no \\
+E06 & unsupported & --- & 3/3 & no \\
+E07 & defensible\_novel & --- & 3/3 & no \\
+E08 & defensible\_novel & --- & 2/3 & no \\
+E09 & matches\_reference & L1 & 2/3 & no \\
+E10 & over\_merge & --- & 1/3 & yes \\
+E11 & unsupported & --- & 2/3 & no \\
+E12 & matches\_reference & L1 & 2/3 & no \\
+E13 & defensible\_novel & --- & 3/3 & no \\
+E14 & unsupported & --- & 2/3 & no \\
+E15 & defensible\_novel & --- & 3/3 & no \\
+E16 & defensible\_novel & --- & 3/3 & no \\
+E17 & matches\_reference & L1 & 3/3 & no \\
+E18 & matches\_reference & L1 & 2/3 & no \\
+E19 & matches\_reference & L3 & 3/3 & no \\
+E20 & defensible\_novel & --- & 3/3 & no \\
+E21 & defensible\_novel & --- & 3/3 & no \\
+E22 & over\_merge & --- & 1/3 & yes \\
+E23 & defensible\_novel & --- & 3/3 & no \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Aggregate counts.}
+\emph{matches\_reference}: 7 (E01, E02, E09, E12, E17, E18, E19).
+\emph{defensible\_novel}: 10 (E03, E05, E07, E08, E13, E15, E16, E20, E21, E23).
+\emph{unsupported}: 4 (E04, E06, E11, E14).
+\emph{over\_merge}: 2 (E10, E22).
+Total: 23. Disputed: 3 (E04, E10, E22). Total lane votes: 69.
+
+\paragraph{Defensible-novel themes.}
+The 10 defensible-novel entries collapse into approximately six distinct
+themes:
+\begin{itemize}[nosep]
+  \item \textbf{N1} finite resource against infinite survivor set (E13, E20).
+  \item \textbf{N2a} intrinsic density-averaging ceiling (E13, E16, E20, E23) ---
+    challenged end-to-end in \cref{sec:results-challenge}.
+  \item \textbf{N2b} reach-ceiling variant (subset of N2a's population).
+  \item \textbf{N3} locality without global coupling (E08).
+  \item \textbf{N5} reorganization without existence forcing (E15, E21) ---
+    also challenged (\texttt{records/N5-challenge.md}).
+  \item \textbf{N6} annotation-pattern observation (E15, subject to scope
+    correction).
+\end{itemize}
+
+\subsection{Pilot-003: proposal-level judgment table}
+
+Source: \texttt{corpus/experiments/pilot-003/records/INDEPENDENT-REVIEW-RESULT.md}.
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Arm & Proposals & Full recovery & Partial recovery \\
+\midrule
+B0 undirected & 7 & 0 & 1 (rank 2: variety slices) \\
+B3 invariant-guided & 6 & \textbf{1} (rank 4) & 1 (rank 5: class-number transfer) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+B3 rank 4 is the fiberwise lattice-point / geometry-of-numbers proposal that
+was invisible to the automatic recovery rule (out-of-vocabulary wording) and
+visible to the blinded model reviewer.
 
 \section{Claim/Evidence Ledger}
 \label{app:claims}
-\todo{Every empirical sentence in the paper mapped to its frozen artifact.}
+
+Every empirical sentence in this paper is traceable to a frozen artifact.
+This ledger enumerates the mapping. Artifact paths are relative to the
+project repository root.
+
+\begin{center}
+\small
+\begin{tabular}{p{0.42\linewidth}lp{0.32\linewidth}}
+\toprule
+Claim / observation in main text & Section & Artifact \\
+\midrule
+System refuses to manufacture failure support when none exists & \cref{sec:results-negative} & \texttt{corpus/experiments/2026-09-10-esr-negative-control/} \\
+M7 Stage 1: pristine target yields \texttt{inconclusive} for all arms & \cref{sec:results-negative} & \texttt{corpus/experiments/m7-blinded-run/RESULT.md} \\
+M7 Stage 2: operator-attested target yields \texttt{no\_recovery} & \cref{sec:results-negative} & \texttt{corpus/experiments/m7-blinded-run/compare-b0-b3.json} \\
+B0 7 proposals, 0 full recovery, 1 rank-2 partial & \cref{sec:results-pilot003} & \texttt{corpus/experiments/pilot-003/records/INDEPENDENT-REVIEW-RESULT.md} \\
+B3 6 proposals, 1 full recovery (rank 4), 1 rank-5 partial & \cref{sec:results-pilot003} & idem. \\
+B3 rank 4 = fiberwise lattice-point / geometry-of-numbers proposal & \cref{sec:results-pilot003,sec:example} & idem., cross-checked \texttt{records/CLOSURE.md} \\
+Automatic recovery rule abstained (out-of-vocabulary wording) & \cref{sec:results-pilot003} & \texttt{corpus/experiments/pilot-003/records/reassessment-v2/} \\
+Pilot-004: 23 proposal occurrences, three-lane quorum & \cref{sec:results-pilot004} & \texttt{corpus/experiments/pilot-004-discovery/quorum-result.json} \\
+7 matches\_reference / 10 defensible\_novel / 4 unsupported / 2 over\_merge & \cref{sec:results-pilot004}, \cref{app:tables} & idem. \\
+Predeclared success criterion not met (C2 fail: 2 vs 0) & \cref{sec:results-pilot004} & \texttt{corpus/experiments/pilot-004-discovery/records/CLOSURE-SCORECARD.md} \\
+Reference-absent shape generation observed (10 defensible\_novel) & \cref{sec:results-pilot004}, \cref{sec:conclusion} & \texttt{docs/findings/001-unencoded-shape-generation.md} \\
+N2a (density-averaging ceiling) proposed as reference-absent hypothesis & \cref{sec:results-challenge} & \texttt{corpus/experiments/pilot-004-discovery/quorum-result.json} (E13, E16, E20, E23) \\
+N2a survived 7-probe challenge with boundary delta at C4 & \cref{sec:results-challenge}, \cref{sec:discussion} & \texttt{corpus/experiments/pilot-004-discovery/records/N2a-challenge.md} \\
+Boundary delta: rate-ceiling (es-05) vs reach-ceiling (es-10) sub-mechanisms & \cref{sec:results-challenge}, \cref{sec:example} & idem. \\
+N5 (reorganization without existence forcing) similarly challenged & \cref{sec:results-pilot004}, \cref{app:tables} & \texttt{corpus/experiments/pilot-004-discovery/records/N5-challenge.md} \\
+N2a admitted to \texttt{mechanism/v4} vocabulary & \cref{sec:results-challenge} & \texttt{internal/canon/vocabulary\_seed.go} \\
+N5 admitted to \texttt{mechanism/v5} vocabulary & \cref{sec:results-pilot004} & idem. \\
+Blinding audit clean (0 leakage across snapshots/normalizations/signatures) & \cref{sec:results-negative} & \texttt{corpus/experiments/m7-blinded-run/RESULT.md} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Verification-tier annotations.}
+All Pilot-003 B3 rank-4 findings are tier-5 evidence (single-model reviewer,
+blinded). All Pilot-004 quorum verdicts are tier-4 evidence (same-family
+multi-lane agreement). N2a and N5 challenge dispositions are tier-4/5 evidence.
+No claim in this paper is tier-1 (formal proof) or tier-2 (reproducible
+deterministic computation). This is the intended epistemic strength for a
+paper that reports exploratory case-study evidence.
 
 \section{Falsification Conditions}
 \label{app:falsification}
-\todo{Full statement of what evidence would make GoW uninteresting or wrong.
-See docs/theory/00-paper-claims.md for the five conditions.}
+
+The GoW thesis is refereeable only if it states what future evidence would
+make it uninteresting or wrong. Each of the five conditions below is a target
+for adversarial evaluation: a demonstration of any one would substantively
+weaken the framework's claim on the literature.
+
+\paragraph{F1. Geometry is vacuous.}
+If the structural descriptions assigned to work items are so model-dependent
+that different reasonable description procedures produce incommensurable
+geometries, then the ``geometry'' is a projection artifact rather than a
+property of the work. Test: run structural normalization with two independent
+model families on the same corpus; measure agreement on regime membership and
+boundary identification.
+
+\paragraph{F2. Shape-space search is dominated.}
+If undirected generation (without shape-space reasoning) consistently produces
+equal or better proposals measured by structural proximity to withheld advances,
+then the shape-space detour adds cost without information. Test: multi-trial
+head-to-head between undirected generation and shape-guided generation over a
+benchmark of held-out targets, with predeclared endpoint.
+
+\paragraph{F3. Epistemic overhead without epistemic gain.}
+If the challenge lifecycle and provenance machinery produce no measurably
+different outcomes from unstructured ``try again with the failures in context,''
+then the epistemics are ceremony rather than discipline. Test: compare
+GoW-with-challenge against a challenge-free ablation on the same corpus and
+target; measure proposal quality, redundancy, and false-positive rate for
+structural claims.
+
+\paragraph{F4. Domain projection is the bottleneck.}
+If model-generated structural deltas cannot be reliably compiled into
+domain-verifiable candidates (projection failure is the norm rather than the
+exception), then shape-space reasoning is systematically disconnected from
+domain-space truth. Test: measure the rate at which structural deltas produce
+candidates that (a) parse under the domain's verifier and (b) are
+mechanistically distinct from the failure population, across multiple domains.
+
+\paragraph{F5. The method does not transfer.}
+If GoW only produces interesting observations on problems whose failure history
+was curated by the GoW practitioner, then it is a curation framework rather than
+a search method. Test: apply GoW to at least one domain not authored by the
+research team, using an existing external corpus of prior work.
+
+\paragraph{Aggregate falsification condition.}
+The conjunction of F1--F5 is the strongest test. GoW should be considered
+uninteresting as a general framework if all five conditions hold; it should be
+considered wrong as a specific method if F1 or F4 hold in isolation.
 
 \end{document}
