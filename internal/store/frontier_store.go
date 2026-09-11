@@ -89,8 +89,11 @@ type FrontierGenerationRecord struct {
 	AdmissionDowngraded int
 	AdmissionStripped   int
 	AdmissionRejected   int
-	Invocation          FrontierProviderInvocation
-	Proposals           []FrontierProposalRow
+	// AdmissionOverflow (v31): proposals supplied beyond the requested count,
+	// deterministically truncated (wire order) before scoring.
+	AdmissionOverflow int
+	Invocation        FrontierProviderInvocation
+	Proposals         []FrontierProposalRow
 }
 
 // PersistFrontierGenerationResult reports the persisted generation and newness.
@@ -203,9 +206,9 @@ VALUES(?, ?, ?, ?)
 	record.ProposalCount = len(persisted)
 
 	if _, err := tx.ExecContext(ctx, `
-INSERT INTO frontier_generation_runs(id, problem_id, cluster_run_id, run_id, provider_invocation_id, generator_version, requested_count, proposal_count, revision, created_at, admission_corrected, admission_downgraded, admission_stripped, admission_rejected)
-VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`, record.ID, record.ProblemID, record.ClusterRunID, record.RunID, inv.ID, record.GeneratorVersion, record.RequestedCount, record.ProposalCount, record.Revision, record.CreatedAt, record.AdmissionCorrected, record.AdmissionDowngraded, record.AdmissionStripped, record.AdmissionRejected); err != nil {
+INSERT INTO frontier_generation_runs(id, problem_id, cluster_run_id, run_id, provider_invocation_id, generator_version, requested_count, proposal_count, revision, created_at, admission_corrected, admission_downgraded, admission_stripped, admission_rejected, admission_overflow)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, record.ID, record.ProblemID, record.ClusterRunID, record.RunID, inv.ID, record.GeneratorVersion, record.RequestedCount, record.ProposalCount, record.Revision, record.CreatedAt, record.AdmissionCorrected, record.AdmissionDowngraded, record.AdmissionStripped, record.AdmissionRejected, record.AdmissionOverflow); err != nil {
 		return PersistFrontierGenerationResult{}, err
 	}
 	for _, occ := range dedupOccurrences {
@@ -268,11 +271,11 @@ func (s *Store) GetFrontierGeneration(ctx context.Context, id string) (FrontierG
 
 func (s *Store) loadFrontierGeneration(ctx context.Context, id string) (FrontierGenerationRecord, error) {
 	row := s.db.QueryRowContext(ctx, `
-SELECT id, problem_id, cluster_run_id, run_id, provider_invocation_id, generator_version, requested_count, proposal_count, revision, created_at, admission_corrected, admission_downgraded, admission_stripped, admission_rejected
+SELECT id, problem_id, cluster_run_id, run_id, provider_invocation_id, generator_version, requested_count, proposal_count, revision, created_at, admission_corrected, admission_downgraded, admission_stripped, admission_rejected, admission_overflow
 FROM frontier_generation_runs WHERE id = ?
 `, id)
 	var rec FrontierGenerationRecord
-	if err := row.Scan(&rec.ID, &rec.ProblemID, &rec.ClusterRunID, &rec.RunID, &rec.ProviderInvocationID, &rec.GeneratorVersion, &rec.RequestedCount, &rec.ProposalCount, &rec.Revision, &rec.CreatedAt, &rec.AdmissionCorrected, &rec.AdmissionDowngraded, &rec.AdmissionStripped, &rec.AdmissionRejected); err != nil {
+	if err := row.Scan(&rec.ID, &rec.ProblemID, &rec.ClusterRunID, &rec.RunID, &rec.ProviderInvocationID, &rec.GeneratorVersion, &rec.RequestedCount, &rec.ProposalCount, &rec.Revision, &rec.CreatedAt, &rec.AdmissionCorrected, &rec.AdmissionDowngraded, &rec.AdmissionStripped, &rec.AdmissionRejected, &rec.AdmissionOverflow); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return FrontierGenerationRecord{}, fmt.Errorf("%w: frontier generation %s", ErrNotFound, id)
 		}
@@ -619,4 +622,79 @@ ORDER BY p.id
 		}
 	}
 	return out, nil
+}
+
+// RecordFailedProviderInvocation persists the invocation-attempt envelope of a
+// REJECTED provider response (512bc54 review, finding 3): request, raw
+// response, provider identity, and contract version survive on the FAILED run
+// even though no generation artifact exists — rejection must not erase the
+// rejected material from the durable trail. The run row carries the
+// validation outcome (its error message).
+func (s *Store) RecordFailedProviderInvocation(ctx context.Context, inv FrontierProviderInvocation) error {
+	role := inv.Role
+	if role == "" {
+		role = "generate"
+	}
+	_, err := s.db.ExecContext(ctx, `
+INSERT INTO provider_invocations(id, run_id, role, provider_name, provider_version, model_name, schema_version, request_hash, request_payload, response_payload, created_at)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, inv.ID, inv.RunID, role, inv.ProviderName, inv.ProviderVersion, inv.ModelName, inv.SchemaVersion, inv.RequestHash, inv.RequestPayload, inv.ResponsePayload, inv.CreatedAt)
+	return err
+}
+
+// ProviderInvocationPayloadRow is one retained invocation payload envelope.
+type ProviderInvocationPayloadRow struct {
+	ID              string
+	Role            string
+	ProviderName    string
+	SchemaVersion   string
+	RequestPayload  string
+	ResponsePayload string
+}
+
+// ListProviderInvocationsForRun returns the invocation envelopes recorded for
+// one run — including failed attempts — so audit can read back exactly what
+// was submitted and rejected.
+func (s *Store) ListProviderInvocationsForRun(ctx context.Context, runID string) ([]ProviderInvocationPayloadRow, error) {
+	rows, err := s.db.QueryContext(ctx, `
+SELECT id, role, provider_name, schema_version, COALESCE(request_payload, ''), COALESCE(response_payload, '')
+FROM provider_invocations WHERE run_id = ? ORDER BY id
+`, runID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []ProviderInvocationPayloadRow
+	for rows.Next() {
+		var r ProviderInvocationPayloadRow
+		if err := rows.Scan(&r.ID, &r.Role, &r.ProviderName, &r.SchemaVersion, &r.RequestPayload, &r.ResponsePayload); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+// LatestRunForOperation resolves the most recent run of one operation for a
+// problem — the entry point for auditing a FAILED attempt (whose artifacts
+// exist only on the run: error message + retained invocation envelope).
+func (s *Store) LatestRunForOperation(ctx context.Context, problemID, operation string) (domain.Run, bool, error) {
+	if err := domain.ValidateProblemID(problemID); err != nil {
+		return domain.Run{}, false, err
+	}
+	row := s.db.QueryRowContext(ctx, `
+SELECT id FROM runs WHERE problem_id = ? AND operation = ? ORDER BY started_at DESC, id DESC LIMIT 1
+`, problemID, operation)
+	var id string
+	if err := row.Scan(&id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.Run{}, false, nil
+		}
+		return domain.Run{}, false, err
+	}
+	run, err := s.GetRun(ctx, id)
+	if err != nil {
+		return domain.Run{}, false, err
+	}
+	return run, true, nil
 }

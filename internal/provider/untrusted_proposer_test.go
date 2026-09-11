@@ -117,3 +117,88 @@ func TestUntrustedProposerIsNotTrusted(t *testing.T) {
 		t.Fatal("UntrustedProposer must not implement TrustedStructureAuthor")
 	}
 }
+
+// Finding-4 regressions: strictness covers the whole payload and the declared
+// required prose, and supplied ordinals are validated.
+func TestUntrustedProposerWholePayloadStrictness(t *testing.T) {
+	t.Parallel()
+	cases := map[string]string{
+		"trailing garbage": validWire + " trailing-not-json",
+		"trailing object":  validWire + ` {"field_completeness":{"preserves":"complete"}}`,
+	}
+	for name, raw := range cases {
+		p := NewUntrustedProposer(stringTransport{raw: raw}, Metadata{})
+		if _, err := p.Generate(context.Background(), GenerationRequest{}); !errors.Is(err, ErrProposalWireViolation) {
+			t.Fatalf("%s must be a wire violation, got %v", name, err)
+		}
+	}
+	// Trailing whitespace stays accepted.
+	p := NewUntrustedProposer(stringTransport{raw: validWire + "\n\n  \n"}, Metadata{})
+	if _, err := p.Generate(context.Background(), GenerationRequest{}); err != nil {
+		t.Fatalf("trailing whitespace must be accepted, got %v", err)
+	}
+}
+
+func TestUntrustedProposerRequiresProseAndValidOrdinals(t *testing.T) {
+	t.Parallel()
+	missingProse := strings.Replace(validWire, `"novelty_argument": "new",`, `"novelty_argument": "",`, 1)
+	p := NewUntrustedProposer(stringTransport{raw: missingProse}, Metadata{})
+	if _, err := p.Generate(context.Background(), GenerationRequest{}); !errors.Is(err, ErrProposalWireViolation) {
+		t.Fatalf("missing required prose must be a wire violation, got %v", err)
+	}
+	badOrdinal := strings.Replace(validWire, `"evaluation_cost": "low"`, `"evaluation_cost": "cheap-ish"`, 1)
+	p = NewUntrustedProposer(stringTransport{raw: badOrdinal}, Metadata{})
+	if _, err := p.Generate(context.Background(), GenerationRequest{}); !errors.Is(err, ErrProposalWireViolation) {
+		t.Fatalf("invalid ordinal must be a wire violation, got %v", err)
+	}
+}
+
+// Finding-1 regressions: explicit target attribution is validated and kept
+// FIXED; omission means the strict break-all default.
+func TestUntrustedProposerTargetAttribution(t *testing.T) {
+	t.Parallel()
+	req := GenerationRequest{Targets: []GenerationTarget{{InvariantID: "inv_a"}, {InvariantID: "inv_b"}}}
+
+	explicit := strings.Replace(validWire, `"mechanism": {`, `"target_invariant_ids": ["inv_a"], "mechanism": {`, 1)
+	p := NewUntrustedProposer(stringTransport{raw: explicit}, Metadata{})
+	resp, err := p.Generate(context.Background(), req)
+	if err != nil {
+		t.Fatalf("generate: %v", err)
+	}
+	if got := resp.Proposals[0].TargetInvariantIDs; len(got) != 1 || got[0] != "inv_a" {
+		t.Fatalf("explicit targeting must be preserved exactly: %+v", got)
+	}
+
+	// Default: break-all (documented strict semantics).
+	p = NewUntrustedProposer(stringTransport{raw: validWire}, Metadata{})
+	resp, err = p.Generate(context.Background(), req)
+	if err != nil {
+		t.Fatalf("generate default: %v", err)
+	}
+	if got := resp.Proposals[0].TargetInvariantIDs; len(got) != 2 {
+		t.Fatalf("omitted targeting must claim the full survivor set: %+v", got)
+	}
+
+	// A target outside the survivor set is a violation, not silent adoption.
+	invalid := strings.Replace(validWire, `"mechanism": {`, `"target_invariant_ids": ["inv_zzz"], "mechanism": {`, 1)
+	p = NewUntrustedProposer(stringTransport{raw: invalid}, Metadata{})
+	if _, err := p.Generate(context.Background(), req); !errors.Is(err, ErrProposalWireViolation) {
+		t.Fatalf("an unknown target id must be a wire violation, got %v", err)
+	}
+}
+
+// Finding-3 regression (adapter layer): a rejected payload still returns its
+// attempt envelope so the pipeline can persist it.
+func TestUntrustedProposerRejectionKeepsPayloadEnvelope(t *testing.T) {
+	t.Parallel()
+	smuggled := strings.Replace(validWire, `"preserves": ["residue locality"],`,
+		`"preserves": ["residue locality"], "canonical_id": "core.x",`, 1)
+	p := NewUntrustedProposer(stringTransport{raw: smuggled}, Metadata{ProviderName: "m"})
+	resp, err := p.Generate(context.Background(), GenerationRequest{})
+	if !errors.Is(err, ErrProposalWireViolation) {
+		t.Fatalf("want wire violation, got %v", err)
+	}
+	if resp.ResponsePayload != smuggled || resp.RequestPayload == "" {
+		t.Fatal("a rejected attempt must keep its request/response envelope for audit")
+	}
+}

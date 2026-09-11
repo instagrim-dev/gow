@@ -112,6 +112,12 @@ type problemStore interface {
 	// HasEvaluationForContent reports whether any evaluation assessed exactly
 	// this content revision — content-scoped batch eligibility (a47dd24 f3).
 	HasEvaluationForContent(context.Context, string, string) (bool, error)
+	// RecordFailedProviderInvocation retains a REJECTED provider attempt's
+	// payload envelope on the failed run (512bc54 f3).
+	RecordFailedProviderInvocation(context.Context, store.FrontierProviderInvocation) error
+	// ListProviderInvocationsForRun reads back a run's invocation envelopes,
+	// including failed attempts.
+	ListProviderInvocationsForRun(context.Context, string) ([]store.ProviderInvocationPayloadRow, error)
 	RedundantAttackKeys(context.Context, string, int) ([]string, error)
 	ListBreakCohortRows(context.Context, string) ([]store.BreakCohortRow, error)
 	PersistSuccessRevision(context.Context, store.SuccessRevisionRecord) (store.PersistSuccessRevisionResult, error)

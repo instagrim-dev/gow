@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 30
+const currentSchemaVersion = 31
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -1002,6 +1002,16 @@ END;
 		// policy follows the latest selection. Backfilled from existing
 		// revisions (their creating executions).
 		apply: migrateV30PolicySelections,
+	},
+	{
+		version: 31,
+		// External-proposal import hardening (512bc54 review, finding 2):
+		// frontier_generation_runs gains admission_overflow — proposals an
+		// untrusted provider supplied beyond the requested count, which the
+		// pipeline deterministically truncates (wire order) BEFORE scoring
+		// rather than leaving the bound to provider cooperation. The raw
+		// response retains the full set.
+		apply: migrateV31AdmissionOverflow,
 	},
 }
 
@@ -3336,4 +3346,17 @@ INSERT OR IGNORE INTO policy_mutation_selections(run_id, problem_id, policy_revi
 SELECT run_id, problem_id, id, created_at FROM search_policy_revisions
 `)
 	return err
+}
+
+func migrateV31AdmissionOverflow(ctx context.Context, tx *sql.Tx) error {
+	has, err := columnExists(ctx, tx, "frontier_generation_runs", "admission_overflow")
+	if err != nil {
+		return err
+	}
+	if !has {
+		if _, err := tx.ExecContext(ctx, `ALTER TABLE frontier_generation_runs ADD COLUMN admission_overflow INTEGER NOT NULL DEFAULT 0`); err != nil {
+			return err
+		}
+	}
+	return nil
 }

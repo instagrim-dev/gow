@@ -728,6 +728,7 @@ type FrontierGenerationView struct {
 	AdmissionDowngraded int                    `json:"admission_downgraded"`
 	AdmissionStripped   int                    `json:"admission_stripped"`
 	AdmissionRejected   int                    `json:"admission_rejected"`
+	AdmissionOverflow   int                    `json:"admission_overflow"`
 	Proposals           []FrontierProposalView `json:"proposals"`
 }
 

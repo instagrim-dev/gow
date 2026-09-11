@@ -453,6 +453,12 @@ func (f *fakeProblemStore) ListOccurrenceProposalRows(context.Context, string) (
 func (f *fakeProblemStore) HasEvaluationForContent(context.Context, string, string) (bool, error) {
 	return false, errors.New("unexpected call")
 }
+func (f *fakeProblemStore) RecordFailedProviderInvocation(context.Context, store.FrontierProviderInvocation) error {
+	return errors.New("unexpected call")
+}
+func (f *fakeProblemStore) ListProviderInvocationsForRun(context.Context, string) ([]store.ProviderInvocationPayloadRow, error) {
+	return nil, errors.New("unexpected call")
+}
 
 func (f *fakeProblemStore) RedundantAttackKeys(context.Context, string, int) ([]string, error) {
 	return nil, errors.New("unexpected call")

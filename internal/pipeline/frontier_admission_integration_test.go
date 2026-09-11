@@ -11,6 +11,7 @@ import (
 
 	"github.com/instagrim-dev/newf/internal/canon"
 	"github.com/instagrim-dev/newf/internal/domain"
+	"github.com/instagrim-dev/newf/internal/invariant"
 	"github.com/instagrim-dev/newf/internal/provider"
 )
 
@@ -234,4 +235,256 @@ func TestIntegrationProposalsFileEntersThroughAdmission(t *testing.T) {
 	// Raw wire payload retention is proven at the adapter layer
 	// (TestUntrustedProposerParsesLabelOnlyClaims); the generation read-back
 	// does not rehydrate invocation payloads.
+}
+
+// seedTwoSurvivors builds a corpus whose failure families share BOTH a
+// preserves id (residue_locality) and an operator id (modular_decomposition),
+// so the CLI-default miner derives TWO candidates; both survive a bias-only
+// campaign. Returns (problemID, preservesInvariantID, operatorInvariantID).
+func seedTwoSurvivors(t *testing.T, ctx context.Context, app *App, dbPath string) (string, string, string) {
+	t.Helper()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	problemID, runID, snapshotID := seedProblemAndSnapshot(t, ctx, dbPath, now)
+	fixture := &MechanismFixture{Approaches: []MechanismFixtureApproach{
+		{
+			LogicalIdentity: "fail-shared-a", Label: "Failed shared A",
+			Locality: "local", ConstructionMode: "constructive", UncertaintyMode: "deterministic",
+			Operators: []string{"modular decomposition"}, Preserves: []string{"residue locality"},
+			Outcome: MechanismFixtureOutcome{Class: "failure"},
+		},
+		{
+			LogicalIdentity: "fail-shared-b", Label: "Failed shared B",
+			Locality: "local", ConstructionMode: "constructive", UncertaintyMode: "deterministic",
+			Operators: []string{"modular decomposition"}, Preserves: []string{"residue locality"},
+			Assumptions: []string{"residue independence"}, // keeps the families distinct
+			Outcome:     MechanismFixtureOutcome{Class: "failure"},
+		},
+		{
+			LogicalIdentity: "contrast", Label: "Partial success contrast",
+			Locality: "global", ConstructionMode: "constructive", UncertaintyMode: "deterministic",
+			Preserves: []string{"mean growth rate"},
+			Outcome:   MechanismFixtureOutcome{Class: "partial_success"},
+		},
+	}}
+	seed, err := app.SeedMechanismFixture(ctx, MechanismFixtureSeedInput{DBPath: dbPath, ProblemID: problemID, RunID: runID, SnapshotID: snapshotID, Fixture: fixture})
+	if err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	for _, mechID := range seed.MechanismIDs {
+		if _, err := app.SignatureMechanism(ctx, SignatureInput{DBPath: dbPath, MechanismID: mechID, VocabVersion: canon.VocabularyMechanismV1}); err != nil {
+			t.Fatalf("signature: %v", err)
+		}
+	}
+	if _, err := app.BuildClustering(ctx, ClusterBuildInput{DBPath: dbPath, ProblemID: problemID}); err != nil {
+		t.Fatalf("cluster: %v", err)
+	}
+	if _, err := app.BuildFailureSpace(ctx, FailureSpaceBuildInput{DBPath: dbPath, ProblemID: problemID}); err != nil {
+		t.Fatalf("failure-space: %v", err)
+	}
+	mined, err := app.MineInvariants(ctx, InvariantMineInput{DBPath: dbPath, ProblemID: problemID, MinSupport: 2})
+	if err != nil {
+		t.Fatalf("mine: %v", err)
+	}
+	if mined.Revision.CandidateCount != 2 {
+		t.Fatalf("want 2 candidates (shared preserves + shared operator), got %d", mined.Revision.CandidateCount)
+	}
+	var preservesInv, operatorInv string
+	wantPreserves := invariant.Predicate{Schema: invariant.PredicateSchemaV1,
+		Root: invariant.Node{Op: invariant.OpContains, Field: invariant.FieldPreserves, CanonicalID: pcResidueLocality}}.Fingerprint()
+	for _, c := range mined.Revision.Candidates {
+		if c.PredicateFingerprint == wantPreserves {
+			preservesInv = c.ID
+		} else {
+			operatorInv = c.ID
+		}
+		if resp, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: c.ID}); err != nil || resp.Reports[0].StateAfter != "surviving" {
+			t.Fatalf("challenge %s: %v / %+v", c.ID, err, resp.Reports)
+		}
+	}
+	if preservesInv == "" || operatorInv == "" {
+		t.Fatalf("could not identify both survivors: %+v", mined.Revision.Candidates)
+	}
+	return problemID, preservesInv, operatorInv
+}
+
+// TestIntegrationExplicitTargetingFixesTheClaim is the 512bc54 finding-1
+// regression: with TWO survivors, an explicitly single-targeted wire proposal
+// whose mechanism SATISFIES the untargeted operator invariant must NOT be
+// refuted by that untargeted invariant — while the same wire under the
+// documented break-all default IS decisively refuted.
+func TestIntegrationExplicitTargetingFixesTheClaim(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.challengerFn = biasOnlyChallenger{}
+
+	problemID, preservesInv, operatorInv := seedTwoSurvivors(t, ctx, app, dbPath)
+
+	wireFor := func(targetLine string) string {
+		return `{
+  "schema_version": "proposal-wire/v1",
+  "proposals": [{` + targetLine + `
+    "mechanism": {
+      "preserves": ["mean growth rate"],
+      "operators": ["modular decomposition"],
+      "locality": "global",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic"
+    },
+    "structural_violation_claim": "escapes residue locality",
+    "novelty_argument": "keeps the operator, changes the preserved property",
+    "cheapest_falsification_path": "check the preserved set",
+    "expected_information_gain": "medium",
+    "evaluation_cost": "low"
+  }]
+}`
+	}
+
+	// Explicitly targeted: preserving the UNTARGETED operator invariant is not
+	// a refutation; the intended target stays unknown (no accepted
+	// completeness), so evaluation is non-decisive — never `failure`.
+	path := filepath.Join(t.TempDir(), "targeted.json")
+	if err := os.WriteFile(path, []byte(wireFor(`
+    "target_invariant_ids": ["`+preservesInv+`"],`)), 0o644); err != nil {
+		t.Fatalf("write wire: %v", err)
+	}
+	gen, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID, ProposalsFile: path})
+	if err != nil {
+		t.Fatalf("generate targeted: %v", err)
+	}
+	prop := gen.Generation.Proposals[0]
+	if len(prop.Targets) != 1 || prop.Targets[0].InvariantID != preservesInv {
+		t.Fatalf("the persisted claim must be the EXPLICIT subset: %+v", prop.Targets)
+	}
+	res, err := app.Evaluate(ctx, EvaluateInput{DBPath: dbPath, ProblemID: problemID, ProposalID: prop.ID})
+	if err != nil {
+		t.Fatalf("evaluate targeted: %v", err)
+	}
+	if v := res.Run.Evaluations[0].Verdict; v == "failure" {
+		t.Fatalf("an untargeted invariant must not refute an explicitly targeted proposal (got %q)", v)
+	}
+
+	// Control — break-all default: the same mechanism SATISFIES the operator
+	// invariant it now implicitly claims to break -> deterministic failure.
+	pathAll := filepath.Join(t.TempDir(), "break-all.json")
+	if err := os.WriteFile(pathAll, []byte(wireFor("")), 0o644); err != nil {
+		t.Fatalf("write wire: %v", err)
+	}
+	genAll, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID, ProposalsFile: pathAll})
+	if err != nil {
+		t.Fatalf("generate break-all: %v", err)
+	}
+	propAll := genAll.Generation.Proposals[0]
+	if len(propAll.Targets) != 2 {
+		t.Fatalf("break-all default must claim both survivors: %+v", propAll.Targets)
+	}
+	resAll, err := app.Evaluate(ctx, EvaluateInput{DBPath: dbPath, ProblemID: problemID, ProposalID: propAll.ID})
+	if err != nil {
+		t.Fatalf("evaluate break-all: %v", err)
+	}
+	if v := resAll.Run.Evaluations[0].Verdict; v != "failure" {
+		t.Fatalf("break-all semantics stay strict: preserving %s must refute (got %q)", operatorInv, v)
+	}
+}
+
+// TestIntegrationCountBoundsExternalProposals is the 512bc54 finding-2
+// regression: the requested count bounds admission/scoring on the external
+// path — never left to provider cooperation. Excess proposals are
+// deterministically truncated in wire order and the overflow is persisted.
+func TestIntegrationCountBoundsExternalProposals(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = minPreservesMiner{}
+	app.challengerFn = biasOnlyChallenger{}
+
+	problemID, invID, _ := mineOneCandidate(t, ctx, app, dbPath)
+	if resp, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID}); err != nil || resp.Reports[0].StateAfter != "surviving" {
+		t.Fatalf("challenge: %v / %+v", err, resp.Reports)
+	}
+
+	wire := `{
+  "schema_version": "proposal-wire/v1",
+  "proposals": [
+    {"mechanism": {"preserves": ["residue locality"], "locality": "global", "construction_mode": "constructive", "uncertainty_mode": "deterministic"},
+     "structural_violation_claim": "first", "novelty_argument": "n1", "cheapest_falsification_path": "c1"},
+    {"mechanism": {"preserves": ["mean growth rate"], "locality": "global", "construction_mode": "constructive", "uncertainty_mode": "deterministic"},
+     "structural_violation_claim": "second", "novelty_argument": "n2", "cheapest_falsification_path": "c2"}
+  ]
+}`
+	path := filepath.Join(t.TempDir(), "two-proposals.json")
+	if err := os.WriteFile(path, []byte(wire), 0o644); err != nil {
+		t.Fatalf("write wire: %v", err)
+	}
+	gen, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID, ProposalsFile: path, Count: 1})
+	if err != nil {
+		t.Fatalf("generate: %v", err)
+	}
+	if len(gen.Generation.Proposals) != 1 {
+		t.Fatalf("count=1 must bound the scored membership, got %d proposals", len(gen.Generation.Proposals))
+	}
+	if gen.Generation.Proposals[0].StructuralViolationClaim != "first" {
+		t.Fatalf("truncation must be deterministic in wire order: %+v", gen.Generation.Proposals[0].StructuralViolationClaim)
+	}
+	repo := openTestStore(t, ctx, dbPath)
+	defer repo.Close()
+	rec, err := repo.GetFrontierGeneration(ctx, gen.Generation.ID)
+	if err != nil {
+		t.Fatalf("record: %v", err)
+	}
+	if rec.AdmissionOverflow != 1 || rec.RequestedCount != 1 {
+		t.Fatalf("overflow disposition must be persisted (overflow=1, requested=1): overflow=%d requested=%d", rec.AdmissionOverflow, rec.RequestedCount)
+	}
+}
+
+// TestIntegrationRejectedWirePayloadIsRetained is the 512bc54 finding-3
+// regression: a rejected wire payload (forbidden authority fields) fails the
+// run AND survives as a durable invocation envelope on that failed run — the
+// exact attempted bytes are readable back from the audit trail.
+func TestIntegrationRejectedWirePayloadIsRetained(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = minPreservesMiner{}
+	app.challengerFn = biasOnlyChallenger{}
+
+	problemID, invID, _ := mineOneCandidate(t, ctx, app, dbPath)
+	if resp, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID}); err != nil || resp.Reports[0].StateAfter != "surviving" {
+		t.Fatalf("challenge: %v / %+v", err, resp.Reports)
+	}
+
+	smuggled := `{
+  "schema_version": "proposal-wire/v1",
+  "proposals": [{
+    "mechanism": {"preserves": ["residue locality"], "field_completeness": {"preserves": "complete"}, "locality": "global", "construction_mode": "constructive", "uncertainty_mode": "deterministic"},
+    "structural_violation_claim": "x", "novelty_argument": "y", "cheapest_falsification_path": "z"
+  }]
+}`
+	path := filepath.Join(t.TempDir(), "smuggled.json")
+	if err := os.WriteFile(path, []byte(smuggled), 0o644); err != nil {
+		t.Fatalf("write wire: %v", err)
+	}
+	if _, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID, ProposalsFile: path}); err == nil {
+		t.Fatal("smuggled authority fields must reject the generation")
+	}
+
+	repo := openTestStore(t, ctx, dbPath)
+	defer repo.Close()
+	run, found, err := repo.LatestRunForOperation(ctx, problemID, "frontier generate")
+	if err != nil || !found {
+		t.Fatalf("failed run must exist: %v %v", err, found)
+	}
+	if run.Status != domain.RunStatusFailed {
+		t.Fatalf("run status = %q, want failed", run.Status)
+	}
+	invs, err := repo.ListProviderInvocationsForRun(ctx, run.ID)
+	if err != nil || len(invs) != 1 {
+		t.Fatalf("the rejected attempt must leave ONE invocation envelope: %v %d", err, len(invs))
+	}
+	if invs[0].ResponsePayload != smuggled {
+		t.Fatalf("the EXACT attempted payload must be readable back, got %q", invs[0].ResponsePayload)
+	}
+	if invs[0].RequestPayload == "" || invs[0].ProviderName != "external-file" {
+		t.Fatalf("the envelope must carry request + provider identity: %+v", invs[0])
+	}
 }

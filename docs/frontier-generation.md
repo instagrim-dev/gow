@@ -129,6 +129,7 @@ required directed-generation prose:
 {
   "schema_version": "proposal-wire/v1",
   "proposals": [{
+    "target_invariant_ids": ["cinv_..."],
     "mechanism": {
       "preserves": ["residue locality"],
       "locality": "global",
@@ -142,9 +143,28 @@ required directed-generation prose:
 }
 ```
 
+Wire semantics:
+
+- `target_invariant_ids` names the survivors THIS proposal claims to break,
+  validated against the supplied survivor set (referencing a target grants no
+  authority over its truth). **Omitted means break-all** — the strict default,
+  which a later-added unrelated survivor can legitimately refute; an explicit
+  subset keeps the claim fixed, so preserving an untargeted invariant is never
+  a refutation.
+- all three prose fields are required; supplied ordinals must be valid.
+- decoding is strict over the WHOLE payload: unknown fields (e.g. a smuggled
+  `canonical_id` or `field_completeness`) and trailing content are visible
+  schema violations, never silent drops. Trailing whitespace is fine.
+- the requested `--count` bounds admission/scoring: excess proposals are
+  deterministically truncated in wire order, with the overflow persisted on
+  the generation audit (`admission_overflow`) and the full set retained in the
+  raw response payload.
+- a REJECTED payload still leaves a durable invocation envelope (request, raw
+  response, provider identity) on the failed run, so audit can read back
+  exactly what was submitted and refused.
+
 The wire deliberately CANNOT express canonical ids, resolution states, or
-field completeness — decoding is strict, so a smuggled authority field is a
-visible schema violation, not a silent drop. Claims enter unresolved and pass
+field completeness. Claims enter unresolved and pass
 the admission boundary above. A live HTTP adapter implements the same
 `ProposalTransport` seam, so the parsing/admission path is identical for
 captured files and live calls.

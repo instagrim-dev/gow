@@ -180,6 +180,24 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 
 	resp, err := generator.Generate(ctx, req)
 	if err != nil {
+		// Finding 3: a REJECTED attempt keeps its durable trail. The adapter
+		// returns the attempted payload envelope alongside the error; persist
+		// it on the (failed) run before failing, so audit can read back
+		// exactly what was submitted and rejected.
+		if resp.RequestPayload != "" || resp.ResponsePayload != "" {
+			_ = repoStore.RecordFailedProviderInvocation(ctx, store.FrontierProviderInvocation{
+				ID:              domain.NewProviderInvocationID(now),
+				RunID:           run.ID,
+				Role:            opts.role,
+				ProviderName:    resp.Metadata.ProviderName,
+				ProviderVersion: resp.Metadata.ProviderVersion,
+				ModelName:       resp.Metadata.ModelName,
+				SchemaVersion:   resp.Metadata.SchemaVersion,
+				RequestPayload:  resp.RequestPayload,
+				ResponsePayload: resp.ResponsePayload,
+				CreatedAt:       now.Format(timeLayout),
+			})
+		}
 		a.failRun(ctx, repoStore, run.ID, err)
 		return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
 	}
@@ -195,7 +213,7 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 	// auditable verbatim in the persisted invocation payload; the admitted
 	// signature is what code compares, hashes, and evaluates.
 	admittedProposals := resp.Proposals
-	var admCorrected, admDowngraded, admStripped, admRejected int
+	var admCorrected, admDowngraded, admStripped, admRejected, admOverflow int
 	if _, trusted := generator.(provider.TrustedStructureAuthor); !trusted {
 		vocab, verr := a.loadVocabulary(ctx, repoStore, clusterRun.VocabularyVersion)
 		if verr != nil {
@@ -220,6 +238,14 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 			admitted.VocabularyVersion = clusterRun.VocabularyVersion
 			p.ProposedSignature = admitted
 			admittedProposals = append(admittedProposals, p)
+		}
+		// Finding 2: the requested count bounds admission/scoring work — never
+		// left to provider cooperation. Excess proposals are deterministically
+		// TRUNCATED in wire order (the raw response retains the full set) and
+		// the overflow is persisted on the generation audit.
+		if count > 0 && len(admittedProposals) > count {
+			admOverflow = len(admittedProposals) - count
+			admittedProposals = admittedProposals[:count]
 		}
 	}
 
@@ -265,6 +291,7 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 	record.AdmissionDowngraded = admDowngraded
 	record.AdmissionStripped = admStripped
 	record.AdmissionRejected = admRejected
+	record.AdmissionOverflow = admOverflow
 	result, err := repoStore.PersistFrontierGeneration(ctx, record)
 	if err != nil {
 		a.failRun(ctx, repoStore, run.ID, err)
@@ -510,6 +537,7 @@ func frontierGenerationView(rec store.FrontierGenerationRecord) FrontierGenerati
 		AdmissionDowngraded: rec.AdmissionDowngraded,
 		AdmissionStripped:   rec.AdmissionStripped,
 		AdmissionRejected:   rec.AdmissionRejected,
+		AdmissionOverflow:   rec.AdmissionOverflow,
 	}
 	for _, p := range rec.Proposals {
 		pv := FrontierProposalView{

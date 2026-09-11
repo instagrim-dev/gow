@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -43,12 +44,20 @@ type WireMechanism struct {
 // WireProposal is one untrusted proposal: a label-only mechanism plus the
 // required directed-generation prose.
 type WireProposal struct {
-	Mechanism                 WireMechanism `json:"mechanism"`
-	StructuralViolationClaim  string        `json:"structural_violation_claim"`
-	NoveltyArgument           string        `json:"novelty_argument"`
-	CheapestFalsificationPath string        `json:"cheapest_falsification_path"`
-	ExpectedInformationGain   string        `json:"expected_information_gain,omitempty"`
-	EvaluationCost            string        `json:"evaluation_cost,omitempty"`
+	Mechanism WireMechanism `json:"mechanism"`
+	// TargetInvariantIDs names the surviving invariants THIS proposal claims
+	// to break, validated against the request's survivor set (referencing an
+	// allowed target grants no authority over its truth — code verifies the
+	// violation). When omitted, the proposal claims to break EVERY supplied
+	// survivor — the strict documented default, which a later-added unrelated
+	// survivor can legitimately refute. An explicit subset keeps the claim
+	// fixed: preserving an untargeted invariant is never a refutation.
+	TargetInvariantIDs        []string `json:"target_invariant_ids,omitempty"`
+	StructuralViolationClaim  string   `json:"structural_violation_claim"`
+	NoveltyArgument           string   `json:"novelty_argument"`
+	CheapestFalsificationPath string   `json:"cheapest_falsification_path"`
+	ExpectedInformationGain   string   `json:"expected_information_gain,omitempty"`
+	EvaluationCost            string   `json:"evaluation_cost,omitempty"`
 }
 
 // WireResponse is the full untrusted proposer payload.
@@ -105,32 +114,71 @@ func (p *UntrustedProposer) Generate(ctx context.Context, req GenerationRequest)
 	reqRaw, _ := json.Marshal(req)
 	raw, err := p.transport.Fetch(ctx, req)
 	if err != nil {
-		return GenerationResponse{}, err
+		return payloadEnvelope(string(reqRaw), "", p.meta), err
 	}
 
 	dec := json.NewDecoder(bytes.NewReader([]byte(raw)))
 	dec.DisallowUnknownFields()
 	var wire WireResponse
 	if err := dec.Decode(&wire); err != nil {
-		return GenerationResponse{}, fmt.Errorf("%w: %v", ErrProposalWireViolation, err)
+		return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: %v", ErrProposalWireViolation, err)
+	}
+	// Strictness covers the WHOLE payload, not just the first JSON value: a
+	// trailing document or garbage suffix is a violation (trailing whitespace
+	// is fine — Token returns io.EOF over it).
+	if _, terr := dec.Token(); terr != io.EOF {
+		return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: trailing content after the wire document", ErrProposalWireViolation)
 	}
 	if wire.SchemaVersion != ProposalWireVersion {
-		return GenerationResponse{}, fmt.Errorf("%w: schema_version %q, want %q", ErrProposalWireViolation, wire.SchemaVersion, ProposalWireVersion)
+		return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: schema_version %q, want %q", ErrProposalWireViolation, wire.SchemaVersion, ProposalWireVersion)
 	}
 
-	targetIDs := make([]string, 0, len(req.Targets))
+	allTargets := make([]string, 0, len(req.Targets))
+	allowed := make(map[string]bool, len(req.Targets))
 	for _, t := range req.Targets {
-		targetIDs = append(targetIDs, t.InvariantID)
+		allTargets = append(allTargets, t.InvariantID)
+		allowed[t.InvariantID] = true
 	}
 
 	proposals := make([]FrontierProposal, 0, len(wire.Proposals))
 	for i, wp := range wire.Proposals {
 		sig, serr := wireSignature(wp.Mechanism)
 		if serr != nil {
-			return GenerationResponse{}, fmt.Errorf("%w: proposal[%d]: %v", ErrProposalWireViolation, i, serr)
+			return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: proposal[%d]: %v", ErrProposalWireViolation, i, serr)
 		}
-		if strings.TrimSpace(wp.StructuralViolationClaim) == "" {
-			return GenerationResponse{}, fmt.Errorf("%w: proposal[%d]: structural_violation_claim is required", ErrProposalWireViolation, i)
+		for _, field := range []struct{ name, value string }{
+			{"structural_violation_claim", wp.StructuralViolationClaim},
+			{"novelty_argument", wp.NoveltyArgument},
+			{"cheapest_falsification_path", wp.CheapestFalsificationPath},
+		} {
+			if strings.TrimSpace(field.value) == "" {
+				return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: proposal[%d]: %s is required", ErrProposalWireViolation, i, field.name)
+			}
+		}
+		for _, ord := range []struct{ name, value string }{
+			{"expected_information_gain", wp.ExpectedInformationGain},
+			{"evaluation_cost", wp.EvaluationCost},
+		} {
+			if ord.value != "" && !domain.Ordinal(ord.value).Valid() {
+				return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: proposal[%d]: invalid %s %q", ErrProposalWireViolation, i, ord.name, ord.value)
+			}
+		}
+		// Target attribution (finding 1): an explicit subset keeps the claim
+		// FIXED — validated against the survivor set, deduplicated. Omitted
+		// means the strict break-all default.
+		targetIDs := allTargets
+		if len(wp.TargetInvariantIDs) > 0 {
+			seen := map[string]bool{}
+			targetIDs = make([]string, 0, len(wp.TargetInvariantIDs))
+			for _, id := range wp.TargetInvariantIDs {
+				if !allowed[id] {
+					return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: proposal[%d]: target %q is not a supplied surviving invariant", ErrProposalWireViolation, i, id)
+				}
+				if !seen[id] {
+					seen[id] = true
+					targetIDs = append(targetIDs, id)
+				}
+			}
 		}
 		proposals = append(proposals, FrontierProposal{
 			ProposedSignature:         sig,
@@ -149,6 +197,14 @@ func (p *UntrustedProposer) Generate(ctx context.Context, req GenerationRequest)
 		RequestPayload:  string(reqRaw),
 		ResponsePayload: raw,
 	}, nil
+}
+
+// payloadEnvelope returns a proposal-free response that still carries the
+// attempted request/response payloads and provider identity, so a REJECTED
+// attempt can be persisted for audit (finding 3) — rejection must not erase
+// the rejected material from the durable trail.
+func payloadEnvelope(reqPayload, respPayload string, meta Metadata) GenerationResponse {
+	return GenerationResponse{Metadata: meta, RequestPayload: reqPayload, ResponsePayload: respPayload}
 }
 
 // wireSignature builds the label-only, UNRESOLVED canonical signature: every
