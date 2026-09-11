@@ -62,14 +62,20 @@ func newInterpretationCommand(stdout io.Writer, app *pipeline.App, opts *rootOpt
 	_ = addCmd.MarkFlagRequired("provenance")
 	cmd.AddCommand(addCmd)
 
+	var listProblem string
 	listCmd := &cobra.Command{
-		Use:   "list <mechanism-id>",
-		Short: "List the interpretation claims attached to a mechanism",
-		Args:  cobra.ExactArgs(1),
+		Use:   "list [mechanism-id]",
+		Short: "List interpretation claims for a mechanism, or a whole problem with --problem",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			mechID := ""
+			if len(args) == 1 {
+				mechID = args[0]
+			}
 			result, err := app.ListInterpretations(cmd.Context(), pipeline.InterpretationListInput{
 				DBPath:      opts.dbPath,
-				MechanismID: args[0],
+				MechanismID: mechID,
+				ProblemID:   listProblem,
 				JSONOutput:  opts.jsonOutput,
 			})
 			if err != nil {
@@ -82,6 +88,7 @@ func newInterpretationCommand(stdout io.Writer, app *pipeline.App, opts *rootOpt
 			return nil
 		},
 	}
+	listCmd.Flags().StringVar(&listProblem, "problem", "", "List every interpretation claim in this problem, joined with approach identity")
 	cmd.AddCommand(listCmd)
 
 	return cmd
@@ -107,9 +114,13 @@ func writeInterpretationListHuman(w io.Writer, result pipeline.InterpretationLis
 		return
 	}
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	fmt.Fprintln(tw, "ID\tFIELD\tLABEL\tPROVENANCE")
+	fmt.Fprintln(tw, "ID\tAPPROACH\tFIELD\tLABEL\tPROVENANCE")
 	for _, c := range result.Claims {
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", c.ID, c.Field, c.Label, c.ProvenanceRef)
+		identity := c.LogicalIdentity
+		if identity == "" {
+			identity = c.MechanismID
+		}
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", c.ID, identity, c.Field, c.Label, c.ProvenanceRef)
 	}
 	tw.Flush()
 }

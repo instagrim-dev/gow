@@ -291,6 +291,10 @@ func (f *fakeProblemStore) ListInterpretationClaims(context.Context, string) ([]
 	return nil, nil
 }
 
+func (f *fakeProblemStore) ListInterpretationClaimsForProblem(context.Context, string) ([]store.ProblemInterpretationClaimRow, error) {
+	return nil, nil
+}
+
 func (f *fakeProblemStore) ListApproachRevisions(context.Context, string) (domain.Approach, []domain.ApproachRevision, error) {
 	return domain.Approach{}, nil, errors.New("unexpected call")
 }

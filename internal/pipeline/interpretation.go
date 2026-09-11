@@ -29,6 +29,8 @@ type InterpretationClaimView struct {
 	ID              string `json:"id"`
 	ProblemID       string `json:"problem_id"`
 	MechanismID     string `json:"mechanism_id"`
+	LogicalIdentity string `json:"logical_identity,omitempty"`
+	ApproachLabel   string `json:"approach_label,omitempty"`
 	Field           string `json:"field"`
 	Label           string `json:"label"`
 	ProvenanceRef   string `json:"provenance_ref"`
@@ -47,10 +49,14 @@ type InterpretationAddResponse struct {
 	Claim   InterpretationClaimView `json:"claim"`
 }
 
-// InterpretationListInput lists the interpretation claims of one mechanism.
+// InterpretationListInput lists interpretation claims: either one mechanism's
+// (MechanismID) or a whole problem's joined with approach identity (ProblemID)
+// — pilot preparations previously had to assemble mechanism-id maps by hand
+// to audit a problem's claims. Exactly one selector is required.
 type InterpretationListInput struct {
 	DBPath      string
 	MechanismID string
+	ProblemID   string
 	JSONOutput  bool
 }
 
@@ -134,19 +140,45 @@ func (a *App) AddInterpretation(ctx context.Context, input InterpretationAddInpu
 	}, nil
 }
 
-// ListInterpretations returns the interpretation claims of one mechanism.
+// ListInterpretations returns interpretation claims for one mechanism or one
+// problem (see InterpretationListInput).
 func (a *App) ListInterpretations(ctx context.Context, input InterpretationListInput) (InterpretationListResponse, error) {
+	if (input.MechanismID == "") == (input.ProblemID == "") {
+		return InterpretationListResponse{}, fmt.Errorf("exactly one of a mechanism id or --problem is required")
+	}
 	dbPath, repoStore, err := a.openStoreFn(ctx, input.DBPath)
 	if err != nil {
 		return InterpretationListResponse{}, err
 	}
 	defer repoStore.Close()
 
+	resp := InterpretationListResponse{OK: true, Command: "interpretation list", Store: dbPath}
+	if input.ProblemID != "" {
+		rows, lerr := repoStore.ListInterpretationClaimsForProblem(ctx, input.ProblemID)
+		if lerr != nil {
+			return InterpretationListResponse{}, lerr
+		}
+		for _, r := range rows {
+			resp.Claims = append(resp.Claims, InterpretationClaimView{
+				ID:              r.ID,
+				ProblemID:       r.ProblemID,
+				MechanismID:     r.MechanismID,
+				LogicalIdentity: r.LogicalIdentity,
+				ApproachLabel:   r.ApproachLabel,
+				Field:           r.FieldKind,
+				Label:           r.SurfaceLabel,
+				ProvenanceRef:   r.ProvenanceRef,
+				Basis:           r.Basis,
+				CreatedAt:       r.CreatedAt,
+			})
+		}
+		return resp, nil
+	}
+
 	rows, err := repoStore.ListInterpretationClaims(ctx, input.MechanismID)
 	if err != nil {
 		return InterpretationListResponse{}, err
 	}
-	resp := InterpretationListResponse{OK: true, Command: "interpretation list", Store: dbPath}
 	for _, r := range rows {
 		resp.Claims = append(resp.Claims, InterpretationClaimView{
 			ID:            r.ID,
