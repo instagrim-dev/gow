@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
@@ -136,6 +137,15 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 		return EvaluateResponse{}, err
 	}
 
+	// Round-2 F1: select the assessed signature revision BEFORE verification —
+	// the occurrence binding of the generation under evaluation. Verdicts are
+	// recomputed against those exact bytes and the persisted evaluation stores
+	// the SUPPLIED hash, never an independent "latest" lookup.
+	occurrences, oerr := repoStore.ListGenerationOccurrenceContents(ctx, gen.ID)
+	if oerr != nil {
+		return EvaluateResponse{}, oerr
+	}
+
 	model := a.modelVerifier()
 	verifiers := a.verifiers(model)
 	now := a.now()
@@ -166,7 +176,18 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 	}
 
 	for _, p := range selected {
-		vc, staleTarget := verificationContextForProposal(p, predicates, reps)
+		var content *canon.MechanismSignature
+		contentHash := ""
+		if oc, ok := occurrences[p.ID]; ok && oc.SignatureJSON != "" {
+			var sig canon.MechanismSignature
+			if uerr := json.Unmarshal([]byte(oc.SignatureJSON), &sig); uerr != nil {
+				a.failRun(ctx, repoStore, run.ID, uerr)
+				return EvaluateResponse{}, fmt.Errorf("proposal %s: corrupt persisted signature: %w", p.ID, uerr)
+			}
+			content = &sig
+			contentHash = oc.ContentHash
+		}
+		vc, staleTarget := verificationContextForProposal(p, predicates, reps, content)
 		var decision verify.Decision
 		if staleTarget {
 			// H5: a claimed target is no longer targetable (weaken/falsified). We do
@@ -196,6 +217,7 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 			VerificationStrength: string(decision.Strength),
 			ConfidenceOrdinal:    decision.ConfidenceOrdinal,
 			Notes:                decision.Notes,
+			SignatureContentHash: contentHash,
 		}
 		if decision.Kind == verify.KindModelJudgment {
 			row.Invocation = a.evaluationInvocation(model, run.ID, now)
@@ -320,7 +342,15 @@ func (a *App) clusterRepresentatives(ctx context.Context, repoStore problemStore
 //   - Recorded nearest families (G1): comparison verdicts come from re-evaluating
 //     the live target predicate against the proposal's OWN recorded nearest
 //     cluster representatives, not every representative in the run.
-func verificationContextForProposal(p store.FrontierProposalRow, predicates map[string]invariant.Predicate, reps map[string]canon.MechanismSignature) (verify.VerificationContext, bool) {
+//   - Assessed revision (round-2 F1): when the proposal's occurrence-bound
+//     signature revision is available, target verdicts are RECOMPUTED against
+//     those exact bytes — a revised interpretation (completeness/unresolved
+//     claims) legitimately changes the predicate verdict, and the cached
+//     generation-time verdict must not masquerade as an assessment of content
+//     the verifier never saw. Pre-v17 proposals without persisted content fall
+//     back to the cached verdict with an empty content hash (attribution gap
+//     recorded, never faked).
+func verificationContextForProposal(p store.FrontierProposalRow, predicates map[string]invariant.Predicate, reps map[string]canon.MechanismSignature, content *canon.MechanismSignature) (verify.VerificationContext, bool) {
 	targets := make(map[string]invariant.Verdict)
 	nearest := make(map[string][]invariant.Verdict)
 	staleTarget := false
@@ -330,7 +360,11 @@ func verificationContextForProposal(p store.FrontierProposalRow, predicates map[
 			staleTarget = true
 			continue
 		}
-		targets[t.InvariantID] = invariant.Verdict(t.Verdict)
+		if content != nil {
+			targets[t.InvariantID] = invariant.Evaluate(pred, *content)
+		} else {
+			targets[t.InvariantID] = invariant.Verdict(t.Verdict)
+		}
 		for _, nc := range p.NearestClusters {
 			rep, ok := reps[nc.ClusterID]
 			if !ok {

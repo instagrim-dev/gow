@@ -68,6 +68,12 @@ type EvaluationRow struct {
 	ToolVersion          string
 	ProviderInvocationID string
 	Notes                string
+	// SignatureContentHash is the EXACT signature content revision the verifier
+	// assessed, supplied by the evaluation stage (round-2 F1). The writer stores
+	// this value verbatim — never an independent "latest revision" lookup, which
+	// could stamp the result with bytes the verifier never saw. Empty for
+	// pre-v17 proposals without persisted content (attribution gap, recorded).
+	SignatureContentHash string
 	// Invocation, when set (model tier), is written to provider_invocations with
 	// role='evaluate' and its ID linked from the evaluation row.
 	Invocation *EvaluationProviderInvocation
@@ -139,10 +145,8 @@ VALUES(?, ?, 'evaluate', ?, ?, ?, ?, ?, ?, ?, ?)
 		}
 		if _, err := tx.ExecContext(ctx, `
 INSERT INTO evaluations(id, evaluation_run_id, proposal_id, verdict, verifier_kind, verification_strength, confidence_ordinal, tool_name, tool_version, provider_invocation_id, notes, created_at, signature_content_hash)
-VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-       COALESCE((SELECT r.content_hash FROM frontier_proposal_signature_revisions r
-                 WHERE r.proposal_id = ? ORDER BY r.revision DESC LIMIT 1), ''))
-`, e.ID, record.ID, nullIfEmpty(e.ProposalID), e.Verdict, e.VerifierKind, e.VerificationStrength, nullIfEmpty(e.ConfidenceOrdinal), nullIfEmpty(e.ToolName), nullIfEmpty(e.ToolVersion), providerInvocationID, nullIfEmpty(e.Notes), record.CreatedAt, e.ProposalID); err != nil {
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, e.ID, record.ID, nullIfEmpty(e.ProposalID), e.Verdict, e.VerifierKind, e.VerificationStrength, nullIfEmpty(e.ConfidenceOrdinal), nullIfEmpty(e.ToolName), nullIfEmpty(e.ToolVersion), providerInvocationID, nullIfEmpty(e.Notes), record.CreatedAt, e.SignatureContentHash); err != nil {
 			return EvaluationRunRecord{}, err
 		}
 		for _, m := range e.Metrics {
@@ -202,7 +206,7 @@ FROM evaluation_runs WHERE id = ?
 		return EvaluationRunRecord{}, err
 	}
 	evalRows, err := s.db.QueryContext(ctx, `
-SELECT id, COALESCE(proposal_id,''), verdict, verifier_kind, verification_strength, COALESCE(confidence_ordinal,''), COALESCE(tool_name,''), COALESCE(tool_version,''), COALESCE(provider_invocation_id,''), COALESCE(notes,'')
+SELECT id, COALESCE(proposal_id,''), verdict, verifier_kind, verification_strength, COALESCE(confidence_ordinal,''), COALESCE(tool_name,''), COALESCE(tool_version,''), COALESCE(provider_invocation_id,''), COALESCE(notes,''), COALESCE(signature_content_hash,'')
 FROM evaluations WHERE evaluation_run_id = ? ORDER BY id
 `, id)
 	if err != nil {
@@ -211,7 +215,7 @@ FROM evaluations WHERE evaluation_run_id = ? ORDER BY id
 	defer evalRows.Close()
 	for evalRows.Next() {
 		var e EvaluationRow
-		if err := evalRows.Scan(&e.ID, &e.ProposalID, &e.Verdict, &e.VerifierKind, &e.VerificationStrength, &e.ConfidenceOrdinal, &e.ToolName, &e.ToolVersion, &e.ProviderInvocationID, &e.Notes); err != nil {
+		if err := evalRows.Scan(&e.ID, &e.ProposalID, &e.Verdict, &e.VerifierKind, &e.VerificationStrength, &e.ConfidenceOrdinal, &e.ToolName, &e.ToolVersion, &e.ProviderInvocationID, &e.Notes, &e.SignatureContentHash); err != nil {
 			return EvaluationRunRecord{}, err
 		}
 		rec.Evaluations = append(rec.Evaluations, e)
@@ -288,11 +292,11 @@ func (s *Store) GetEvaluation(ctx context.Context, id string) (EvaluationRow, er
 		return EvaluationRow{}, err
 	}
 	row := s.db.QueryRowContext(ctx, `
-SELECT id, COALESCE(proposal_id,''), verdict, verifier_kind, verification_strength, COALESCE(confidence_ordinal,''), COALESCE(tool_name,''), COALESCE(tool_version,''), COALESCE(provider_invocation_id,''), COALESCE(notes,'')
+SELECT id, COALESCE(proposal_id,''), verdict, verifier_kind, verification_strength, COALESCE(confidence_ordinal,''), COALESCE(tool_name,''), COALESCE(tool_version,''), COALESCE(provider_invocation_id,''), COALESCE(notes,''), COALESCE(signature_content_hash,'')
 FROM evaluations WHERE id = ?
 `, id)
 	var e EvaluationRow
-	if err := row.Scan(&e.ID, &e.ProposalID, &e.Verdict, &e.VerifierKind, &e.VerificationStrength, &e.ConfidenceOrdinal, &e.ToolName, &e.ToolVersion, &e.ProviderInvocationID, &e.Notes); err != nil {
+	if err := row.Scan(&e.ID, &e.ProposalID, &e.Verdict, &e.VerifierKind, &e.VerificationStrength, &e.ConfidenceOrdinal, &e.ToolName, &e.ToolVersion, &e.ProviderInvocationID, &e.Notes, &e.SignatureContentHash); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return EvaluationRow{}, fmt.Errorf("%w: evaluation %s", ErrNotFound, id)
 		}

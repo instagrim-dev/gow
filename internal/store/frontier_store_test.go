@@ -396,3 +396,70 @@ SELECT ?, COALESCE(MAX(revision), 0) + 1, ?, ?, ?, ? FROM frontier_proposal_sign
 		t.Fatalf("insert revision: %v", err)
 	}
 }
+
+// Round-2 F3 regression (A -> B -> A): a generation re-emitting EARLIER content
+// must be occurrence-bound to that content — not to whatever revision is
+// numerically latest. Content dedup is preserved (no duplicate blob), but the
+// third generation's read-back returns A, never B.
+func TestOccurrenceBindingSurvivesContentReplay(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+
+	contentA := `{"schema_version":"mechanism/v1","completeness":"unobserved"}`
+	contentB := `{"schema_version":"mechanism/v1","completeness":"complete"}`
+
+	gen1 := sampleFrontier(t, st)
+	gen1.Proposals[0].SignatureJSON = contentA
+	gen1.Proposals[0].CanonicalFingerprint = "cfp-replay"
+	res1, err := st.PersistFrontierGeneration(ctx, gen1)
+	if err != nil {
+		t.Fatalf("gen1: %v", err)
+	}
+	proposalID := res1.Record.Proposals[0].ID
+
+	gen2 := sampleFrontierReusingProblem(t, st, gen1)
+	gen2.Proposals[0].SignatureJSON = contentB
+	res2, err := st.PersistFrontierGeneration(ctx, gen2)
+	if err != nil {
+		t.Fatalf("gen2: %v", err)
+	}
+
+	gen3 := sampleFrontierReusingProblem(t, st, gen2)
+	gen3.Proposals[0].SignatureJSON = contentA // A re-emitted
+	res3, err := st.PersistFrontierGeneration(ctx, gen3)
+	if err != nil {
+		t.Fatalf("gen3: %v", err)
+	}
+
+	// Dedup preserved: exactly two immutable revisions (A, B).
+	var revisions int
+	if err := st.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM frontier_proposal_signature_revisions WHERE proposal_id = ?`, proposalID).Scan(&revisions); err != nil {
+		t.Fatalf("count: %v", err)
+	}
+	if revisions != 2 {
+		t.Fatalf("want 2 content revisions, got %d", revisions)
+	}
+
+	occ3, err := st.ListGenerationOccurrenceContents(ctx, res3.Record.ID)
+	if err != nil {
+		t.Fatalf("occurrences gen3: %v", err)
+	}
+	oc, ok := occ3[proposalID]
+	if !ok {
+		t.Fatal("gen3 must have an occurrence binding for the deduped proposal")
+	}
+	if !strings.Contains(oc.SignatureJSON, `"completeness":"unobserved"`) {
+		t.Fatalf("gen3 emitted A; read-back must return A, got %s", oc.SignatureJSON)
+	}
+	if oc.FallbackLatest {
+		t.Fatal("gen3 has an explicit binding; must not be a fallback")
+	}
+	// And gen2 still binds to B.
+	occ2, err := st.ListGenerationOccurrenceContents(ctx, res2.Record.ID)
+	if err != nil {
+		t.Fatalf("occurrences gen2: %v", err)
+	}
+	if !strings.Contains(occ2[proposalID].SignatureJSON, `"completeness":"complete"`) {
+		t.Fatalf("gen2 emitted B; read-back must return B, got %s", occ2[proposalID].SignatureJSON)
+	}
+}

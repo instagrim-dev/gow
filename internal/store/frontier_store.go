@@ -151,6 +151,10 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	// the immutable proposal row itself is never updated.
 	persisted := make([]FrontierProposalRow, 0, len(record.Proposals))
 	idByHash := make(map[string]string, len(record.Proposals))
+	// Occurrence bindings for DEDUPED proposals are collected here and written
+	// after the generation-run row exists (FK ordering).
+	type pendingOccurrence struct{ proposalID, contentHash string }
+	var dedupOccurrences []pendingOccurrence
 	for _, p := range record.Proposals {
 		var existingID string
 		err := tx.QueryRowContext(ctx, `SELECT id FROM frontier_proposals WHERE problem_id = ? AND proposal_hash = ?`, record.ProblemID, p.ProposalHash).Scan(&existingID)
@@ -175,10 +179,13 @@ VALUES(?, ?, ?, ?)
 				// deliberately excludes completeness/unresolved claims, so a
 				// REVISED interpretation can dedup onto this proposal while
 				// carrying evaluation-relevant changes. Append a content
-				// revision so the revised evidence is never silently dropped.
-				if ierr := insertSignatureRevision(ctx, tx, existingID, p.CanonicalFingerprint, p.SignatureJSON, record.CreatedAt); ierr != nil {
+				// revision so the revised evidence is never silently dropped,
+				// and bind THIS generation to the content it emitted.
+				contentHash, ierr := insertSignatureRevision(ctx, tx, existingID, p.CanonicalFingerprint, p.SignatureJSON, record.CreatedAt)
+				if ierr != nil {
 					return PersistFrontierGenerationResult{}, ierr
 				}
+				dedupOccurrences = append(dedupOccurrences, pendingOccurrence{existingID, contentHash})
 			}
 		}
 	}
@@ -190,6 +197,11 @@ INSERT INTO frontier_generation_runs(id, problem_id, cluster_run_id, run_id, pro
 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `, record.ID, record.ProblemID, record.ClusterRunID, record.RunID, inv.ID, record.GeneratorVersion, record.RequestedCount, record.ProposalCount, record.Revision, record.CreatedAt); err != nil {
 		return PersistFrontierGenerationResult{}, err
+	}
+	for _, occ := range dedupOccurrences {
+		if err := insertGenerationOccurrence(ctx, tx, record.ID, occ.proposalID, occ.contentHash, record.CreatedAt); err != nil {
+			return PersistFrontierGenerationResult{}, err
+		}
 	}
 
 	for _, p := range record.Proposals {
@@ -206,8 +218,12 @@ VALUES(?, ?, ?, ?)
 `, p.ID, p.CanonicalFingerprint, p.SignatureJSON, record.CreatedAt); err != nil {
 				return PersistFrontierGenerationResult{}, err
 			}
-			if err := insertSignatureRevision(ctx, tx, p.ID, p.CanonicalFingerprint, p.SignatureJSON, record.CreatedAt); err != nil {
-				return PersistFrontierGenerationResult{}, err
+			contentHash, rerr := insertSignatureRevision(ctx, tx, p.ID, p.CanonicalFingerprint, p.SignatureJSON, record.CreatedAt)
+			if rerr != nil {
+				return PersistFrontierGenerationResult{}, rerr
+			}
+			if rerr := insertGenerationOccurrence(ctx, tx, record.ID, p.ID, contentHash, record.CreatedAt); rerr != nil {
+				return PersistFrontierGenerationResult{}, rerr
 			}
 		}
 		for _, t := range p.Targets {
@@ -468,25 +484,38 @@ func (s *Store) FindGenerationForProposal(ctx context.Context, proposalID string
 }
 
 // insertSignatureRevision appends an immutable content revision for a
-// proposal's signature JSON, keyed on sha256 of the persisted bytes. Identical
-// content is a no-op; changed content (e.g. revised extraction completeness or
-// unresolved claims — evaluation-relevant but fingerprint-invisible) gets the
-// next revision number.
-func insertSignatureRevision(ctx context.Context, tx *sql.Tx, proposalID, fingerprint, signatureJSON, createdAt string) error {
+// proposal's signature JSON, keyed on sha256 of the persisted bytes, and
+// returns that content hash. Identical content is a revision no-op (dedup);
+// changed content (e.g. revised extraction completeness or unresolved claims —
+// evaluation-relevant but fingerprint-invisible) gets the next revision number.
+func insertSignatureRevision(ctx context.Context, tx *sql.Tx, proposalID, fingerprint, signatureJSON, createdAt string) (string, error) {
 	sum := sha256.Sum256([]byte(signatureJSON))
 	contentHash := hex.EncodeToString(sum[:])
 	var exists int
 	err := tx.QueryRowContext(ctx, `SELECT 1 FROM frontier_proposal_signature_revisions WHERE proposal_id = ? AND content_hash = ?`, proposalID, contentHash).Scan(&exists)
 	if err == nil {
-		return nil // identical content already revisioned
+		return contentHash, nil // identical content already revisioned
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
-		return err
+		return "", err
 	}
 	_, err = tx.ExecContext(ctx, `
 INSERT INTO frontier_proposal_signature_revisions(proposal_id, revision, content_hash, canonical_fingerprint, signature_json, created_at)
 SELECT ?, COALESCE(MAX(revision), 0) + 1, ?, ?, ?, ?
 FROM frontier_proposal_signature_revisions WHERE proposal_id = ?
 `, proposalID, contentHash, fingerprint, signatureJSON, createdAt, proposalID)
+	return contentHash, err
+}
+
+// insertGenerationOccurrence records which content THIS generation emitted for
+// a proposal — the occurrence-level binding that keeps A -> B -> A honest:
+// re-emitting earlier content references A's existing immutable revision, and
+// downstream readers score what the generator actually produced, never a
+// "latest" reconstruction.
+func insertGenerationOccurrence(ctx context.Context, tx *sql.Tx, generationRunID, proposalID, contentHash, createdAt string) error {
+	_, err := tx.ExecContext(ctx, `
+INSERT OR IGNORE INTO frontier_generation_contents(generation_run_id, proposal_id, content_hash, created_at)
+VALUES(?, ?, ?, ?)
+`, generationRunID, proposalID, contentHash, createdAt)
 	return err
 }

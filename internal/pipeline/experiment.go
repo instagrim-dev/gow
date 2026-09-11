@@ -651,46 +651,36 @@ func (a *App) runArm(ctx context.Context, repoStore problemStore, dbPath, proble
 	for h, id := range result.ProposalIDByHash {
 		hashByID[id] = h
 	}
-	contentByID, rerr := loadProposalContentByID(ctx, repoStore, ids)
+	// F3: score what THIS generation emitted, not a MAX(revision) reconstruction.
+	// The occurrence binding keeps A -> B -> A honest: a generation re-emitting
+	// earlier content references A's existing immutable revision, and the arm
+	// assesses exactly those bytes.
+	occurrences, rerr := repoStore.ListGenerationOccurrenceContents(ctx, result.Record.ID)
 	if rerr != nil {
 		return "", nil, rerr
 	}
 	contents := make([]experiment.ProposalContent, 0, len(ids))
 	for _, id := range ids {
-		c, ok := contentByID[id]
-		if !ok {
+		oc, ok := occurrences[id]
+		if !ok || oc.SignatureJSON == "" {
 			continue // pre-v17 content gap; recovery cannot fabricate it
 		}
 		if budget > 0 && len(contents) >= budget {
 			break // shared per-arm budget is a stopping condition, not silent truncation
 		}
-		c.Rank = len(contents) // per-arm position: unique, deterministic total order
-		c.ProposalHash = hashByID[id]
-		contents = append(contents, c)
+		var sig canon.MechanismSignature
+		if err := json.Unmarshal([]byte(oc.SignatureJSON), &sig); err != nil {
+			return "", nil, fmt.Errorf("proposal %s: corrupt persisted signature: %w", id, err)
+		}
+		contents = append(contents, experiment.ProposalContent{
+			ProposalID:   id,
+			ProposalHash: hashByID[id],
+			Rank:         len(contents), // per-arm position: unique, deterministic total order
+			ContentHash:  oc.ContentHash,
+			Signature:    sig,
+		})
 	}
 	return result.Record.ID, contents, nil
-}
-
-// loadProposalContentByID rehydrates persisted proposal content keyed by id,
-// skipping pre-v17 sidecar gaps (recovery cannot fabricate content). The caller
-// imposes ordering; this only resolves id -> content.
-func loadProposalContentByID(ctx context.Context, repoStore problemStore, ids []string) (map[string]experiment.ProposalContent, error) {
-	rows, err := repoStore.ListProposalContentsByIDs(ctx, ids)
-	if err != nil {
-		return nil, err
-	}
-	out := make(map[string]experiment.ProposalContent, len(rows))
-	for _, r := range rows {
-		if r.SignatureJSON == "" {
-			continue
-		}
-		var sig canon.MechanismSignature
-		if err := json.Unmarshal([]byte(r.SignatureJSON), &sig); err != nil {
-			return nil, fmt.Errorf("proposal %s: corrupt persisted signature: %w", r.ProposalID, err)
-		}
-		out[r.ProposalID] = experiment.ProposalContent{ProposalID: r.ProposalID, ContentHash: r.ContentHash, Signature: sig}
-	}
-	return out, nil
 }
 
 func (a *App) resolveHoldoutSet(ctx context.Context, repoStore problemStore, problemID, holdoutSetID string) (store.HoldoutSetRecord, error) {

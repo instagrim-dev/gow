@@ -25,20 +25,29 @@ type BreakCohortRow struct {
 	Strength          string // that evaluation's verification_strength
 	SignatureJSON     string
 	Fingerprint       string
-	ContentHash       string // exact signature content revision consumed (F1)
+	ContentHash       string // the revision the selected evaluation ASSESSED
+	LatestContentHash string // the proposal's newest revision (pending detection)
 }
 
 // ListBreakCohortRows returns every code-verified break (violated=1) whose
 // proposal has been evaluated, joined with the persisted canonical content.
-// ListBreakCohortRows selects, per proposal, the evaluation that CURRENT
-// research guidance should trust, under selection-policy/v1: the evaluation
-// with the STRONGEST verification class wins; ties break to the LATEST
-// (an accepted reassessment supersedes an earlier equal-strength result).
-// This mirrors the verification hierarchy — a later model-judged "success"
-// can never displace a deterministic "failure", while a deterministic
-// reassessment always displaces an earlier model judgment or blocked result.
-// The earliest-result view remains available in the append-only evaluations
-// ledger for historical analysis; it is no longer the source of guidance.
+// Two bindings make each row a coherent assessment tuple (round-2 F2):
+//
+//   - The evaluation is selected under selection-policy/v2: DECISIVE outcomes
+//     (success/partial_success/failure/partial_failure) are eligible before
+//     non-decisive ones (unknown/verification_blocked) — certainty that
+//     evaluation was BLOCKED is not stronger evidence about the outcome —
+//     then the strongest verification class wins, ties to the latest. A
+//     blocker is selected only when no decisive evaluation exists, and the
+//     caller counts it ambiguous, never support.
+//   - The signature content joined is the revision the selected evaluation
+//     ACTUALLY assessed (its recorded signature_content_hash), never an
+//     unconditional latest-revision join. LatestContentHash is returned
+//     alongside so the caller can detect a newer, unassessed interpretation
+//     and mark the member pending instead of splicing old outcomes onto new
+//     evidence. Legacy evaluations without a recorded hash fall back to the
+//     latest revision (binding unknowable; mismatch undetectable).
+//
 // Verdict, strength, and evaluation id are taken from that ONE record (H1).
 func (s *Store) ListBreakCohortRows(ctx context.Context, problemID string) ([]BreakCohortRow, error) {
 	if err := domain.ValidateProblemID(problemID); err != nil {
@@ -47,9 +56,11 @@ func (s *Store) ListBreakCohortRows(ctx context.Context, problemID string) ([]Br
 	rows, err := s.db.QueryContext(ctx, `
 WITH selected_eval AS (
   SELECT e.proposal_id, e.id AS evaluation_id, e.verdict, e.verification_strength,
+         COALESCE(e.signature_content_hash, '') AS assessed_hash,
          ROW_NUMBER() OVER (
            PARTITION BY e.proposal_id
-           ORDER BY CASE e.verification_strength
+           ORDER BY CASE WHEN e.verdict IN ('success','partial_success','failure','partial_failure') THEN 0 ELSE 1 END ASC,
+                    CASE e.verification_strength
                       WHEN 'deterministic' THEN 0
                       WHEN 'reproducible' THEN 1
                       WHEN 'independent-evidence' THEN 2
@@ -59,18 +70,23 @@ WITH selected_eval AS (
                     e.created_at DESC, e.id DESC
          ) AS rn
   FROM evaluations e
-)
-SELECT t.invariant_id, p.id, fe.evaluation_id, fe.verdict, COALESCE(fe.verification_strength, ''),
-       COALESCE(fps.signature_json, ''), COALESCE(fps.canonical_fingerprint, ''), COALESCE(fps.content_hash, '')
-FROM frontier_target_invariants t
-JOIN frontier_proposals p ON p.id = t.proposal_id
-JOIN selected_eval fe ON fe.proposal_id = p.id AND fe.rn = 1
-LEFT JOIN (
-  SELECT r.proposal_id, r.signature_json, r.canonical_fingerprint, r.content_hash
+),
+latest_rev AS (
+  SELECT r.proposal_id, r.content_hash, r.signature_json, r.canonical_fingerprint
   FROM frontier_proposal_signature_revisions r
   JOIN (SELECT proposal_id, MAX(revision) AS mr FROM frontier_proposal_signature_revisions GROUP BY proposal_id) lr
     ON lr.proposal_id = r.proposal_id AND lr.mr = r.revision
-) fps ON fps.proposal_id = p.id
+)
+SELECT t.invariant_id, p.id, fe.evaluation_id, fe.verdict, COALESCE(fe.verification_strength, ''),
+       COALESCE(ar.signature_json, lr.signature_json, ''),
+       COALESCE(ar.canonical_fingerprint, lr.canonical_fingerprint, ''),
+       CASE WHEN fe.assessed_hash <> '' THEN fe.assessed_hash ELSE COALESCE(lr.content_hash, '') END,
+       COALESCE(lr.content_hash, '')
+FROM frontier_target_invariants t
+JOIN frontier_proposals p ON p.id = t.proposal_id
+JOIN selected_eval fe ON fe.proposal_id = p.id AND fe.rn = 1
+LEFT JOIN frontier_proposal_signature_revisions ar ON ar.proposal_id = p.id AND ar.content_hash = fe.assessed_hash
+LEFT JOIN latest_rev lr ON lr.proposal_id = p.id
 WHERE p.problem_id = ? AND t.violated = 1
 ORDER BY t.invariant_id, p.id
 `, problemID)
@@ -81,7 +97,7 @@ ORDER BY t.invariant_id, p.id
 	var out []BreakCohortRow
 	for rows.Next() {
 		var r BreakCohortRow
-		if err := rows.Scan(&r.TargetInvariantID, &r.ProposalID, &r.EvaluationID, &r.Result, &r.Strength, &r.SignatureJSON, &r.Fingerprint, &r.ContentHash); err != nil {
+		if err := rows.Scan(&r.TargetInvariantID, &r.ProposalID, &r.EvaluationID, &r.Result, &r.Strength, &r.SignatureJSON, &r.Fingerprint, &r.ContentHash, &r.LatestContentHash); err != nil {
 			return nil, err
 		}
 		out = append(out, r)
@@ -133,6 +149,7 @@ type SuccessRevisionRecord struct {
 	MinSupport            int
 	CohortHash            string
 	IneligibleUnpersisted int
+	PendingReassessment   int
 	AmbiguousMembers      int
 	// InadmissibleConditions counts provider-proposed conditions rejected by the
 	// AdmitCandidate gate (grammar / pinned-vocabulary / outcome-read). They are
@@ -200,9 +217,9 @@ VALUES(?, ?, 'success-compress', ?, ?, ?, ?, ?, ?, ?, ?)
 		return PersistSuccessRevisionResult{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `
-INSERT INTO success_invariant_revisions(id, problem_id, run_id, provider_invocation_id, compressor_version, predicate_schema, min_support, cohort_hash, ineligible_unpersisted, ambiguous_members, inadmissible_conditions, revision, invariant_count, created_at)
-VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`, record.ID, record.ProblemID, record.RunID, inv.ID, record.CompressorVersion, record.PredicateSchema, record.MinSupport, record.CohortHash, record.IneligibleUnpersisted, record.AmbiguousMembers, record.InadmissibleConditions, record.Revision, record.InvariantCount, record.CreatedAt); err != nil {
+INSERT INTO success_invariant_revisions(id, problem_id, run_id, provider_invocation_id, compressor_version, predicate_schema, min_support, cohort_hash, ineligible_unpersisted, pending_reassessment, ambiguous_members, inadmissible_conditions, revision, invariant_count, created_at)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, record.ID, record.ProblemID, record.RunID, inv.ID, record.CompressorVersion, record.PredicateSchema, record.MinSupport, record.CohortHash, record.IneligibleUnpersisted, record.PendingReassessment, record.AmbiguousMembers, record.InadmissibleConditions, record.Revision, record.InvariantCount, record.CreatedAt); err != nil {
 		return PersistSuccessRevisionResult{}, err
 	}
 
@@ -250,11 +267,11 @@ func (s *Store) GetSuccessRevision(ctx context.Context, id string) (SuccessRevis
 
 func (s *Store) loadSuccessRevision(ctx context.Context, id string) (SuccessRevisionRecord, error) {
 	row := s.db.QueryRowContext(ctx, `
-SELECT id, problem_id, run_id, compressor_version, predicate_schema, min_support, cohort_hash, ineligible_unpersisted, ambiguous_members, inadmissible_conditions, revision, invariant_count, created_at
+SELECT id, problem_id, run_id, compressor_version, predicate_schema, min_support, cohort_hash, ineligible_unpersisted, pending_reassessment, ambiguous_members, inadmissible_conditions, revision, invariant_count, created_at
 FROM success_invariant_revisions WHERE id = ?
 `, id)
 	var rec SuccessRevisionRecord
-	if err := row.Scan(&rec.ID, &rec.ProblemID, &rec.RunID, &rec.CompressorVersion, &rec.PredicateSchema, &rec.MinSupport, &rec.CohortHash, &rec.IneligibleUnpersisted, &rec.AmbiguousMembers, &rec.InadmissibleConditions, &rec.Revision, &rec.InvariantCount, &rec.CreatedAt); err != nil {
+	if err := row.Scan(&rec.ID, &rec.ProblemID, &rec.RunID, &rec.CompressorVersion, &rec.PredicateSchema, &rec.MinSupport, &rec.CohortHash, &rec.IneligibleUnpersisted, &rec.PendingReassessment, &rec.AmbiguousMembers, &rec.InadmissibleConditions, &rec.Revision, &rec.InvariantCount, &rec.CreatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return SuccessRevisionRecord{}, fmt.Errorf("%w: success revision %s", ErrNotFound, id)
 		}
@@ -328,7 +345,7 @@ func (s *Store) ListSuccessRevisions(ctx context.Context, problemID string) ([]S
 		return nil, err
 	}
 	rows, err := s.db.QueryContext(ctx, `
-SELECT id, problem_id, run_id, compressor_version, predicate_schema, min_support, cohort_hash, ineligible_unpersisted, ambiguous_members, inadmissible_conditions, revision, invariant_count, created_at
+SELECT id, problem_id, run_id, compressor_version, predicate_schema, min_support, cohort_hash, ineligible_unpersisted, pending_reassessment, ambiguous_members, inadmissible_conditions, revision, invariant_count, created_at
 FROM success_invariant_revisions WHERE problem_id = ? ORDER BY revision DESC, id DESC
 `, problemID)
 	if err != nil {
@@ -338,7 +355,7 @@ FROM success_invariant_revisions WHERE problem_id = ? ORDER BY revision DESC, id
 	var out []SuccessRevisionRecord
 	for rows.Next() {
 		var rec SuccessRevisionRecord
-		if err := rows.Scan(&rec.ID, &rec.ProblemID, &rec.RunID, &rec.CompressorVersion, &rec.PredicateSchema, &rec.MinSupport, &rec.CohortHash, &rec.IneligibleUnpersisted, &rec.AmbiguousMembers, &rec.InadmissibleConditions, &rec.Revision, &rec.InvariantCount, &rec.CreatedAt); err != nil {
+		if err := rows.Scan(&rec.ID, &rec.ProblemID, &rec.RunID, &rec.CompressorVersion, &rec.PredicateSchema, &rec.MinSupport, &rec.CohortHash, &rec.IneligibleUnpersisted, &rec.PendingReassessment, &rec.AmbiguousMembers, &rec.InadmissibleConditions, &rec.Revision, &rec.InvariantCount, &rec.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, rec)

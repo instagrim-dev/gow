@@ -94,6 +94,7 @@ type SuccessRevisionView struct {
 	MinSupport             int                    `json:"min_support"`
 	CohortHash             string                 `json:"cohort_hash"`
 	IneligibleUnpersisted  int                    `json:"ineligible_unpersisted"`
+	PendingReassessment    int                    `json:"pending_reassessment"`
 	AmbiguousMembers       int                    `json:"ambiguous_members"`
 	InadmissibleConditions int                    `json:"inadmissible_conditions"`
 	Revision               int                    `json:"revision"`
@@ -135,7 +136,12 @@ type builtCohorts struct {
 	Cohorts               []success.BreakCohort
 	IneligibleUnpersisted int
 	Ambiguous             int
-	CohortHash            string
+	// PendingReassessment counts members whose NEWEST interpretation has no
+	// compatible reassessment (round-2 F2): the selected evaluation assessed an
+	// older revision, so the member is excluded from current guidance rather
+	// than splicing an old outcome onto unassessed evidence.
+	PendingReassessment int
+	CohortHash          string
 }
 
 // buildBreakCohorts partitions the persisted (target, evaluated proposal)
@@ -153,9 +159,19 @@ func buildBreakCohorts(rows []store.BreakCohortRow) (builtCohorts, error) {
 		// interpretation of the same mechanism (completeness/unresolved-claim
 		// changes are fingerprint-invisible) changes what every condition C
 		// evaluates against, so it must produce the next cohort revision.
-		hashLines = append(hashLines, r.TargetInvariantID+"|"+r.ProposalID+"|"+r.EvaluationID+"|"+r.Result+"|"+r.Strength+"|"+r.ContentHash)
+		hashLines = append(hashLines, r.TargetInvariantID+"|"+r.ProposalID+"|"+r.EvaluationID+"|"+r.Result+"|"+r.Strength+"|"+r.ContentHash+"|"+r.LatestContentHash)
 		if r.SignatureJSON == "" {
 			out.IneligibleUnpersisted++
+			continue
+		}
+		// Round-2 F2: the selected evaluation assessed an OLDER revision than
+		// the proposal's newest interpretation. Carrying its outcome forward
+		// would attribute the old assessment to unassessed evidence; the member
+		// is pending until a compatible reassessment exists. (The latest hash is
+		// part of the identity line above, so resolving the pending state
+		// produces the next cohort revision.)
+		if r.ContentHash != "" && r.LatestContentHash != "" && r.ContentHash != r.LatestContentHash {
+			out.PendingReassessment++
 			continue
 		}
 		var member success.Member
@@ -226,6 +242,7 @@ func successRevisionView(rec store.SuccessRevisionRecord) SuccessRevisionView {
 		MinSupport:             rec.MinSupport,
 		CohortHash:             rec.CohortHash,
 		IneligibleUnpersisted:  rec.IneligibleUnpersisted,
+		PendingReassessment:    rec.PendingReassessment,
 		AmbiguousMembers:       rec.AmbiguousMembers,
 		InadmissibleConditions: rec.InadmissibleConditions,
 		Revision:               rec.Revision,
@@ -398,6 +415,7 @@ func successRevisionRecord(problemID, runID string, minSupport int, built builtC
 		MinSupport:            minSupport,
 		CohortHash:            built.CohortHash,
 		IneligibleUnpersisted: built.IneligibleUnpersisted,
+		PendingReassessment:   built.PendingReassessment,
 		AmbiguousMembers:      built.Ambiguous,
 		InvariantCount:        len(candidates),
 		CreatedAt:             now.Format(timeLayout),

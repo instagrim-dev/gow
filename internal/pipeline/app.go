@@ -65,6 +65,7 @@ type problemStore interface {
 	ListSignaturesForProblem(context.Context, string, string, string) ([]string, error)
 	ListMechanismsForProblem(context.Context, string) ([]store.MechanismListItem, error)
 	FindGenerationForProposal(context.Context, string) (string, bool, error)
+	ListGenerationOccurrenceContents(context.Context, string) (map[string]store.OccurrenceContent, error)
 	PersistClusterRun(context.Context, store.ClusterRunRecord) (store.PersistClusterRunResult, error)
 	GetClusterRun(context.Context, string) (store.ClusterRunRecord, error)
 	ListClusterRuns(context.Context, string) ([]store.ClusterRunRecord, error)

@@ -258,7 +258,7 @@ func TestVerificationContextDropsStaleTarget(t *testing.T) {
 		SetFieldCompleteness: map[domain.FieldKind]domain.FieldCompleteness{domain.FieldPreserves: domain.CompletenessComplete},
 	}}
 
-	vc, staleTarget := verificationContextForProposal(p, predicates, reps)
+	vc, staleTarget := verificationContextForProposal(p, predicates, reps, nil)
 	if !staleTarget {
 		t.Fatal("a proposal with a no-longer-targetable target must be flagged stale (H5)")
 	}
@@ -326,5 +326,91 @@ func TestIntegrationEvaluateDefaultVerifierRetainsPayloads(t *testing.T) {
 	}
 	if inv.RequestHash == "" {
 		t.Fatal("request hash must be stored for replay/audit")
+	}
+}
+
+// Round-2 F1 regression (unit): when the occurrence-bound signature revision is
+// supplied, target verdicts are RECOMPUTED against those exact bytes — the
+// cached generation-time verdict must not describe content the verifier never
+// saw. Here the cached verdict says "violates" but the revised content
+// SATISFIES the predicate.
+func TestVerificationContextRecomputesAgainstRevision(t *testing.T) {
+	pred := invariant.Predicate{
+		Schema: invariant.PredicateSchemaV1,
+		Root:   invariant.Node{Op: invariant.OpContains, Field: invariant.FieldPreserves, CanonicalID: "domain.number_theory.property.residue_locality"},
+	}
+	predicates := map[string]invariant.Predicate{"inv_x": pred}
+	p := store.FrontierProposalRow{
+		ID:      "fpr_x",
+		Targets: []store.FrontierTargetRow{{InvariantID: "inv_x", Verdict: "violates", Violated: true}},
+	}
+
+	// Revised content that SATISFIES the predicate (complete + resolved claim).
+	sig := canon.MechanismSignature{
+		SchemaVersion:     canon.SchemaMechanismV1,
+		VocabularyVersion: "mechanism/v1",
+		Preserves: []canon.FieldClaim{{
+			FieldKind: domain.FieldPreserves, State: domain.ResolutionResolved,
+			CanonicalID: "domain.number_theory.property.residue_locality", Status: domain.ClaimExplicit,
+		}},
+		SetFieldCompleteness: map[domain.FieldKind]domain.FieldCompleteness{
+			domain.FieldPreserves: domain.CompletenessComplete,
+		},
+	}
+	vc, stale := verificationContextForProposal(p, predicates, map[string]canon.MechanismSignature{}, &sig)
+	if stale {
+		t.Fatal("live predicate must not be stale")
+	}
+	if got := vc.TargetVerdicts["inv_x"]; got != invariant.VerdictSatisfies {
+		t.Fatalf("verdict must be recomputed against the revision (satisfies), got %q (cached was violates)", got)
+	}
+
+	// Without content (pre-v17 gap) the cached verdict is the honest fallback.
+	vc2, _ := verificationContextForProposal(p, predicates, map[string]canon.MechanismSignature{}, nil)
+	if got := vc2.TargetVerdicts["inv_x"]; got != invariant.VerdictViolates {
+		t.Fatalf("no-content fallback must keep the cached verdict, got %q", got)
+	}
+}
+
+// Round-2 F1 regression (integration): the persisted evaluation references the
+// EXACT occurrence-bound revision it assessed — the supplied hash, not an
+// independent latest-revision lookup at persistence time.
+func TestIntegrationEvaluationStampsAssessedRevision(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = dataDrivenMiner{}
+	app.challengerFn = biasOnlyChallenger{}
+
+	problemID, invID, _ := mineOneCandidate(t, ctx, app, dbPath)
+	if _, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID}); err != nil {
+		t.Fatalf("challenge: %v", err)
+	}
+	gen, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("generate: %v", err)
+	}
+	proposalID := gen.Generation.Proposals[0].ID
+	res, err := app.Evaluate(ctx, EvaluateInput{DBPath: dbPath, ProblemID: problemID, ProposalID: proposalID})
+	if err != nil {
+		t.Fatalf("evaluate: %v", err)
+	}
+
+	repo := openTestStore(t, ctx, dbPath)
+	defer repo.Close()
+	occ, err := repo.ListGenerationOccurrenceContents(ctx, gen.Generation.ID)
+	if err != nil {
+		t.Fatalf("occurrences: %v", err)
+	}
+	wantHash := occ[proposalID].ContentHash
+	if wantHash == "" {
+		t.Fatal("generation must have an occurrence binding for its proposal")
+	}
+	full, err := repo.GetEvaluationRun(ctx, res.Run.ID)
+	if err != nil {
+		t.Fatalf("load run: %v", err)
+	}
+	if got := full.Evaluations[0].SignatureContentHash; got != wantHash {
+		t.Fatalf("evaluation must reference the assessed occurrence revision %s, got %q", wantHash, got)
 	}
 }

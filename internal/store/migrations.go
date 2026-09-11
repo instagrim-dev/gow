@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 23
+const currentSchemaVersion = 24
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -903,6 +903,24 @@ END;
 		// evaluations + experiment_arm_proposals). The v17 sidecar remains as
 		// the frozen first-observed content.
 		apply: migrateV23SignatureContentRevisions,
+	},
+	{
+		version: 24,
+		// Occurrence-level revision binding (review round 2). v23 preserved
+		// revised content but read it back through MAX(revision) lookups,
+		// which (1) let an evaluation stamp a hash its verifier never
+		// assessed, (2) let compression splice an old evaluation onto a
+		// newer unassessed revision, and (3) mis-attributed content when a
+		// generation re-emitted earlier content (A -> B -> A returns B).
+		// v24 adds frontier_generation_contents: an immutable binding
+		// generation -> (proposal, EMITTED content hash), backfilled for each
+		// proposal's ORIGIN generation from revision 1 (dedup occurrences on
+		// other generations are historically unrecoverable — readers fall
+		// back to the latest revision and say so). success_invariant_revisions
+		// gains pending_reassessment: members whose newest interpretation has
+		// no compatible reassessment are excluded from current guidance and
+		// counted, never silently carried forward.
+		apply: migrateV24OccurrenceBindings,
 	},
 }
 
@@ -2950,6 +2968,57 @@ VALUES(?, 1, ?, ?, ?, ?)
 			continue
 		}
 		if _, err := tx.ExecContext(ctx, c.ddl); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// occurrenceBindingsSQL is the v24 DDL: the immutable generation-occurrence
+// binding (which content a generation actually emitted per proposal).
+const occurrenceBindingsSQL = `
+CREATE TABLE IF NOT EXISTS frontier_generation_contents (
+  generation_run_id TEXT NOT NULL REFERENCES frontier_generation_runs(id),
+  proposal_id TEXT NOT NULL REFERENCES frontier_proposals(id),
+  content_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY(generation_run_id, proposal_id)
+);
+
+CREATE TRIGGER IF NOT EXISTS frontier_generation_contents_immutable_update
+BEFORE UPDATE ON frontier_generation_contents
+BEGIN
+  SELECT RAISE(ABORT, 'generation content occurrences are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS frontier_generation_contents_immutable_delete
+BEFORE DELETE ON frontier_generation_contents
+BEGIN
+  SELECT RAISE(ABORT, 'generation content occurrences are immutable');
+END;
+`
+
+// migrateV24OccurrenceBindings creates the occurrence table, backfills each
+// proposal's ORIGIN generation from its revision-1 content (the only
+// occurrence recoverable from history), and adds the pending-reassessment
+// count to success revisions.
+func migrateV24OccurrenceBindings(ctx context.Context, tx *sql.Tx) error {
+	if _, err := tx.ExecContext(ctx, occurrenceBindingsSQL); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `
+INSERT OR IGNORE INTO frontier_generation_contents(generation_run_id, proposal_id, content_hash, created_at)
+SELECT p.frontier_generation_run_id, p.id, r.content_hash, r.created_at
+FROM frontier_proposals p
+JOIN frontier_proposal_signature_revisions r ON r.proposal_id = p.id AND r.revision = 1
+`); err != nil {
+		return err
+	}
+	has, err := columnExists(ctx, tx, "success_invariant_revisions", "pending_reassessment")
+	if err != nil {
+		return err
+	}
+	if !has {
+		if _, err := tx.ExecContext(ctx, `ALTER TABLE success_invariant_revisions ADD COLUMN pending_reassessment INTEGER NOT NULL DEFAULT 0`); err != nil {
 			return err
 		}
 	}

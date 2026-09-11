@@ -511,6 +511,10 @@ func (f *fakeProblemStore) FindGenerationForProposal(context.Context, string) (s
 	return "", false, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) ListGenerationOccurrenceContents(context.Context, string) (map[string]store.OccurrenceContent, error) {
+	return nil, errors.New("unexpected call")
+}
+
 func (f *fakeProblemStore) PersistExperiment(context.Context, store.ExperimentRecord) (store.PersistExperimentResult, error) {
 	return store.PersistExperimentResult{}, errors.New("unexpected call")
 }

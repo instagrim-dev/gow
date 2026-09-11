@@ -704,3 +704,75 @@ FROM experiment_runs WHERE problem_id = ? ORDER BY revision DESC, id DESC
 	}
 	return out, rows.Err()
 }
+
+// ListGenerationOccurrenceContents returns, for one generation, the content
+// each proposal ACTUALLY emitted in that generation (occurrence binding), with
+// the exact revision's bytes. Proposals without an occurrence row (pre-v24
+// history) fall back to their LATEST revision, flagged via FallbackLatest so
+// callers can report the weaker attribution honestly.
+func (s *Store) ListGenerationOccurrenceContents(ctx context.Context, generationRunID string) (map[string]OccurrenceContent, error) {
+	if err := domain.ValidateFrontierGenerationRunID(generationRunID); err != nil {
+		return nil, err
+	}
+	out := make(map[string]OccurrenceContent)
+	rows, err := s.db.QueryContext(ctx, `
+SELECT o.proposal_id, o.content_hash, r.signature_json
+FROM frontier_generation_contents o
+JOIN frontier_proposal_signature_revisions r
+  ON r.proposal_id = o.proposal_id AND r.content_hash = o.content_hash
+WHERE o.generation_run_id = ?
+`, generationRunID)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var id string
+		var oc OccurrenceContent
+		if err := rows.Scan(&id, &oc.ContentHash, &oc.SignatureJSON); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		out[id] = oc
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
+	rows.Close()
+
+	// Pre-v24 fallback: proposals of this generation without occurrence rows.
+	fallback, err := s.db.QueryContext(ctx, `
+SELECT p.id, COALESCE(fps.content_hash, ''), COALESCE(fps.signature_json, '')
+FROM frontier_proposals p
+LEFT JOIN (
+  SELECT r.proposal_id, r.signature_json, r.content_hash
+  FROM frontier_proposal_signature_revisions r
+  JOIN (SELECT proposal_id, MAX(revision) AS mr FROM frontier_proposal_signature_revisions GROUP BY proposal_id) lr
+    ON lr.proposal_id = r.proposal_id AND lr.mr = r.revision
+) fps ON fps.proposal_id = p.id
+WHERE p.frontier_generation_run_id = ?
+`, generationRunID)
+	if err != nil {
+		return nil, err
+	}
+	defer fallback.Close()
+	for fallback.Next() {
+		var id string
+		var oc OccurrenceContent
+		if err := fallback.Scan(&id, &oc.ContentHash, &oc.SignatureJSON); err != nil {
+			return nil, err
+		}
+		if _, bound := out[id]; !bound && oc.SignatureJSON != "" {
+			oc.FallbackLatest = true
+			out[id] = oc
+		}
+	}
+	return out, fallback.Err()
+}
+
+// OccurrenceContent is one occurrence-bound signature revision.
+type OccurrenceContent struct {
+	ContentHash    string
+	SignatureJSON  string
+	FallbackLatest bool // pre-v24 history: no occurrence binding recorded
+}

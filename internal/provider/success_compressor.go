@@ -18,9 +18,10 @@ const SuccessCompressorRole = "success-compress"
 
 // SuccessCompressorVersion is the compressor contract version stored per run.
 // The +selection suffix names the evaluation-selection policy the cohort query
-// applies (strongest verification class wins, ties to the latest), so a policy
-// change is visible in every revision's provenance.
-const SuccessCompressorVersion = "success-compress/v1+selection-strongest-latest/v1"
+// applies (DECISIVE outcomes eligible before non-decisive blockers, then the
+// strongest verification class, ties to the latest), so a policy change is
+// visible in every revision's provenance.
+const SuccessCompressorVersion = "success-compress/v1+selection-decisive-strongest-latest/v2"
 
 // CohortMemberFacts is the compact, structured projection of one evaluated
 // P-breaking proposal: canonical content + code-owned result and verification

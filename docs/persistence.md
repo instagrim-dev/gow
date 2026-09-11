@@ -1221,11 +1221,26 @@ bytes. `v23` separates the three identities:
   revised evidence is a NEW experiment / compression revision, never a silent
   recomputation.
 
-Success compression additionally selects its per-proposal evaluation under
-`selection-policy/v1` (strongest verification class wins; ties to the latest),
-so an accepted deterministic reassessment displaces an earlier model judgment
-while a later model-judged "success" can never displace a deterministic
-"failure". The earliest-result view stays in the append-only ledger.
+Migration `v24` completes the binding: retaining a revision is not the same as
+evaluating it. `frontier_generation_contents` records which content each
+generation ACTUALLY emitted per proposal (occurrence binding — re-emitting
+earlier content A after B references A's existing immutable revision, and
+A -> B -> A read-back returns A, never "latest B"). Evaluation selects the
+occurrence-bound revision BEFORE verification, recomputes the targeted
+predicates against those exact bytes, and the writer stores the SUPPLIED
+content hash — never an independent latest-revision lookup. Success cohorts
+join the revision the selected evaluation assessed; a member whose newest
+interpretation lacks a compatible reassessment is excluded and counted in
+`success_invariant_revisions.pending_reassessment`.
+
+Success compression selects its per-proposal evaluation under
+`selection-policy/v2`: decisive outcomes are eligible before non-decisive
+blockers, then the strongest verification class wins with ties to the latest —
+an accepted deterministic reassessment displaces an earlier model judgment, a
+later model-judged "success" cannot displace a decisive deterministic
+"failure", and a stale-target refusal cannot monopolize selection once a
+completed reassessment exists. The earliest-result view stays in the
+append-only ledger.
 
 ## Immutable vs mutable/revisioned
 
