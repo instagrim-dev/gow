@@ -1,5 +1,5 @@
 {
-  "status": "executed_awaiting_independent_review",
+  "status": "reviewed_model_judgment_awaiting_operator_conclusion",
   "protocol_revision": "pilot-003 (successor to pilot-002; PROTOCOL-REVISION.md)",
   "source_commit": "a868dec70e6cb0f5ab6000ec89bbd36e12f43ec4",
   "executable_commit": "00e22b2246c43525877dd6acbb807ab3b0bba812",
@@ -41,5 +41,28 @@
     "note": "no arm recovered under recovery-rule/v1; unknowns are proposals whose surface labels do not resolve under the pinned mechanism/v3, making decisive fields incomparable. The automatic classifier abstained rather than guessed. Post-capture vocabulary changes to resolve proposal wording would be outcome-selected and are prohibited; adjudication of unknowns belongs to the independent unlabeled review.",
     "b3_result_classification": "repaired-input assessment (derivative): the primary B3 captured attempt is WIRE-INVALID and produced no assessable payload; the executed assessment consumed the recorded lossless derivative b3-consumed.json",
     "assessment_rule_note": "assessed under classify/v1 (profile f3334d08...) \u2014 the rule pinned before execution. classify/v2 (completeness-aware absence) now exists as the corrected production rule with a distinct profile hash; any reassessment under it is a corrected assessment with its own experiment identity, never a substitution for this pinned result."
+  },
+  "independent_review": {
+    "received_at_utc": "2026-09-11T08:59:39.293542+00:00",
+    "reviewer": "isolated same-model-family session, blinded to arms/targets/automatic classifications (see captures/config.json)",
+    "epistemic_strength": "model_judgment",
+    "tally": {
+      "b0_undirected": {
+        "recovers": 0,
+        "partially_recovers": 1,
+        "does_not_recover": 6
+      },
+      "b3_invariant_guided": {
+        "recovers": 1,
+        "partially_recovers": 1,
+        "does_not_recover": 4
+      }
+    },
+    "full_recovery": "b3_invariant_guided member_rank 4 (fiberwise lattice-point / geometry-of-numbers) \u2014 criterion match with recorded mathematical objections",
+    "records": [
+      "independent-assessment.json",
+      "review-key.json",
+      "INDEPENDENT-REVIEW-RESULT.md"
+    ]
   }
 }

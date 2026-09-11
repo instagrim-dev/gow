@@ -1,0 +1,71 @@
+{
+  "schema": "pilot-review-key/v1",
+  "shuffle_seed_derivation": "sha256(b0-raw digest + b3-consumed digest)",
+  "key": [
+    {
+      "proposal_id": "P01",
+      "arm": "b0_undirected",
+      "member_rank": 3
+    },
+    {
+      "proposal_id": "P02",
+      "arm": "b3_invariant_guided",
+      "member_rank": 3
+    },
+    {
+      "proposal_id": "P03",
+      "arm": "b0_undirected",
+      "member_rank": 6
+    },
+    {
+      "proposal_id": "P04",
+      "arm": "b3_invariant_guided",
+      "member_rank": 5
+    },
+    {
+      "proposal_id": "P05",
+      "arm": "b0_undirected",
+      "member_rank": 0
+    },
+    {
+      "proposal_id": "P06",
+      "arm": "b0_undirected",
+      "member_rank": 4
+    },
+    {
+      "proposal_id": "P07",
+      "arm": "b0_undirected",
+      "member_rank": 2
+    },
+    {
+      "proposal_id": "P08",
+      "arm": "b3_invariant_guided",
+      "member_rank": 0
+    },
+    {
+      "proposal_id": "P09",
+      "arm": "b0_undirected",
+      "member_rank": 5
+    },
+    {
+      "proposal_id": "P10",
+      "arm": "b3_invariant_guided",
+      "member_rank": 4
+    },
+    {
+      "proposal_id": "P11",
+      "arm": "b0_undirected",
+      "member_rank": 1
+    },
+    {
+      "proposal_id": "P12",
+      "arm": "b3_invariant_guided",
+      "member_rank": 1
+    },
+    {
+      "proposal_id": "P13",
+      "arm": "b3_invariant_guided",
+      "member_rank": 2
+    }
+  ]
+}
