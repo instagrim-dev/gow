@@ -1,0 +1,66 @@
+{
+  "schema_version": "decision-handoff-packet/v3",
+  "source_decision": {
+    "identity": "file:/Users/jmh/dev/gh/newf/corpus/experiments/pilot-001/review/adjudication-ledger.json",
+    "digest": "sha256:3b5d5e4a0769b06474b77108ab112b9cea3d39cbceb916c0ebae29e0fd65e493"
+  },
+  "decision_ids": [
+    "D-ADJ-L1-L5",
+    "D-L6"
+  ],
+  "foundation_invariant": "Accepted ledger relationships change the vocabulary only through a new pinned revision: no accepted entry merges identities, and accepted shared properties enter as GeneratedInterpretation hypotheses that earn support only through mine -> challenge at the unchanged min-support threshold.",
+  "owning_artifact": "corpus/experiments/pilot-001/review/adjudication-ledger.json",
+  "in_scope_seams": [
+    "new pinned vocabulary revision (mechanism/v2 or scoped equivalent) adding canonical concepts for confined_to_quadratic_nonresidues (L1), class_union_construction (L3), identity_carried_solvability (L4) with ledger-entry provenance and GeneratedInterpretation status",
+    "recording of L2 component_of and L5/L6 distinct_on_tested_property relationships as non-merging contrast metadata available to challenge",
+    "successor protocol revision (pilot-002): new pinned hashes, fresh isolated database, re-normalization, mandatory reclustering, readiness re-run per RUNBOOK/MAPPING-REVIEW freeze rules"
+  ],
+  "out_of_scope_seams": [
+    {
+      "seam": "mechanism/v1 vocabulary",
+      "reason": "immutable by MAPPING-REVIEW.md freeze rule; aliases/concepts publish only as a new pinned revision"
+    },
+    {
+      "seam": "corpus/train note contents at pin a868dec",
+      "reason": "frozen dataset; any content change is a corpus revision requiring its own protocol"
+    },
+    {
+      "seam": "corpus/target and all artifacts derived from it",
+      "reason": "blinding: withheld target remains unread until capture protocol"
+    },
+    {
+      "seam": "miner min-support threshold and DerivingFixtureInvariantMiner semantics",
+      "reason": "operator constraint: keep the threshold; readiness failure is a stop, not a tuning instruction"
+    },
+    {
+      "seam": "pilot-001 manifest/PROTOCOL runtime values",
+      "reason": "pilot-001 stays prepared_not_captured with nulls; a successor protocol inherits the design"
+    }
+  ],
+  "first_broken_seam": "vocabulary revision: mechanism/v1 contains no canonical concepts for the three accepted shared properties, so the deterministic miner cannot see them",
+  "sibling_surfaces": [
+    "corpus/experiments/pilot-001/records/STOP-readiness-2026-09-10.md (already revised; must not be re-litigated by the implementation)",
+    "readiness check surface (newf experiment readiness): verify it reports the new vocabulary revision and reclustered family counts without semantic changes to check definitions",
+    "docs describing vocabulary pinning (if any name mechanism/v1 as sole revision, update descriptively only)"
+  ],
+  "acceptance_proof_obligations": [
+    "git diff shows mechanism/v1 definition unchanged; new revision added alongside with ledger-entry provenance references (L1/L3/L4)",
+    "encoded properties carry GeneratedInterpretation (hypothesis) epistemic status, not SourceFact/Evidence",
+    "reclustering executed on the fresh database before any support counting; resulting cluster_run status recorded verbatim (degraded or otherwise) in successor records",
+    "newf experiment readiness re-run in the successor pilot and its verbatim output persisted; no threshold or check weakening",
+    "go build ./... && go test ./... && gofmt -l . empty, if code changes are required for the new vocabulary revision"
+  ],
+  "do_not_reopen_decisions": [
+    "D-ADJ-L1-L5",
+    "D-L6"
+  ],
+  "missing_packet_fields": [],
+  "handoff_status": "ready",
+  "authority_boundaries": {
+    "mutation_authority": "none",
+    "status_authority": "owning_artifact",
+    "identity_authority": "owning_artifact",
+    "approval_authority": "owning_artifact"
+  },
+  "next_lawful_owner": "implementation_owner"
+}

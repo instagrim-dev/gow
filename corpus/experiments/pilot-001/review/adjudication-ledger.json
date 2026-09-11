@@ -19,126 +19,290 @@
       "id": "L1",
       "kind": "shared_property",
       "labels": [
-        {"field_kind": "operator", "label": "polynomial identity", "source": "es-01"},
-        {"field_kind": "operator", "label": "congruence covering", "source": "es-02"},
-        {"field_kind": "operator", "label": "factorization identity", "source": "es-03"},
-        {"field_kind": "operator", "label": "class assembly", "source": "es-10"},
-        {"field_kind": "preserves", "label": "confinement of congruence methods to non-residues", "source": "es-08"}
+        {
+          "field_kind": "operator",
+          "label": "polynomial identity",
+          "source": "es-01"
+        },
+        {
+          "field_kind": "operator",
+          "label": "congruence covering",
+          "source": "es-02"
+        },
+        {
+          "field_kind": "operator",
+          "label": "factorization identity",
+          "source": "es-03"
+        },
+        {
+          "field_kind": "operator",
+          "label": "class assembly",
+          "source": "es-10"
+        },
+        {
+          "field_kind": "preserves",
+          "label": "confinement of congruence methods to non-residues",
+          "source": "es-08"
+        }
       ],
       "claim": "Distinct mechanisms (per-class identities, finite covering, divisor factorization, class assembly with density) share the restriction that their congruence-carried reach eliminates only quadratic non-residue classes; quadratic-residue survivor classes remain outside all of them.",
       "proposed_property": "confined_to_quadratic_nonresidues (working name): the method's coverage is carried by congruence relations that, by quadratic reciprocity, cannot catch quadratic-residue classes.",
       "scope": "Asserted for es-01, es-02, es-03, es-10 (failure-side) with es-08 as the note that names the property as an obstruction. NOT asserted for es-05 (fails on growth rate, see L5) or es-07 (fails by definitional finiteness; its QR mention is about what remains beyond the bound, not about its mechanism's carrier).",
       "evidence": [
-        {"source": "es-01", "passage": "They resolve every class except those where n behaves like a perfect square to small moduli."},
-        {"source": "es-02", "passage": "the congruence relations that carry polynomial identities can only eliminate quadratic *non*-residues. By quadratic reciprocity, no finite covering built from these identities can catch the quadratic-residue classes (see es-08)."},
-        {"source": "es-03", "passage": "the factorization view gives no global lattice organization of the solution set ... existence unforced for QR primes (boundary_statement)."},
-        {"source": "es-08", "passage": "the note that explains why the identity/covering families (es-01, es-02) all stall on the same classes ... It preserves — indeed pinpoints — the invariant that the whole identity/covering program confines to non-residues."},
-        {"source": "es-10", "passage": "the exceptional set is thin but non-empty and infinite, and it is exactly the quadratic-residue survivor family."}
+        {
+          "source": "es-01",
+          "passage": "They resolve every class except those where n behaves like a perfect square to small moduli."
+        },
+        {
+          "source": "es-02",
+          "passage": "the congruence relations that carry polynomial identities can only eliminate quadratic *non*-residues. By quadratic reciprocity, no finite covering built from these identities can catch the quadratic-residue classes (see es-08)."
+        },
+        {
+          "source": "es-03",
+          "passage": "the factorization view gives no global lattice organization of the solution set ... existence unforced for QR primes (boundary_statement)."
+        },
+        {
+          "source": "es-08",
+          "passage": "the note that explains why the identity/covering families (es-01, es-02) all stall on the same classes ... It preserves — indeed pinpoints — the invariant that the whole identity/covering program confines to non-residues."
+        },
+        {
+          "source": "es-10",
+          "passage": "the exceptional set is thin but non-empty and infinite, and it is exactly the quadratic-residue survivor family."
+        }
       ],
       "preserves_distinctions": "es-01/es-02/es-03/es-10 remain four distinct mechanisms (local identity vs global covering vs divisor construction vs density assembly). This entry asserts a shared restriction, not sameness.",
       "counterevidence": [
-        {"source": "es-09", "note": "partial_success that explicitly 'adds no positivity for QR primes' — a non-failure outcome still preserving the property; relevant to challenge step 3 (success that preserves the invariant)."},
-        {"source": "es-12", "note": "partial_success that designs around the restriction ('none of the admitted congruences is a quadratic residue', preserves 'Mordell non-residue restriction'); conjectural coverage. Mandatory contrast for any candidate built from this property."}
+        {
+          "source": "es-09",
+          "note": "partial_success that explicitly 'adds no positivity for QR primes' — a non-failure outcome still preserving the property; relevant to challenge step 3 (success that preserves the invariant)."
+        },
+        {
+          "source": "es-12",
+          "note": "partial_success that designs around the restriction ('none of the admitted congruences is a quadratic residue', preserves 'Mordell non-residue restriction'); conjectural coverage. Mandatory contrast for any candidate built from this property."
+        }
       ],
-      "status": "proposed",
-      "adjudication": null
+      "status": "accepted",
+      "adjudication": {
+        "decision": "accepted",
+        "by": "operator (adjudication form, 2026-09-11 UTC)",
+        "date_utc": "2026-09-11",
+        "reason": "Accepted as proposed: encode confined_to_quadratic_nonresidues as a source-grounded hypothesis (canonical concept), scope excluding es-05/es-07; support earned only via mine -> challenge at unchanged threshold."
+      }
     },
     {
       "id": "L2",
       "kind": "component_of",
       "labels": [
-        {"field_kind": "operator", "label": "class union", "source": "es-02"},
-        {"field_kind": "operator", "label": "congruence covering", "source": "es-02"}
+        {
+          "field_kind": "operator",
+          "label": "class union",
+          "source": "es-02"
+        },
+        {
+          "field_kind": "operator",
+          "label": "congruence covering",
+          "source": "es-02"
+        }
       ],
       "claim": "In es-02, 'class union' is a constituent operation of the 'congruence covering' method: the covering system is built by unioning identity-admitting classes. Co-occurrence on one note is not evidence of interchangeability.",
       "scope": "es-02 only. No alias is proposed; a support merge would double-count one note.",
       "evidence": [
-        {"source": "es-02", "passage": "it seeks a finite family of congruences whose union is all of Z."},
-        {"source": "es-02", "passage": "notes: 'Seeks a finite union of solvable classes covering Z.' — the union is the means; the covering is the objective."}
+        {
+          "source": "es-02",
+          "passage": "it seeks a finite family of congruences whose union is all of Z."
+        },
+        {
+          "source": "es-02",
+          "passage": "notes: 'Seeks a finite union of solvable classes covering Z.' — the union is the means; the covering is the objective."
+        }
       ],
       "preserves_distinctions": "The global covering objective vs the class-level union operation, which es-02 itself distinguishes.",
       "counterevidence": [],
-      "status": "proposed",
-      "adjudication": null
+      "status": "accepted",
+      "adjudication": {
+        "decision": "accepted",
+        "by": "operator (adjudication form, 2026-09-11 UTC)",
+        "date_utc": "2026-09-11",
+        "reason": "Accepted: relationship recorded, identities preserved, no support merge."
+      }
     },
     {
       "id": "L3",
       "kind": "shared_property",
       "labels": [
-        {"field_kind": "operator", "label": "congruence covering", "source": "es-02"},
-        {"field_kind": "operator", "label": "class assembly", "source": "es-10"}
+        {
+          "field_kind": "operator",
+          "label": "congruence covering",
+          "source": "es-02"
+        },
+        {
+          "field_kind": "operator",
+          "label": "class assembly",
+          "source": "es-10"
+        }
       ],
       "claim": "es-02's covering and es-10's assembly both construct unions of identity-admitting congruence classes; they differ on the demand placed on the union (exhaustive cover of Z vs bounded-density leftover). Not proposed as an alias.",
       "proposed_property": "class_union_construction (working name): builds a union of congruence classes each admitting a polynomial identity.",
       "scope": "es-02 and es-10. The exhaustive/existential vs density/estimative distinction is load-bearing: es-02 fails outright where es-10 reaches a thin-but-infinite exceptional set.",
       "evidence": [
-        {"source": "es-02", "passage": "choose finitely many moduli and residue classes so that every integer n falls into at least one class that admits an identity."},
-        {"source": "es-10", "passage": "it works class by class (local identities) but its payoff is a global density statement about how thin the unsolved set is."}
+        {
+          "source": "es-02",
+          "passage": "choose finitely many moduli and residue classes so that every integer n falls into at least one class that admits an identity."
+        },
+        {
+          "source": "es-10",
+          "passage": "it works class by class (local identities) but its payoff is a global density statement about how thin the unsolved set is."
+        }
       ],
       "preserves_distinctions": "Exhaustive covering (existential, all of Z) vs density-driven assembly (counts survivors). Merging these as an alias would erase the variable that separates their outcome boundaries.",
       "counterevidence": [
-        {"source": "es-12", "note": "uses the exact label 'congruence covering' under partial_success (form-indexed, respecting the non-residue restriction). Any candidate involving covering must face this occurrence."}
+        {
+          "source": "es-12",
+          "note": "uses the exact label 'congruence covering' under partial_success (form-indexed, respecting the non-residue restriction). Any candidate involving covering must face this occurrence."
+        }
       ],
-      "status": "proposed",
-      "adjudication": null
+      "status": "accepted",
+      "adjudication": {
+        "decision": "accepted",
+        "by": "operator (adjudication form, 2026-09-11 UTC)",
+        "date_utc": "2026-09-11",
+        "reason": "Accepted: encode class_union_construction as hypothesis; exhaustive-vs-density distinction preserved as load-bearing."
+      }
     },
     {
       "id": "L4",
       "kind": "shared_property",
       "labels": [
-        {"field_kind": "operator", "label": "polynomial identity", "source": "es-01"},
-        {"field_kind": "preserves", "label": "polynomial-identity solvability per class", "source": "es-02"},
-        {"field_kind": "assumption", "label": "many classes admit identities", "source": "es-10"}
+        {
+          "field_kind": "operator",
+          "label": "polynomial identity",
+          "source": "es-01"
+        },
+        {
+          "field_kind": "preserves",
+          "label": "polynomial-identity solvability per class",
+          "source": "es-02"
+        },
+        {
+          "field_kind": "assumption",
+          "label": "many classes admit identities",
+          "source": "es-10"
+        }
       ],
       "claim": "es-01, es-02 and es-10 all depend on class-local polynomial identities as the carrier of solvability; the dependency appears as operator (es-01), preserved property (es-02) and assumption (es-10).",
       "proposed_property": "identity_carried_solvability (working name): solvability inside a congruence class is supplied by a fixed polynomial identity keyed to that class.",
       "scope": "es-01, es-02, es-10 (failure-side). es-12 shares the dependency in form-indexed shape (partial_success contrast).",
       "evidence": [
-        {"source": "es-01", "passage": "For many residue classes of n, a fixed polynomial identity in n writes down 4/n = 1/x + 1/y + 1/z directly."},
-        {"source": "es-02", "passage": "preserves: 'polynomial-identity solvability per class'."},
-        {"source": "es-10", "passage": "estimates the number of n ≤ N for which the conjecture is not yet settled by known congruence identities."}
+        {
+          "source": "es-01",
+          "passage": "For many residue classes of n, a fixed polynomial identity in n writes down 4/n = 1/x + 1/y + 1/z directly."
+        },
+        {
+          "source": "es-02",
+          "passage": "preserves: 'polynomial-identity solvability per class'."
+        },
+        {
+          "source": "es-10",
+          "passage": "estimates the number of n ≤ N for which the conjecture is not yet settled by known congruence identities."
+        }
       ],
       "preserves_distinctions": "How each method uses the identities (locally, unioned, counted) stays distinct; only the dependency is shared.",
       "counterevidence": [
-        {"source": "es-12", "note": "associates a general polynomial to each of two solution forms — the same dependency arranged by form rather than by producing congruence, under partial_success."}
+        {
+          "source": "es-12",
+          "note": "associates a general polynomial to each of two solution forms — the same dependency arranged by form rather than by producing congruence, under partial_success."
+        }
       ],
-      "status": "proposed",
-      "adjudication": null
+      "status": "accepted",
+      "adjudication": {
+        "decision": "accepted",
+        "by": "operator (adjudication form, 2026-09-11 UTC)",
+        "date_utc": "2026-09-11",
+        "reason": "Accepted: encode identity_carried_solvability as hypothesis; es-12 form-indexed contrast retained."
+      }
     },
     {
       "id": "L5",
       "kind": "distinct_on_tested_property",
       "labels": [
-        {"field_kind": "operator", "label": "averaging", "source": "es-05"},
-        {"field_kind": "operator", "label": "sieve estimation", "source": "es-05"}
+        {
+          "field_kind": "operator",
+          "label": "averaging",
+          "source": "es-05"
+        },
+        {
+          "field_kind": "operator",
+          "label": "sieve estimation",
+          "source": "es-05"
+        }
       ],
       "claim": "es-05 fails for a different structural reason than the congruence family: its boundary is intrinsic growth rate (polylog average too slow to force existence), not quadratic-residue confinement. This distinction is potential counterevidence against over-generalizing L1.",
       "scope": "es-05 vs the L1 cohort. If a future candidate claims 'all failure-side methods are QR-confined', es-05 refutes the universal reading.",
       "evidence": [
-        {"source": "es-05", "passage": "the average grows only polylogarithmically. For some Diophantine problems a positive average forces a solution to exist, but that argument needs at least polynomial growth."},
-        {"source": "es-05", "passage": "it reasons about the distribution of solution counts across a large ensemble of primes rather than about any single n."}
+        {
+          "source": "es-05",
+          "passage": "the average grows only polylogarithmically. For some Diophantine problems a positive average forces a solution to exist, but that argument needs at least polynomial growth."
+        },
+        {
+          "source": "es-05",
+          "passage": "it reasons about the distribution of solution counts across a large ensemble of primes rather than about any single n."
+        }
       ],
       "preserves_distinctions": "Ensemble/probabilistic posture vs congruence-carried constructive posture; growth-rate boundary vs residue-class boundary.",
       "counterevidence": [],
-      "status": "proposed",
-      "adjudication": null
+      "status": "accepted",
+      "adjudication": {
+        "decision": "accepted",
+        "by": "operator (adjudication form, 2026-09-11 UTC)",
+        "date_utc": "2026-09-11",
+        "reason": "Accepted: preserved as counterevidence against universal QR-confinement claims."
+      }
     },
     {
       "id": "L6",
-      "kind": "unresolved",
+      "kind": "distinct_on_tested_property",
       "labels": [
-        {"field_kind": "operator", "label": "local congruence filter", "source": "es-03"},
-        {"field_kind": "operator", "label": "modular decomposition", "source": "es-01"}
+        {
+          "field_kind": "operator",
+          "label": "local congruence filter",
+          "source": "es-03"
+        },
+        {
+          "field_kind": "operator",
+          "label": "modular decomposition",
+          "source": "es-01"
+        }
       ],
-      "claim": "es-03's positivity-filtering by local congruences and es-01's resolved 'modular decomposition' both manipulate residue classes, but the train evidence does not establish that they are the same operation, a specialization, or a shared dependency beyond L1/L4.",
-      "scope": "Left unresolved; recorded so the gap is visible rather than silently absorbed into an alias.",
+      "claim": "The two operations have affirmatively distinct roles: es-01's modular decomposition partitions the problem inputs by residue class of n and dispatches per-class identities; es-03's local congruence filter selects among candidate denominators for positivity within a single instance. No alias, component, or shared property beyond those already carried by L1/L4 is admissible from train evidence.",
+      "scope": "es-01 vs es-03. The distinction is preserved as potential counterevidence against any future candidate that would merge congruence-based problem partitioning with congruence-based candidate filtering.",
       "evidence": [
-        {"source": "es-03", "passage": "enumerating divisors of a quantity depending on n and applying local congruence filters to keep the denominators positive integers."}
+        {
+          "source": "es-03",
+          "passage": "enumerating divisors of a quantity depending on n and applying local congruence filters to keep the denominators positive integers."
+        },
+        {
+          "source": "es-01",
+          "passage": "Because these identities are keyed to fixed moduli, they reason one class at a time and never couple classes."
+        }
       ],
-      "preserves_distinctions": "Filtering candidates for positivity vs decomposing the problem by modulus.",
+      "preserves_distinctions": "Problem-space partition (global class structure over n) vs candidate-solution filtering (instance-local positivity selection).",
       "counterevidence": [],
-      "status": "proposed",
-      "adjudication": null
+      "prohibited_promotions": [
+        "'uses modular arithmetic' as a shared property: rejected on abstraction-safety grounds — nearly every note in this corpus, including partial successes es-04 and es-12, uses modular arithmetic, so the property has no predictive discrimination and would erase the variable separating outcomes."
+      ],
+      "status": "accepted",
+      "adjudication": {
+        "decision": "accepted_as_reclassified",
+        "by": "operator via holistic-design-decision-resolver invocation (adjudication form, question L6)",
+        "date_utc": "2026-09-11",
+        "reason": "Resolver decision D-L6, option B: train evidence affirmatively establishes distinct roles, which is stronger than 'no relationship established'. Original 'unresolved' kind superseded; over-broad abstraction recorded as prohibited promotion.",
+        "reopen_trigger": "If a future proposer or reviewer supplies train-grounded evidence that the positivity filter and the class decomposition compose into or specialize one another, this entry must be re-adjudicated before any merged concept is encoded."
+      }
     }
-  ]
+  ],
+  "adjudication_summary": {
+    "date_utc": "2026-09-11",
+    "result": "L1-L5 accepted as proposed by operator form response; L6 reclassified unresolved -> distinct_on_tested_property and accepted via holistic-design-decision-resolver (decision D-L6, option B).",
+    "downstream": "Per MAPPING-REVIEW.md freeze rules: accepted shared properties (L1, L3, L4) enter as GeneratedInterpretation hypotheses in a NEW pinned vocabulary revision; no alias was accepted, so no identity merge occurs; reclustering + fresh database + new protocol revision required before support is counted again."
+  }
 }
