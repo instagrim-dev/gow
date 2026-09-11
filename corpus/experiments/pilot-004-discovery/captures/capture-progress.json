@@ -1,0 +1,58 @@
+{
+  "schema": "pilot-capture-progress/v1",
+  "recorded_at_utc": "2026-09-11T13:19:24.961954+00:00",
+  "freeze": "FREEZE.md committed before any dispatch (7e58c2c)",
+  "sealed_captures": {
+    "d1-run1": {
+      "sha256": "a75e8cf930c64522e694129ef78381cdb5924f518d1524ed438fbf900d4b0008",
+      "session": "5435e830-9283-41b7-8e92-3cd9139c9225",
+      "audit": [
+        "Read",
+        "UpdateCurrentStep"
+      ],
+      "validator": "valid: 4"
+    },
+    "d1-run2": {
+      "sha256": "bed96ecfe84d97dc37b2f5848938c2647acac4630d83338a2c845a72cda8f3a8",
+      "session": "0ad32634-369f-4ad2-a8a8-62f1977252bb",
+      "audit": [
+        "Read",
+        "UpdateCurrentStep"
+      ],
+      "validator": "valid: 4"
+    },
+    "d1-run3": {
+      "sha256": "92aa8c73784b86c028416a59250f7e07da1ca0b920773954f36c7832bc9bb73b",
+      "session": "a7b26cfc-d9e7-4d9a-9964-159c7c69d5c8",
+      "audit": [
+        "Read",
+        "UpdateCurrentStep",
+        "UpdateCurrentStep"
+      ],
+      "validator": "valid: 4"
+    },
+    "d0-run1": {
+      "sha256": "8b7eaa20d2b4664b2a87c6c808bc0fa5dcd2a8d11909f75bd83c081158fabdc6",
+      "session": "7411236b-471d-49d0-9da0-8d46cc027144",
+      "audit": [
+        "Read"
+      ],
+      "validator": "valid: 4"
+    },
+    "d0-run2": {
+      "sha256": "a8a392fc5f5024bfd82e075ffd869959f176e75eb934892f3a9bc5f083b31d21",
+      "session": "8df793ed-dbf0-4116-84e2-51f1156e1860",
+      "audit": [
+        "Read",
+        "UpdateCurrentStep"
+      ],
+      "validator": "valid: 4"
+    }
+  },
+  "blocked": {
+    "capture": "d0-run3",
+    "evidence": "six consecutive host dispatch rejections ([invalid_argument]) between 12:20 and 12:34 UTC, including two wrapper rewordings and waits of 15-90s; d0-run2 succeeded with the identical wrapper minutes earlier \u2014 a host-side dispatch fault, not a protocol or input problem",
+    "disposition": "capture remains OWED; the sealed-before-next-dispatch invariant is intact (no partial dispatch occurred); the freeze does not expire. Ledger assembly deliberately WAITS for the sixth capture \u2014 adjudicating a 3-vs-2 arm asymmetry would bias the D1/D0 comparison the protocol exists to make.",
+    "resume": "dispatch d0-run3 with the same wrapper and seal via the recorded procedure, then assemble the arm-blind ledger"
+  }
+}
