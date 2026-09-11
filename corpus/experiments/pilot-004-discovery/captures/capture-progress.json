@@ -47,12 +47,21 @@
         "UpdateCurrentStep"
       ],
       "validator": "valid: 4"
+    },
+    "d0-run3": {
+      "sha256": "6bfa6ae19f2b47fa88ee0c520c047ca8357269196893504d21fd93e74d5f90a8",
+      "session": "412c84ec-810e-407b-974b-de9b227a5655",
+      "audit": [
+        "Read"
+      ],
+      "validator": "valid: 3"
     }
   },
   "blocked": {
     "capture": "d0-run3",
     "evidence": "six consecutive host dispatch rejections ([invalid_argument]) between 12:20 and 12:34 UTC, including two wrapper rewordings and waits of 15-90s; d0-run2 succeeded with the identical wrapper minutes earlier \u2014 a host-side dispatch fault, not a protocol or input problem",
     "disposition": "capture remains OWED; the sealed-before-next-dispatch invariant is intact (no partial dispatch occurred); the freeze does not expire. Ledger assembly deliberately WAITS for the sixth capture \u2014 adjudicating a 3-vs-2 arm asymmetry would bias the D1/D0 comparison the protocol exists to make.",
-    "resume": "dispatch d0-run3 with the same wrapper and seal via the recorded procedure, then assemble the arm-blind ledger"
+    "resume": "dispatch d0-run3 with the same wrapper and seal via the recorded procedure, then assemble the arm-blind ledger",
+    "resolution": "resolved 2026-09-11T13:24:29.834179+00:00: a seventh dispatch with the original wrapper succeeded after the recorded commit interval; capture sealed under the standard procedure"
   }
 }

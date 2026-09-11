@@ -1,0 +1,121 @@
+{
+  "schema": "pilot-adjudication-key/v1",
+  "shuffle_seed_derivation": "sha256 of sorted capture digests",
+  "key": [
+    {
+      "entry_id": "E01",
+      "capture": "d1-run2",
+      "index": 0
+    },
+    {
+      "entry_id": "E02",
+      "capture": "d1-run3",
+      "index": 0
+    },
+    {
+      "entry_id": "E03",
+      "capture": "d1-run3",
+      "index": 1
+    },
+    {
+      "entry_id": "E04",
+      "capture": "d0-run2",
+      "index": 1
+    },
+    {
+      "entry_id": "E05",
+      "capture": "d1-run1",
+      "index": 1
+    },
+    {
+      "entry_id": "E06",
+      "capture": "d0-run1",
+      "index": 3
+    },
+    {
+      "entry_id": "E07",
+      "capture": "d1-run2",
+      "index": 1
+    },
+    {
+      "entry_id": "E08",
+      "capture": "d1-run1",
+      "index": 2
+    },
+    {
+      "entry_id": "E09",
+      "capture": "d0-run2",
+      "index": 0
+    },
+    {
+      "entry_id": "E10",
+      "capture": "d1-run2",
+      "index": 2
+    },
+    {
+      "entry_id": "E11",
+      "capture": "d0-run1",
+      "index": 1
+    },
+    {
+      "entry_id": "E12",
+      "capture": "d0-run3",
+      "index": 0
+    },
+    {
+      "entry_id": "E13",
+      "capture": "d0-run3",
+      "index": 2
+    },
+    {
+      "entry_id": "E14",
+      "capture": "d0-run3",
+      "index": 1
+    },
+    {
+      "entry_id": "E15",
+      "capture": "d1-run1",
+      "index": 3
+    },
+    {
+      "entry_id": "E16",
+      "capture": "d0-run1",
+      "index": 2
+    },
+    {
+      "entry_id": "E17",
+      "capture": "d1-run1",
+      "index": 0
+    },
+    {
+      "entry_id": "E18",
+      "capture": "d0-run1",
+      "index": 0
+    },
+    {
+      "entry_id": "E19",
+      "capture": "d1-run2",
+      "index": 3
+    },
+    {
+      "entry_id": "E20",
+      "capture": "d1-run3",
+      "index": 3
+    },
+    {
+      "entry_id": "E21",
+      "capture": "d0-run2",
+      "index": 2
+    },
+    {
+      "entry_id": "E22",
+      "capture": "d1-run3",
+      "index": 2
+    },
+    {
+      "entry_id": "E23",
+      "capture": "d0-run2",
+      "index": 3
+    }
+  ]
+}
