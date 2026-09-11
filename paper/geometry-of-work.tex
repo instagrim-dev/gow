@@ -81,20 +81,39 @@ behavior and constituent capabilities.
 \label{sec:intro}
 
 \subsection{The problem with repeated hard work}
-\todo{Motivate: when linear search exhausts its information yield, what do
-you do with the accumulated history of attempts?}
+\subsection{The problem with repeated hard work}
+
+Some problems resist sustained effort not because they are poorly understood,
+but because the effort itself is not producing new information. A research team
+accumulates twelve serious attempts on a conjecture; each attempt is more
+sophisticated than the last; none resolves the case. A software team iterates
+on a design; each iteration adds complexity; the core problem remains. An
+optimizer runs for hours; the objective barely moves.
+
+In each case, the problem is not a lack of effort or ingenuity. The problem is
+that \emph{the space of attempts is being searched linearly}, treating each new
+attempt as independent of the last. The accumulated history of failure is
+discarded as consumed effort rather than read as structured evidence.
+
+This paper is about what to do instead.
 
 \subsection{Geometry of Work}
-\todo{Core thesis in one paragraph:}
 
-\begin{quote}
-When repeated work stops producing information, treat the work itself as data.
-\end{quote}
+The key insight is that a population of attempts on a problem --- including all
+the failed ones --- has a geometry. Attempts cluster by the structure they
+instantiate. Clusters partition by outcome. The partitions reveal boundaries.
+Boundaries are the structural conditions that separate the work that has
+progress potential from the work that does not. A new attempt can be designed
+to deliberately cross a boundary rather than continue inside a known failure
+regime.
 
-Given work items~$W$, structural descriptions~$S(W)$, and observed
-outcomes~$O(W)$, reconstruct a geometry over work, identify boundaries between
-outcome regimes, propose a structural move~$\Delta S$, and project that move
-back into the domain:
+We call this framework \emph{Geometry of Work} (GoW). The methodology separates
+shape-space reasoning from domain-space verification: the geometry is
+constructed and explored in shape-space (the space of structural descriptions),
+and proposed crossings are projected back into domain-space for classical
+evaluation. Shape-space search is inherently uncertain; domain-space verification
+is inherently authoritative. Keeping them separate is the epistemic core of the
+framework.
 \[
 W
 \xrightarrow{S}
@@ -133,8 +152,54 @@ We make four claims, deliberately ordered from broadest to narrowest:
 \section{Motivating Example}
 \label{sec:example}
 
-\todo{Concrete before/after: conventional search vs.\ shape-guided search on a
-small worked example. Use Erd\H{o}s--Straus or a simpler toy problem.}
+\section{Motivating Example}
+\label{sec:example}
+
+Consider a research team that has spent several years attempting to prove the
+Erd\H{o}s--Straus conjecture ($4/n = 1/a + 1/b + 1/c$ has a solution for all
+$n \geq 2$) without success. They have accumulated roughly a dozen serious
+approaches: algebraic identities, modular arithmetic constructions, sieve
+methods, class-number arguments, geometric interpretations, and analytic
+estimates. None has resolved the general case.
+
+\paragraph{Conventional search (the failure mode).}
+In the conventional model, the team's next step is to \emph{think of something
+new}. ``New'' here means surface novelty: a different proof idea, a different
+representation, a different tool. The history of attempts is consumed context,
+not data. Each new attempt is a fresh start. After twelve years, the team has
+twelve attempts and no useful accumulated knowledge about the structure of
+the problem's resistance.
+
+\paragraph{GoW (treating work as data).}
+Under GoW, the team first \emph{maps} the twelve attempts. Each is given a
+structural description: what objects it reasons over, what it assumes, what
+operations it performs, what properties it preserves. The descriptions are
+normalized to a common vocabulary. Clustering reveals four mechanistic families.
+Three are failure-conditioned; one contains the two partial results in the corpus.
+
+Mining the failure families produces a candidate shape claim: every approach
+that has stalled so far has an \emph{averaging ceiling} in its rate argument.
+The polylogarithmic or slower growth of its key aggregate is insufficient to
+force a solution to exist. The claim is proposed, challenged, and survives with
+a boundary delta: there are two sub-mechanisms (rate-ceiling and reach-ceiling)
+that were previously conflated.
+
+The boundary delta is now a structural target. The team asks: \emph{what approach
+would cross this boundary?} The answer --- a construction that avoids polylog
+rate arguments entirely, using instead a sparse algebraic identity that works
+modulo a structured residue class --- is a proposal in shape-space. Translating
+it back into domain-space produces a concrete construction to investigate.
+
+\paragraph{The difference.}
+Conventional search produces another attempt. GoW produces an attempt whose
+structural rationale is legible: it targets a specific, challenged, surviving
+boundary in the failure geometry. If the attempt fails, the landing point is
+re-ingested and the geometry is updated. Failure is still failure; but now it
+is a measurement.
+
+This example is drawn from the Pilot-003 and Pilot-004 experiments reported in
+\cref{sec:results}. The fiberwise lattice-point proposal in Pilot-003 (B3 rank 4)
+is the domain-space analog of the crossing described above.
 
 % ── 3. Semantic Model ────────────────────────────────────────────────
 \section{Semantic Model: The Geometry of Work}
@@ -171,33 +236,215 @@ where:
 \end{itemize}
 \end{definition}
 
-\todo{Develop regime, boundary, structural delta, projection, landing point
-definitions. Keep self-contained---a reader must reconstruct GoW from this
-section alone.}
+\begin{definition}[Regime]
+A \emph{regime} $r \in R$ is a region of shape-space associated with an
+outcome distribution. Formally, it is a set of work items whose structural
+shapes cluster together under a similarity criterion, together with the
+conditional outcome distribution $P(O \mid \text{shape} \in r)$. Two common
+regime types are \emph{failure-conditioned} (work that did not progress the
+problem) and \emph{success-conditioned} (work that made progress). Partial
+successes define intermediate regimes. Regimes are empirically estimated, not
+axiomatically given.
+\end{definition}
+
+\begin{definition}[Boundary]
+A \emph{boundary} $b \in B$ is a structural condition that separates two
+regimes with distinct outcome distributions. A boundary has the form
+\[
+b = \bigl(\text{property } p,\; r_1,\; r_2 \bigr)
+\]
+where $p$ is absent in $r_1$ and present in $r_2$ (or vice versa), and the
+difference in outcome distributions across $p$ is greater than the noise in
+the estimates. A boundary is not a sharp line but a structural discriminant:
+the evidence establishes that $p$ changes across the boundary, not that
+the boundary is a hyperplane.
+
+A \emph{boundary delta} $\delta(b)$ is the minimal structural condition
+separating a counterexample (or observed split) from a claim's support
+population. It arises during adversarial challenge and is itself evidence:
+a sharp delta is a \emph{resolution gain}, not a failure, because it reveals
+a tighter boundary.
+\end{definition}
+
+\begin{definition}[Structural delta]
+A \emph{structural delta} $\Delta S$ is a proposed change in structural shape
+that, if instantiated, would cross a boundary from one regime toward another.
+It is an action in shape-space, not an assertion about domain-space. It must
+be stated as a concrete difference in at least one structural field (representation,
+assumptions, operators, preserved properties) and must argue that the change
+is mechanistically distinct from known failure families, not merely notational.
+\end{definition}
+
+\begin{definition}[Projection and landing point]
+A \emph{projection} $\Pi_{\text{domain}} : \Delta S \to W'$ translates a
+structural delta into a domain-native candidate that a classical verifier can
+evaluate. The translation is not unique, and the projection step is inherently
+model-assisted. The resulting $W'$ is a \emph{proposed work item}, not yet
+a member of the observed geometry.
+
+A \emph{landing point} is the observed result of evaluating $W'$ in the
+domain:
+\[
+\Lambda(W') = \bigl( O(W'),\; E(W'),\; \text{strength} \bigr)
+\]
+where $\text{strength}$ records the tier of the verifier that established $O(W')$
+(formal proof, reproducible computation, model judgment, etc.). The landing
+point, together with the shape $S(W')$, is then inserted back into the geometry,
+updating $R$, $B$, $H$, and $T$.
+\end{definition}
+
+\begin{remark}[Shape-space and domain-space are distinct]
+A structural delta $\Delta S$ proposes a crossing in shape-space. It does not
+establish a domain result. Projection $\Pi_{\text{domain}}(\Delta S) = W'$
+produces a candidate; verification of $W'$ produces a landing point. These three
+events are separate, carry separate epistemic weights, and must not be conflated.
+Proposing a crossing is not the same as landing across.
+\end{remark}
+
+Each component of the geometry encodes a different kind of information:
+$R$ reports where work has been; $B$ reports what structurally separates
+outcome classes; $H$ records the conserved shapes that make boundaries
+predictive; $V$ records the under-sampled or unoccupied structural combinations
+(voids); and $T$ records how successive work has moved through shape-space.
+A practitioner with access to only $B$ and $H$ has enough to propose $\Delta S$
+and begin a projection; the rest of the geometry improves prior estimates and
+informs search policy.
 
 % ── 4. Epistemic Model ──────────────────────────────────────────────
 \section{Epistemic Model: Claims, Evidence, and Promotion}
 \label{sec:epistemic}
 
-\todo{Formalize:}
+Searching in shape-space is fluent precisely because it is not being certified
+as it happens. That fluency is also dangerous: a coherent structural argument
+\emph{feels} like knowledge. The epistemic model exists to ensure that nothing
+is \emph{counted} as knowledge until something other than fluency has confirmed it.
+
+\subsection{A claim is a tuple, not a point on a ladder}
 
 \begin{definition}[Shape claim]
 A \emph{shape claim} is a tuple
-$\text{ShapeClaim} = (\text{shape}, \text{conditioning}, \text{role},
-\text{epistemic state})$
-where the four components are orthogonal axes, not a single confidence ladder.
+\[
+\text{ShapeClaim} = (\text{shape},\; \text{conditioning},\; \text{role},\;
+\text{epistemic state})
+\]
+where the four components are orthogonal axes, not a single confidence scalar.
+\begin{itemize}[nosep]
+  \item \textbf{shape} --- the conserved structure being asserted; does not
+    change when confidence changes or scope narrows.
+  \item \textbf{conditioning} --- the outcome-population the shape was observed
+    over: \emph{failure-conditioned}, \emph{success-conditioned}, \emph{mixed},
+    or \emph{frontier-conditioned}.
+  \item \textbf{role} --- the interpretive standing: regularity, obstruction,
+    enabling condition, or boundary hypothesis (see below).
+  \item \textbf{epistemic state} --- how much adversarial pressure the claim
+    has survived: \emph{proposed}, \emph{challenged}, \emph{surviving},
+    \emph{weakened}, \emph{falsified}, or \emph{operator-attested}.
+\end{itemize}
 \end{definition}
 
-\todo{The four separations:}
-\begin{enumerate}[nosep]
-  \item Shape $\neq$ outcome-conditioning
-  \item Observed regularity $\neq$ obstruction
-  \item Model judgment $\neq$ verification
-  \item Absence $\neq$ negation
+\subsection{The four separations}
+
+Four pairs of concepts must never be collapsed. Each conflation is a failure
+mode.
+
+\paragraph{1. Shape $\neq$ conditioning.}
+A structural shape is outcome-blind. Attaching a population is a separate,
+explicit act that changes the meaning of the claim. The same shape observed
+over failures vs.\ successes is a different belief: the first is a hypothesis
+about what correlates with failure; the second is a hypothesis about what
+correlates with progress.
+
+\paragraph{2. Observed regularity $\neq$ obstruction.}
+That a property recurs across the failure regime is a \emph{descriptive} fact.
+That the property \emph{prevents} progress is an \emph{explanatory} claim.
+The claim role axis exists precisely to prevent regularity from masquerading as
+obstruction. Roles:
+\begin{itemize}[nosep]
+  \item \emph{regularity} --- shape conserved across the sampled population;
+    no causal reading claimed.
+  \item \emph{obstruction} --- regularity + discrimination against successes +
+    challenge survival; the shape \emph{may} causally block progress.
+  \item \emph{enabling condition} --- regularity conserved across successes;
+    the shape may be necessary for progress.
+  \item \emph{boundary hypothesis} --- the minimal structural difference between
+    a failure regime and a success regime; the $\Delta(F, S)$ that search
+    proposes to cross.
+\end{itemize}
+
+\paragraph{3. Model judgment $\neq$ verification.}
+A provider may propose any claim. Consensus among models is still model judgment.
+Verification requires a mechanism stronger than the claim's source: a
+deterministic computation, a reproducible experiment, an independent proof, or
+at minimum an independent model family that did not generate the original claim.
+
+\begin{definition}[Verification hierarchy]
+Claims are strengthened through the following ordered tiers (higher tiers
+supersede lower ones as evidence, but lower tiers are not discarded):
+\begin{enumerate}[nosep,label=\arabic*.]
+  \item Formal proof or deterministic check
+  \item Reproducible computation or experiment
+  \item Independently sourced evidence (not model-derived)
+  \item Cross-model or independent-critic agreement
+  \item Single-model judgment
+\end{enumerate}
+No tier automatically invalidates lower ones, but the recorded evidence strength
+must remain explicit. A surviving challenge at tier~5 is weaker than a surviving
+challenge at tier~2; both are recorded.
+\end{definition}
+
+\paragraph{4. Absence $\neq$ negation.}
+An unobserved property in a structural description is not a falsified one.
+An absent field means ``not observed''; a falsified claim means ``a
+counterexample was found.'' Coercing absence to negation silently extends a
+claim beyond its evidence base.
+
+\subsection{Epistemic state transitions}
+
+A shape claim enters the lifecycle at \emph{proposed} and may transition as
+follows:
+\[
+\text{proposed}
+\xrightarrow{\text{adversarial challenge}}
+\begin{cases}
+  \text{surviving} & \text{(all probes failed to falsify)} \\
+  \text{weakened} & \text{(scope narrowed; boundary delta found)} \\
+  \text{split} & \text{(claim decomposes into two non-trivially distinct children)} \\
+  \text{falsified} & \text{(counterexample found and verified)}
+\end{cases}
+\]
+A \emph{surviving} or \emph{weakened} claim may be independently verified,
+which advances it toward \emph{operator-attested} or (with proof-level evidence)
+toward an established result. No transition may occur automatically; each
+requires explicit evidence and an operator or independent critic to record the
+transition.
+
+\subsection{The adversarial challenge}
+
+A shape claim submitted for challenge is probed by seven operations:
+
+\begin{enumerate}[nosep,label=\textbf{C\arabic*.}]
+  \item Find a known failed attempt that violates the claim.
+  \item Construct a synthetic failed attempt that violates the claim.
+  \item Find a success that still preserves the claim (contrast stability).
+  \item Lower the abstraction level and test whether the claim splits.
+  \item Raise the abstraction level and test whether two claims merge.
+  \item Identify sampling or publication bias in the observed population.
+  \item Distinguish correlation from causal obstruction.
 \end{enumerate}
 
-\todo{Verification hierarchy. Epistemic state transitions. Challenge operations.
-Anti-fractal discipline.}
+A \emph{weaken} or \emph{split} outcome is a \emph{resolution gain}: the
+boundary delta $\delta$ sharpens the claim's scope rather than refuting it.
+The weakened claim plus $\delta$ are both more informative than the original
+claim. A sharp delta is thus preferable to a vacuous survive, and a principled
+falsification is preferable to an unchallenged hypothesis.
+
+\subsection{Anti-fractal discipline}
+
+Recursive refinement is productive but must not fractal-expand indefinitely.
+The governing rule: a boundary delta licenses at most \emph{one} grounded
+child hypothesis, which enters the lifecycle at \emph{proposed} with no
+inherited authority from the parent. Children are not admitted until two or
+more independently motivated instances of the delta exist in the corpus.
 
 % ── 5. Shape-Guided Search ───────────────────────────────────────────
 \section{Shape-Guided Search}
@@ -230,37 +477,203 @@ Anti-fractal discipline.}
 \end{algorithmic}
 \end{algorithm}
 
-\todo{Prose walkthrough of each step. Recursive challenge refinement.
-Why failed crossings are informative. Failure invariants as one instrument
-among several.}
+\paragraph{Step 1 (Map).}
+Normalize heterogeneous work into outcome-blind structural shapes; canonicalize
+labels to stable, versioned vocabulary identifiers; fingerprint each shape
+deterministically; group shapes into mechanistic families; partition families
+by observed outcome into regimes. Report coverage and gaps. The output is an
+explicit geometry: $n$ distinct families, their boundaries, and where the
+sample is thin.
+
+\paragraph{Steps 2--4 (Regime, Shape, Challenge).}
+Mine the geometry for structure worth crossing. Shape claims are the most
+developed instrument, but other readings are equally valid: clusters identify
+regions; voids identify unoccupied structural combinations; gradients identify
+directions along which outcome improves; bridges identify structure shared
+between failure and success families; separatrices are the conserved properties
+that most strongly discriminate outcome classes.
+
+A shape claim that survives challenge --- or sharpens through weakening and
+boundary-delta extraction --- is stronger evidence than an unchallenged
+hypothesis.
+
+\paragraph{Steps 5--6 (Boundary, Move).}
+Identify the minimal structural condition separating the relevant regimes.
+Choose a structural delta $\Delta S$ that crosses it. A proposal must be
+mechanistically distinct from known failure families: it must change at least
+one structural field in a non-cosmetic way and name its nearest failure family
+and why it is still distinct. The conceptual objective is:
+\[
+\arg\max_{\Delta S}
+\frac{\text{mechanistic distance} + \text{invariant violation} +
+      \text{expected information gain}}{\text{evaluation cost} + \text{redundancy}}
+\]
+Fake precision in this score is undesirable; component-wise or ordinal
+judgments are acceptable.
+
+\paragraph{Step 7 (Project).}
+Translate $\Delta S$ into a domain-native candidate $W'$ that a classical
+verifier can evaluate. This step is inherently model-assisted and not unique.
+The projection is a hypothesis about how a shape-space move compiles into
+domain-space; it is not a proof.
+
+\paragraph{Steps 8--9 (Verify, Update).}
+Evaluate $W'$ with the strongest verifier available (see the verification
+hierarchy, \cref{sec:epistemic}). Record the landing point. Whether $W'$
+succeeds or fails, insert $\bigl(W', S(W'), O(W')\bigr)$ back into
+$\mathcal{G}$ and update the search policy. A failed crossing is informative
+if it narrows the search space, falsifies an invariant, identifies a tighter
+boundary, or reveals structural redundancy. Failure invariants are not an
+embarrassment; they are measurements of the terrain.
+
+\subsection{Recursive refinement}
+
+Challenge (step 4) is itself a recursive pass of the same loop. When challenge
+produces a boundary delta $\delta(b)$, it opens a micro-loop:
+\[
+F_0
+\xrightarrow{\text{compress}} I_0
+\xrightarrow{\text{challenge}} (I_1, \delta_1)
+\xrightarrow{\text{micro-loop}} \cdots
+\]
+where $F_0$ is the original failure population, $I_0$ the candidate claim,
+$I_1$ the weakened claim, and $\delta_1$ the minimal condition separating the
+support from the counterexample. Each delta narrows the map's resolution before
+any crossing is attempted. The anti-fractal rule (\cref{sec:epistemic}) prevents
+this recursion from expanding indefinitely.
 
 % ── 6. System ────────────────────────────────────────────────────────
 \section{System: \texttt{newf}}
 \label{sec:system}
 
-\todo{Architecture figure. 20--25\% of paper, not 60\%. Frame the systems
-contribution as: how do you build software that lets fuzzy model-native
-operations coexist with deterministic evidence and immutable provenance?}
+\section{System: \texttt{newf}}
+\label{sec:system}
 
-\todo{Layers:}
-\begin{enumerate}[nosep]
-  \item Work ingestion (immutable, content-addressed)
-  \item Structural normalization (model-assisted, epistemic status tracked)
-  \item Shape-space construction (deterministic canonicalization + clustering)
-  \item Shape proposal (model-native: compress, contrast, abstract)
-  \item Challenge lifecycle (adversarial, code-verified)
-  \item Boundary / frontier generation
-  \item Domain projection
-  \item Assessment (strongest-decisive-first verifier routing)
-  \item Map update (re-entry + policy mutation)
+\texttt{newf} is an instrumented realization of the GoW loop. Its technical
+contribution is not the methodology itself but the answer to a specific
+engineering question:
+
+\begin{quote}
+How do you build software that lets fuzzy, model-native operations coexist
+with deterministic evidence and immutable provenance?
+\end{quote}
+
+The answer is strict separation: model-native operations (compress, contrast,
+abstract, propose) produce \emph{claims} and \emph{candidates} that enter the
+system with an explicit epistemic status and never upgrade it silently. Every
+state transition requires explicit evidence. Every artifact is content-addressed
+and linked to its derivation. The system owns durable state; models execute
+bounded inference operations inside it.
+
+\subsection{Architecture}
+
+The GoW loop is realized as a layered CLI pipeline (Go; SQLite-backed; offline
+first). The layers are:
+
+\begin{enumerate}[label=\arabic*.]
+  \item \textbf{Work ingestion.} Each piece of work (a prior approach, a
+    paper, a proof attempt) is ingested as an immutable record with source
+    provenance. The ingestion step does not assign structural descriptions;
+    it only guarantees the raw artifact is stored and reachable.
+  \item \textbf{Structural normalization.} A model-assisted extraction step
+    maps each ingested work item to a set of structural fields
+    (representation, assumptions, operators, preserved properties, broken
+    properties). Labels are proposed by the model; resolved deterministically
+    against a versioned vocabulary to stable canonical identifiers. Unresolvable
+    labels stay \texttt{novel\_candidate} or \texttt{ambiguous}, never coerced
+    to the nearest term.
+  \item \textbf{Shape-space construction.} Canonical signatures are computed
+    as order-independent fingerprints over the resolved field sets. Signatures
+    are clustered by mechanistic similarity; clusters are partitioned by
+    observed outcome into regimes. The cluster and failure-space records are
+    deterministic functions of the signatures and vocabulary version; they
+    are recomputed, not curated.
+  \item \textbf{Shape proposal.} A model-native \emph{compress} operation
+    reads the failure-space record and proposes shape claims (candidate
+    invariants) as hypotheses about what is conserved across the failure
+    population. These enter with epistemic status \emph{proposed}.
+  \item \textbf{Challenge lifecycle.} Each candidate is subjected to the
+    seven-probe adversarial challenge. Probe outcomes are recorded with
+    evidence; status transitions require explicit operator or model attestation;
+    boundary deltas are persisted as first-class records. The status transition
+    graph is enforced in code: a proposed claim cannot move to surviving
+    without a completed challenge record.
+  \item \textbf{Boundary / frontier generation.} Surviving or weakened claims,
+    together with their boundary deltas, feed a frontier step: a model-native
+    \emph{project} operation proposes structural deltas that cross the surviving
+    boundaries. Each proposal states its target claim, claimed structural
+    violation, nearest failure family, and mechanistic distance argument.
+  \item \textbf{Domain projection.} The structural delta is compiled into a
+    domain-native candidate (e.g., a mathematical construction, a proof
+    strategy). The projection step is model-assisted and records its prompt,
+    output, and the model/version that produced it.
+  \item \textbf{Assessment.} Candidates are evaluated against a predeclared
+    recovery rule. The system routes to the strongest decisive verifier available;
+    it abstains rather than manufacturing a verdict when comparisons are
+    epistemically undecidable.
+  \item \textbf{Map update.} Evaluated candidates (regardless of outcome) are
+    re-ingested into the corpus; their landing points update the failure-space
+    and inform the next search-policy revision.
 \end{enumerate}
+
+\subsection{Epistemic guarantees}
+
+Three guarantees are enforced by construction, not convention:
+
+\begin{itemize}[nosep]
+  \item \textbf{Status monotonicity.} No epistemic status transition occurs
+    without an explicit evidence record. A model cannot claim credit for
+    surviving a challenge that has not been completed.
+  \item \textbf{Vocabulary immutability.} Vocabulary versions are append-only;
+    once a term is canonicalized it cannot be retroactively redefined. New
+    concepts require a new vocabulary version, which is recorded in the
+    signature lineage.
+  \item \textbf{Blinding.} In benchmark mode, the system records and audits
+    information flow between training and target artifacts at ingestion,
+    normalization, and signature generation, refusing to proceed if leakage
+    is detected.
+\end{itemize}
+
+Implementation details (SQLite migration numbers, provider configuration,
+command flags) are documented in the repository and cited in the appendix.
+They do not affect the theory.
 
 % ── 7. Experimental Method ───────────────────────────────────────────
 \section{Experimental Method}
 \label{sec:method-exp}
 
-\todo{Corpus description (Erd\H{o}s--Straus synthetic blinded benchmark).
-Train/target split. Assessment protocol. Provenance guarantees.}
+\section{Experimental Method}
+\label{sec:method-exp}
+
+\paragraph{Corpus.}
+All experiments use a project-authored study corpus on the Erd\H{o}s--Straus
+conjecture: whether $4/n = 1/a + 1/b + 1/c$ has a positive integer solution
+for every integer $n \geq 2$. This conjecture is mathematically open, has a
+rich history of structural attempts, and generates a meaningful failure
+population. The corpus is synthetic and authored for the purpose of these
+experiments; it is not a crawl of the mathematical literature, and no claim
+about mathematical validity follows from its use.
+
+The corpus is partitioned into a \emph{train} split (known attempts with
+outcomes) and a \emph{target} split (a withheld structural move, quarantined
+from all training operations). Blinding is enforced by \texttt{newf}'s leakage
+audit: the system refuses to proceed if any target artifact is reachable from
+the train atlas at ingestion, normalization, or signature time.
+
+\paragraph{Predeclared assessment protocol.}
+Each experiment predeclares its success criterion before generation begins.
+For curated-feature and discovery experiments, the criterion is
+\emph{criterion recovery}: at least one generated proposal must structurally
+match the withheld target move under the code-owned recovery rule
+(\texttt{recovery-rule/v1}, \texttt{classify/v3}). The rule abstains on
+out-of-vocabulary wording rather than guessing; it does not recover proposals
+that are mechanistically distinct from the target. Judgment-level review is
+separately recorded and distinguished from rule-based assessment.
+
+\paragraph{Provenance.}
+Every experiment record is immutable and content-addressed. Frozen artifacts
+live in \texttt{corpus/experiments/}; every empirical number in the results
+section is traceable to a specific file and row in those artifacts.
 
 % ── 8. Results ───────────────────────────────────────────────────────
 \section{Results}
@@ -268,40 +681,248 @@ Train/target split. Assessment protocol. Provenance guarantees.}
 
 \subsection{Experiment A: Negative controls}
 \label{sec:results-negative}
-\todo{System refuses to manufacture structure when no eligible failure
-population exists, vocabulary resolution is inadequate, or recovery is
-epistemically undecidable. Purpose: demonstrate epistemic behavior.}
+
+Two negative-control runs exercise the system's epistemic behavior when
+preconditions for useful inference are absent.
+
+\paragraph{Empty failure population.}
+Run against a version of the corpus in which no approach was classified as
+\texttt{failure} (all entries were \texttt{partial\_success} or \texttt{unknown}).
+Result: the system mined 0 candidate invariants, B3's invariant-guided arm
+generated 0 proposals, and the experiment concluded \texttt{inconclusive}
+(not \texttt{no\_recovery}: the baseline was also unassessable, so no honest
+negative can be claimed). All content axes resolved to 0 canonical identifiers.
+The run confirms that the system does not manufacture failure support when none
+exists.\footnote{Artifact: \texttt{corpus/experiments/2026-09-10-esr-negative-control/}}
+
+\paragraph{M7 blinded benchmark --- pristine target.}
+A full end-to-end blinded run against the quarantined affine-lattice target,
+with no operator attestation applied to the target's completeness declaration.
+The target's decisive set-fields were present but their completeness was only
+provider-declared, never operator-accepted; under \texttt{classify/v3}'s
+completeness contract, every field axis compared as \texttt{incomparable}.
+A target that cannot self-match cannot be matched by any arm; the conclusion was
+\texttt{inconclusive} for all arms symmetrically. This reproduces the epistemic
+behavior of the two Pilot-003 reassessment runs and confirms that the abstention
+is structural, not accidental.\footnote{Artifact: \texttt{corpus/experiments/m7-blinded-run/}; M7 Stage 1.}
+
+\paragraph{Summary.}
+Across both controls, the system refused to manufacture a verdict when
+preconditions were not met. This is the intended epistemic behavior: the
+framework distinguishes \texttt{inconclusive} (undecidable) from
+\texttt{no\_recovery} (decisively assessed, no match found).
 
 \subsection{Experiment B: Curated-feature guided search (Pilot-003)}
 \label{sec:results-pilot003}
-\todo{Curated-feature structural hypotheses supplied and challenged.
-B0 (baseline) vs B3 (structure-informed). Automatic assessment inconclusive.
-Separate model review: B3 matched intended structural move. Same-family caveat.
-Criterion recovery, not mathematical validity.}
+
+\paragraph{Design.}
+Three arms, equal budget of 6 proposals each:
+\begin{itemize}[nosep]
+  \item B0 (undirected baseline): no structural context supplied.
+  \item B1 (semantic summary): plain prose summary of corpus themes.
+  \item B3 (invariant-guided): failure-conditioned structural hypotheses
+    (L1, L3, L4) supplied and challenged before generation.
+\end{itemize}
+Target: a withheld fiberwise lattice-point / geometry-of-numbers structural move.
+
+\paragraph{Automatic assessment.}
+All arms: \texttt{inconclusive}. The target's completeness was not
+operator-attested at run time; the code-owned recovery rule abstained. The
+B0 vs.\ B3 comparison concluded \texttt{inconclusive} for the same reason
+(see M7 Stage 1 reproduction above).
+
+\paragraph{Judgment-level review.}
+A blinded model reviewer scored all proposals against the target without access
+to arm labels. Results:
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Arm & Proposals & Full recovery & Partial \\
+\midrule
+B0 (undirected) & 7 & 0 & 1 (rank 2: variety slices) \\
+B3 (invariant-guided) & 6 & \textbf{1} (rank 4) & 1 (rank 5: class-number transfer) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{The single full-recovery verdict is B3 rank 4}: a fiberwise lattice-point
+proposal whose recovery was invisible to the automatic rule (out-of-vocabulary
+wording) and visible to the blinded reviewer. B0's rank-2 partial also matters:
+the undirected arm reached the same regime, but did not cross into the target
+family.
+
+\paragraph{Caveats and limitations.}
+(1) The recovery was assessed by a model reviewer, not a domain expert or
+formal verifier; it is tier-5 evidence (single-model judgment), not
+tier-1--2. (2) B0 and B3 drew from the same model family, so the comparison
+does not rule out same-family redundancy. (3) One pilot is not a measured
+effect; it is a single-pilot directional observation.
+
+\paragraph{Conclusion.}
+Automatic assessment remained inconclusive. The model reviewer classified B3
+rank 4 as a full criterion recovery; this is an \emph{observation at tier-5
+epistemic status}, not an established result.
 
 \subsection{Experiment C: Shape discovery (Pilot-004)}
 \label{sec:results-pilot004}
-\todo{23 proposal occurrences. Reference matches. Provisionally defensible
-novel occurrences. Repeated themes. Quorum disagreement. Predeclared aggregate
-criterion not met. Capability finding: unencoded shape generation occurred.}
 
-The experiment was negative under its predeclared effectiveness endpoint while
-positive on a constituent capability observation: models generated plausible,
-previously unencoded shape hypotheses.
+\paragraph{Design.}
+Predeclared discovery criterion: the model must propose shared structural
+properties not explicitly supplied from the reference ledger, and the
+aggregate rate of such properties must exceed a predeclared threshold.
+Generation proceeded without supplying curated reference properties; all
+structural context was drawn from the corpus signatures and vocabulary alone.
 
-\subsection{Experiment D: Novel-hypothesis challenge}
+\paragraph{Results.}
+23 proposal occurrences were generated and adjudicated by a three-lane quorum.
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+Outcome & Count \\
+\midrule
+Matches reference (L1--L6) & 7 \\
+Defensible novel (not in reference) & 10 (collapsed to $\approx$6 distinct themes) \\
+Unsupported & 4 \\
+Over-merge / prohibited promotion & 2 \\
+\midrule
+Predeclared criterion & \textbf{Not met} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Of the 10 defensible-novel occurrences, five recurring themes were identified,
+including density-averaging ceiling (N2a), reorganization without existence
+forcing (N5), and locality-without-global-coupling (N3). Quorum disagreement
+was highest at the reference-match / novel boundary, partly due to wording
+sensitivity and unstable category edges.
+
+\paragraph{Key distinction.}
+The experiment was \textbf{negative under its predeclared effectiveness endpoint}
+(the aggregate novel rate did not meet the predeclared threshold) while
+\textbf{positive on a constituent capability observation}: models generated
+plausible structural hypotheses absent from the reference ledger. These two
+statements are compatible. The predeclared criterion tested method reliability;
+the capability observation records that reference-absent shape generation occurred.
+
+\paragraph{Conclusion.}
+Pilot-004 verdict: \textbf{negative / inconclusive}. Individual novel candidates
+from this pilot are admissible for independent challenge; admissibility does not
+depend on the pilot's aggregate result.
+
+\subsection{Experiment D: Novel-hypothesis challenge (N2a)}
 \label{sec:results-challenge}
-\todo{One reference-absent Pilot-004 hypothesis (N2a or similar) through full
-challenge lifecycle: ground $\to$ challenge $\to$ \{falsify, weaken, split,
-survive\}. Report outcome regardless of direction.}
+
+\paragraph{Candidate.}
+N2a (\emph{density averaging ceiling}): the hypothesis that all stalled
+Erd\H{o}s--Straus mechanisms are subject to an intrinsic rate ceiling,
+specifically that polylogarithmic-or-slower sieve-average growth is
+structurally insufficient to force the existence of a solution, independent
+of parameter optimization.
+
+This hypothesis was proposed by a model during Pilot-004 and was absent from
+the reference ledger (L1--L6). It was selected for end-to-end challenge on the
+criterion of high quorum confidence and no obvious scope objection.
+
+\paragraph{Challenge outcomes.}
+All seven probes were completed:
+\begin{itemize}[nosep]
+  \item \textbf{C1} (known counterexample): None found. es-01 and es-02 are
+    partial successes but do not violate the density framing.
+  \item \textbf{C2} (synthetic counterexample): A hypothetical dense-sieve
+    variant was constructed; it does not exist in the corpus and would need
+    independent verification.
+  \item \textbf{C3} (success-preserving): es-01 preserves the ceiling in a
+    consistent way; contrast stable.
+  \item \textbf{C4} (lower abstraction --- splits?): \textbf{Partial split found.}
+    es-05 (Bombieri--Vinogradov / Titchmarsh--Korobov type) exhibits a
+    density-rate ceiling; es-10 (\texttt{confined\_to\_quadratic\_nonresidues})
+    exhibits a reach ceiling. These are distinct sub-mechanisms. A boundary
+    delta $\delta_{\text{N2a}}$ was identified: \emph{rate-framing vs.\
+    reach-framing of the same exhaustion argument.}
+  \item \textbf{C5} (higher abstraction --- merges?): Merges with a general
+    ``finite-resource exhaustion'' theme, but the rate-specific sub-claim
+    survives at lower level.
+  \item \textbf{C6} (sampling bias): Population limited; the claim should be
+    read as holding \emph{for this corpus}, not universally.
+  \item \textbf{C7} (causality): Causal reading supported by BV/BT/TK
+    machinery analysis; polylog main-term growth is structurally insufficient
+    for existence-forcing by the relevant number-theoretic mechanisms.
+\end{itemize}
+
+\paragraph{Disposition.}
+\textbf{Weakened, with boundary delta.} N2a survives as a valid
+failure-conditioned regularity in this corpus, refined to distinguish rate-ceiling
+(es-05) from reach-ceiling (es-10) sub-mechanisms. A child hypothesis (N2a-child-1)
+was derived but not yet independently motivated by two corpus instances and
+therefore not yet admitted.
+
+\paragraph{Significance for C4.}
+This experiment provides the evidence required for Claim C4: a reference-absent,
+model-generated structural hypothesis underwent the complete challenge lifecycle
+and survived with a resolution-gaining boundary refinement. Whether the hypothesis
+is mathematically correct is outside the scope of this paper; the claim is that
+the framework can subject such a hypothesis to explicit evidentiary challenge.
 
 % ── 9. Discussion ────────────────────────────────────────────────────
 \section{Discussion}
 \label{sec:discussion}
 
-\todo{What the evidence does and does not establish. Micro-failures and
-recursive geometry. Human use of GoW. The interesting distinction: experiment
-negative on method reliability, positive on constituent capability.}
+\subsection{What the evidence does and does not establish}
+
+The four experiments form a progression, not an independence sample. Experiment A
+establishes epistemic behavior (the system abstains rather than inventing
+structure). Experiment B establishes a directional capability finding (shape-guided
+context produced the only full-recovery proposal, visible to a blinded reviewer
+but not to the automatic rule). Experiment C establishes that reference-absent
+shape generation occurs (the predeclared effectiveness endpoint was not met, but
+the constituent capability was demonstrated). Experiment D establishes that the
+challenge lifecycle can be completed for a model-generated reference-absent
+hypothesis, and that the outcome is informative regardless of direction.
+
+What the progression does not establish: that GoW reliably outperforms undirected
+generation (one pilot does not support this), that the found structural hypotheses
+are mathematically correct (no formal verification was attempted), or that the
+framework generalizes beyond the Erd\H{o}s--Straus study corpus.
+
+\subsection{The interesting distinction}
+
+The most important epistemic lesson from Pilot-004 is the distinction between
+two results that superficially look like the same negative result:
+
+\begin{itemize}[nosep]
+  \item \textbf{Method reliability endpoint not met} (aggregate novel rate below
+    predeclared threshold): \emph{negative} result.
+  \item \textbf{Reference-absent shape generation observed}: \emph{positive}
+    capability finding within the negative-effectiveness run.
+\end{itemize}
+
+These are compatible. The effectiveness endpoint tested whether the method is
+\emph{reliable}; the capability finding recorded whether a specific operation
+\emph{can occur}. A single demonstration of reference-absent shape generation,
+even inside a negative-effectiveness pilot, is evidence that the capability
+exists. It does not establish that the method is useful at scale.
+
+\subsection{Micro-failures and recursive geometry}
+
+The N2a challenge (Experiment D) produced a boundary delta that decomposed one
+``structural ceiling'' into two distinct sub-mechanisms. This is a micro-instance
+of the GoW loop running at finer granularity: the challenge step itself is a
+recursive cartography pass, and its productive output is not merely a verdict
+but a sharper map. The delta --- rate-ceiling (es-05) vs.\ reach-ceiling (es-10)
+--- was not observable from the corpus without challenge. This is evidence that
+the challenge step adds map-resolution value independent of whether the
+challenged hypothesis ultimately survives.
+
+\subsection{Human use of GoW}
+
+Nothing in the methodology requires a model. A practitioner with domain
+expertise can execute the Map step manually (by listing and describing prior
+attempts), the Challenge step by applying the seven probes with judgment, and
+the Boundary step by identifying what structurally separates the better from the
+worse outcomes. Models add throughput, not authority. The epistemic model is
+designed to keep that distinction clear: a model-generated structural hypothesis
+is a \emph{proposed} claim, not a \emph{discovered} one, regardless of how
+convincing the argument sounds.
 
 \subsection{Complement geometry: the dual reading}
 \label{sec:complement}
@@ -386,34 +1007,281 @@ Note that rigorous definition of $\Omega$ is itself a research problem.}
 \section{Related Work}
 \label{sec:related}
 
-\todo{Serious comparison against: metaheuristics, novelty search /
-quality-diversity, case-based reasoning, automated scientific discovery,
-automated theorem proving / conjecture generation, program synthesis / CEGAR,
-meta-learning, failure analysis, design-space exploration, LLM self-reflection /
-debate / verifier architectures. See docs/research/related-work-matrix.md.}
+Several research traditions inform GoW, and a careful comparison is necessary
+to identify where the contribution lies. The main finding of the comparison is
+that no single tradition combines all of the following: (1) representing prior
+attempts as structured objects, (2) conditioning shape claims on outcome class,
+(3) inferring conserved structure across a \emph{population} of attempts, (4)
+defining boundaries between outcome regimes, (5) generating next work from the
+boundary analysis, and (6) tracking epistemic provenance of structural claims.
+The conjunction is the novelty, not any single ingredient.
+
+\paragraph{Metaheuristics and search-space methods.}
+Simulated annealing, genetic algorithms, and related methods operate on a
+\emph{solution} space with a fitness function~\citep{kirkpatrick1983optimization,
+goldberg1989genetic}. They implicitly use failure (low fitness) to bias search
+but do not construct a structured description of \emph{why} attempts fail.
+The geometry is over solution encodings, not over structural descriptions of
+attempt history. GoW is complementary: it adds a structural-description layer
+that can inform the design of the search space itself, not just the trajectory
+through it.
+
+\paragraph{Novelty search and quality-diversity.}
+Novelty search \citep{lehman2011abandoning} and MAP-Elites \citep{mouret2015illuminating}
+archive \emph{behavioral} descriptors and reward diversity. The spaces they
+maintain are over behavior (input/output profiles), not over mechanism structure.
+GoW's structural shapes are outcome-blind mechanism descriptions; its regimes
+are outcome-conditioned; its epistemic lifecycle has no counterpart in novelty
+search. There is no challenge, no boundary hypothesis, and no domain projection
+in the quality-diversity tradition.
+
+\paragraph{Case-based reasoning and analogical reasoning.}
+Case-based reasoning \citep{kolodner1993case} retrieves structurally similar
+cases to adapt for new problems. It uses a similarity metric to find
+\emph{individual} similar cases, not to characterize a \emph{population} of
+failures. GoW does not retrieve; it mines. The governing question is not
+``what does this problem look like?'' but ``what is conserved across the
+failure population, and what structural move would violate it?''
+
+\paragraph{Automated scientific discovery.}
+Systems in the BACON/Eureka tradition \citep{langley1987scientific} discover
+laws from data about physical objects. The AI Scientist \citep{lu2024aiscientist}
+generates hypotheses and runs experiments. The target of discovery is
+\emph{object-level} patterns in measurements. GoW's target is the geometry of
+\emph{prior work on a problem}: a meta-level object. The two can coexist
+(GoW can use scientific discovery methods inside a projection step), but
+they answer different questions.
+
+\paragraph{Automated theorem proving and conjecture generation.}
+ATP systems (Lean, Isabelle, Metamath) \citep{harrison2014history} search proof
+space. Conjecturing systems (Graffiti, TxGraffiti) \citep{fajtlowicz1988graffiti}
+generate conjectures from graph properties. Proof failures in ATP are dead ends,
+not structured measurements of terrain. GoW's failure population is the set of
+\emph{mathematical approaches}; its geometry is over mechanism structure, not
+proof-tree structure.
+
+\paragraph{Program synthesis and counterexample-guided inductive synthesis.}
+CEGIS \citep{solar-lezama2008program} and CEGAR \citep{clarke2000counterexample}
+are the closest neighbors. Both use counterexamples to refine an abstraction.
+CEGAR refines the correctness proof of a \emph{single} synthesis target; GoW
+mines the geometry of a \emph{population of heterogeneous attempts}. In CEGIS
+the abstraction space is given; in GoW it is inferred from work descriptions.
+In both, a counterexample is productive; in GoW, any challenge outcome
+(including a boundary delta) is a structured measurement of terrain.
+
+\paragraph{Meta-learning and learning-to-search.}
+Meta-learning \citep{schmidhuber1987evolutionary, finn2017maml} learns across
+tasks to improve on new tasks quickly. The meta-space is \emph{task-indexed}.
+GoW's geometry is \emph{attempt-indexed}: the same task, many attempts.
+Meta-learning assumes a distribution over tasks and optimizes for fast adaptation;
+GoW assumes a history of work on one hard problem and optimizes for informative
+next moves.
+
+\paragraph{Failure analysis and root-cause analysis.}
+Engineering failure analysis \citep{anderson2005root} diagnoses failures to
+prevent recurrence. It shares GoW's respect for failure as data and its
+attention to structural patterns across failures. It is diagnostic, not
+generative: the goal is explanation, not the identification of a structural
+delta to cross. GoW adds the search direction.
+
+\paragraph{Design-space exploration.}
+Multi-objective DSE \citep{palermo2004dse} searches a parameter space with
+known dimensions. GoW's shape-space dimensions are inferred, not given. DSE
+assumes the space is parametric and fixed; GoW allows the representation itself
+to move (normalizing and abstracting as the geometry is refined).
+
+\paragraph{LLM self-reflection, debate, and process reward models.}
+Reflexion \citep{shinn2023reflexion} and debate \citep{irving2018ai} let models
+reflect on or challenge their own single generation. Process reward models
+\citep{lightman2023lets} supervise individual reasoning steps. These operate
+at the generation level, on a single attempt, in a single session. GoW operates
+at the meta level, over a persistent geometry that outlasts any single session
+and is not owned by any single model.
+
+\paragraph{Lakatos and the logic of mathematical discovery.}
+Lakatos's \emph{Proofs and Refutations} \citep{lakatos1976proofs} is the
+intellectual ancestor most relevant to GoW. Lakatos describes mathematical
+knowledge as evolving through a dialectic of conjecture and refutation, with
+monster-barring and exception-incorporation as the tools. GoW operationalizes
+a computational version of this dialectic, replacing Lakatos's informal
+philosophical analysis with typed, persisted, adversarially challenged structural
+claims. The key lift is that GoW makes the process machine-executable and
+makes the failure population a first-class computational object.
+
+\paragraph{Instance space analysis.}
+ISA \citep{smith2014instancespace} characterizes algorithm performance by
+constructing a geometry over problem instances. GoW constructs a geometry over
+\emph{solution attempts} for a fixed problem. ISA requires a known algorithm
+portfolio and a problem generator; GoW requires a corpus of prior work and a
+structural vocabulary. The two framings are dual: ISA asks which algorithm to
+use for which problem; GoW asks which structural move to make on which problem.
+
+\paragraph{The narrow novelty claim.}
+No single tradition above combines outcome-conditioned regime construction,
+conserved-structure inference over a population of heterogeneous attempts, an
+explicit boundary concept, structural delta generation, and epistemic provenance
+of structural claims. The conjunction of these properties --- particularly the
+use of a \emph{population} of heterogeneous work as the primary object,
+with representation itself allowed to move --- is the claim GoW makes on the
+literature. It is a narrow claim, and it is the claim we hold.
 
 % ── 11. Limitations and Threats to Validity ──────────────────────────
 \section{Limitations and Threats to Validity}
 \label{sec:limitations}
 
-\todo{Single domain. LLM-dependent structural descriptions. Same-model-family
-quorum. Curated corpus. No statistical power claims. Projection bottleneck.
-No convergence guarantee.}
+\section{Limitations and Threats to Validity}
+\label{sec:limitations}
+
+\paragraph{Single domain.}
+All experiments use a project-authored corpus on a single open number-theory
+problem. No claim about GoW's effectiveness on other domains or problem types
+is supported by this evidence. Whether the shape vocabulary, challenge
+operations, and boundary concept transfer to other disciplines remains an
+empirical question.
+
+\paragraph{LLM-dependent structural descriptions.}
+Structural normalization is model-assisted. Different model families may produce
+different structural descriptions for the same piece of work, yielding different
+geometries. We do not have a model-independent procedure for structural
+description, and the effect of model variation on geometry stability has not
+been measured.
+
+\paragraph{Same-model-family quorum.}
+The adversarial challenge and the quorum adjudication in Pilot-004 both used
+models from the same family as the original generation. Cross-model-family
+agreement is a stronger evidence tier; we have not achieved it. Results labeled
+as tier-5 (single-model judgment) or tier-4 (same-family quorum) should be
+read accordingly.
+
+\paragraph{Curated corpus.}
+The Erd\H{o}s--Straus study corpus was authored for these experiments. It is
+not a random sample of the mathematical literature, and it is not guaranteed
+to represent the full diversity of approaches. Publication bias, selection bias,
+and the researchers' own familiarity with the problem structure all influence
+the corpus and therefore the geometry.
+
+\paragraph{No statistical power.}
+One pilot does not establish a statistical effect. Pilot-003's B3 recovery
+and Pilot-004's reference-absent shape generation are single-pilot observations.
+The predeclared aggregate criterion in Pilot-004 was not met; the individual
+capability findings are not a substitute for aggregate power.
+
+\paragraph{Projection bottleneck.}
+In every experiment, domain projection was model-assisted and produced candidates
+that were mechanistically distinct from the withheld target under the code-owned
+recovery rule. Whether this reflects an inherent limitation of the projection
+step or an artifact of the specific target is unknown.
+
+\paragraph{No convergence guarantee.}
+GoW does not guarantee that the geometry converges to a useful representation,
+that challenge produces stable boundaries, or that repeated application of the
+loop improves the proposal quality in any measurable sense. These are research
+questions, not established properties.
 
 % ── 12. Future Work ──────────────────────────────────────────────────
 \section{Future Work}
 \label{sec:future}
 
-\todo{Second domain. Statistical comparison against undirected search.
-Formal convergence analysis. Human-in-the-loop GoW. Micro-failure geometry.
-Search-policy mutation evaluation. Cross-model verification.}
+\section{Future Work}
+\label{sec:future}
+
+\paragraph{Second domain.}
+Demonstrating GoW on a domain other than Erd\H{o}s--Straus is the most
+important step toward generality. Candidate domains include open combinatorics
+conjectures, program synthesis benchmarks, and scientific hypothesis refinement.
+
+\paragraph{Statistical evaluation.}
+A controlled comparison of invariant-guided generation vs.\ undirected
+generation over a held-out benchmark, with enough trials for statistical power,
+is the next empirical target. The present experiments are pilot-scale; a
+multi-sample evaluation would convert directional observations into measurable
+effect estimates.
+
+\paragraph{Formal convergence analysis.}
+Does the challenge-refine loop converge to a fixed point? Under what conditions
+does repeated boundary extraction reduce search diameter? These questions admit
+formal analysis in a simplified model.
+
+\paragraph{Human-in-the-loop GoW.}
+GoW does not require a model at every step. A practitioner with domain expertise
+can execute the Map, Challenge, and Boundary steps manually. Evaluating
+human-assisted GoW against fully automated GoW would clarify where models add
+value and where domain expertise dominates.
+
+\paragraph{Micro-failure geometry.}
+This paper treats work items at the granularity of complete approaches. Within
+a single approach, step-level failures (failed lemmas, failed case analyses)
+constitute a finer-grained failure population with its own geometry. The same
+loop applies recursively at this level.
+
+\paragraph{Complement geometry.}
+The complement view introduced in \cref{sec:complement} is theoretically
+motivated but not yet implemented or tested. Formalizing the constraint-collapse
+operator $\mathcal{C}(\Omega \mid W) \to R$ and evaluating whether complement
+geometry identifies directions that forward geometry misses is a natural
+follow-on experiment.
+
+\paragraph{Search-policy mutation.}
+The policy-mutation step (\texttt{policy mutate}) in \texttt{newf} is
+implemented but not yet evaluated. Measuring whether policy-driven search
+outperforms static context supply over multiple rounds would test whether the
+geometry's feedback loop is productive.
 
 % ── 13. Conclusion ───────────────────────────────────────────────────
 \section{Conclusion}
 \label{sec:conclusion}
 
-\todo{Restate thesis. Summarize contributions C1--C4. Restate what the
-evidence does and does not establish.}
+\section{Conclusion}
+\label{sec:conclusion}
+
+We introduced \emph{Geometry of Work} (GoW), a discipline for treating the
+history of problem-solving attempts as a structured search space whose geometry
+contains useful information about how search is failing or progressing. The
+core thesis is:
+
+\begin{quote}
+When repeated Work stops producing information, treat the Work itself as data.
+\end{quote}
+
+We made four deliberate claims. Conceptually (C1), a history of work can be
+represented as a shape-space with regions, boundaries, and conserved properties.
+Methodologically (C2), the \textsc{Map $\to$ Boundary $\to$ Move $\to$
+Project $\to$ Measure} loop provides a disciplined way to choose informative
+next work rather than continuing linear search. As a systems contribution (C3),
+\texttt{newf} operationalizes GoW with typed provenance, epistemic state
+tracking, adversarial challenge, and domain projection --- demonstrating that
+fuzzy model-native operations and deterministic evidence can coexist without
+silently promoting claims. Empirically and narrowly (C4), in project-authored
+Erd\H{o}s--Straus study corpora, large language models proposed structural
+regularities absent from the reference ledger, shape-guided context produced at
+least one proposal judged by a blinded reviewer to match a withheld structural
+move, and one reference-absent hypothesis underwent a complete challenge lifecycle
+and survived with a resolution-gaining boundary refinement. The experiments
+establish epistemic behavior and constituent capabilities; they do not establish
+mathematical validity, general discovery effectiveness, or autonomous theorem
+solving.
+
+The framework's epistemic model is as important as the geometric methodology.
+Without explicit separation of shape from conditioning, regularity from
+obstruction, model judgment from verification, and absence from negation, a
+framework for learning from failures is simply a platform for laundering
+speculation into authority. GoW's epistemic architecture makes these
+separations load-bearing rather than advisory.
+
+The nearest intellectual ancestors --- Lakatos's \emph{Proofs and Refutations},
+CEGIS/CEGAR, and instance space analysis --- each contribute one component.
+None combines outcome-conditioned regime construction, conserved-structure
+inference over a heterogeneous attempt population, an explicit challenge
+lifecycle, and epistemic provenance of structural claims. The conjunction is
+the contribution.
+
+GoW does not solve hard problems. It makes the structure of the search more
+legible, the failures more informative, and the next move more motivated.
+Whether the approach transfers beyond Erd\H{o}s--Straus, whether it produces
+measurably better proposals than undirected generation, and whether the geometry
+converges to something stable are open questions this paper deliberately leaves
+open. It presents a theory, a methodology, a working instrument, and the
+exploratory evidence sufficient to make the framework refereeable.
 
 % ── Acknowledgments ──────────────────────────────────────────────────
 \section*{Acknowledgments}

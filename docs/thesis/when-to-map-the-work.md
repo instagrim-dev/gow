@@ -367,6 +367,11 @@ existing Work contains more information than you have extracted from it.**
 
 ## Relationship to the rest of the series
 
+- **[Why Map the Work?](why-map-the-work.md)** — the reader-facing
+  introduction: experience the reasoning move once before any terminology.
+- **[How to Map the Work](how-to-map-the-work.md)** — the reusable recording
+  method: attempts, commonality vs explanation, discriminating probes, honest
+  updates.
 - **[Why Solve by Shape?](why-solve-by-shape.md)** — the thesis: why this
   is worth building at all.
 - **[00 — Geometry of Work](../theory/00-geometry-of-work.md)** — the

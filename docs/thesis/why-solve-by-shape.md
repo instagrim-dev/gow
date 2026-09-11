@@ -4,8 +4,10 @@
 what the objects mean and what we are allowed to believe about them; the
 [findings](../findings/) say what experiments have actually shown; the
 [EPIC](../../EPIC.md) says what has been built. This document says why any of it
-is worth building at all. For the practitioner's field guide — when to reach for
-GoW and what to do — see
+is worth building at all. For a reader-facing introduction that motivates the
+move with a worked example before any vocabulary, see
+[Why Map the Work?](why-map-the-work.md). For the practitioner's field guide —
+when to reach for GoW and what to do — see
 [When to Map the Work](when-to-map-the-work.md).*
 
 ---

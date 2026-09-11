@@ -35,8 +35,10 @@ authored position pieces:
 
 | Document | Layer | Question it answers |
 |---|---|---|
+| [Why Map the Work?](../thesis/why-map-the-work.md) | Introduction | What does examining prior attempts teach that another attempt would not? |
 | [Why Solve by Shape?](../thesis/why-solve-by-shape.md) | Thesis | Why is any of this worth building? |
 | [When to Map the Work](../thesis/when-to-map-the-work.md) | Field guide | When should a practitioner reach for GoW, and how? |
+| [How to Map the Work](../thesis/how-to-map-the-work.md) | Method | How to record attempts so the move is repeatable? |
 
 ## The governing principle
 

@@ -307,3 +307,7 @@ one of them, the interesting thesis is not "we invented failure analysis." It is
 - Every claim here is bounded by the [paper claim registry](00-paper-claims.md);
   nothing in this document is an `observation` — the empirical record is
   [Finding 001](../findings/001-unencoded-shape-generation.md) and the pilots.
+- Per-tradition summaries of the ancestors named above live in
+  [docs/research/summaries/](../research/summaries/); the strongest objections
+  across the composite are consolidated in the
+  [composite attack surface](../research/composite-attack-surface.md).

@@ -5,6 +5,10 @@ is a research tradition; columns are the features that collectively
 distinguish GoW. The paper's novelty claim will be stated as the conjunction
 of columns no single row fills.*
 
+*Per-tradition AI-friendly summaries live in [summaries/](summaries/); the
+ten strongest objections they imply are consolidated in the
+[composite attack surface](composite-attack-surface.md).*
+
 ---
 
 ## Column definitions

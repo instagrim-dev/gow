@@ -1,0 +1,124 @@
+# Publication Plan — Geometry of Work
+
+**Target:** arXiv flagship paper introducing GoW as a discipline.
+**Title:** Geometry of Work: Shape-Guided Search over Failed and Partial Solution Attempts
+**Alternate subtitle:** Search in Shape-Space, Verify in Domain-Space
+**Format:** LaTeX, single-column, ~15–20 main-text pages + appendices
+**Categories:** cs.AI primary; cs.LG, math.HO cross-list candidates
+
+**Core thesis:**
+
+> When repeated Work stops producing information, treat the Work itself as data.
+
+$$
+W \xrightarrow{S} \mathcal{G}(W) \xrightarrow{B} \Delta S \xrightarrow{\Pi} W' \xrightarrow{O} \mathcal{G}'
+$$
+
+---
+
+## The four claims (from `docs/theory/00-paper-claims.md`)
+
+| ID | Role | Statement |
+|---|---|---|
+| C1 | Theory | A history of problem-solving work can be represented as a structured search space whose geometry is informative about how search is failing or progressing |
+| C2 | Method | Conserved shapes, regimes, boundaries, and structural deltas provide a disciplined way to choose informative next work |
+| C3 | Systems | `newf` operationalizes GoW with typed provenance, epistemic state tracking, adversarial challenge, and domain projection |
+| C4 | Empirical (narrow) | In project-authored Erdős–Straus corpora, LLMs proposed reference-absent structural regularities; shape-guided context produced proposals judged closer to a withheld move; experiments do **not** establish mathematical validity, general effectiveness, or autonomous theorem solving |
+
+**Everything else:** explicitly under hypotheses / future work.
+
+---
+
+## 10-stage completion plan
+
+| Stage | Deliverable | Gate | Status |
+|---|---|---|---|
+| **0. Freeze claims** | `docs/theory/00-paper-claims.md` | Every major sentence classified | ✅ **Done** — 4 claims frozen; sentence-level classification key written; falsification conditions stated |
+| **1. Semantic foundation** | GoW ontology + glossary | Shape, Work, outcome, regime, boundary, delta, projection, landing point defined without `newf` terminology | ✅ **Done** — `docs/theory/00-04` + glossary; `paper/geometry-of-work.tex` §3 has skeleton definitions |
+| **2. Epistemic foundation** | Claims/evidence model | Conditioning, claim role, epistemic status separated; no invariant laundering | 🔄 **Partial** — `docs/domain-model.md` three-axis model written; `paper/geometry-of-work.tex` §4 is skeleton; needs full prose + verification hierarchy |
+| **3. Formalize the method** | Algorithm box | Reader can reconstruct Map→Boundary→Move→Measure from definitions | 🔄 **Partial** — Algorithm 1 is in the LaTeX; prose walkthrough and recursive-refinement discussion still `\todo{}` |
+| **4. Position against prior work** | Related-work section | Matrix complete; narrow novelty claim stated | 🔄 **Partial** — `docs/research/related-work-matrix.md` written; `docs/theory/06-situated-in-the-literature.md` drafted; LaTeX §10 is a `\todo{}`; needs full prose section |
+| **5. Reduce `newf` to paper-relevant** | System architecture section | Only machinery necessary to instantiate GoW | 🔄 **Partial** — LaTeX §6 skeleton exists; pipeline diagram and epistemic-guarantee framing still `\todo{}` |
+| **6. Finish empirical evidence** | Experiment section + frozen artifacts | Claims match what Pilot-003/004 establish; no result promoted beyond evidence | 🔄 **Partial** — All artifacts frozen; LaTeX §8 sub-sections are skeletons with `\todo{}`; numbers correct in prose but not yet in LaTeX tables |
+| **7. One novel-shape loop closed** | One reference-absent hypothesis challenged end-to-end | At least one model-generated shape grounded and challenged, survive or fail | ✅ **Done** — N2a (`density_averaging_ceiling`) challenged end-to-end; survived with boundary_delta (C4); N5 (`reorganisation_without_qr_existence`) also challenged; both admitted to vocabulary |
+| **8. Limitations / falsifiability** | Explicit failure conditions | Paper states what evidence would make GoW uninteresting or wrong | ✅ **Done** — `docs/theory/00-paper-claims.md` has 5 falsification conditions; LaTeX §11 skeleton exists; needs prose |
+| **9. Produce submission manuscript** | LaTeX + figures + bibliography | Clean compilation; artifact references; external review | ⬜ **Not started** — `paper/geometry-of-work.tex` scaffolded (452 lines); `paper/references.bib` populated (223 lines); figures not yet produced |
+| **10. Freeze arXiv v1** | Tagged paper/repo release | Every empirical number traceable to immutable artifact | ⬜ **Not started** |
+
+---
+
+## Completion definition
+
+The paper is ready to submit when ALL of these are true:
+
+1. A skeptical reader can explain GoW without mentioning `newf`.
+2. Every named construct has exactly one meaning (no "candidate invariant" / "failure invariant" semantic sludge in the paper prose).
+3. The method is operational enough that another person could perform a small GoW analysis manually.
+4. The software architecture clearly implements the theory rather than defining it.
+5. Every empirical claim points to an immutable experiment artifact.
+6. At least one model-generated reference-absent shape has undergone an actual challenge lifecycle. (**Done: N2a, N5**)
+7. Related work identifies the nearest intellectual ancestors and states a narrow novelty claim.
+8. The paper contains explicit falsification conditions for the thesis.
+9. A technically competent outsider reviews it without having participated in these conversations.
+10. The LaTeX source, figures, bibliography, and references compile cleanly in an arXiv-compatible environment.
+
+---
+
+## What does NOT block arXiv v1
+
+- A second discipline (strengthens generality but is not necessary if ES is explicitly an exploratory case study)
+- A verified mathematical advance
+- A live-provider architecture
+- Fully automatic adjudication
+- Statistical proof that GoW outperforms conventional search
+- A complete universal ontology of Work
+
+---
+
+## Figures (mandatory)
+
+| # | Description | Status |
+|---|---|---|
+| 1 | Geometry of Work: work items in failure/partial/success regimes; conserved shapes; boundary-crossing delta | ⬜ draft |
+| 2 | Search in shape-space, verify in domain-space: full pipeline loop | ⬜ draft |
+| 3 | Epistemic decomposition: shape × conditioning × claim role × epistemic state | ⬜ draft |
+| 4 | `newf` architecture: the 9-step GoW loop as implemented | ⬜ draft |
+| 5 | Pilot progression: negative controls → curated-feature → discovery → novel-shape challenge | ⬜ draft |
+
+---
+
+## Near-term writing priorities (what is writable now)
+
+These sections are fully writable from existing artifacts. No new experiments needed.
+
+| Priority | Section | Source material |
+|---|---|---|
+| 1 | §3 Semantic Model (complete prose) | `docs/theory/00-01`, `glossary.md` |
+| 2 | §4 Epistemic Model (complete prose) | `docs/domain-model.md` three-axis model; `docs/invariant-challenge.md` |
+| 3 | §5 Method prose + recursive-refinement discussion | `docs/theory/03-shape-guided-search.md`, `N2a-challenge.md` boundary_delta |
+| 4 | §10 Related Work (full text from matrix) | `docs/research/related-work-matrix.md`, `docs/theory/06-situated-in-the-literature.md` |
+| 5 | §8A Negative controls | M7 run + pilot-001/002 records |
+| 6 | §8B Curated-feature pilot | Pilot-003 frozen record |
+| 7 | §8C Shape discovery | Pilot-004 frozen result + quorum |
+| 8 | §8D Novel-hypothesis challenge | N2a-challenge.md (full lifecycle) |
+| 9 | §6 System | EPIC.md, `docs/` implementation docs |
+| 10 | §11 Limitations, §13 Conclusion | `docs/theory/00-paper-claims.md` §Falsification |
+
+---
+
+## File map
+
+| File | Role |
+|---|---|
+| `paper/geometry-of-work.tex` | Main manuscript (LaTeX) |
+| `paper/references.bib` | Bibliography |
+| `paper/PUBLICATION-PLAN.md` | This file |
+| `docs/theory/00-paper-claims.md` | Claim registry (stage 0 authority) |
+| `docs/research/related-work-matrix.md` | Related-work comparison matrix |
+| `docs/theory/06-situated-in-the-literature.md` | Literature positioning (draft §10 source) |
+| `corpus/experiments/pilot-003/` | Frozen Pilot-003 artifacts |
+| `corpus/experiments/pilot-004-discovery/` | Frozen Pilot-004 artifacts |
+| `corpus/experiments/m7-blinded-run/` | M7 blinded run (negative controls + no_recovery) |
+| `docs/findings/001-unencoded-shape-generation.md` | Finding 001 (C4 evidence) |
+| `corpus/experiments/pilot-004-discovery/records/N2a-challenge.md` | N2a challenge lifecycle (stage 7 complete) |
+| `corpus/experiments/pilot-004-discovery/records/N5-challenge.md` | N5 challenge lifecycle (stage 7 additional) |
