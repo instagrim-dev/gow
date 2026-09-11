@@ -1,0 +1,65 @@
+{
+  "schema_version": "decision-handoff-packet/v3",
+  "source_decision": {
+    "identity": "file:/Users/jmh/dev/gh/newf/corpus/experiments/pilot-004-discovery/PROTOCOL-DRAFT.md",
+    "digest": "sha256:b02a19ea19b295966cc99e674f81edaa20ce4932c819cb6c422363e941f6dd7e"
+  },
+  "decision_ids": [
+    "D1",
+    "D2",
+    "D3",
+    "D4"
+  ],
+  "foundation_invariant": "Pilot-004 executes only after a dated operator FREEZE.md exists, with 3 runs per arm (cap 5), a whole-outcome-object permuted D0 whose conservative-control limitation is predeclared, and a fully operator-owned first adjudication.",
+  "owning_artifact": "corpus/experiments/pilot-004-discovery/PROTOCOL-DRAFT.md",
+  "in_scope_seams": [
+    "pilot-004 bundle assembly: D1 train-only bundle (pilot-003 assembly rule) and D0 bundle with complete outcome objects permuted under a fixed recorded seed, both digest-pinned",
+    "capture prompts for D1/D0 with the wire format, cap 5, and the pre-declared status-emission exception; preflight via experiment validate-proposals semantics before sealing",
+    "FREEZE.md scaffold listing every digest the operator attests (protocol bytes, bundles, reference-ledger digest, wire schema, prompts) with attestor/UTC fields left for the operator",
+    "adjudication ledger template with the five predeclared categories, occurrence-count dedup, and arm-blind shuffle keyed like pilot-003's review packet"
+  ],
+  "out_of_scope_seams": [
+    {
+      "seam": "dispatching any D1/D0 capture",
+      "reason": "hard gate: no capture may precede the operator's dated FREEZE.md (decision D4)"
+    },
+    {
+      "seam": "prose rewriting of train notes for D0",
+      "reason": "rejected on appetite in decision D2; the prose leak is predeclared instead"
+    },
+    {
+      "seam": "model pre-screening or triage of adjudication entries",
+      "reason": "decision D3: the first discovery adjudication is fully operator-owned"
+    },
+    {
+      "seam": "pilot-003 records and the external human review packet",
+      "reason": "frozen run; external review is separately blocked on a human reviewer"
+    }
+  ],
+  "first_broken_seam": "corpus/experiments/pilot-004-discovery/ has a decisioned protocol but no assembled bundles, prompts, permutation record, or FREEZE scaffold",
+  "sibling_surfaces": [
+    "docs/experiment.md (descriptive mention of the discovery pilot once frozen \u2014 defer until FREEZE.md exists)",
+    "corpus/experiments/pilot-001/prompts/ templates (reuse verbatim where applicable; any divergence recorded in the pilot-004 assembly record)"
+  ],
+  "acceptance_proof_obligations": [
+    "both bundles assembled with digests recorded; D0 permutation seed and note-to-outcome mapping persisted verbatim",
+    "prompts preflighted through the real importer decode path before any sealing is declared",
+    "FREEZE.md scaffold present with null attestor/date fields and every digest it must pin already computed",
+    "no capture artifacts exist anywhere under pilot-004-discovery/ before FREEZE.md is committed by the operator"
+  ],
+  "do_not_reopen_decisions": [
+    "D1",
+    "D2",
+    "D3",
+    "D4"
+  ],
+  "missing_packet_fields": [],
+  "handoff_status": "ready",
+  "authority_boundaries": {
+    "mutation_authority": "none",
+    "status_authority": "owning_artifact",
+    "identity_authority": "owning_artifact",
+    "approval_authority": "owning_artifact"
+  },
+  "next_lawful_owner": "implementation_owner"
+}

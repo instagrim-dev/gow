@@ -34,18 +34,22 @@ evidence.
 
 - **Arm D1 (discovery):** an isolated session receives the 12 frozen train
   notes (train-only bundle, pilot-003 assembly rule) and instructions to
-  propose up to 6 candidate shared properties, each with: the property
+  propose up to 5 candidate shared properties, each with: the property
   statement; which approaches share it (by note); supporting passages;
   what distinctions it deliberately preserves; a counterexample check
   against the partial-success notes; and what would falsify it. Wire
   format and strict preflight defined at freeze (validate through the
   actual importer-path implementation before sealing anything).
-- **Arm D0 (permuted control):** the same instructions over a bundle with
-  outcome annotations PERMUTED across notes (fixed seed, recorded). If D1's
-  agreement with the reference merely reflects surface co-occurrence
-  rather than failure structure, D0 should approximate it.
-- One capture per arm, D1 first, sealed before D0 is dispatched. Same
-  model, fresh isolated sessions.
+- **Arm D0 (permuted control):** the same instructions over a bundle whose
+  COMPLETE outcome objects (class + boundary_statement + outcome notes) are
+  permuted across the 12 payloads (fixed seed, recorded at freeze; see
+  resolved decision D2 for the predeclared prose-leak limitation that makes
+  this a conservative control). If D1's agreement with the reference merely
+  reflects surface co-occurrence rather than failure structure, D0 should
+  approximate it.
+- **Three runs per arm** (resolved decision D1), cap 5 proposals per run.
+  All D1 runs are captured and sealed before any D0 run is dispatched. Same
+  model, fresh isolated session per run.
 
 ## Blinding and exclusions
 
@@ -86,10 +90,12 @@ prohibited_promotion     — a rejected abstraction (e.g. "uses modular arithmet
 unsupported              — fails the evidence bar
 ```
 
-Success criteria (predeclared, modest): D1 produces ≥2 of {L1, L3, L4} as
-`matches_reference` including at least one of {L3, L4}; D1's
+Success criteria (predeclared, modest; aggregated across the 3 runs per
+arm): D1 produces ≥2 of {L1, L3, L4} as `matches_reference` in a majority
+of its runs, including at least one of {L3, L4}; D1's aggregate
 over_merge + prohibited_promotion count is ≤ D0's; and D0 does not match
-the unnamed properties at D1's rate. Anything else is a negative or
+the unnamed properties at D1's rate. Per resolved decision D2, D1≈D0 is
+uninterpretable in D1's favor. Anything else is a negative or
 inconclusive result to be recorded as such. Model-judgment caveats from
 pilot-003 apply to any model-assisted pre-screening; the adjudication
 itself is operator work by design (the discovery claim is about proposing,
@@ -101,15 +107,19 @@ Even full success shows the model can compress THIS corpus's failure
 structure into properties an operator accepts — with the corpus authored
 by the same project. It does not show discovery on independent literature,
 does not validate the properties mathematically, and inherits the
-single-run counterfactual limitation unless repeated with fresh sessions
-(runs N≥3 per arm recommended at freeze if budget allows).
+run-to-run variability limitation only to the extent three runs per arm
+(resolved decision D1) can characterize it.
 
-## Open operator decisions before freeze
+## Resolved pre-freeze decisions (holistic-design-decision-resolver, 2026-09-11)
 
-1. Runs per arm (1 vs 3) and the exact proposal cap.
-2. Whether D0's permutation covers outcome classes only or also boundary
-   statements (stronger control, more assembly work).
-3. Whether a model pre-screen of adjudication entries is permitted
-   (recommendation: no — keep the first discovery adjudication fully
-   operator-owned).
-4. Reviewer/date for the pre-capture freeze attestation.
+The four formerly-open operator decisions are cemented; the freeze
+attestation itself (D4's event) remains operator-owned and gates execution.
+
+| ID | Decision | Cemented value |
+|---|---|---|
+| D1 | Runs per arm / proposal cap | **3 runs per arm, cap 5 proposals per run.** Near-identical proposals across runs are adjudicated once with an occurrence count; expected adjudication load ≤30 entries before dedup. Rationale: the single-run counterfactual was pilot-003's named limitation; capture is cheap, adjudication is the budget. |
+| D2 | D0 permutation depth | **Permute the complete outcome objects** (class + boundary_statement + outcome notes) across the 12 payloads, fixed recorded seed. Predeclared limitation: note PROSE retains true outcome semantics, so D0 is a CONSERVATIVE control — D1≈D0 is uninterpretable in D1's favor; only a clear D1≫D0 separation counts. Class-only permutation was rejected (payload/prose contradiction is trivially detectable); prose rewriting was rejected on appetite. |
+| D3 | Model pre-screen of adjudication | **No — single path.** Verbatim proposals only, shuffled, arm-blind until every entry is adjudicated; no model summaries, clustering, or triage. Justified directly by the pilot-003 review findings (supplied detail; same-family priors). |
+| D4 | Freeze attestation mechanism | **Freeze = a dated `FREEZE.md` committed by the operator BEFORE any dispatch**, naming attestor, UTC time, and pinned digests: this protocol's bytes, both assembled bundles, the reference-ledger digest, the wire schema, and the prompts. The trigger for any capture is that artifact's existence — no capture may precede it. Attestor identity/date are operator-supplied at freeze; the resolver cements the mechanism only. |
+
+Do not reopen these without live evidence contradicting their grounding.
