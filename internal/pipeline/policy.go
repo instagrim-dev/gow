@@ -363,7 +363,7 @@ func itoa(n int) string {
 // CODE by evaluating each preferred success invariant's predicate against every
 // candidate's proposed signature (ModelJudgment != Verification).
 func (a *App) applySearchPolicy(ctx context.Context, repoStore problemStore, problemID string, survivors []frontier.SurvivingInvariant, candidates []frontier.Candidate) ([]frontier.Candidate, []policy.AppliedBias, string, error) {
-	latest, found, err := repoStore.LatestPolicyRevision(ctx, problemID)
+	latest, found, err := repoStore.LatestSelectedPolicyRevision(ctx, problemID)
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -506,7 +506,7 @@ func (a *App) ShowPolicy(ctx context.Context, input PolicyShowInput) (PolicyShow
 
 	id := input.PolicyRevisionID
 	if id == "" {
-		latest, found, lerr := repoStore.LatestPolicyRevision(ctx, input.ProblemID)
+		latest, found, lerr := repoStore.LatestSelectedPolicyRevision(ctx, input.ProblemID)
 		if lerr != nil {
 			return PolicyShowResponse{}, lerr
 		}

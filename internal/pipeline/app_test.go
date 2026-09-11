@@ -411,6 +411,9 @@ func (f *fakeProblemStore) ListPolicyRevisions(context.Context, string) ([]store
 	return nil, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) LatestSelectedPolicyRevision(context.Context, string) (string, bool, error) {
+	return "", false, errors.New("unexpected call")
+}
 func (f *fakeProblemStore) LatestPolicyRevision(context.Context, string) (string, bool, error) {
 	return "", false, errors.New("unexpected call")
 }
@@ -476,6 +479,9 @@ func (f *fakeProblemStore) LatestSuccessRevision(context.Context, string) (strin
 }
 func (f *fakeProblemStore) LatestSelectedSuccessRevision(context.Context, string) (string, bool, error) {
 	return "", false, errors.New("unexpected call")
+}
+func (f *fakeProblemStore) ListCompressionSelections(context.Context, string) ([]store.CompressionSelectionRow, error) {
+	return nil, errors.New("unexpected call")
 }
 
 func (f *fakeProblemStore) PersistHoldoutSet(context.Context, store.HoldoutSetRecord) (store.HoldoutSetRecord, bool, error) {

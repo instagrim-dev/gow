@@ -974,6 +974,7 @@ func validateSchemaTables(ctx context.Context, tx *sql.Tx) error {
 		"success_compression_selections",
 		"search_policy_revisions", "search_policy_directives",
 		"search_policy_provenance", "frontier_generation_policy",
+		"policy_mutation_selections",
 	} {
 		row := tx.QueryRowContext(ctx, `
 SELECT EXISTS(

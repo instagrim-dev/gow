@@ -490,3 +490,38 @@ WHERE problem_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1
 	}
 	return id, true, nil
 }
+
+// CompressionSelectionRow is one compression execution's selection (v28):
+// which artifact that execution produced or reused.
+type CompressionSelectionRow struct {
+	RunID             string
+	SuccessRevisionID string
+	CreatedAt         string
+}
+
+// ListCompressionSelections returns the problem's compression selection
+// history in EXECUTION order (oldest first) — the audit trail behind current
+// guidance: the last row is what LatestSelectedSuccessRevision resolves.
+func (s *Store) ListCompressionSelections(ctx context.Context, problemID string) ([]CompressionSelectionRow, error) {
+	if err := domain.ValidateProblemID(problemID); err != nil {
+		return nil, err
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT run_id, success_revision_id, created_at
+FROM success_compression_selections
+WHERE problem_id = ? ORDER BY created_at ASC, rowid ASC
+`, problemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []CompressionSelectionRow
+	for rows.Next() {
+		var r CompressionSelectionRow
+		if err := rows.Scan(&r.RunID, &r.SuccessRevisionID, &r.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}

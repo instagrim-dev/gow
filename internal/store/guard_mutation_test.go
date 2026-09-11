@@ -226,3 +226,131 @@ func TestGuardMutationUseLatestRevisionNotSelection(t *testing.T) {
 		t.Fatalf("mutant must return the stale-supported R2, got %s", mutant)
 	}
 }
+
+// v28 P4: the selection history reads back in EXECUTION order across a reuse —
+// the last row is what LatestSelectedSuccessRevision resolves.
+func TestListCompressionSelectionsExecutionOrder(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+	problemID, runID, _, _, _ := seedInvariantPrereqs(t, st)
+
+	r1 := sampleSuccessRevision(t, problemID, runID, "cohort-empty")
+	r1.InvariantCount = 0
+	r1.Invariants = nil
+	res1, err := st.PersistSuccessRevision(ctx, r1)
+	if err != nil {
+		t.Fatalf("persist R1: %v", err)
+	}
+	r2 := sampleSuccessRevision(t, problemID, runID, "cohort-supported")
+	now2 := time.Now().UTC().Add(500 * time.Millisecond)
+	run2 := domain.NewRun{
+		ID: domain.NewRunID(now2), ProblemID: problemID, Operation: "successes compress",
+		Status: domain.RunStatusInitialized, InputRef: "test", ToolName: "newf", ToolVersion: "test",
+		StartedAt: now2, CompletedAt: now2,
+	}
+	if _, err := st.CreateRun(ctx, run2); err != nil {
+		t.Fatalf("create run2: %v", err)
+	}
+	r2.RunID = run2.ID
+	r2.CreatedAt = formatTime(now2)
+	if _, err := st.PersistSuccessRevision(ctx, r2); err != nil {
+		t.Fatalf("persist R2: %v", err)
+	}
+	now := time.Now().UTC().Add(time.Second)
+	run3 := domain.NewRun{
+		ID: domain.NewRunID(now), ProblemID: problemID, Operation: "successes compress",
+		Status: domain.RunStatusInitialized, InputRef: "test", ToolName: "newf", ToolVersion: "test",
+		StartedAt: now, CompletedAt: now,
+	}
+	if _, err := st.CreateRun(ctx, run3); err != nil {
+		t.Fatalf("create run3: %v", err)
+	}
+	r3 := sampleSuccessRevision(t, problemID, run3.ID, "cohort-empty")
+	r3.InvariantCount = 0
+	r3.Invariants = nil
+	r3.CreatedAt = formatTime(now)
+	if _, err := st.PersistSuccessRevision(ctx, r3); err != nil {
+		t.Fatalf("persist R3 (reuse): %v", err)
+	}
+
+	sels, err := st.ListCompressionSelections(ctx, problemID)
+	if err != nil {
+		t.Fatalf("list selections: %v", err)
+	}
+	if len(sels) != 3 {
+		t.Fatalf("three executions must yield three selections, got %d", len(sels))
+	}
+	if sels[0].SuccessRevisionID != res1.Record.ID || sels[1].SuccessRevisionID != r2.ID || sels[2].SuccessRevisionID != res1.Record.ID {
+		t.Fatalf("selection order must be R1, R2, R1(reused): %+v", sels)
+	}
+	latest, found, err := st.LatestSelectedSuccessRevision(ctx, problemID)
+	if err != nil || !found || latest != sels[len(sels)-1].SuccessRevisionID {
+		t.Fatalf("the last selection must be current guidance: %v %v %s", err, found, latest)
+	}
+}
+
+// mutant use_latest_policy_revision_not_selection (v30, P5 audit finding 1):
+// after policy evidence reverts to an earlier cohort and the mutation reuses
+// the earlier revision, the pre-v30 consumer (LatestPolicyRevision) returns
+// the higher-numbered stale revision — the named assertion (current policy ==
+// latest SELECTION) fails under the mutant.
+func TestGuardMutationUseLatestPolicyRevisionNotSelection(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+	problemID, runID, _, _, _ := seedInvariantPrereqs(t, st)
+
+	now := time.Now().UTC()
+	mkRun := func(offset time.Duration) string {
+		r := domain.NewRun{
+			ID: domain.NewRunID(now.Add(offset)), ProblemID: problemID, Operation: "policy mutate",
+			Status: domain.RunStatusInitialized, InputRef: "test", ToolName: "newf", ToolVersion: "test",
+			StartedAt: now.Add(offset), CompletedAt: now.Add(offset),
+		}
+		if _, err := st.CreateRun(ctx, r); err != nil {
+			t.Fatalf("create run: %v", err)
+		}
+		return r.ID
+	}
+	mkRev := func(runID, cohort string, offset time.Duration) PolicyRevisionRecord {
+		return PolicyRevisionRecord{
+			ID: domain.NewSearchPolicyRevisionID(now.Add(offset)), ProblemID: problemID, RunID: runID,
+			MutatorVersion: "policy-mutate/v1", PolicySchema: "search-policy/v1",
+			EvidenceCohortHash: cohort, CreatedAt: formatTime(now.Add(offset)),
+			Invocation: &InvariantProviderInvocation{
+				ID: domain.NewProviderInvocationID(now.Add(offset)), RunID: runID,
+				ProviderName: "fixture", SchemaVersion: "search-policy/v1",
+				RequestHash: "rh", CreatedAt: formatTime(now.Add(offset)),
+			},
+		}
+	}
+
+	p1, _, err := st.PersistPolicyRevision(ctx, mkRev(runID, "evidence-e1", 0))
+	if err != nil {
+		t.Fatalf("persist P1: %v", err)
+	}
+	if _, _, err := st.PersistPolicyRevision(ctx, mkRev(mkRun(time.Second), "evidence-e2", time.Second)); err != nil {
+		t.Fatalf("persist P2: %v", err)
+	}
+	// Evidence reverts to E1's cohort: the execution REUSES P1.
+	p3, created, err := st.PersistPolicyRevision(ctx, mkRev(mkRun(2*time.Second), "evidence-e1", 2*time.Second))
+	if err != nil {
+		t.Fatalf("persist P3 (reuse): %v", err)
+	}
+	if created || p3.ID != p1.ID {
+		t.Fatalf("reverted evidence must reuse P1: created=%v id=%s want %s", created, p3.ID, p1.ID)
+	}
+
+	// GUARD ON: current policy is the reused P1.
+	selected, found, err := st.LatestSelectedPolicyRevision(ctx, problemID)
+	if err != nil || !found || selected != p1.ID {
+		t.Fatalf("guard on: current policy must be the reused P1: %v %v %s", err, found, selected)
+	}
+	// MUTANT: the pre-v30 consumer returns the stale higher-numbered P2.
+	mutant, found, err := st.LatestPolicyRevision(ctx, problemID)
+	if err != nil || !found {
+		t.Fatalf("mutant: %v %v", err, found)
+	}
+	if mutant == p1.ID {
+		t.Fatal("mutant did not disable the guard: selection unexpectedly holds under MAX(revision)")
+	}
+}

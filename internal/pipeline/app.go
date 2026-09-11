@@ -123,6 +123,9 @@ type problemStore interface {
 	// selection, never MAX(revision), so a reused older (e.g. empty) artifact
 	// displaces a higher-numbered stale one.
 	LatestSelectedSuccessRevision(context.Context, string) (string, bool, error)
+	// ListCompressionSelections returns the compression execution history
+	// (v28, oldest first) — the audit trail behind current guidance.
+	ListCompressionSelections(context.Context, string) ([]store.CompressionSelectionRow, error)
 	PersistHoldoutSet(context.Context, store.HoldoutSetRecord) (store.HoldoutSetRecord, bool, error)
 	GetHoldoutSet(context.Context, string) (store.HoldoutSetRecord, error)
 	LatestHoldoutSet(context.Context, string) (string, bool, error)
@@ -140,6 +143,10 @@ type problemStore interface {
 	GetPolicyRevision(context.Context, string) (store.PolicyRevisionRecord, error)
 	ListPolicyRevisions(context.Context, string) ([]store.PolicyRevisionRecord, error)
 	LatestPolicyRevision(context.Context, string) (string, bool, error)
+	// LatestSelectedPolicyRevision resolves the artifact chosen by the most
+	// recent mutation EXECUTION (v30) — current policy follows the latest
+	// selection, never MAX(revision) (P5 audit finding 1).
+	LatestSelectedPolicyRevision(context.Context, string) (string, bool, error)
 	PersistFrontierGenerationPolicy(context.Context, string, string, []store.FrontierGenerationPolicyRow) error
 	GetFrontierGenerationPolicy(context.Context, string) (string, []store.FrontierGenerationPolicyRow, error)
 	PersistEvaluationRun(context.Context, store.EvaluationRunRecord) (store.EvaluationRunRecord, error)

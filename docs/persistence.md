@@ -1274,7 +1274,21 @@ and current guidance (`LatestSelectedSuccessRevision` — consumed by policy
 evidence and `successes show`) follows the latest selection, falling back to
 the highest revision only for pre-v28 history. Dedup is preserved; old
 artifacts are never rewritten; retracted support genuinely leaves the policy
-loop.
+loop. The full selection history is readable
+(`ListCompressionSelections`, exposed on `success-invariant show`).
+
+`v30` applies the same pattern to the search-policy layer (the P5
+current-state-reader audit, `docs/plans/2026-09-10-011-audit-current-state-readers.md`,
+found the identical dedup-reuse + MAX(revision) confusion there):
+`policy_mutation_selections` records every mutation execution, and
+`LatestSelectedPolicyRevision` — consumed by generation-time policy
+application and policy show — follows the latest selection, so evidence that
+reverts to an earlier cohort genuinely reverts the applied policy.
+
+`v29` persists the proposal-admission audit on `frontier_generation_runs`
+(`admission_corrected/downgraded/stripped/rejected`) — zero for trusted
+code-derived generators, populated when the untrusted-proposal boundary
+corrects, downgrades, strips, or rejects.
 
 ## Justified field completeness (migration `v25`, admission split `v26`)
 

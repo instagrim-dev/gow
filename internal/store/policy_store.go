@@ -68,6 +68,13 @@ WHERE problem_id = ? AND evidence_cohort_hash = ? AND mutator_version = ? AND po
 		if lerr != nil {
 			return PolicyRevisionRecord{}, false, lerr
 		}
+		// v30: dedup preserves the artifact; THIS execution still selected it.
+		if _, serr := s.db.ExecContext(ctx, `
+INSERT OR IGNORE INTO policy_mutation_selections(run_id, problem_id, policy_revision_id, created_at)
+VALUES(?, ?, ?, ?)
+`, record.RunID, record.ProblemID, existingID, record.CreatedAt); serr != nil {
+			return PolicyRevisionRecord{}, false, serr
+		}
 		return full, false, nil
 	case !errors.Is(err, sql.ErrNoRows):
 		return PolicyRevisionRecord{}, false, err
@@ -101,6 +108,13 @@ VALUES(?, ?, 'policy-mutate', ?, ?, ?, ?, ?, ?, ?, ?)
 INSERT INTO search_policy_revisions(id, problem_id, run_id, provider_invocation_id, mutator_version, policy_schema, evidence_cohort_hash, inert_proposals, revision, directive_count, created_at)
 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `, record.ID, record.ProblemID, record.RunID, invID, record.MutatorVersion, record.PolicySchema, record.EvidenceCohortHash, record.InertProposals, record.Revision, record.DirectiveCount, record.CreatedAt); err != nil {
+		return PolicyRevisionRecord{}, false, err
+	}
+	// v30: the creating execution selects its own artifact.
+	if _, err := tx.ExecContext(ctx, `
+INSERT OR IGNORE INTO policy_mutation_selections(run_id, problem_id, policy_revision_id, created_at)
+VALUES(?, ?, ?, ?)
+`, record.RunID, record.ProblemID, record.ID, record.CreatedAt); err != nil {
 		return PolicyRevisionRecord{}, false, err
 	}
 
@@ -226,6 +240,30 @@ func (s *Store) LatestPolicyRevision(ctx context.Context, problemID string) (str
 	if err := row.Scan(&id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return "", false, nil
+		}
+		return "", false, err
+	}
+	return id, true, nil
+}
+
+// LatestSelectedPolicyRevision resolves the artifact chosen by the MOST RECENT
+// mutation execution (v30) — the current-policy selector. Dedup means the
+// largest revision number is not current state: evidence that reverts to an
+// earlier cohort reuses the earlier revision, and generation must apply THAT,
+// not the higher-numbered stale one. Falls back to the highest revision for
+// pre-v30 history without selection rows.
+func (s *Store) LatestSelectedPolicyRevision(ctx context.Context, problemID string) (string, bool, error) {
+	if err := domain.ValidateProblemID(problemID); err != nil {
+		return "", false, err
+	}
+	row := s.db.QueryRowContext(ctx, `
+SELECT policy_revision_id FROM policy_mutation_selections
+WHERE problem_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1
+`, problemID)
+	var id string
+	if err := row.Scan(&id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return s.LatestPolicyRevision(ctx, problemID)
 		}
 		return "", false, err
 	}

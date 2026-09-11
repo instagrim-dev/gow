@@ -118,4 +118,19 @@ func TestIntegrationUntrustedProposalAdmission(t *testing.T) {
 	if strings.Contains(sigJSON, `"complete"`) {
 		t.Fatalf("provider-declared completeness must be stripped from the admitted signature: %s", sigJSON)
 	}
+
+	// v29: the admission audit is PERSISTED on the generation — one corrected
+	// claim, one stripped completeness, one rejected proposal — so an operator
+	// can see what admission changed without diffing raw payloads.
+	genRec, err := repo.GetFrontierGeneration(ctx, gen.Generation.ID)
+	if err != nil {
+		t.Fatalf("read back generation record: %v", err)
+	}
+	if genRec.AdmissionCorrected < 1 || genRec.AdmissionStripped != 1 || genRec.AdmissionRejected != 1 {
+		t.Fatalf("admission audit must persist (corrected>=1 stripped=1 rejected=1): %+v",
+			[]int{genRec.AdmissionCorrected, genRec.AdmissionDowngraded, genRec.AdmissionStripped, genRec.AdmissionRejected})
+	}
+	if gen.Generation.AdmissionCorrected != genRec.AdmissionCorrected || gen.Generation.AdmissionRejected != genRec.AdmissionRejected {
+		t.Fatalf("the response view must expose the persisted audit: %+v vs %+v", gen.Generation, genRec)
+	}
 }

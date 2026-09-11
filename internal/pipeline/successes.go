@@ -126,6 +126,17 @@ type SuccessShowResponse struct {
 	Command  string              `json:"command"`
 	Store    string              `json:"store"`
 	Revision SuccessRevisionView `json:"revision"`
+	// Selections is the compression execution history (v28, oldest first) when
+	// the show resolved by problem: each row is one execution and the artifact
+	// it selected (created OR reused). The LAST row is current guidance.
+	Selections []CompressionSelectionView `json:"selections,omitempty"`
+}
+
+// CompressionSelectionView is one compression execution's selection.
+type CompressionSelectionView struct {
+	RunID             string `json:"run_id"`
+	SuccessRevisionID string `json:"success_revision_id"`
+	CreatedAt         string `json:"created_at"`
 }
 
 // --- cohort building (code-selected; the provider never nominates members) ---
@@ -536,5 +547,18 @@ func (a *App) ShowSuccess(ctx context.Context, input SuccessShowInput) (SuccessS
 	if err != nil {
 		return SuccessShowResponse{}, err
 	}
-	return SuccessShowResponse{OK: true, Command: "success-invariant show", Store: dbPath, Revision: successRevisionView(rec)}, nil
+	resp := SuccessShowResponse{OK: true, Command: "success-invariant show", Store: dbPath, Revision: successRevisionView(rec)}
+	// Selection history (v28): the audit trail behind current guidance.
+	if input.ProblemID != "" {
+		selections, serr := repoStore.ListCompressionSelections(ctx, input.ProblemID)
+		if serr != nil {
+			return SuccessShowResponse{}, serr
+		}
+		for _, s := range selections {
+			resp.Selections = append(resp.Selections, CompressionSelectionView{
+				RunID: s.RunID, SuccessRevisionID: s.SuccessRevisionID, CreatedAt: s.CreatedAt,
+			})
+		}
+	}
+	return resp, nil
 }

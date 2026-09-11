@@ -79,8 +79,18 @@ type FrontierGenerationRecord struct {
 	ProposalCount        int
 	Revision             int
 	CreatedAt            string
-	Invocation           FrontierProviderInvocation
-	Proposals            []FrontierProposalRow
+	// Admission audit (v29): what the untrusted-proposal admission boundary
+	// changed for THIS generation — corrected claims (provider resolution
+	// disagreed with the pinned vocabulary), downgraded claims (unverifiable,
+	// no surface label), proposals whose self-declared completeness was
+	// stripped, and version-incompatible proposals rejected outright. All zero
+	// for trusted (code-derived) generators, which bypass admission.
+	AdmissionCorrected  int
+	AdmissionDowngraded int
+	AdmissionStripped   int
+	AdmissionRejected   int
+	Invocation          FrontierProviderInvocation
+	Proposals           []FrontierProposalRow
 }
 
 // PersistFrontierGenerationResult reports the persisted generation and newness.
@@ -193,9 +203,9 @@ VALUES(?, ?, ?, ?)
 	record.ProposalCount = len(persisted)
 
 	if _, err := tx.ExecContext(ctx, `
-INSERT INTO frontier_generation_runs(id, problem_id, cluster_run_id, run_id, provider_invocation_id, generator_version, requested_count, proposal_count, revision, created_at)
-VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`, record.ID, record.ProblemID, record.ClusterRunID, record.RunID, inv.ID, record.GeneratorVersion, record.RequestedCount, record.ProposalCount, record.Revision, record.CreatedAt); err != nil {
+INSERT INTO frontier_generation_runs(id, problem_id, cluster_run_id, run_id, provider_invocation_id, generator_version, requested_count, proposal_count, revision, created_at, admission_corrected, admission_downgraded, admission_stripped, admission_rejected)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, record.ID, record.ProblemID, record.ClusterRunID, record.RunID, inv.ID, record.GeneratorVersion, record.RequestedCount, record.ProposalCount, record.Revision, record.CreatedAt, record.AdmissionCorrected, record.AdmissionDowngraded, record.AdmissionStripped, record.AdmissionRejected); err != nil {
 		return PersistFrontierGenerationResult{}, err
 	}
 	for _, occ := range dedupOccurrences {
@@ -258,11 +268,11 @@ func (s *Store) GetFrontierGeneration(ctx context.Context, id string) (FrontierG
 
 func (s *Store) loadFrontierGeneration(ctx context.Context, id string) (FrontierGenerationRecord, error) {
 	row := s.db.QueryRowContext(ctx, `
-SELECT id, problem_id, cluster_run_id, run_id, provider_invocation_id, generator_version, requested_count, proposal_count, revision, created_at
+SELECT id, problem_id, cluster_run_id, run_id, provider_invocation_id, generator_version, requested_count, proposal_count, revision, created_at, admission_corrected, admission_downgraded, admission_stripped, admission_rejected
 FROM frontier_generation_runs WHERE id = ?
 `, id)
 	var rec FrontierGenerationRecord
-	if err := row.Scan(&rec.ID, &rec.ProblemID, &rec.ClusterRunID, &rec.RunID, &rec.ProviderInvocationID, &rec.GeneratorVersion, &rec.RequestedCount, &rec.ProposalCount, &rec.Revision, &rec.CreatedAt); err != nil {
+	if err := row.Scan(&rec.ID, &rec.ProblemID, &rec.ClusterRunID, &rec.RunID, &rec.ProviderInvocationID, &rec.GeneratorVersion, &rec.RequestedCount, &rec.ProposalCount, &rec.Revision, &rec.CreatedAt, &rec.AdmissionCorrected, &rec.AdmissionDowngraded, &rec.AdmissionStripped, &rec.AdmissionRejected); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return FrontierGenerationRecord{}, fmt.Errorf("%w: frontier generation %s", ErrNotFound, id)
 		}

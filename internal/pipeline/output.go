@@ -714,16 +714,21 @@ type FrontierProposalView struct {
 
 // FrontierGenerationView is a full generation pass.
 type FrontierGenerationView struct {
-	ID               string                 `json:"id"`
-	ProblemID        string                 `json:"problem_id"`
-	ClusterRunID     string                 `json:"cluster_run_id"`
-	RunID            string                 `json:"run_id"`
-	GeneratorVersion string                 `json:"generator_version"`
-	RequestedCount   int                    `json:"requested_count"`
-	ProposalCount    int                    `json:"proposal_count"`
-	Revision         int                    `json:"revision"`
-	CreatedAt        string                 `json:"created_at"`
-	Proposals        []FrontierProposalView `json:"proposals"`
+	ID               string `json:"id"`
+	ProblemID        string `json:"problem_id"`
+	ClusterRunID     string `json:"cluster_run_id"`
+	RunID            string `json:"run_id"`
+	GeneratorVersion string `json:"generator_version"`
+	RequestedCount   int    `json:"requested_count"`
+	ProposalCount    int    `json:"proposal_count"`
+	Revision         int    `json:"revision"`
+	CreatedAt        string `json:"created_at"`
+	// Admission audit (v29): zero for trusted code-derived generators.
+	AdmissionCorrected  int                    `json:"admission_corrected"`
+	AdmissionDowngraded int                    `json:"admission_downgraded"`
+	AdmissionStripped   int                    `json:"admission_stripped"`
+	AdmissionRejected   int                    `json:"admission_rejected"`
+	Proposals           []FrontierProposalView `json:"proposals"`
 }
 
 // FrontierGenerationSummaryView is a compact list row.

@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 28
+const currentSchemaVersion = 30
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -979,6 +979,29 @@ END;
 		// artifact is reused), and policy consumes the latest selection.
 		// Existing revisions are backfilled as their own creating selection.
 		apply: migrateV28CompressionSelections,
+	},
+	{
+		version: 29,
+		// Admission audit persistence (follow-on P3 from the 040b8c9 review
+		// series). The proposal-admission boundary computed corrected /
+		// downgraded / stripped / rejected counts and dropped them; operators
+		// could only reconstruct them by diffing raw provider payloads. v29
+		// persists the per-generation aggregate on frontier_generation_runs
+		// (zero for trusted code-derived generators, which bypass admission).
+		apply: migrateV29AdmissionAudit,
+	},
+	{
+		version: 30,
+		// Policy mutation selection log (P5 audit finding 1): search-policy
+		// revisions dedup-reuse by evidence cohort identity exactly like
+		// success revisions, and generation-time application read
+		// MAX(revision) — so evidence that REVERTED to an earlier cohort
+		// reused the older revision while generation kept applying the
+		// higher-numbered stale one. Same fix as v28: every mutation
+		// execution appends a selection row (also on reuse), and current
+		// policy follows the latest selection. Backfilled from existing
+		// revisions (their creating executions).
+		apply: migrateV30PolicySelections,
 	},
 }
 
@@ -3259,6 +3282,58 @@ func migrateV28CompressionSelections(ctx context.Context, tx *sql.Tx) error {
 	_, err := tx.ExecContext(ctx, `
 INSERT OR IGNORE INTO success_compression_selections(run_id, problem_id, success_revision_id, created_at)
 SELECT run_id, problem_id, id, created_at FROM success_invariant_revisions
+`)
+	return err
+}
+
+func migrateV29AdmissionAudit(ctx context.Context, tx *sql.Tx) error {
+	for _, col := range []string{"admission_corrected", "admission_downgraded", "admission_stripped", "admission_rejected"} {
+		has, err := columnExists(ctx, tx, "frontier_generation_runs", col)
+		if err != nil {
+			return err
+		}
+		if !has {
+			if _, err := tx.ExecContext(ctx, `ALTER TABLE frontier_generation_runs ADD COLUMN `+col+` INTEGER NOT NULL DEFAULT 0`); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// policySelectionsSQL mirrors success_compression_selections (v28) for the
+// search-policy layer (v30): one immutable row per mutation execution.
+const policySelectionsSQL = `
+CREATE TABLE IF NOT EXISTS policy_mutation_selections (
+  run_id TEXT PRIMARY KEY REFERENCES runs(id),
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  policy_revision_id TEXT NOT NULL REFERENCES search_policy_revisions(id),
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_policy_mutation_selections_problem
+ON policy_mutation_selections(problem_id, created_at);
+
+CREATE TRIGGER IF NOT EXISTS policy_mutation_selections_immutable_update
+BEFORE UPDATE ON policy_mutation_selections
+BEGIN
+  SELECT RAISE(ABORT, 'policy selections are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS policy_mutation_selections_immutable_delete
+BEFORE DELETE ON policy_mutation_selections
+BEGIN
+  SELECT RAISE(ABORT, 'policy selections are immutable');
+END;
+`
+
+func migrateV30PolicySelections(ctx context.Context, tx *sql.Tx) error {
+	if _, err := tx.ExecContext(ctx, policySelectionsSQL); err != nil {
+		return err
+	}
+	_, err := tx.ExecContext(ctx, `
+INSERT OR IGNORE INTO policy_mutation_selections(run_id, problem_id, policy_revision_id, created_at)
+SELECT run_id, problem_id, id, created_at FROM search_policy_revisions
 `)
 	return err
 }

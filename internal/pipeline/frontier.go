@@ -179,6 +179,7 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 	// auditable verbatim in the persisted invocation payload; the admitted
 	// signature is what code compares, hashes, and evaluates.
 	admittedProposals := resp.Proposals
+	var admCorrected, admDowngraded, admStripped, admRejected int
 	if _, trusted := generator.(provider.TrustedStructureAuthor); !trusted {
 		vocab, verr := a.loadVocabulary(ctx, repoStore, clusterRun.VocabularyVersion)
 		if verr != nil {
@@ -190,9 +191,15 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 			sig := p.ProposedSignature
 			if (sig.SchemaVersion != "" && sig.SchemaVersion != canon.SchemaMechanismV1) ||
 				(sig.VocabularyVersion != "" && sig.VocabularyVersion != clusterRun.VocabularyVersion) {
+				admRejected++
 				continue // version-incompatible: rejected, auditable in the invocation payload
 			}
-			admitted, _ := canon.AdmitProposalSignature(sig, vocab)
+			admitted, ares := canon.AdmitProposalSignature(sig, vocab)
+			admCorrected += ares.CorrectedClaims
+			admDowngraded += ares.DowngradedClaims
+			if ares.CompletenessStripped {
+				admStripped++
+			}
 			admitted.SchemaVersion = canon.SchemaMechanismV1
 			admitted.VocabularyVersion = clusterRun.VocabularyVersion
 			p.ProposedSignature = admitted
@@ -236,6 +243,12 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 	}
 
 	record := frontierGenerationRecord(input.ProblemID, clusterRun.ID, run.ID, count, req.Fingerprint(), resp, candidates, now, opts.role)
+	// v29: persist the admission audit — what the untrusted-proposal boundary
+	// changed this generation (all zero for trusted code-derived generators).
+	record.AdmissionCorrected = admCorrected
+	record.AdmissionDowngraded = admDowngraded
+	record.AdmissionStripped = admStripped
+	record.AdmissionRejected = admRejected
 	result, err := repoStore.PersistFrontierGeneration(ctx, record)
 	if err != nil {
 		a.failRun(ctx, repoStore, run.ID, err)
@@ -468,15 +481,19 @@ func (a *App) ShowFrontier(ctx context.Context, input FrontierShowInput) (Fronti
 // frontierGenerationView maps a persisted generation to its stable view.
 func frontierGenerationView(rec store.FrontierGenerationRecord) FrontierGenerationView {
 	view := FrontierGenerationView{
-		ID:               rec.ID,
-		ProblemID:        rec.ProblemID,
-		ClusterRunID:     rec.ClusterRunID,
-		RunID:            rec.RunID,
-		GeneratorVersion: rec.GeneratorVersion,
-		RequestedCount:   rec.RequestedCount,
-		ProposalCount:    rec.ProposalCount,
-		Revision:         rec.Revision,
-		CreatedAt:        rec.CreatedAt,
+		ID:                  rec.ID,
+		ProblemID:           rec.ProblemID,
+		ClusterRunID:        rec.ClusterRunID,
+		RunID:               rec.RunID,
+		GeneratorVersion:    rec.GeneratorVersion,
+		RequestedCount:      rec.RequestedCount,
+		ProposalCount:       rec.ProposalCount,
+		Revision:            rec.Revision,
+		CreatedAt:           rec.CreatedAt,
+		AdmissionCorrected:  rec.AdmissionCorrected,
+		AdmissionDowngraded: rec.AdmissionDowngraded,
+		AdmissionStripped:   rec.AdmissionStripped,
+		AdmissionRejected:   rec.AdmissionRejected,
 	}
 	for _, p := range rec.Proposals {
 		pv := FrontierProposalView{
