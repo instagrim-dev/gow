@@ -30,6 +30,9 @@ without an external reviewer, and it is recorded as exactly that.
 - Transcript audit: one sanctioned Read plus two `UpdateCurrentStep` status
   emissions — the same deviation class recorded for the B3 capture session,
   carried as `protocol_deviation_pending_adjudication` on the same terms.
+  **Adjudicated at closure** (`CLOSURE.md`): accepted for exploratory
+  analysis with the deviation retained; rule compliance not satisfied; no
+  target ingress established by the materials reviewed.
 
 ## Unblinded tally
 

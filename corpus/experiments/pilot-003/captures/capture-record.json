@@ -26,7 +26,11 @@
           "UpdateCurrentStep x2 (harness progress-status emission; no information ingress)"
         ],
         "verdict": "protocol_deviation_pending_adjudication: the recorded capture rule was unconditional (\"any tool use beyond the sanctioned Read voids the capture\") and the session emitted UpdateCurrentStep twice. No pre-capture exception permitted status-only emissions, so the deviation stands recorded rather than excused; the earlier no-information-ingress analysis is retained below as commentary, not as satisfaction of the rule. The independent reviewer adjudicates whether the capture is admissible for the blinded comparison or only for exploratory analysis.",
-        "ingress_commentary": "UpdateCurrentStep emits progress status and reads nothing; no target information could enter through it. This explains why the deviation is plausibly harmless; it does not make the capture satisfy the unconditional rule."
+        "ingress_commentary": "UpdateCurrentStep emits progress status and reads nothing; no target information could enter through it. This explains why the deviation is plausibly harmless; it does not make the capture satisfy the unconditional rule.",
+        "adjudication": {
+          "resolved_in": "records/CLOSURE.md (operator disposition, 2026-09-11)",
+          "outcome": "accepted for exploratory analysis with the deviation retained; compliance with the original unconditional tool rule NOT satisfied; no target ingress established by the materials reviewed"
+        }
       },
       "target_id_validation": "all target_invariant_ids present in the frozen survivor list; explicit subsets used; no invented IDs",
       "wire_validity": "INVALID as captured \u2014 the sealed b3-raw.json fails the production importer (unknown field \"expected_information_gain\" nested inside mechanism). The primary captured attempt is classified WIRE-INVALID: not a research failure and not no_recovery. The assessable derivative is b3-consumed.json (see repair_policy)."
@@ -59,5 +63,6 @@
     "applied": {
       "b3_invariant_guided": "jq re-nesting of exactly expected_information_gain/evaluation_cost from mechanism to proposal level; losslessness machine-verified; consumed digest pinned in extraction_details"
     }
-  }
+  },
+  "deviation_adjudication_note": "The pending-adjudication verdicts below were adjudicated at closure; see records/CLOSURE.md. The verdict strings are retained verbatim as the pre-adjudication state."
 }
