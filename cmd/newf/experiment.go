@@ -111,6 +111,7 @@ func newExperimentCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions
 		readyProblem string
 		readySet     string
 		readySupport int
+		readyVocab   string
 	)
 	readinessCmd := &cobra.Command{
 		Use:   "readiness",
@@ -128,7 +129,7 @@ func newExperimentCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions
 			}
 			result, err := app.ExperimentReadiness(cmd.Context(), pipeline.ExperimentReadinessInput{
 				DBPath: opts.dbPath, ProblemID: readyProblem, HoldoutSetID: readySet,
-				MinSupport: readySupport, JSONOutput: opts.jsonOutput,
+				MinSupport: readySupport, VocabVersion: readyVocab, JSONOutput: opts.jsonOutput,
 			})
 			if err != nil {
 				return wrapCommandError("experiment readiness", err)
@@ -143,6 +144,7 @@ func newExperimentCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions
 	readinessCmd.Flags().StringVar(&readyProblem, "problem", "", "Problem ID")
 	readinessCmd.Flags().StringVar(&readySet, "holdout-set", "", "Holdout set ID (default: the problem's only/latest set)")
 	readinessCmd.Flags().IntVar(&readySupport, "min-support", 0, "Failure-side family threshold (default 2)")
+	readinessCmd.Flags().StringVar(&readyVocab, "vocab-version", "", "Vocabulary the corpus was signed under (default mechanism/v1)")
 	cmd.AddCommand(readinessCmd)
 
 	var showProblem string

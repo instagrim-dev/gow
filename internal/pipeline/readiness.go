@@ -16,6 +16,7 @@ type ExperimentReadinessInput struct {
 	ProblemID    string
 	HoldoutSetID string // default: the problem's only/latest set
 	MinSupport   int    // default 2 (the deriving miner's derivation threshold)
+	VocabVersion string // default mechanism/v1: the vocabulary the corpus was signed under
 	JSONOutput   bool
 }
 
@@ -113,8 +114,16 @@ func (a *App) ExperimentReadiness(ctx context.Context, input ExperimentReadiness
 	}
 
 	// 2 + 3. Decisive-axis resolution and completeness admissions over the
-	// train population's persisted signatures.
-	sigIDs, err := repoStore.ListSignaturesForProblem(ctx, input.ProblemID, canon.SchemaMechanismV1, canon.VocabularyMechanismV1)
+	// train population's persisted signatures, under the vocabulary the corpus
+	// was actually signed with (default mechanism/v1). The check semantics are
+	// unchanged; only the population selector is parameterized so a corpus
+	// signed under a successor revision (e.g. mechanism/v2) is not reported as
+	// signature-less.
+	vocabVersion := input.VocabVersion
+	if vocabVersion == "" {
+		vocabVersion = canon.VocabularyMechanismV1
+	}
+	sigIDs, err := repoStore.ListSignaturesForProblem(ctx, input.ProblemID, canon.SchemaMechanismV1, vocabVersion)
 	if err != nil {
 		return ExperimentReadinessResponse{}, err
 	}

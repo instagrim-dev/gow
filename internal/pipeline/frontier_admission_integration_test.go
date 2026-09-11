@@ -875,3 +875,50 @@ func TestIntegrationExperimentReadiness(t *testing.T) {
 		}
 	}
 }
+
+// TestIntegrationExperimentReadinessVocabParameterized pins the population
+// selector fix: a corpus signed under a successor vocabulary revision reports
+// its signatures when the matching --vocab-version is supplied, and reports
+// the honest signature-less blocker under a version it was NOT signed with.
+// Check semantics are identical either way.
+func TestIntegrationExperimentReadinessVocabParameterized(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+
+	problemID, runID, snapshotID := seedProblemAndSnapshot(t, ctx, dbPath, now)
+	seed, err := app.SeedMechanismFixture(ctx, MechanismFixtureSeedInput{
+		DBPath: dbPath, ProblemID: problemID, RunID: runID, SnapshotID: snapshotID,
+		Fixture: interpFixture("es-v2-only", "V2-only corpus", "residue locality"),
+	})
+	if err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	if _, err := app.SignatureMechanism(ctx, SignatureInput{DBPath: dbPath, MechanismID: seed.MechanismIDs[0], VocabVersion: canon.VocabularyMechanismV2}); err != nil {
+		t.Fatalf("signature: %v", err)
+	}
+
+	statusOf := func(vocab string) string {
+		r, rerr := app.ExperimentReadiness(ctx, ExperimentReadinessInput{DBPath: dbPath, ProblemID: problemID, VocabVersion: vocab})
+		if rerr != nil {
+			t.Fatalf("readiness (%q): %v", vocab, rerr)
+		}
+		for _, c := range r.Checks {
+			if c.Check == "decisive_axis_resolution" {
+				return c.Status + " " + c.Detail
+			}
+		}
+		t.Fatal("missing decisive_axis_resolution check")
+		return ""
+	}
+
+	underV2 := statusOf(canon.VocabularyMechanismV2)
+	if !strings.HasPrefix(underV2, "ready") {
+		t.Fatalf("v2-signed corpus must report its signatures under v2: %s", underV2)
+	}
+	underDefault := statusOf("")
+	if !strings.Contains(underDefault, "no persisted signatures") {
+		t.Fatalf("default (v1) must honestly report the corpus is not signed under it: %s", underDefault)
+	}
+}
