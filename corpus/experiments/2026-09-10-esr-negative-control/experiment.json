@@ -1,0 +1,222 @@
+{
+  "ok": true,
+  "command": "experiment show",
+  "store": "/tmp/newf-esr/newf.db",
+  "experiment": {
+    "id": "exp_01M26ST4EV1MPRAC4GCNE0XN4P",
+    "problem_id": "prb_01M26SR297SH09DMYK82HBNE9G",
+    "holdout_set_id": "hset_01M26SSYHF7CNJ62TBRE70K59P",
+    "run_id": "run_01M26ST4EVTZ0XK037DNJ62SFC",
+    "mode": "blinded",
+    "mode_disclaimer": "blinded benchmark: structural-move recovery under enforced blinding; NO chronological claim is made or implied",
+    "recovery_rule_version": "recovery-rule/v1",
+    "profile_version": "classify/v1",
+    "proposal_budget_count": 8,
+    "evaluation_budget_count": 40,
+    "conclusion": "inconclusive",
+    "revision": 1,
+    "created_at": "2026-09-10T23:17:56.315084Z",
+    "leakage_check": {
+      "id": "lkc_01M26ST4EVTZ0XK037DR92SBHT",
+      "checker_version": "leakage-check/v1",
+      "snapshot_leaks": 0,
+      "normalization_leaks": 0,
+      "signature_leaks": 0,
+      "passed": true
+    },
+    "arms": [
+      {
+        "arm": "b0_undirected",
+        "frontier_generation_run_id": "fgr_01M26ST4EZ10SM6RJ39V73P55Y",
+        "proposal_count": 0,
+        "recovered": false,
+        "nearest_classification": "unknown",
+        "distinct_family_count": 0,
+        "redundant_count": 0,
+        "stopping_condition": "completed",
+        "decisive_count": 0,
+        "unknown_count": 0,
+        "unassessed_count": 0,
+        "evaluations_consumed": 0,
+        "members": null
+      },
+      {
+        "arm": "b1_semantic_summary",
+        "frontier_generation_run_id": "fgr_01M26ST4F407K93BNC3WXTBB5C",
+        "proposal_count": 1,
+        "recovered": false,
+        "nearest_classification": "unknown",
+        "distinct_family_count": 1,
+        "redundant_count": 0,
+        "stopping_condition": "completed",
+        "decisive_count": 0,
+        "unknown_count": 1,
+        "unassessed_count": 0,
+        "evaluations_consumed": 1,
+        "members": [
+          {
+            "proposal_id": "fpr_01M26ST4F407K93BNC415921BG",
+            "member_rank": 0,
+            "assessment": "unknown"
+          }
+        ]
+      },
+      {
+        "arm": "b2_brainstorm",
+        "frontier_generation_run_id": "fgr_01M26ST4FABFT6RX1R4S4P4BWF",
+        "proposal_count": 1,
+        "recovered": false,
+        "nearest_classification": "unknown",
+        "distinct_family_count": 1,
+        "redundant_count": 0,
+        "stopping_condition": "completed",
+        "decisive_count": 0,
+        "unknown_count": 1,
+        "unassessed_count": 0,
+        "evaluations_consumed": 1,
+        "members": [
+          {
+            "proposal_id": "fpr_01M26ST4FABFT6RX1R4Z6SBTE7",
+            "member_rank": 0,
+            "assessment": "unknown"
+          }
+        ]
+      },
+      {
+        "arm": "b3_invariant_guided",
+        "frontier_generation_run_id": "fgr_01M26ST4FFQX1XAY3R4TQ8RAJH",
+        "proposal_count": 0,
+        "recovered": false,
+        "nearest_classification": "unknown",
+        "distinct_family_count": 0,
+        "redundant_count": 0,
+        "stopping_condition": "completed",
+        "decisive_count": 0,
+        "unknown_count": 0,
+        "unassessed_count": 0,
+        "evaluations_consumed": 0,
+        "members": null
+      }
+    ],
+    "metrics": [
+      {
+        "arm": "b0_undirected",
+        "metric": "decisive_assessments",
+        "numerator": 0,
+        "denominator": 1,
+        "ordinal": "low"
+      },
+      {
+        "arm": "b0_undirected",
+        "metric": "held_out_family_recovery",
+        "numerator": 0,
+        "denominator": 1,
+        "ordinal": "low"
+      },
+      {
+        "arm": "b0_undirected",
+        "metric": "mechanistic_diversity",
+        "numerator": 0,
+        "denominator": 1,
+        "ordinal": "low"
+      },
+      {
+        "arm": "b0_undirected",
+        "metric": "normalized_redundancy",
+        "numerator": 0,
+        "denominator": 1,
+        "ordinal": "low"
+      },
+      {
+        "arm": "b1_semantic_summary",
+        "metric": "decisive_assessments",
+        "numerator": 0,
+        "denominator": 1,
+        "ordinal": "low"
+      },
+      {
+        "arm": "b1_semantic_summary",
+        "metric": "held_out_family_recovery",
+        "numerator": 0,
+        "denominator": 1,
+        "ordinal": "low"
+      },
+      {
+        "arm": "b1_semantic_summary",
+        "metric": "mechanistic_diversity",
+        "numerator": 1,
+        "denominator": 1,
+        "ordinal": "high"
+      },
+      {
+        "arm": "b1_semantic_summary",
+        "metric": "normalized_redundancy",
+        "numerator": 0,
+        "denominator": 1,
+        "ordinal": "low"
+      },
+      {
+        "arm": "b2_brainstorm",
+        "metric": "decisive_assessments",
+        "numerator": 0,
+        "denominator": 1,
+        "ordinal": "low"
+      },
+      {
+        "arm": "b2_brainstorm",
+        "metric": "held_out_family_recovery",
+        "numerator": 0,
+        "denominator": 1,
+        "ordinal": "low"
+      },
+      {
+        "arm": "b2_brainstorm",
+        "metric": "mechanistic_diversity",
+        "numerator": 1,
+        "denominator": 1,
+        "ordinal": "high"
+      },
+      {
+        "arm": "b2_brainstorm",
+        "metric": "normalized_redundancy",
+        "numerator": 0,
+        "denominator": 1,
+        "ordinal": "low"
+      },
+      {
+        "arm": "b3_invariant_guided",
+        "metric": "decisive_assessments",
+        "numerator": 0,
+        "denominator": 1,
+        "ordinal": "low"
+      },
+      {
+        "arm": "b3_invariant_guided",
+        "metric": "held_out_family_recovery",
+        "numerator": 0,
+        "denominator": 1,
+        "ordinal": "low"
+      },
+      {
+        "arm": "b3_invariant_guided",
+        "metric": "mechanistic_diversity",
+        "numerator": 0,
+        "denominator": 1,
+        "ordinal": "low"
+      },
+      {
+        "arm": "b3_invariant_guided",
+        "metric": "normalized_redundancy",
+        "numerator": 0,
+        "denominator": 1,
+        "ordinal": "low"
+      }
+    ],
+    "targets": [
+      {
+        "signature_id": "msig_01M26SRQ93Z90BBVGTNRW48SGG",
+        "canonical_fingerprint": "8f3c8b568600c9b32966cfc3271d936c9a6ea93de2523385c8d3c6e7ee17a6e4"
+      }
+    ]
+  }
+}

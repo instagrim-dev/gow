@@ -1,0 +1,95 @@
+{
+  "ok": true,
+  "command": "experiment compare",
+  "store": "/tmp/newf-esr/newf.db",
+  "comparison": {
+    "experiment_id": "exp_01M26ST4EV1MPRAC4GCNE0XN4P",
+    "mode": "blinded",
+    "mode_disclaimer": "blinded benchmark: structural-move recovery under enforced blinding; NO chronological claim is made or implied",
+    "recovery_rule_version": "recovery-rule/v1",
+    "profile_version": "classify/v1",
+    "proposal_budget_count": 8,
+    "baseline_arm": {
+      "arm": "b2_brainstorm",
+      "frontier_generation_run_id": "fgr_01M26ST4FABFT6RX1R4S4P4BWF",
+      "proposal_count": 1,
+      "recovered": false,
+      "nearest_classification": "unknown",
+      "distinct_family_count": 1,
+      "redundant_count": 0,
+      "stopping_condition": "completed",
+      "decisive_count": 0,
+      "unknown_count": 1,
+      "unassessed_count": 0,
+      "evaluations_consumed": 1,
+      "members": [
+        {
+          "proposal_id": "fpr_01M26ST4FABFT6RX1R4Z6SBTE7",
+          "member_rank": 0,
+          "assessment": "unknown"
+        }
+      ]
+    },
+    "treatment_arm": {
+      "arm": "b3_invariant_guided",
+      "frontier_generation_run_id": "fgr_01M26ST4FFQX1XAY3R4TQ8RAJH",
+      "proposal_count": 0,
+      "recovered": false,
+      "nearest_classification": "unknown",
+      "distinct_family_count": 0,
+      "redundant_count": 0,
+      "stopping_condition": "completed",
+      "decisive_count": 0,
+      "unknown_count": 0,
+      "unassessed_count": 0,
+      "evaluations_consumed": 0,
+      "members": null
+    },
+    "baseline_recovery_status": "inconclusive",
+    "treatment_recovery_status": "inconclusive",
+    "recovery_delta": "inconclusive",
+    "metrics": [
+      {
+        "metric": "decisive_assessments",
+        "baseline_numerator": 0,
+        "baseline_denominator": 1,
+        "baseline_ordinal": "low",
+        "treatment_numerator": 0,
+        "treatment_denominator": 1,
+        "treatment_ordinal": "low",
+        "direction": "same"
+      },
+      {
+        "metric": "held_out_family_recovery",
+        "baseline_numerator": 0,
+        "baseline_denominator": 1,
+        "baseline_ordinal": "low",
+        "treatment_numerator": 0,
+        "treatment_denominator": 1,
+        "treatment_ordinal": "low",
+        "direction": "incomparable"
+      },
+      {
+        "metric": "mechanistic_diversity",
+        "baseline_numerator": 1,
+        "baseline_denominator": 1,
+        "baseline_ordinal": "high",
+        "treatment_numerator": 0,
+        "treatment_denominator": 1,
+        "treatment_ordinal": "low",
+        "direction": "lower"
+      },
+      {
+        "metric": "normalized_redundancy",
+        "baseline_numerator": 0,
+        "baseline_denominator": 1,
+        "baseline_ordinal": "low",
+        "treatment_numerator": 0,
+        "treatment_denominator": 1,
+        "treatment_ordinal": "low",
+        "direction": "same"
+      }
+    ],
+    "interpretation": "at least one arm was not decisively assessed on this split; no recovery negative can be claimed (inconclusive)"
+  }
+}
