@@ -2,62 +2,81 @@
 
 Status: `negative_inconclusive`
 Recorded: 2026-09-11
-Commits: quorum adjudication `78e73d2`; unblinding key `captures/adjudication-key.json`
+Commits: quorum adjudication `78e73d2`; result record corrections `0aac153`
+Review: operator audit of `78e73d2` — no repository changes; corrections applied here.
 
 ---
 
 ## Predeclared verdict
 
 The success criteria were fixed in `PROTOCOL-DRAFT.md` before any capture was
-dispatched. All three criteria must be evaluated exactly as written; the result
-cannot be adjusted post-hoc.
+dispatched. All three criteria must be evaluated against the frozen run-level
+endpoints, not a pooled tally.
 
-### Criterion 1 — Recovery of reference properties (D1 consistency)
+### Criterion 1 — D1 run-level recovery of reference properties
 
 > D1 produces ≥2 of {L1, L3, L4} as `matches_reference` in a majority of its
 > runs (≥2 of 3), including at least one of {L3, L4}.
 
 **FAILS.**
 
-| Run | Entries | {L1,L3,L4} hits | Includes L3 or L4? | Passes? |
-|---|---|---|---|---|
-| d1-run1 | E05, E08, E15, E17 | E17 → L1 (1 hit) | No | ✗ |
-| d1-run2 | E01, E07, E10, E19 | E01 → L1, E19 → L3 (2 hits) | Yes | ✓ |
-| d1-run3 | E02, E03, E20, E22 | E02 → L1 (1 hit) | No | ✗ |
+Reference-match distribution by run, after unblinding:
 
-Result: 1 of 3 runs passes. Criterion requires ≥2. **Not met.**
+```
+D1 run 1:  L1              (E17)
+D1 run 2:  L1 + L3         (E01, E19)
+D1 run 3:  L1              (E02)
 
-L4 (`identity_carried_solvability`) was not recovered in any D1 run. L3
-(`class_union_construction`) appeared in exactly one run (d1-run2, entry E19)
-alongside two over-merges in the same run (E10 DISPUTED, E22 DISPUTED). The
-one-run signal is preserved as an observation but does not satisfy the majority
-test.
+D0 run 1:  L1              (E18)
+D0 run 2:  L1              (E09)
+D0 run 3:  L1              (E12)
+```
 
-### Criterion 2 — Error discipline (D1 OM + PP ≤ D0 OM + PP)
+One of three D1 runs passes the within-run threshold (d1-run2, which
+produced both L1 and L3). The frozen criterion requires two of three.
+**Not met.**
+
+Numerical correction from the pooled table: the final aggregate contains
+**six L1 assignments and one L3 assignment** (E01, E02, E09, E12, E17, E18
+→ L1; E19 → L3). The minority rationale for E19 cited L4
+(`identity_carried_solvability`) but was outvoted by L3. Crediting E19 with
+both L3 and L4 would still leave the informative recovery concentrated in
+one D1 run and would not satisfy the majority criterion. L4 was not
+recovered in any run by majority.
+
+Narrow favorable observation: L3 (`class_union_construction`) appeared once
+in D1 run 2 and in no D0 run. That is the only unnamed-reference-property
+hit distinguishing the two arms. It occurred in one run alongside one
+disputed over-merge (E10) in the same run, and does not override the
+majority-of-runs criterion. It is worth retaining as an observation.
+
+### Criterion 2 — D1 error discipline
 
 > D1's aggregate `over_merge` + `prohibited_promotion` count is ≤ D0's.
 
 **FAILS.**
 
-| Arm | over_merge | prohibited_promotion | Total |
+| Arm | `over_merge` | `prohibited_promotion` | Total |
 |---|---|---|---|
-| D1 (12 entries) | 2 (E10, E22 — both DISPUTED, cemented conservative) | 0 | **2** |
-| D0 (11 entries) | 0 | 0 | **0** |
+| D1 | 2 (E10, E22 — both conservative fallbacks) | 0 | **2** |
+| D0 | 0 | 0 | **0** |
 
-D1 generated two over-merges; D0 generated none. **Not met.**
+Both D1 over-merge assignments are **disputed** (no majority; conservative
+fallback applied per the predeclared rule). They should not be presented as
+confirmed examples of over-merging; the conservative disposition is a
+holding position, not a verdict that most reviewers found an error. The
+correct description is: two D1 entries received a conservative fallback of
+`over_merge` because no lane majority existed. D0 received no fallbacks.
+The criterion still fails under this reading.
 
-Both D1 over-merges targeted the same membership set [es-01, es-03, es-07]
-and erased the distinction recorded in reference entry L6 (es-01's modular
-decomposition versus es-03's local congruence filter have affirmatively
-distinct roles). This is a recurring prompt-design failure: the D1 bundle
-contains the training notes but provides no explicit instruction preventing
-the L6 distinction from being collapsed. See §Learnings.
-
-Note on disputed cements: the predeclared aggregation rule cements the most
-conservative vote when no majority exists. If the operator independently
-reverses E10 and E22 to `defensible_novel`, D1 OM drops to 0, matching D0 —
-but this would require new evidence, not a recount. The conservative cements
-are final under the current record.
+Both D1 disputed entries (E10, E22) targeted the same membership set
+[es-01, es-03, es-07] and the same structural question as reference entry
+L6: whether es-01's modular decomposition and es-03's local congruence
+filter can be jointly labelled without erasing the distinct-role finding. One
+lane voted `defensible_novel`, one `matches_reference (L6)`, one
+`over_merge` for both entries — three irreconcilable readings of what "novel
+vs. already known vs. category-violating" means for the same membership set.
+That is a genuine scope ambiguity, not a resolved error.
 
 ### Criterion 3 — D0 novel rate below D1 novel rate
 
@@ -65,246 +84,390 @@ are final under the current record.
 
 **PASSES.**
 
-| Arm | defensible_novel | Total entries | Rate |
+| Arm | `defensible_novel` occurrences | Total | Rate |
 |---|---|---|---|
-| D1 | 6 (E03, E05, E07, E08, E15, E20) | 12 | **50%** |
-| D0 | 4 (E13, E16, E21, E23) | 11 | **36%** |
+| D1 | 6 | 12 | 50% |
+| D0 | 4 | 11 | 36% |
 
-D0's novel rate (36%) is below D1's (50%). One criterion satisfied, two
-not.
+One of three criteria met.
 
 ### Overall verdict
 
-> Anything else is a negative or inconclusive result to be recorded as such.
-
 **Verdict: negative / inconclusive.**
 
-The two-criterion failure is decisive. The partial signal in d1-run2 is
-preserved as an observation. No result stronger than "inconclusive" is
-warranted.
+The two-criterion failure is decisive. Per the frozen protocol: "Anything
+else is a negative or inconclusive result to be recorded as such."
+
+---
+
+## What "negative/inconclusive" names precisely
+
+The verdict is specifically about **run-to-run consistency of rediscovery**.
+It does not assess whether the individual entries are valid candidate
+properties, whether the proposal operation has any value, or whether the
+approach can succeed with design corrections.
+
+The quorum result provides considerably more diagnostic information than a
+single pass/fail verdict. The remaining sections distinguish what the data
+does and does not establish.
 
 ---
 
 ## Unblinded arm breakdown
 
-### D1 (guided — train-only bundle, L1/L3/L4 as surviving invariants supplied)
+### D1 (guided — train-only bundle, L1/L3/L4 supplied as surviving invariants)
 
-| Entry | Category | Ref match | Disputed | Run |
-|---|---|---|---|---|
-| E01 | `matches_reference` | L1 | — | d1-run2 |
-| E02 | `matches_reference` | L1 | — | d1-run3 |
-| E03 | `defensible_novel` | — | — | d1-run3 |
-| E05 | `defensible_novel` | — | — | d1-run1 |
-| E07 | `defensible_novel` | — | — | d1-run2 |
-| E08 | `defensible_novel` | — | — | d1-run1 |
-| E10 | `over_merge` | — | ⚠ conservative | d1-run2 |
-| E15 | `defensible_novel` | — | — | d1-run1 |
-| E17 | `matches_reference` | L1 | — | d1-run1 |
-| E19 | `matches_reference` | L3 | — | d1-run2 |
-| E20 | `defensible_novel` | — | — | d1-run3 |
-| E22 | `over_merge` | — | ⚠ conservative | d1-run3 |
+| Entry | Category | Ref | Disputed | Run | Vote split |
+|---|---|---|---|---|---|
+| E01 | `matches_reference` | L1 | — | d1-run2 | 3-0 |
+| E02 | `matches_reference` | L1 | — | d1-run3 | 3-0 |
+| E03 | `defensible_novel` | — | — | d1-run3 | 2-1 |
+| E05 | `defensible_novel` | — | — | d1-run1 | 3-0 |
+| E07 | `defensible_novel` | — | — | d1-run2 | 3-0 |
+| E08 | `defensible_novel` | — | — | d1-run1 | 2-1 |
+| E10 | `over_merge` | — | ⚠ conservative | d1-run2 | 0 majority |
+| E15 | `defensible_novel` | — | — | d1-run1 | 3-0 |
+| E17 | `matches_reference` | L1 | — | d1-run1 | 3-0 |
+| E19 | `matches_reference` | L3 | — | d1-run2 | 3-0 (L4 in 1 minority reason) |
+| E20 | `defensible_novel` | — | — | d1-run3 | 3-0 |
+| E22 | `over_merge` | — | ⚠ conservative | d1-run3 | 0 majority |
 
-D1 summary: 4 `matches_reference` (all L1 or L3; L4 absent), 6 `defensible_novel`,
-2 `over_merge`.
+D1 summary: 4 `matches_reference`, 6 `defensible_novel`, 2 `over_merge` (conservative).
 
 ### D0 (control — outcome-permuted bundle; original prose retained)
 
-| Entry | Category | Ref match | Disputed | Run |
-|---|---|---|---|---|
-| E04 | `unsupported` | — | ⚠ conservative | d0-run2 |
-| E06 | `unsupported` | — | — | d0-run1 |
-| E09 | `matches_reference` | L1 | — | d0-run2 |
-| E11 | `unsupported` | — | — | d0-run1 |
-| E12 | `matches_reference` | L1 | — | d0-run3 |
-| E13 | `defensible_novel` | — | — | d0-run3 |
-| E14 | `unsupported` | — | — | d0-run3 |
-| E16 | `defensible_novel` | — | — | d0-run1 |
-| E18 | `matches_reference` | L1 | — | d0-run1 |
-| E21 | `defensible_novel` | — | — | d0-run2 |
-| E23 | `defensible_novel` | — | — | d0-run2 |
+| Entry | Category | Ref | Disputed | Run | Vote split |
+|---|---|---|---|---|---|
+| E04 | `unsupported` | — | ⚠ conservative | d0-run2 | 0 majority |
+| E06 | `unsupported` | — | — | d0-run1 | 3-0 |
+| E09 | `matches_reference` | L1 | — | d0-run2 | 2-1 |
+| E11 | `unsupported` | — | — | d0-run1 | 2-1 |
+| E12 | `matches_reference` | L1 | — | d0-run3 | 2-1 |
+| E13 | `defensible_novel` | — | — | d0-run3 | 3-0 |
+| E14 | `unsupported` | — | — | d0-run3 | 2-1 |
+| E16 | `defensible_novel` | — | — | d0-run1 | 3-0 |
+| E18 | `matches_reference` | L1 | — | d0-run1 | 2-1 |
+| E21 | `defensible_novel` | — | — | d0-run2 | 3-0 |
+| E23 | `defensible_novel` | — | — | d0-run2 | 3-0 |
 
-D0 summary: 3 `matches_reference` (all L1), 4 `defensible_novel`, 4 `unsupported`.
+D0 summary: 3 `matches_reference`, 4 `defensible_novel`, 4 `unsupported`.
 
 ---
 
-## Observations (not result claims)
+## Vote-distribution summary
 
-### D0 reference-matching explained by prose retention
+| Distribution | Count | Entries |
+|---|---|---|
+| Unanimous 3-0 | 13 | E01, E02, E05, E06, E07, E13, E15, E16, E17, E19, E20, E21, E23 |
+| Majority 2-1 | 7 | E03, E08, E09, E11, E12, E14, E18 |
+| No majority (conservative fallback) | 3 | E04, E10, E22 |
 
-D0 recovered L1 (QR-confinement) three times despite outcome-permuted
+Seven entries carry a dissenting vote whose rationale names a substantive
+objection — see §Testable disagreements.
+
+---
+
+## Novel occurrences — recurring themes, not ten distinct discoveries
+
+Ten entries received `defensible_novel`. **These are proposal occurrences,
+not ten distinct properties.** The lane rationales identify substantial
+repetition:
+
+- **E05 and E07** are two framings of the same [es-05, es-07, es-10]
+  grouping ("intrinsically bounded evidence" and "quantitative measure
+  cannot reach every-n"). Lane A flags this explicitly.
+- **E13, E16, E20, E23** are four framings of the same [es-05, es-10]
+  pairing at different abstraction levels (capped coverage profile,
+  asymptotic thinning, too-weak quantitative statement, monotone-but-rate-
+  limited). Lane A identifies these as duplicate novel claims.
+- **E08, E10, E22** share the membership [es-01, es-03, es-07]; E08 was
+  accepted as novel while E10 and E22 received conservative `over_merge`
+  fallbacks for the same underlying locality-grouping question.
+
+The defensible statement is:
+
+> **Ten proposal occurrences received a `defensible_novel` disposition
+> relative to the reference ledger. They contain recurring candidate themes
+> whose distinct-property count has not been adjudicated.**
+
+Approximate distinct themes in the novel set:
+
+| Theme | Occurrences | Notes |
+|---|---|---|
+| Finite resource against demonstrated-infinite survivor | E03 (D1) | Contested by Lane B — see §Testable disagreements |
+| Intrinsic quantitative ceiling / bounded evidence | E05, E07 (D1), E13, E16, E20, E23 (D0) | ~2 distinct properties across 6 occurrences |
+| Local-only reasoning without global coupling | E08, E15 (D1) | E10, E22 disputed versions of same theme |
+| Reorganisation without added existence | E21 (D0) | Distinct; es-09/es-11 as partial successes |
+
+Recurrence across fresh runs is informative: it suggests the proposer
+repeatedly finds a theme rather than generating arbitrary variation. This
+answers a different question from distinctness — "does the model converge
+on something?" not "how many independent things did it find?"
+
+"Novel relative to this ledger" does not establish novelty in mathematical
+literature or prove the curated pass overlooked valid invariants.
+
+---
+
+## Substantive concerns in specific entries
+
+### E15 — annotation pattern versus mechanism-level claim
+
+E15 was accepted unanimously. Its core claim:
+
+> "Several stalled approaches break nothing about the underlying
+> congruence/residue structure — their normalized mechanism records list no
+> broken properties."
+
+The supporting evidence is three quotations of `"breaks": []` from the
+corpus records. That evidence directly supports:
+
+> The corpus annotations record no broken properties for these mechanisms.
+
+It does not directly support:
+
+> The mechanisms break no relevant properties.
+
+The second claim requires either that the annotations are exhaustive, or an
+independent substantive argument. This is the same absence-versus-evidence
+distinction corrected in the automatic comparator (classify/v2). A unanimous
+quorum verdict should not reintroduce it through prose.
+
+Additionally, E15's contrast check lists es-05 among partial successes that
+"break something." The frozen corpus records es-05 as `partial_failure`, not
+`partial_success`. This is a concrete status mismatch in a unanimously
+accepted entry.
+
+**Disposition:** Retain E15's quorum verdict as the historical record. Reopen
+the substantive claim for two corrections before any pipeline admission: (1)
+narrow the statement to the annotation pattern rather than the mechanism-level
+conservation claim; (2) correct the es-05 contrast-check status. Any admitted
+revision must be separately attributed.
+
+### E10/E22 — conservative fallback ≠ confirmed error
+
+As noted in §Criterion 2: the three lanes voted `defensible_novel`,
+`matches_reference (L6)`, and `over_merge` respectively for both E10 and E22.
+Two lanes found the claims supportable; they disagreed about whether novelty
+or reference-match was the right category. One lane found an over-merge. The
+conservative fallback correctly held the claim to a higher standard, but it
+does not establish that most reviewers found a category error.
+
+**Disposition:** Withhold from downstream guidance (conservative action). Do
+not treat as confirmed examples of over-merging (unsupported conclusion).
+
+### E19 — L3 match with an L4 claim in the minority rationale
+
+E19 maps to L3 by 3-0 majority. Lane C's rationale argues the claim is
+actually L4 (`identity_carried_solvability`) at L3's scope. The mapping
+question — class-union construction, identity-carried solvability, or a
+conjunction — is a bounded substantive question that the vote count alone
+cannot resolve. E19's matched scope and its matched property meaning should be
+addressed separately if it is advanced to challenge.
+
+---
+
+## D0 status objections as experimental artefacts
+
+Several D0 entries were rejected partly because they cited outcome classes that
+conflict with the original corpus. Some of these conflicts arise from the
+experimental intervention, not from model error.
+
+The D0 permutation record shows that d0-run1 (which produced E11) received
+these outcome-class flips relative to the original:
+
+| Note | Original class | D0 supplied class |
+|---|---|---|
+| es-09 | `partial_success` | `partial_failure` |
+| es-11 | `partial_success` | `partial_failure` |
+| es-03 | `partial_failure` | `partial_success` |
+| es-07 | `partial_failure` | `partial_success` |
+
+Lane B rejected E11 partly because "es-09 and es-11 are corpus-recorded as
+partial_success" — but in the material d0-run1 actually received, they were
+supplied as `partial_failure`. The rejection is grounded in the reference
+corpus; the proposer operated on the permuted input.
+
+A proposal can fail the reference-matching criterion while correctly using the
+manipulated metadata it was given. **D0 status mismatches should not be
+uniformly treated as examples of model hallucination or bad admission
+behaviour.** The admission system should not encode "correctly following an
+intentionally corrupted input is an error" without distinguishing which input
+was authoritative.
+
+This applies specifically to D0 entries. D1 entries received the unperturbed
+training bundle; status mismatches in D1 entries are not explained by the
+permutation.
+
+---
+
+## D0 reference-matching — prose-retention confirmation
+
+D0 recovered L1 three times (E09, E12, E18) despite outcome-permuted
 annotations. This is consistent with the pre-adjudication caution in
 `records/INTERPRETATION-NOTES.md`:
 
 > The model follows the original prose: outcome permutation has little effect.
 
-The D0 bundle preserves the original training note text; the permuted field is
-the outcome metadata annotation. A model reading the prose can reconstruct
-the QR-confinement property without access to a guided bundle. Therefore D0's
-three L1 recoveries are expected under the "prose-following" explanation and do
-not constitute evidence of failure-structure discovery in the D0 arm.
+The D0 bundle preserved the original training note text; only the outcome
+metadata was permuted. The QR-confinement property is recoverable from prose
+alone, independently of outcome labels. D0's three L1 recoveries are expected
+under the prose-following explanation.
 
-This observation also limits what D1's L1 recoveries show: the two-explanation
-problem (failure-structure discovery vs. prose-following) applies to both arms.
-D1's additional L3 recovery in run2 is the only case where the prose-following
-explanation is weaker, since L3 (`class_union_construction`) is a
-relationship between es-02 and es-10 that requires reasoning across notes
-rather than copying a single note's language.
+The same caution applies to D1's L1 recoveries, which is why the L3 recovery
+in d1-run2 is the more informative signal: L3 requires reasoning across notes
+(es-02 and es-10) rather than recovering a property named in a single note's
+prose.
 
-### d1-run2 as the strongest single-run signal
+---
 
-d1-run2 is the only run that passes Criterion 1 individually. It produced:
-- E01 → L1 (QR confinement)
-- E19 → L3 (class union construction) ← includes L3 ✓
-- E07 → defensible_novel (intrinsic quantitative ceiling)
-- E10 → over_merge DISPUTED (local-coupling erasure of L6 distinction)
+## Testable disagreements
 
-The L3 recovery is the highest-quality signal in the pilot: it requires
-recognising that es-02 (covering) and es-10 (density assembly) share a
-union-construction property despite different objectives. It does not appear
-in any other run. One run is weak evidence; it motivates a follow-on but
-does not discharge the majority criterion.
+The dissent identifies specific bounded questions for follow-up. These are
+not noise.
 
-### Ten novel candidates — ready for challenge
+**E03 (D1, 2-1: defensible_novel vs unsupported):** Lane B distinguishes a
+finite computation's inability to certify a universal statement (es-07's
+boundary: "finite verification is not a proof for all n") from a structural
+obstruction leaving a proven-infinite survivor set (es-02, es-10). If these
+are different structural situations, E03's shared_by set is not coherent. The
+2-vote majority should answer this objection with source evidence, not rely on
+the vote count.
 
-The quorum judged 10 entries `defensible_novel`. A `defensible_novel` verdict
-means the passages support the property, distinctions are preserved, and the
-contrast check is honest. This is a proposed candidate invariant — the model
-has done the compression step the research loop expects.
+**E08/E10/E22 (D1, same membership [es-01, es-03, es-07]):** E08 was
+accepted as novel (2-1: defensible_novel); E10 and E22 received conservative
+over_merge fallbacks for proposals that are substantively similar. The question
+is whether grouping es-01 and es-03 under a shared locality label preserves or
+erases their L6-recorded distinct roles. Lane A accepted it in E08 but Lane C
+rejected it in E10 and E22; Lane A also treated all three as equivalent.
+Whether meaningful wording differences justify the asymmetric outcome is a
+bounded question with a bounded answer.
 
-The negative pilot verdict is about run-to-run *rediscovery reliability*, not
-about the validity of individual entries. The admission gate for a candidate
-invariant is: (1) surviving the evidence bar, and (2) surviving challenge.
-Condition 1 is met by the quorum verdict. Condition 2 has not yet been tested.
+**E19 (D1, 3-0 L3 with L4 in minority reasoning):** Is the claim
+"solvability inherited from per-class identities" (L4) at the [es-02, es-10]
+scope (L3), or is it a genuinely conjunctive property? This affects whether
+L4 was marginally recovered in the pilot.
 
-One asymmetry between arms: the 4 D0 novel entries have the prose-retention
-ambiguity (the model may be following original outcome language rather than
-discovering structure). The 6 D1 novel entries are less ambiguous in origin.
-This does not invalidate D0 entries — it qualifies what their source establishes.
+**E15 (D1, 3-0 defensible_novel but substantive scope concern):** Is the
+correct claim about annotation patterns or about mechanism-level conservation?
+The evidence base, stated as direct corpus inspection, only supports the
+narrower claim. Resolving this requires no new evidence — only clarifying what
+the passages actually establish.
 
-**D1 novel (6):**
+---
 
-| Entry | Property (summary) | Scope |
-|---|---|---|
-| E03 | Finite resource against demonstrated-infinite survivor set | es-02, es-07, es-10 |
-| E05 | Intrinsically bounded evidence type cannot upgrade to universal existence | es-05, es-07, es-10 |
-| E07 | Quantitative progress measure cannot reach every-n | es-05, es-07, es-10 (same as E05, tighter framing) |
-| E08 | Local-only reasoning, no global coupling | es-01, es-03, es-07 |
-| E15 | breaks=[] for all three (conserves structure) | es-01, es-03, es-10 |
-| E20 | Global quantitative statement too weak to force per-prime existence | es-05, es-10 |
+## Quorum governance note
 
-**D0 novel (4):**
+The three quorum lanes were dispatched to the same model family (claude /
+cursor-agent) with role-differentiated prompts. Agreements across lanes
+represent within-family consistency under different framings, not
+independent-source validation. Different role labels do not on their own
+establish three independent sources of expertise.
 
-| Entry | Property (summary) | Scope |
-|---|---|---|
-| E13 | Intrinsically capped almost-all coverage profile | es-05, es-10 |
-| E16 | Asymptotic thinning incapable of reaching empty exceptional set | es-05, es-10 |
-| E21 | Reorganisation without new existence (es-09, es-11 partial successes) | es-09, es-11 |
-| E23 | Monotonically improving but rate-limited, infinite uncovered residue | es-05, es-10 |
-
-Note: E13, E16, E20, E23 are four framings of the same [es-05, es-10]
-pairing at different abstraction levels. E05 and E07 are two framings of
-the same [es-05, es-07, es-10] grouping. Collapsing these would reduce 10
-novel candidates to approximately 4–5 distinct properties. The next step
-for these entries is the challenge step (can an adversarial case falsify
-them?), not re-adjudication. No admission decision has been made; that is
-operator work.
+The quorum is a decision procedure that correctly implements the aggregation
+rule and usefully organises judgment. It does not convert judgment into
+verification. This is why the project's evidentiary standard requires
+challenge to follow adjudication before a hypothesis is established —
+quorum consensus is still model judgment under the verification hierarchy.
 
 ---
 
 ## Provenance limitations
 
-### Key seal gap
+**Key seal gap:** `adjudication-ledger.json` had `key_sealed: null` and
+`key_sha256: null` when adjudication began. The key was produced and committed
+before quorum dispatch but its SHA256 was not formally recorded in the ledger.
+The adjudication itself was blind by construction — quorum agents operated from
+`quorum-lane-brief.json` which contains no arm assignments — but tamper-evidence
+between key file and ledger was absent. Git commit history and sealed capture
+digests provide partial protection. Future protocols should include the key
+SHA256 in FREEZE.md before any capture is dispatched.
 
-`adjudication-ledger.json` has `key_sealed: null` and `key_sha256: null`.
-The adjudication key (`captures/adjudication-key.json`) was produced by the
-executing agent and committed before the quorum was dispatched. It was not
-formally hashed into the ledger before adjudication began. The adjudication
-itself was blind by construction — the quorum agents operated from
-`quorum-lane-brief.json` which contains no arm assignments — but the
-tamper-evidence seal between the key file and the ledger was not completed.
+**Same-model-family quorum:** See §Quorum governance note.
 
-**Limitation:** a post-hoc key substitution could not be detected from the
-ledger record alone. The git commit history and the sealed capture digests
-provide partial protection, but the formal seal is absent. Future protocols
-should include the key SHA256 in FREEZE.md before any capture is dispatched.
-
-### Same-model-family limitation
-
-All three quorum lanes were dispatched to the same model family (claude,
-cursor-agent). Lane diversity was role-based (research / engineering /
-generalist), not model-diverse. Agreements across lanes therefore represent
-within-family consistency rather than independent-source agreement. The
-aggregation rule treats majority as cement; this caveat applies to all
-cemented results.
-
-### D0 control interpretation
-
-Per `records/INTERPRETATION-NOTES.md`, the D0 design is "unperturbed notes
-versus outcome-permuted notes whose prose still retains the original outcome
-information." A D1 > D0 score — had it been achieved — would have been
-consistent with both failure-structure discovery and sensitivity to
-coherent-versus-corrupted descriptions. The negative verdict makes this
-moot for now but records the limitation for future protocol design.
+**D0 causal ambiguity:** Per `records/INTERPRETATION-NOTES.md`, a D1 > D0
+score would have been consistent with both failure-structure discovery and
+sensitivity to coherent-vs-corrupted descriptions. The negative verdict makes
+the causal question moot for now but records the limitation for future design.
 
 ---
 
 ## Learnings for future protocols
 
-**L1 — Run-level credit:** One of three D1 runs passed Criterion 1. A
-future protocol could record run-level pass/fail as a secondary metric
-without changing the majority criterion. This preserves the majority bar
-while making the partial signal visible.
+**L1 — Run-level credit:** One of three D1 runs passed Criterion 1. A future
+protocol could record run-level pass/fail as a secondary metric without
+changing the majority criterion.
 
-**L2 — L6 erasure failure mode:** Both D1 over-merges targeted [es-01,
-es-03, es-07] and erased the L6 distinction. The D1 prompt did not
-explicitly instruct the model to preserve distinctions recorded in the
-reference. Future prompts should include the reference distinctions (not
-only the reference properties) as negative examples: "Do not group es-01
-and es-03 under a shared label without preserving their
-decomposition-vs-filtering distinction."
+**L2 — L6 erasure failure mode:** Both D1 over-merge fallbacks grouped es-01
+and es-03 under a shared label despite L6's distinct-role finding. Future D1
+prompts should include the reference distinctions as explicit negative
+examples.
 
-**L3 — L4 absence:** The `identity_carried_solvability` property (L4) was
-not recovered in any D1 run. The three D1 runs collectively covered all
-twelve training notes through their proposals; the property exists in the
-training evidence. Its absence may reflect the prompt's framing, the
-property's subtlety (it appears as operator/preserved/assumption across
-three notes rather than as a single named pattern), or run-count limits.
-Three runs per arm is insufficient to characterise absence.
+**L3 — L4 absence:** `identity_carried_solvability` was not recovered in any
+D1 run by majority. Its cross-note character (operator in es-01, preserved
+property in es-02, assumption in es-10) may make it harder to compress into a
+single-session proposal. Three runs per arm is insufficient to characterise
+absence.
 
-**L4 — Novel candidates as scoping input:** The 10 novel entries, if
-subsequently challenged and admitted, would expand the property space
-available to guide future experiments. The four [es-05, es-10] framings
-suggest a density/averaging ceiling property may be admissible under a
-tighter scope; this would be L7 or similar if admitted.
+**L4 — Annotation-pattern versus mechanism-level claims:** The E15 finding
+shows that proposals derived from structured fields (empty lists, metadata
+counts) need to state their evidential scope precisely. A future admission
+checklist should distinguish "corpus annotation records X" from "mechanism
+exhibits X."
+
+**L5 — D0 permutation disambiguation:** Rejection rationales for D0 entries
+should distinguish "entry conflicts with original corpus" from "entry
+correctly follows supplied permuted input." The current rejection language
+conflates them.
+
+---
+
+## Summary
+
+Pilot-004 produced 23 candidate-property occurrences across six captures.
+Quorum adjudication assigned seven reference matches and ten proposal
+occurrences with a `defensible_novel` disposition, with recurring themes and
+unresolved scope questions across the ten. D1 recovered an unnamed reference
+property (L3) in one of three runs, below the predeclared majority-of-runs
+requirement; the overall success criterion was not met. The result demonstrates
+candidate-generation capability and yields useful hypotheses and diagnostic
+disagreements. It does not establish ten distinct discoveries, reliable
+discrimination of failure structure from the control, or verification by
+reviewer consensus.
+
+**Operational milestone reached:** non-predetermined discovery proposals were
+captured, attributed, and subjected to structured criticism.
+
+**Predeclared discovery-success milestone not reached.**
 
 ---
 
 ## Next steps (operator-owned)
 
-The following are decisions, not tasks. None may be executed by the agent
-without explicit operator instruction.
+1. **Closure scorecard:** Freeze the endpoint result; group repeated
+   hypotheses without deleting occurrences; distinguish reference agreement from
+   fidelity to each arm's supplied evidence; resolve specific scope objections
+   before promoting candidates into downstream guidance. See
+   `records/CLOSURE-SCORECARD.md`.
 
-1. **Admission and challenge (D-C1):** Review the arm-labeled novel candidates
-   above and decide which to advance to the challenge step. Challenge means:
-   attempt to find a known failed approach that violates the property, a
-   synthetic failed approach that violates it, and a success that preserves it
-   (per AGENTS.md §Candidate invariant discipline). Properties that survive
-   challenge can be admitted as interpretation claims in a new vocabulary
-   revision. A positive challenge outcome is the correct gate — not the pilot
-   overall verdict.
+2. **Challenge step for novel candidates:** For each candidate theme selected
+   by the operator, apply the predeclared challenge discipline (known
+   counterexample, synthetic counterexample, success-preserving check). A
+   surviving challenged property may be admitted as an interpretation claim.
+   The negative pilot verdict does not gate this step; individual entry validity
+   is independent of pilot consistency.
 
-2. **Ledger update (D-B1):** After this result record is committed, the
-   executing agent may update `adjudication-ledger.json` to replace `SEALED`
-   capture references with actual arm/run assignments from the key, and
-   populate `key_sha256` from the file digest.
+3. **Scope corrections before any admission:** E15 requires narrowing before
+   pipeline admission (annotation pattern vs. mechanism-level claim; es-05
+   contrast status). E10/E22 require substantive resolution before any
+   downstream guidance use (do not rely on conservative fallback category).
 
-3. **Follow-on protocol:** If a follow-on discovery pilot is planned,
-   incorporate L1–L4 above before freezing the next design.
+4. **Follow-on protocol revisions:** Incorporate learnings L1–L5 before
+   designing the next pilot.
 
 ---
 
-*Review scope: quorum votes in `quorum-result.json`, adjudication key in
-`captures/adjudication-key.json`, predeclared criteria in `PROTOCOL-DRAFT.md`,
-and pre-adjudication interpretation notes in `records/INTERPRETATION-NOTES.md`.
-Verdict is mechanical from the predeclared criteria; no new judgment was
-applied to reach `negative_inconclusive`.*
+*Operator review scope: committed quorum result at `78e73d2`, adjudication key,
+frozen protocol, and selected supporting records. Arm/run counts derived
+mechanically from the key; no new blinded adjudication or mathematical
+verification. Corrections applied to this file at `0aac153` and this revision.*
