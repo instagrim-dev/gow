@@ -343,3 +343,69 @@ func TestIntegrationInterpretationListByProblem(t *testing.T) {
 		t.Fatal("both selectors must be refused")
 	}
 }
+
+// TestIntegrationLateInterpretationRefusesStaleSignatureReuse pins the
+// stale-input reuse gate: persistence dedups signatures on
+// (mechanism, schema, vocabulary), so an interpretation claim accepted AFTER
+// first signing would be silently invisible downstream — the claim would
+// list, but mining would keep consuming the old signature. Until signature
+// revisions exist, re-signing with changed inputs must REFUSE explicitly
+// (history unchanged), never return stale content as if current.
+func TestIntegrationLateInterpretationRefusesStaleSignatureReuse(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 9, 11, 13, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+
+	problemID, runID, snapshotID := seedProblemAndSnapshot(t, ctx, dbPath, now)
+	mechID := calibSeedMechanism(t, ctx, app, dbPath, problemID, runID, snapshotID,
+		interpFixture("late/one", "Late-interpretation mechanism", "some unresolved label"))
+
+	// 1. Sign FIRST.
+	first, err := app.SignatureMechanism(ctx, SignatureInput{DBPath: dbPath, MechanismID: mechID, VocabVersion: canon.VocabularyMechanismV2})
+	if err != nil {
+		t.Fatalf("first sign: %v", err)
+	}
+
+	// 2. Interpretation accepted AFTER signing; it lists fine.
+	if _, err := app.AddInterpretation(ctx, InterpretationAddInput{
+		DBPath: dbPath, MechanismID: mechID, Field: "preserves",
+		Label: interpProperty, ProvenanceRef: "pilot-001/adjudication-ledger:L1",
+	}); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+
+	// 3. Re-sign: the inputs changed, so the build must REFUSE stale reuse.
+	_, err = app.SignatureMechanism(ctx, SignatureInput{DBPath: dbPath, MechanismID: mechID, VocabVersion: canon.VocabularyMechanismV2})
+	if err == nil {
+		t.Fatal("re-sign with changed inputs must refuse stale reuse, got success")
+	}
+	if !strings.Contains(err.Error(), "stale") || !strings.Contains(err.Error(), "interpretation") {
+		t.Fatalf("refusal must name the stale-input cause and remedy: %v", err)
+	}
+
+	// 4. History unchanged: the persisted signature is still the FIRST build
+	// (no interpreted claim), read back independently.
+	repo := openTestStore(t, ctx, dbPath)
+	defer repo.Close()
+	rec, err := repo.GetSignature(ctx, first.Signature.ID)
+	if err != nil {
+		t.Fatalf("read back: %v", err)
+	}
+	for _, c := range rec.FieldClaims {
+		if strings.HasPrefix(c.SupportLocator, "interpretation:") {
+			t.Fatalf("history must be unchanged; found interpreted claim in stored signature: %+v", c)
+		}
+	}
+
+	// 5. Idempotent control: a mechanism whose inputs did NOT change re-signs
+	// fine (the gate refuses staleness, not idempotence).
+	other := calibSeedMechanism(t, ctx, app, dbPath, problemID, runID, snapshotID,
+		interpFixture("late/two", "Unchanged mechanism", "another label"))
+	if _, err := app.SignatureMechanism(ctx, SignatureInput{DBPath: dbPath, MechanismID: other, VocabVersion: canon.VocabularyMechanismV2}); err != nil {
+		t.Fatalf("sign other: %v", err)
+	}
+	if _, err := app.SignatureMechanism(ctx, SignatureInput{DBPath: dbPath, MechanismID: other, VocabVersion: canon.VocabularyMechanismV2}); err != nil {
+		t.Fatalf("idempotent re-sign must still succeed: %v", err)
+	}
+}

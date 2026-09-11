@@ -3,6 +3,8 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/instagrim-dev/newf/internal/canon"
@@ -132,10 +134,59 @@ func (a *App) buildAndPersistSignature(ctx context.Context, repoStore problemSto
 		a.failRun(ctx, repoStore, run.ID, err)
 		return store.SignatureRecord{}, false, err
 	}
+	// Stale-input reuse gate: persistence dedups on (mechanism, schema,
+	// vocabulary) and returns the stored signature unchanged, so a claim set
+	// that changed since first signing (e.g. interpretation claims accepted
+	// AFTER the mechanism was signed) would be silently invisible to every
+	// downstream reader — mining would keep consuming the old signature while
+	// `interpretation list` shows the new claim. Until signature revisions
+	// exist, the honest behavior is an explicit refusal: history is never
+	// overwritten, and the operator learns the claim must be attached before
+	// first signing (or in a fresh workspace) instead of being silently
+	// dropped. Justified completeness is deliberately NOT part of this
+	// identity: it loads live at read time by design (v25).
+	if !result.Created && !signatureClaimsEqual(record, result.Record) {
+		err := fmt.Errorf("mechanism %s already has a signature under %s/%s whose inputs differ from the current build (e.g. interpretation claims added after signing); refusing stale reuse — signature revisions are not yet supported, so attach interpretation claims before the first `mechanism signature` run or use a fresh workspace", mechanismID, record.SchemaVersion, record.VocabularyVersion)
+		a.failRun(ctx, repoStore, run.ID, err)
+		return store.SignatureRecord{}, false, err
+	}
 	if ferr := a.finalizeRun(ctx, repoStore, run.ID, nil); ferr != nil {
 		return store.SignatureRecord{}, false, ferr
 	}
 	return result.Record, result.Created, nil
+}
+
+// signatureClaimsEqual reports whether two signature records were built from
+// the same claim inputs: identical fingerprints and identical multisets of
+// (kind, label, resolution, canonical id, status, support locator) claims and
+// boundary labels. Field completeness is excluded on purpose (live-loaded,
+// v25). Ordering differences between a freshly built record and a loaded one
+// are normalized away.
+func signatureClaimsEqual(a, b store.SignatureRecord) bool {
+	if a.Fingerprint != b.Fingerprint {
+		return false
+	}
+	key := func(rec store.SignatureRecord) []string {
+		out := make([]string, 0, len(rec.FieldClaims)+len(rec.Boundaries))
+		for _, c := range rec.FieldClaims {
+			out = append(out, strings.Join([]string{"c", c.FieldKind, c.SurfaceLabel, c.ResolutionState, c.CanonicalID, c.ClaimStatus, c.SupportLocator}, "\x00"))
+		}
+		for _, bd := range rec.Boundaries {
+			out = append(out, strings.Join([]string{"b", bd.SurfaceLabel, bd.ResolutionState, bd.CanonicalID, bd.Relation}, "\x00"))
+		}
+		sort.Strings(out)
+		return out
+	}
+	ka, kb := key(a), key(b)
+	if len(ka) != len(kb) {
+		return false
+	}
+	for i := range ka {
+		if ka[i] != kb[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // CompareMechanisms builds both signatures (idempotent) and compares them.

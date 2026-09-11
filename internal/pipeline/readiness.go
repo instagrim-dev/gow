@@ -213,7 +213,7 @@ func (a *App) ExperimentReadiness(ctx context.Context, input ExperimentReadiness
 			// reviewer-side canonicalization of stated labels and/or
 			// justified completeness — never ignoring the gap, and never
 			// interpretation claims on the target.
-			profile := canon.ProfileMechanismV2()
+			profile := canon.ProfileMechanismV3()
 			reachableTargets := 0
 			var blockedDetail string
 			for _, m := range manifest {
@@ -239,7 +239,7 @@ func (a *App) ExperimentReadiness(ctx context.Context, input ExperimentReadiness
 
 	// 6. Recovery criterion: pinned rule + profile (classify/v2: corrected
 	// completeness-aware absence semantics).
-	profile := canon.ProfileMechanismV2()
+	profile := canon.ProfileMechanismV3()
 	add("recovery_criterion", "info", fmt.Sprintf("%s under %s (%s) — a reproducible classification; the pilot independently assesses whether it corresponds to the intended mechanism", experiment.RecoveryRuleV1, profile.Version, profile.Hash()))
 
 	return resp, nil

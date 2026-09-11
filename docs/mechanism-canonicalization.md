@@ -232,9 +232,11 @@ properties, structural moves, and auxiliary constructions that predict outcome.
 measured but non-decisive **by default** (a caller may promote posture/outcome
 or add boundaries as decisive via a different profile).
 
-### Production assessment profile (`classify/v2` / `ProfileMechanismV2`)
+### Production assessment profile (`classify/v3` / `ProfileMechanismV3`)
 
-`classify/v2` is the production **assessment** rule used by `experiment run`
+`classify/v3` (v2's absence/subset guards plus stable positive evidence:
+nonempty-set agreement is decisive only when both sides justify
+completeness) is the production **assessment** rule used by `experiment run`
 and `experiment readiness`: the same decisive axis selection as v1 with
 completeness-aware absence enabled — under its missing-data contract (see
 [`experiment.md`](experiment.md)), an empty decisive field without a `complete`

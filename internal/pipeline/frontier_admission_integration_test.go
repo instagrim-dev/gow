@@ -594,12 +594,13 @@ func TestIntegrationExternalProposalArms(t *testing.T) {
 		t.Fatalf("state after campaign = %q", resp.Reports[0].StateAfter)
 	}
 	// A FULL-AXES withheld target (the real pilot shape: every decisive field
-	// records content). Under the corrected missing-data contract, untrusted
-	// proposals — whose completeness is stripped at admission — can be
-	// RECOVERED only through recorded agreement on every decisive axis, and
-	// can never earn decisive_no from recorded-subset conflicts (unrecorded
-	// members could overturn those), so a sparse target would make every
-	// external assessment unknown.
+	// records content). Under classify/v3 untrusted proposals — whose
+	// completeness is stripped at admission — can earn NEITHER decisive
+	// verdict automatically: recorded-subset conflicts are overturnable by
+	// unrecorded members, and recorded agreement establishes shared members,
+	// not whole-set similarity. The automatic layer abstains in both
+	// directions; recovery for external captures is judgment-level until a
+	// justified-completeness pathway exists.
 	targetProblem, targetRun, targetSnap := seedOtherProblem(t, ctx, dbPath, now.Add(time.Hour))
 	seed, err := app.SeedMechanismFixture(ctx, MechanismFixtureSeedInput{
 		DBPath: dbPath, ProblemID: targetProblem, RunID: targetRun, SnapshotID: targetSnap,
@@ -670,12 +671,21 @@ func TestIntegrationExternalProposalArms(t *testing.T) {
 	if b0.ProposalCount != 1 || b0.Recovered || b0.UnknownCount != 1 || b0.DecisiveCount != 0 {
 		t.Fatalf("B0 must carry the captured proposal as non-decisive unknown: %+v", b0)
 	}
-	// B3 carries the captured guided proposal and recovers the target.
-	if b3.ProposalCount != 1 || !b3.Recovered {
-		t.Fatalf("B3 must recover with the captured guided proposal: %+v", b3)
+	// B3 carries the captured guided proposal whose recorded sets fully agree
+	// with the target — but under classify/v3 recorded agreement is decisive
+	// only when BOTH sides justify completeness, and admission STRIPS
+	// completeness from untrusted wire content. So the automatic layer
+	// honestly abstains (unknown, never a granted recovery): "both affirm X"
+	// is not "their sets are sufficiently similar". Automatic recovery for
+	// external captures now requires a justified-completeness pathway (a
+	// research/protocol decision, e.g. operator-attested proposal
+	// completeness); until then, judgment-level review carries the recovery
+	// question for untrusted proposals.
+	if b3.ProposalCount != 1 || b3.Recovered || b3.UnknownCount != 1 {
+		t.Fatalf("B3's full recorded agreement must abstain (unknown) under classify/v3: %+v", b3)
 	}
-	if exp.Conclusion != "structural_recovery" {
-		t.Fatalf("conclusion = %q", exp.Conclusion)
+	if exp.Conclusion != "inconclusive" {
+		t.Fatalf("conclusion = %q, want inconclusive", exp.Conclusion)
 	}
 
 	// Both arm generations went through admission (label-only wire claims are

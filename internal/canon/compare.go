@@ -41,6 +41,13 @@ type ComparisonProfile struct {
 	// difference. Default keeps it reported-only (outcome is an effect, not a
 	// mechanism).
 	DecisiveOutcome bool
+	// CompleteSetsRequired, when true (classify/v3), extends the missing-data
+	// contract to POSITIVE evidence: a decisive whole-set similarity judgment
+	// (identical/high) on nonempty sets requires BOTH sides justified
+	// complete — otherwise the axis is incomparable and the recorded overlap
+	// is retained as a diagnostic only (observed-feature resemblance never
+	// acquires recovery meaning).
+	CompleteSetsRequired bool
 	// CompletenessAwareAbsence, when true, refuses to read an EMPTY set field
 	// as decisive negative evidence unless that field's completeness is
 	// `complete`: an empty-and-unobserved field against a nonempty one is an
@@ -67,6 +74,17 @@ const ClassifyMechanismV1 = "classify/v1"
 // v2 is a corrected assessment with its own identity, never a silent
 // substitution.
 const ClassifyMechanismV2 = "classify/v2"
+
+// ClassifyMechanismV3 strengthens the missing-data contract SYMMETRICALLY:
+// v2 refused unsupported negatives (subset mismatches, unjustified absence);
+// v3 additionally refuses unsupported POSITIVES — recorded-set agreement
+// between nonempty sets is decisive only when both sides are justified
+// complete, because "both descriptions affirm X" is supported while "their
+// sets are sufficiently similar" is not: unrecorded members on a partial
+// side can push true similarity below the near threshold. Separately pinned
+// because classify/v2's hash is referenced by a persisted reassessment
+// artifact; historical results are never changed in place.
+const ClassifyMechanismV3 = "classify/v3"
 
 // ProfileMechanismV1 is the default comparison profile. It treats the
 // structural moves, conserved/violated properties, and auxiliary constructions
@@ -108,6 +126,17 @@ func ProfileMechanismV2() ComparisonProfile {
 	return p
 }
 
+// ProfileMechanismV3 is the corrected production assessment profile
+// (classify/v3): v2's absence/subset guards plus the stable-positive-evidence
+// requirement. The flag participates in Hash(), so v3 verdicts can never
+// masquerade as pinned v1/v2 results.
+func ProfileMechanismV3() ComparisonProfile {
+	p := ProfileMechanismV2()
+	p.Version = ClassifyMechanismV3
+	p.CompleteSetsRequired = true
+	return p
+}
+
 // Hash returns a stable, content-addressed digest of the profile's decisive
 // axis selection (the semantics that actually determine a verdict): the sorted
 // decisive set fields, the surface field, and the posture/outcome decisiveness
@@ -128,6 +157,7 @@ func (p ComparisonProfile) Hash() string {
 		DecisivePosture          bool     `json:"decisive_posture"`
 		DecisiveOutcome          bool     `json:"decisive_outcome"`
 		CompletenessAwareAbsence bool     `json:"completeness_aware_absence,omitempty"`
+		CompleteSetsRequired     bool     `json:"complete_sets_required,omitempty"`
 		MissingDataContract      string   `json:"missing_data_contract,omitempty"`
 	}{
 		DecisiveSetFields:        fields,
@@ -135,6 +165,7 @@ func (p ComparisonProfile) Hash() string {
 		DecisivePosture:          p.DecisivePosture,
 		DecisiveOutcome:          p.DecisiveOutcome,
 		CompletenessAwareAbsence: p.CompletenessAwareAbsence,
+		CompleteSetsRequired:     p.CompleteSetsRequired,
 	}
 	if p.CompletenessAwareAbsence {
 		// The full missing-data contract (mutual-silence + subset guards, not
@@ -251,8 +282,10 @@ func ProfileForClassifyVersion(version string) (ComparisonProfile, error) {
 		return ProfileMechanismV1(), nil
 	case ClassifyMechanismV2:
 		return ProfileMechanismV2(), nil
+	case ClassifyMechanismV3:
+		return ProfileMechanismV3(), nil
 	default:
-		return ComparisonProfile{}, fmt.Errorf("unknown classify version %q (known: %s, %s)", version, ClassifyMechanismV1, ClassifyMechanismV2)
+		return ComparisonProfile{}, fmt.Errorf("unknown classify version %q (known: %s, %s, %s)", version, ClassifyMechanismV1, ClassifyMechanismV2, ClassifyMechanismV3)
 	}
 }
 
@@ -323,10 +356,23 @@ func CompareWithProfile(a, b MechanismSignature, profile ComparisonProfile) Comp
 			default: // both nonempty
 				if fr.Ordinal == OrdinalLow || fr.Ordinal == OrdinalNone {
 					insufficient = !(aComplete && bComplete)
+				} else if profile.CompleteSetsRequired {
+					// classify/v3: recorded AGREEMENT is decisive only when
+					// no unrecorded member can overturn it — both sides
+					// justified complete. "Both affirm X" stays visible as
+					// the retained overlap diagnostic; "their sets are
+					// sufficiently similar" is not established by partial
+					// records.
+					insufficient = !(aComplete && bComplete)
 				}
 			}
 			if insufficient {
-				fr = FieldResult{FieldKind: sf.kind, Incomparable: true, Ordinal: OrdinalIncomparable, AbsenceUnverified: true}
+				// Retain the measured recorded-set overlap as a diagnostic
+				// (observed-feature resemblance); only the decisive ordinal
+				// is withdrawn.
+				fr.Incomparable = true
+				fr.Ordinal = OrdinalIncomparable
+				fr.AbsenceUnverified = true
 			}
 		}
 		cmp.Fields = append(cmp.Fields, fr)

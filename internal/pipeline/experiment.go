@@ -496,7 +496,7 @@ func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore,
 	// rule; its flag participates in the profile hash, so experiments assessed
 	// under it have a distinct identity from pinned classify/v1 results —
 	// a reassessment is a corrected assessment, never a silent substitution.
-	profile := canon.ProfileMechanismV2()
+	profile := canon.ProfileMechanismV3()
 	var armRows []store.ExperimentArmRow
 	var metricRows []store.ExperimentMetricRow
 	var identityParts []string

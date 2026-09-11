@@ -596,3 +596,83 @@ func TestCompletenessAwareAbsence(t *testing.T) {
 		t.Fatal("v2 must have a distinct profile hash")
 	}
 }
+
+// TestStablePositiveEvidence pins classify/v3: recorded-set AGREEMENT between
+// nonempty sets is decisive only when both sides justify completeness. Two
+// partial sets both recording {X} have similarity 1 on recorded members, but
+// completions {X,A1,A2} vs {X,B1,B2} sit at 1/5 — below the near threshold —
+// and nothing recorded excludes them, so the initial assessment must not
+// assert a stable near-match. The recorded overlap survives as a diagnostic.
+func TestStablePositiveEvidence(t *testing.T) {
+	mk := func(complete bool) MechanismSignature {
+		sig := MechanismSignature{
+			SchemaVersion:     SchemaMechanismV1,
+			VocabularyVersion: "mechanism/v1",
+			Preserves: []FieldClaim{{
+				FieldKind: domain.FieldPreserves, State: domain.ResolutionResolved,
+				CanonicalID: "domain.number_theory.property.residue_locality", Status: domain.ClaimExplicit,
+			}},
+			Operators: []FieldClaim{{
+				FieldKind: domain.FieldOperator, State: domain.ResolutionResolved,
+				CanonicalID: "core.operator.modular_decomposition", Status: domain.ClaimExplicit,
+			}},
+			Assumptions: []FieldClaim{{
+				FieldKind: domain.FieldAssumption, State: domain.ResolutionResolved,
+				CanonicalID: "core.assumption.residue_independence", Status: domain.ClaimExplicit,
+			}},
+			Breaks: []FieldClaim{{
+				FieldKind: domain.FieldBreaks, State: domain.ResolutionResolved,
+				CanonicalID: "domain.number_theory.property.residue_class_locality", Status: domain.ClaimExplicit,
+			}},
+			AuxiliaryObjects: []FieldClaim{{
+				FieldKind: domain.FieldAuxiliaryObject, State: domain.ResolutionResolved,
+				CanonicalID: "core.auxiliary_object.affine_lattice", Status: domain.ClaimExplicit,
+			}},
+			Posture: Posture{Locality: domain.LocalityLocal, Construction: domain.ConstructionConstructive, Uncertainty: domain.UncertaintyDeterministic},
+		}
+		if complete {
+			sig.SetFieldCompleteness = map[domain.FieldKind]domain.FieldCompleteness{
+				domain.FieldOperator:        domain.CompletenessComplete,
+				domain.FieldPreserves:       domain.CompletenessComplete,
+				domain.FieldAssumption:      domain.CompletenessComplete,
+				domain.FieldBreaks:          domain.CompletenessComplete,
+				domain.FieldAuxiliaryObject: domain.CompletenessComplete,
+			}
+		}
+		return sig
+	}
+
+	// Matching PARTIAL sets: v2 (prior contract) reads them near; v3 abstains.
+	partialA, partialB := mk(false), mk(false)
+	if got := CompareWithProfile(partialA, partialB, ProfileMechanismV2()).Classification; got != ClassMechanismNear {
+		t.Fatalf("v2 pin (prior contract): got %s", got)
+	}
+	cmp := CompareWithProfile(partialA, partialB, ProfileMechanismV3())
+	if cmp.Classification != ClassUnknown {
+		t.Fatalf("v3: matching partial sets must not assert a stable near-match, got %s", cmp.Classification)
+	}
+	// The recorded overlap survives as a diagnostic on the withdrawn axis.
+	for _, f := range cmp.Fields {
+		if f.FieldKind == domain.FieldOperator {
+			if !f.Incomparable || !f.AbsenceUnverified {
+				t.Fatalf("operators axis must be withdrawn: %+v", f)
+			}
+			if f.OverlapCount != 1 || f.UnionCount != 1 {
+				t.Fatalf("recorded overlap must survive as a diagnostic: %+v", f)
+			}
+		}
+	}
+
+	// Complete-set positive control: agreement with both sides justified
+	// complete stays decisive under v3.
+	completeA, completeB := mk(true), mk(true)
+	if got := CompareWithProfile(completeA, completeB, ProfileMechanismV3()).Classification; got != ClassMechanismNear {
+		t.Fatalf("v3 complete-complete agreement must stay decisive, got %s", got)
+	}
+
+	// Hash discipline: three distinct pinned contracts.
+	h1, h2, h3 := ProfileMechanismV1().Hash(), ProfileMechanismV2().Hash(), ProfileMechanismV3().Hash()
+	if h1 == h2 || h2 == h3 || h1 == h3 {
+		t.Fatalf("profile hashes must be pairwise distinct: %s %s %s", h1, h2, h3)
+	}
+}
