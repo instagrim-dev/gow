@@ -1,0 +1,595 @@
+{
+  "schema": "pilot-quorum-result/v1",
+  "aggregation_rule": "Three independent lanes. Per entry: majority (>=2/3) cements the category; for matches_reference the modal L-id among matching votes cements reference_match. No majority => the MOST CONSERVATIVE vote cements, ordered unsupported > prohibited_promotion > over_merge > defensible_novel > matches_reference, and the entry is flagged disputed. All per-lane votes retained verbatim.",
+  "lanes": [
+    "A",
+    "B",
+    "C"
+  ],
+  "date_utc": "2026-09-11",
+  "entries": [
+    {
+      "entry_id": "E01",
+      "cemented_category": "matches_reference",
+      "cemented_reference_match": "L1",
+      "cemented_scope_deltas": "Drops es-03 from L1's scope; es-08 retained as active member rather than meta-analysis label. All four included members preserved with distinct roles.; L1 includes es-03 in the congruence-confined set; E01 drops es-03. L1 labels es-08 as obstruction meta-analysis; E01 includes it explicitly in shared_by rather than as a supporting meta-note. No other scope differences.; L1 lists es-08 as obstruction meta-analysis; E01 includes es-08 in the core shared_by set rather than as a parenthetical. Both exclude es-05 and es-07. Wording enriches 'confined_to_quadratic_nonresidues' by explicitly naming the transport mechanism, which is additive.",
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "matches_reference",
+          "reference_match": "L1",
+          "reason": "The core claim — fixed-modulus congruence methods eliminate only non-residues so each stalls on the same QR survivor classes — is the operative content of L1. Preserved distinctions match L1's explicit note that this is not an alias. The omission of es-03 is a contraction of scope, not a contradiction of the property."
+        },
+        "B": {
+          "category": "matches_reference",
+          "reference_match": "L1",
+          "reason": "E01 asserts the same confinement-to-QR-non-residues property as L1 over the same four entries (es-01, es-02, es-10, es-08). The distinction-preservation notes match L1's scope exclusions. The additional mechanism language does not widen the scope."
+        },
+        "C": {
+          "category": "matches_reference",
+          "reference_match": "L1",
+          "reason": "Asserts the same QR-confinement property as L1 over [es-01, es-02, es-10, es-08]. The only scope delta is the omission of es-03, which L1 includes explicitly. Role distinctions across the four members are maintained, satisfying L1's load-bearing carve-out."
+        }
+      }
+    },
+    {
+      "entry_id": "E02",
+      "cemented_category": "matches_reference",
+      "cemented_reference_match": "L1",
+      "cemented_scope_deltas": "Identical scope to E01: drops es-03 relative to L1; lists es-08 in shared_by rather than as meta-support. Otherwise matches L1's accepted claim verbatim.; Same scope as E01: drops es-03 relative to L1; es-08 listed as co-member not meta-analysis annotator. Roles preserved identically to E01.; Same four entries as L1. Phrasing 'sources solvability exclusively from fixed-modulus congruence/identity relations' is more explicit about the transport chain than L1's formulation but covers identical scope. L1 uses es-08 parenthetically; E02 includes it symmetrically — a presentation delta, not a scope change.",
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "matches_reference",
+          "reference_match": "L1",
+          "reason": "E02 restates L1's congruence-to-non-residue confinement claim word-for-word in different framing. The contrast check is consistent with L1's boundary notes. No mechanistic distinction from E01 or L1; this is a duplicate formulation of the same accepted property at reduced scope."
+        },
+        "B": {
+          "category": "matches_reference",
+          "reference_match": "L1",
+          "reason": "E02 is a near-synonym of E01 and both map to L1. The shared_by set is identical to L1's scope, the QR-confinement claim is the same, and the contrast set matches L1's exclusions. No merging of distinctions; evidence bar met by corpus passages for all four entries."
+        },
+        "C": {
+          "category": "matches_reference",
+          "reference_match": "L1",
+          "reason": "Substantively identical claim and membership to E01; both are sub-scope instances of L1. The four-way role preservation matches L1's requirement. No new mechanism is introduced relative to E01 or L1."
+        }
+      }
+    },
+    {
+      "entry_id": "E03",
+      "cemented_category": "defensible_novel",
+      "cemented_reference_match": null,
+      "cemented_scope_deltas": null,
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "The reference does not record a 'finite-resource vs infinite-survivor' grouping. All three corpus entries support the claim: es-02's boundary is 'no finite covering eliminates QR classes', es-10's exceptional set is 'thin but infinite', and es-07's boundary is that finite verification cannot prove all n. The preserved distinctions (finite moduli covering Z vs per-n bounded certification vs density assembly) are real and named, so no over-merge occurs. The contrast check correctly excludes es-12, whose leftover is only conjecturally empty, not demonstrated infinite. Passes the evidence bar."
+        },
+        "B": {
+          "category": "unsupported",
+          "reference_match": null,
+          "reason": "The statement claims es-07's 'finite verification range' faces a 'structurally impossible exhaustion' against an infinite survivor set. The corpus records es-07's boundary as 'finite verification is not a proof for all n' — a generality failure, not a structural impossibility of exhaustion against a proven-infinite set. Including es-07 here conflates a scope-of-certification failure with the QR-wall infinity argument, and no corpus passage supports treating es-07's survivor set as 'demonstrated to be infinite' in the same sense as es-02 or es-10."
+        },
+        "C": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "No reference entry covers finite-resource exhaustion against an infinite survivor set. All three members (es-02 failure via class-local isolation break, es-07 partial_failure via claim-of-generality break, es-10 partial_failure via density assembly) independently exhibit finite means applied against demonstrated-infinite residue. Distinctions are preserved and the contrast is honest."
+        }
+      }
+    },
+    {
+      "entry_id": "E04",
+      "cemented_category": "unsupported",
+      "cemented_reference_match": null,
+      "cemented_scope_deltas": null,
+      "resolution": "no_majority_conservative",
+      "disputed": true,
+      "votes": {
+        "A": {
+          "category": "prohibited_promotion",
+          "reference_match": null,
+          "reason": "The entry's own contrast check concedes that es-04 and es-06 — partial successes — also operate in an existential non-constructive mode, so the property holds across both failure and non-failure outcomes. This is structurally identical to the 'uses modular arithmetic' case rejected in L6: a corpus-wide predicate with no predictive discrimination between failing and non-failing approaches. The sharper per-n constructivity distinction the check gestures at is not what the stated property actually asserts."
+        },
+        "B": {
+          "category": "unsupported",
+          "reference_match": null,
+          "reason": "The statement attempts to distinguish the four entries by mode of existence-posture, but the entry itself concedes that es-04 and es-06 are also existential — so the property does not discriminate the claimed sharing set from a broader pool. The contrast check is self-defeating: if the property fails to separate the named set from unlisted partial successes, it provides no predictive discrimination and cannot meet the evidence bar as a defensible shared property."
+        },
+        "C": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "No reference entry covers the aggregate/characterizing-mode-surrenders-per-n-construction property. For es-05 and es-10 the corpus is explicit; for es-09 and es-11 the partial_success status does not contradict the claim that the mode is non-constructive per-n—their successes lie elsewhere. Role distinctions are preserved across the four members."
+        }
+      }
+    },
+    {
+      "entry_id": "E05",
+      "cemented_category": "defensible_novel",
+      "cemented_reference_match": null,
+      "cemented_scope_deltas": null,
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "The reference records es-05 as failing for an intrinsic growth-rate boundary (L5) and es-10 as having a protected infinite exceptional set, but does not group them with es-07 under a 'structurally unupgradeable quantitative evidence' predicate. The corpus supports all three: es-07's finite verification cannot generalise, es-05's polylog average cannot force existence, es-10's density shrinks but never reaches zero. Distinctions between the evidence types are preserved. The inclusion of es-07 requires care — its barrier is qualitative (finite vs universal) rather than a rate limit — but the property's framing ('structural upgrade barrier of the evidence type') covers it without erasing that difference."
+        },
+        "B": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "No reference entry covers the three-way grouping of es-05, es-07, and es-10 under 'intrinsically bounded quantitative evidence whose limiting form cannot be upgraded.' The corpus supports this for all three: es-05's polylog average, es-07's finite range, and es-10's thin-but-infinite exceptional set are each recorded with explicit ceiling language. The contrast against es-06 (almost-all but no intrinsic ceiling claim) is checked honestly."
+        },
+        "C": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "No reference entry covers the intrinsically-bounded-evidence-cannot-upgrade-to-universal-existence property. All three members support it. Distinctions (probabilistic averaging vs per-instance certification vs class assembly) are preserved."
+        }
+      }
+    },
+    {
+      "entry_id": "E06",
+      "cemented_category": "unsupported",
+      "cemented_reference_match": null,
+      "cemented_scope_deltas": null,
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "unsupported",
+          "reference_match": null,
+          "reason": "The claim includes es-12 in the 'stalled approaches that concede the unified object adds no existence' set, but es-12 is a partial_success whose boundary is that completeness is 'conjectural', not a declared failure of positivity. The corpus for es-12 records breaks=['classification by producing congruence'], not a concession that reorganisation adds no existence. Including es-12 on those terms misreads the corpus fact. The property is supportable for es-09 and es-11 but the stated shared_by set is wrong."
+        },
+        "B": {
+          "category": "unsupported",
+          "reference_match": null,
+          "reason": "The entry classifies es-12 as a 'stalled' or 'failed' approach, but the true corpus records es-12 as partial_success. Including a partial_success in a property defined over 'stalled approaches' misclassifies corpus status. The compression-without-positivity characterization may hold for es-09 and es-11, but the evidence bar is not met for es-12 under that framing, and the entry's own note concedes the classification inconsistency."
+        },
+        "C": {
+          "category": "unsupported",
+          "reference_match": null,
+          "reason": "The entry's framing of es-09, es-11, and es-12 as 'stalled approaches' contradicts the corpus, which labels all three partial_success. The premise is factually wrong for the claimed membership."
+        }
+      }
+    },
+    {
+      "entry_id": "E07",
+      "cemented_category": "defensible_novel",
+      "cemented_reference_match": null,
+      "cemented_scope_deltas": null,
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "Functionally equivalent to E05 in scope and substance — both claim es-05, es-07, es-10 share a 'measure whose improvement mode cannot reach universal existence'. Corpus supports all three as documented in E05's analysis. Preserved distinctions between probabilistic averaging, bounded certification, and class assembly are present and real. This is a duplicate novel claim; it passes the evidence bar on the same grounds as E05."
+        },
+        "B": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "This is a tighter restatement of the E05 insight — focusing on the 'mode of improvement cannot reach universal every-n' framing — applied to the same (es-05, es-07, es-10) set. The corpus supports the claim for each entry through their recorded boundaries. The contrast against es-06 is acknowledged and honest. No reference entry covers this grouping."
+        },
+        "C": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "Substantively the same as E05 but phrased at the level of 'quantitative progress measure cannot reach universal every-n.' Both claims and memberships survive the evidence bar independently. The three-way role distinction is preserved."
+        }
+      }
+    },
+    {
+      "entry_id": "E08",
+      "cemented_category": "defensible_novel",
+      "cemented_reference_match": null,
+      "cemented_scope_deltas": null,
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "The reference (L6) records that es-01 and es-03 have affirmatively distinct roles but does not propose a joint grouping with es-07 under a 'no global organisation' predicate. All three corpus entries support local/instance reasoning with no cross-class coupling: es-01's modular decomposition is per-class, es-03's congruence filter is per-candidate-instance, es-07's bounded search is per-n. Contrast with partial successes (global or mixed) is sound and supported by corpus notes. No reference distinction is erased."
+        },
+        "B": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "The local/per-instance-without-global-organization grouping of es-01, es-03, es-07 is not present in the reference standard. The corpus supports it: es-01 uses polynomial identity per class, es-03 uses local congruence filter per divisor, es-07 uses bounded per-n search — none couples classes globally. Contrast against partial successes is noted. L6 mentions es-01 and es-03 as distinct in role, not as sharing this local-only property, so there is no over-merge."
+        },
+        "C": {
+          "category": "over_merge",
+          "reference_match": null,
+          "reason": "L6 records an affirmative distinct-role finding for exactly es-01 (modular decomposition) and es-03 (local congruence filter); lumping them under 'no global organization' erases that load-bearing distinction. The claim reduces two structurally differentiated mechanisms to an undifferentiated label."
+        }
+      }
+    },
+    {
+      "entry_id": "E09",
+      "cemented_category": "matches_reference",
+      "cemented_reference_match": "L1",
+      "cemented_scope_deltas": "Drops es-02 and es-03 from L1; adds es-12 (partial_success, ops include congruence covering). es-08 retained as co-member.; Drops es-02 and es-03 from L1's covered set; adds es-12. es-12 is partial_success and its QR confinement comes from the Mordell non-residue restriction rather than a mechanism that 'stalls' in the same sense as the failed entries. The omission of es-02 — which is explicitly in L1 and shares the full congruence machinery — is a material contraction.",
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "matches_reference",
+          "reference_match": "L1",
+          "reason": "The core property is L1's congruence-to-non-residue confinement claim. The scope substitution (dropping es-02, adding es-12) is a delta rather than a new property. The contrast check itself acknowledges es-02 shares the machinery; the decision to exclude it from shared_by while retaining es-12 is not well justified by corpus evidence and produces a weaker rather than stronger claim."
+        },
+        "B": {
+          "category": "unsupported",
+          "reference_match": null,
+          "reason": "The entry includes es-12 in a 'failed approach' grouping but the corpus records es-12 as partial_success. Additionally, es-02 is noted as also stalling on the QR wall but is omitted from the shared_by set without justification, making the claimed sharing set inconsistently bounded. The entry's own note flags the es-12 status mismatch, confirming the evidence bar is not cleanly met."
+        },
+        "C": {
+          "category": "matches_reference",
+          "reference_match": "L1",
+          "reason": "Asserts the same QR-confinement property as L1 but with materially different scope: es-02 and es-03 dropped, es-12 (partial_success) added. Core property still maps to L1; scope delta is large but the claim is not novel."
+        }
+      }
+    },
+    {
+      "entry_id": "E10",
+      "cemented_category": "over_merge",
+      "cemented_reference_match": null,
+      "cemented_scope_deltas": null,
+      "resolution": "no_majority_conservative",
+      "disputed": true,
+      "votes": {
+        "A": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "Substantively identical to E08: es-01, es-03, es-07 share per-class or per-instance local reasoning with no global coupling. The evidence bar is met on the same grounds. This is a duplicate novel formulation of E08 with slightly different framing ('never couples classes' vs 'no global organisation') but the same scope and logical content."
+        },
+        "B": {
+          "category": "matches_reference",
+          "reference_match": "L6",
+          "reason": "E10's core claim — that es-01, es-03, and es-07 reason locally without global class coupling — is directionally consistent with L6, which affirms the distinct local roles of es-01 and es-03. Adding es-07 as a third local approach does not contradict L6. The corpus supports all three entries' local-only character. This is a scope extension, not a contradiction."
+        },
+        "C": {
+          "category": "over_merge",
+          "reference_match": null,
+          "reason": "Same membership as E08 with a near-identical claim. L6 affirmatively records distinct roles for es-01 and es-03; both E08 and E10 erase that distinction. The entry provides no evidence that the L6-noted distinction is inert at this abstraction level."
+        }
+      }
+    },
+    {
+      "entry_id": "E11",
+      "cemented_category": "unsupported",
+      "cemented_reference_match": null,
+      "cemented_scope_deltas": null,
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "The grouping es-08, es-09, es-11, es-05 under 'non-constructive characterising posture where non-construction is the declared boundary' is not a reference entry. The contrast check correctly distinguishes this from es-04's existential posture by pointing to where the stall is located in each note. The corpus supports the declared boundary claim for all four: es-08's obstruction constructs no solution, es-05 breaks per-n constructivity, es-09 and es-11 each record their non-existence at QR primes. Distinctions between obstruction, averaging, algebraic unification, and constraint geometry are preserved."
+        },
+        "B": {
+          "category": "unsupported",
+          "reference_match": null,
+          "reason": "The entry labels es-09 and es-11 as 'failed/partially failed' in its characterization, but both are corpus-recorded as partial_success. Including them under a 'failed/partially failed' non-constructive posture label misrepresents corpus status. Furthermore, the contrast claim that es-07 and es-03 are 'partial successes' contradicts the corpus, which records both as partial_failure — the contrast check is factually wrong."
+        },
+        "C": {
+          "category": "unsupported",
+          "reference_match": null,
+          "reason": "Labels es-09 and es-11 as 'stalled at missing existence step,' but the corpus marks both partial_success. The shared-property claim requires the property to hold across all named members; the partial_success designation directly contradicts the framing."
+        }
+      }
+    },
+    {
+      "entry_id": "E12",
+      "cemented_category": "matches_reference",
+      "cemented_reference_match": "L1",
+      "cemented_scope_deltas": "Same scope as E09: drops es-02 and es-03 from L1, adds es-12. The addition of 'rather than degrading gradually' is a refinement not in L1 but is corpus-supported (es-08 confirms the wall is structural, not gradual). The es-02 omission remains material.; Same scope as E09: drops es-02 and es-03 from L1, adds es-12 (partial_success). Identical to E09 scope.",
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "matches_reference",
+          "reference_match": "L1",
+          "reason": "The operative content is L1 restated. The added qualifier about non-gradual halting is defensible from corpus but does not make this a novel property — it elaborates L1's mechanism. Scope deltas are identical to E09: contraction by dropping es-02 and es-03, extension by adding es-12."
+        },
+        "B": {
+          "category": "unsupported",
+          "reference_match": null,
+          "reason": "Like E09, E12 includes es-12 (corpus status: partial_success) in what it frames as a 'failed and partially failed congruence-family' grouping, and the entry's own note flags this. Additionally, es-02 is excluded without principled justification even though it also operates through fixed-modulus congruence identities confined to QR non-residues. The inconsistent inclusion/exclusion boundary means the claimed sharing set is not well-supported."
+        },
+        "C": {
+          "category": "matches_reference",
+          "reference_match": "L1",
+          "reason": "Substantively identical to E09 in claim and membership. The QR-confinement property maps to L1; scope deltas are the same large deviations noted for E09 and E12."
+        }
+      }
+    },
+    {
+      "entry_id": "E13",
+      "cemented_category": "defensible_novel",
+      "cemented_reference_match": null,
+      "cemented_scope_deltas": null,
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "L5 records es-05's intrinsic growth-rate boundary as potential counterevidence against over-generalising L1, but does not pair it with es-10 under a joint 'intrinsically capped almost-all coverage' property. The pair es-05 and es-10 are the only two corpus entries whose notes attribute the ceiling to an internal structural feature of the method rather than unfinished effort. Contrast with es-06, which also achieves almost-all coverage but does not carry an internal ceiling claim, is accurate. Distinctions between probabilistic sieve averaging and deterministic class assembly are preserved."
+        },
+        "B": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "The two-entry grouping of es-05 and es-10 under 'intrinsically capped coverage profile' is supported by corpus passages: es-05 records polylog average too slow to force existence, es-10 records exceptional set thin but infinite and protected by the QR wall. The contrast against es-06 (almost-all but no internal ceiling claim) is honest. No reference entry covers this two-entry property."
+        },
+        "C": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "No reference entry covers the intrinsically-capped-coverage / almost-all-gap-is-structural property for [es-05, es-10]. Both partial_failure. Distinction between probabilistic sieve averaging and deterministic class assembly is preserved."
+        }
+      }
+    },
+    {
+      "entry_id": "E14",
+      "cemented_category": "unsupported",
+      "cemented_reference_match": null,
+      "cemented_scope_deltas": null,
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "over_merge",
+          "reference_match": null,
+          "reason": "Including es-08 in a 'reorganisation/compression without positivity' grouping mischaracterises its mechanism. es-08's operators are [quadratic reciprocity, obstruction argument] — a negative structural meta-result, not a reorganisation or compression of existing mechanisms. The reference (L1, L5, L6) treats es-08 as obstruction meta-analysis, explicitly separate from the algebraic-lift and constraint-geometry entries. Collapsing obstruction with algebraic re-representation erases a distinction the reference preserves."
+        },
+        "B": {
+          "category": "unsupported",
+          "reference_match": null,
+          "reason": "The entry's own note concedes that es-09 and es-11 are partial_successes and es-08 is a failure, yet groups them as 'partially failed approaches' performing existential re-organization. This mixes corpus-status categories in a way the evidence does not support. The claim that es-08 performs 'existential re-organization that preserves known solution structure' is not supported by corpus passages, which describe es-08 as an obstruction argument, not a re-organization."
+        },
+        "C": {
+          "category": "unsupported",
+          "reference_match": null,
+          "reason": "Corpus marks es-09 and es-11 as partial_success, contradicting 'adds no positivity.' Only es-08 clearly fits the claim. The shared-property requires the property across all members and two of three contradict it."
+        }
+      }
+    },
+    {
+      "entry_id": "E15",
+      "cemented_category": "defensible_novel",
+      "cemented_reference_match": null,
+      "cemented_scope_deltas": null,
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "The corpus facts directly confirm breaks=[] for es-01, es-03, and es-10. No reference entry records this as a shared property; it is an inference from the normalised mechanism data cross-validated against es-08's obstruction note. The deliberate exclusion of es-02 (which does record a broken property) and the accurate contrast with partial successes (all record non-empty breaks) show honest evidence handling. Passes the evidence bar."
+        },
+        "B": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "The breaks=[] shared property for es-01, es-03, and es-10 is directly readable from the corpus and is not present in the reference standard as a named shared property. The deliberate exclusion of es-02 (which breaks class-local isolation) is consistent with corpus data. The contrast that partial successes each record non-empty breaks is checkable from corpus entries. This meets the evidence bar as a novel structural observation."
+        },
+        "C": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "The claim that all three members have breaks=[] is directly verifiable and true. No reference entry covers this structural metadata property. L6 records distinct roles but does not contradict the breaks=[] observation."
+        }
+      }
+    },
+    {
+      "entry_id": "E16",
+      "cemented_category": "defensible_novel",
+      "cemented_reference_match": null,
+      "cemented_scope_deltas": null,
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "Functionally a third formulation of the E13/E20/E23 claim for es-05 and es-10 ('almost-all with structural ceiling'). The corpus supports it and no reference entry covers it. Distinctions between probabilistic and deterministic modes are preserved. This is a duplicate novel claim that passes the evidence bar on the same grounds as E13."
+        },
+        "B": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "The asymptotic-thinning-without-reaching-empty characterization of es-05 and es-10 is supported by corpus boundaries for both. The contrast against es-06 is correctly noted. This is a refinement of E13 focusing on the 'structurally incapable of driving to empty' angle, which is marginally distinct but still supported. No reference entry names this property."
+        },
+        "C": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "Frames the same [es-05, es-10] pair as exhibiting asymptotic-thinning incapable of emptying the exceptional set. Corpus supports both partial_failure outcomes."
+        }
+      }
+    },
+    {
+      "entry_id": "E17",
+      "cemented_category": "matches_reference",
+      "cemented_reference_match": "L1",
+      "cemented_scope_deltas": "Drops es-03 from L1's active scope; demotes es-08 to non-member (passage source only), reducing active membership to [es-01, es-02, es-10].; E17 uses shared_by=[es-01,es-02,es-10] — exactly L1's core three, omitting L1's es-08 parenthetical. L1 explicitly includes es-08 as obstruction meta-analysis. E17 thus narrows L1's scope by dropping es-08. The QR-confinement-via-fixed-modulus claim is identical.; Drops es-03 and es-08 from L1's scope. es-08 is L1's explicit meta-support node; removing it from even that role is a contraction. es-03 is also removed. The scope es-01, es-02, es-10 is a strict subset of L1's accepted set.",
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "matches_reference",
+          "reference_match": "L1",
+          "reason": "The claim is L1 stated with reduced scope. The supporting quotes cited in the entry come from the same passages that underpin L1. No new mechanism or discriminating refinement is introduced; this is a scope-contracted restatement of the accepted property."
+        },
+        "B": {
+          "category": "matches_reference",
+          "reference_match": "L1",
+          "reason": "E17 asserts the same fixed-modulus congruence confinement to QR non-residues as L1 for es-01, es-02, and es-10. The scope is a strict subset of L1 (es-08 dropped). The claim, contrast set, and evidence basis are consistent with L1. The narrowing does not introduce over-merge or unsupported claims."
+        },
+        "C": {
+          "category": "matches_reference",
+          "reference_match": "L1",
+          "reason": "Asserts QR confinement over a strict subset of L1's scope. Scope reductions, not claim alterations. Three-way role preservation aligns with L1's requirement."
+        }
+      }
+    },
+    {
+      "entry_id": "E18",
+      "cemented_category": "matches_reference",
+      "cemented_reference_match": "L1",
+      "cemented_scope_deltas": "Same scope as E09/E12: drops es-02 and es-03 from L1, adds es-12 (partial_success). es-08 retained as co-member.; Same scope substitution as E09 and E12: drops es-02 and es-03 from L1, adds es-12. The added phrase 'QR survivor classes are conserved rather than attacked' is consistent with L1's content but adds no new discriminating claim.",
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "matches_reference",
+          "reference_match": "L1",
+          "reason": "This is L1's confinement claim restated with the same non-standard scope as E09 and E12. The material omission of es-02 and the inclusion of es-12 produce the same scope deltas. The property is not novel relative to L1."
+        },
+        "B": {
+          "category": "unsupported",
+          "reference_match": null,
+          "reason": "The entry frames 'preserves the quadratic-residue wall' as a shared property of es-01, es-12, es-10, es-08, but the entry's own contrast note lists es-02 as also naming QR primes as boundary — yet es-02 is excluded. The shared_by boundary is not principled. Additionally es-12 is a partial_success whose partial_success character is precisely that it designs around the QR wall; describing it as 'preserving the wall' is a mischaracterization relative to corpus entry es-12's boundary and operators."
+        },
+        "C": {
+          "category": "matches_reference",
+          "reference_match": "L1",
+          "reason": "Third entry with the same QR-wall claim and identical membership as E09 and E12. Core property maps to L1; scope deltas are the same large deviations."
+        }
+      }
+    },
+    {
+      "entry_id": "E19",
+      "cemented_category": "matches_reference",
+      "cemented_reference_match": "L3",
+      "cemented_scope_deltas": "L3 covers es-02 and es-10 under 'class_union_construction' and separately records the exhaustive/existential vs density/estimative distinction as load-bearing. E19 makes the same two-entry claim but frames it as inheritance from per-class polynomial identities rather than union construction. L3 treats union construction as the primary property; E19 adds the identity-inheritance aspect (which is also present in L4). E19 is a composite of L3 and L4 scoped to two entries; no new scope, no over-merge.; Drops es-01 from L4's scope [es-01, es-02, es-10]; restricts to [es-02, es-10]. Overlaps with L3's scope but the claim is about identity-carried solvability (L4), not class-union construction (L3).; L3's scope is exactly es-02 and es-10, matching E19. L3 names the shared property 'class_union_construction' with the exhaustive/density distinction as load-bearing. E19 reframes this as 'solvability inheritance from per-class identities' rather than union construction, but the underlying mechanism is the same. L4 also overlaps (identity-carried solvability for es-02 and es-10). E19 does not extend to es-01 or es-12 as L4 does.",
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "matches_reference",
+          "reference_match": "L3",
+          "reason": "The core content — that es-02 and es-10 both build on per-class polynomial identities and cannot add existence beyond what those identities supply — is the mechanism underlying both L3 and L4. The preserved distinction (exhaustive cover vs density with leftover) is exactly what L3 records as load-bearing. No new property is introduced beyond what L3 already captures."
+        },
+        "B": {
+          "category": "matches_reference",
+          "reference_match": "L3",
+          "reason": "E19 covers es-02 and es-10 and asserts they inherit solvability only from per-class polynomial identities they assemble — combining the L3 union-construction observation with the L4 identity-carried-solvability property. The two-entry scope is consistent with both L3 and L4. The contrast noting es-12's conjectural completeness is honest."
+        },
+        "C": {
+          "category": "matches_reference",
+          "reference_match": "L4",
+          "reason": "The claim that class-aggregation approaches inherit solvability only from per-class identities is the defining content of L4 applied to L3's scope. Dropping es-01 is the only scope delta."
+        }
+      }
+    },
+    {
+      "entry_id": "E20",
+      "cemented_category": "defensible_novel",
+      "cemented_reference_match": null,
+      "cemented_scope_deltas": null,
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "A fourth formulation of the same es-05 / es-10 pairing (alongside E13, E16, E23) with framing around 'too-weak global quantitative statement as terminal boundary'. Corpus supports it; the distinction from es-06 (almost-all ceiling but no internal ceiling claim) is sound. Duplicate novel claim that passes the evidence bar."
+        },
+        "B": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "The 'replaces per-n existence with a global quantitative statement too weak to force every prime' framing for es-05 and es-10 is supported by corpus boundaries for both entries. The contrast against es-06 is correctly noted. This is a slightly different angle on the same E13/E16 cluster but is a standalone defensible claim not covered by any reference entry."
+        },
+        "C": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "Same [es-05, es-10] pair. Frames the shared property as 'quantitative statement intrinsically too weak to force per-prime existence.' Supported by corpus."
+        }
+      }
+    },
+    {
+      "entry_id": "E21",
+      "cemented_category": "defensible_novel",
+      "cemented_reference_match": null,
+      "cemented_scope_deltas": null,
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "The two-entry grouping es-09 and es-11 under 'reorganisation-without-positivity' is not a reference entry. The contrast check correctly notes es-06 has near-identical annotation but adds representation lower bounds for almost-all primes. Corpus supports both entries: es-09 breaks only surface distinctions and es-11 preserves algebraic relations without adding existence. Distinctions between higher-dimensional variety unification and ground-level constraint derivation are preserved. The claim is narrower and cleaner than E14, which over-merged es-08."
+        },
+        "B": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "The reorganization-without-new-existence property for es-09 and es-11 is directly supported by corpus entries: both are partial_successes whose boundaries explicitly record they add no positivity for QR primes. The contrast against es-06 (which delivers representation lower bounds) is precisely documented. No reference entry names this two-entry shared property."
+        },
+        "C": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "The claim that es-09 and es-11 deliver reorganization without new existence is defensible: es-09 explicitly breaks only surface distinctions (a reorganization result, not a new existence proof), and es-11's partial_success lies in constraint analysis not existence generation."
+        }
+      }
+    },
+    {
+      "entry_id": "E22",
+      "cemented_category": "over_merge",
+      "cemented_reference_match": null,
+      "cemented_scope_deltas": null,
+      "resolution": "no_majority_conservative",
+      "disputed": true,
+      "votes": {
+        "A": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "Substantively identical to E08 and E10 in scope and content. All three claim es-01, es-03, es-07 share per-class or per-instance reasoning with no global coupling. Passes the evidence bar on the same grounds. This is a third duplicate formulation of the same novel property."
+        },
+        "B": {
+          "category": "matches_reference",
+          "reference_match": "L6",
+          "reason": "E22 extends L6's observation about local reasoning in es-01 and es-03 to include es-07 under the same label. The corpus supports es-07's per-n-only character. The contrast against partial successes is noted. This is a scope-widening extension of L6, not a contradiction."
+        },
+        "C": {
+          "category": "over_merge",
+          "reference_match": null,
+          "reason": "Third entry with membership [es-01, es-03, es-07] and a no-global-organization claim. L6 affirmatively records distinct roles for es-01 and es-03; E22 erases this distinction just as E08 and E10 do."
+        }
+      }
+    },
+    {
+      "entry_id": "E23",
+      "cemented_category": "defensible_novel",
+      "cemented_reference_match": null,
+      "cemented_scope_deltas": null,
+      "resolution": "majority",
+      "disputed": false,
+      "votes": {
+        "A": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "A fifth formulation of the es-05 / es-10 intrinsic-ceiling pairing, here framed as 'monotonically improving but rate-limited, leaving an infinite uncovered residue'. The corpus confirms es-05's exceptional set is infinite (all QR primes) and es-10's exceptional set is 'thin but infinite'. The contrast distinguishing these from es-02 and es-06 on the grounds of an internally attributed rate limit is accurate per corpus boundaries. Passes the evidence bar; duplicate novel claim."
+        },
+        "B": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "The 'monotonically improves coverage but rate is structurally too weak to reach all n, leaving infinite uncovered residue' framing for es-05 and es-10 is supported by both corpus boundaries. The contrast against es-02 and es-06 (attributed to unfinished work rather than intrinsic rate limit) is checked honestly. No reference entry names this specific monotone-but-intrinsically-capped property."
+        },
+        "C": {
+          "category": "defensible_novel",
+          "reference_match": null,
+          "reason": "Same [es-05, es-10] pair. Frames the ceiling as an intrinsic rate limit rather than unfinished work. Corpus supports both partial_failure outcomes as rate-limited. Distinctions preserved."
+        }
+      }
+    }
+  ],
+  "summary": {
+    "matches_reference": 7,
+    "defensible_novel": 10,
+    "over_merge": 2,
+    "prohibited_promotion": 0,
+    "unsupported": 4
+  },
+  "disputed_count": 3
+}
