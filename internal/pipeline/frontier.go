@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"time"
 
@@ -31,11 +32,16 @@ var targetableStates = []string{"surviving", "operator_attested"}
 // FrontierGenerateInput requests a generation pass for a problem. Count <= 0
 // defaults to defaultFrontierCount.
 type FrontierGenerateInput struct {
-	DBPath     string
-	ProblemID  string
-	Count      int
-	NoPolicy   bool
-	JSONOutput bool
+	DBPath    string
+	ProblemID string
+	Count     int
+	NoPolicy  bool
+	// ProposalsFile routes generation through the UNTRUSTED proposer adapter:
+	// the file's proposal-wire/v1 payload (label-only claims; captured model
+	// output or an authored fixture) enters through the production
+	// vocabulary-admission boundary exactly as a live transport would.
+	ProposalsFile string
+	JSONOutput    bool
 }
 
 // FrontierListInput lists frontier generations for a problem.
@@ -79,9 +85,19 @@ type frontierArmOptions struct {
 }
 
 // GenerateFrontier runs the directed B3 frontier operator (surviving targets +
-// search policy) under the real run lifecycle.
+// search policy) under the real run lifecycle. With ProposalsFile set, the
+// generator is the untrusted proposer over the file transport — its output
+// passes the admission boundary like any live model adapter.
 func (a *App) GenerateFrontier(ctx context.Context, input FrontierGenerateInput) (FrontierGenerateResponse, error) {
-	resp, _, err := a.generateFrontierWith(ctx, input, frontierArmOptions{noPolicy: input.NoPolicy})
+	opts := frontierArmOptions{noPolicy: input.NoPolicy}
+	if input.ProposalsFile != "" {
+		opts.generator = provider.NewUntrustedProposer(
+			provider.FileProposalTransport{Path: input.ProposalsFile},
+			provider.Metadata{ProviderName: "external-file", ProviderVersion: "v1", ModelName: filepath.Base(input.ProposalsFile)},
+		)
+		opts.role = provider.GeneratorRole
+	}
+	resp, _, err := a.generateFrontierWith(ctx, input, opts)
 	return resp, err
 }
 

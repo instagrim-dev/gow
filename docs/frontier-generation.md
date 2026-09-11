@@ -118,6 +118,37 @@ The raw provider response remains auditable verbatim in the persisted
 provider-invocation payload; the admitted signature is what code hashes,
 compares, and evaluates.
 
+### Untrusted proposer wire (`proposal-wire/v1`)
+
+`newf frontier generate --proposals-file <path>` routes generation through the
+untrusted proposer adapter: the file carries captured model output (or an
+authored fixture) in `proposal-wire/v1` — label-only mechanisms plus the
+required directed-generation prose:
+
+```json
+{
+  "schema_version": "proposal-wire/v1",
+  "proposals": [{
+    "mechanism": {
+      "preserves": ["residue locality"],
+      "locality": "global",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic"
+    },
+    "structural_violation_claim": "...",
+    "novelty_argument": "...",
+    "cheapest_falsification_path": "..."
+  }]
+}
+```
+
+The wire deliberately CANNOT express canonical ids, resolution states, or
+field completeness — decoding is strict, so a smuggled authority field is a
+visible schema violation, not a silent drop. Claims enter unresolved and pass
+the admission boundary above. A live HTTP adapter implements the same
+`ProposalTransport` seam, so the parsing/admission path is identical for
+captured files and live calls.
+
 ## Ranking objective
 
 Proposals are ranked lexicographically over ordinal components (no fabricated

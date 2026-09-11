@@ -19,9 +19,10 @@ func newFrontierCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) 
 	}
 
 	var (
-		genProblem  string
-		genCount    int
-		genNoPolicy bool
+		genProblem       string
+		genCount         int
+		genNoPolicy      bool
+		genProposalsFile string
 	)
 	genCmd := &cobra.Command{
 		Use:   "generate",
@@ -38,11 +39,12 @@ func newFrontierCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) 
 				return wrapCommandError("frontier generate", errors.New("--problem is required"))
 			}
 			result, err := app.GenerateFrontier(cmd.Context(), pipeline.FrontierGenerateInput{
-				DBPath:     opts.dbPath,
-				ProblemID:  genProblem,
-				Count:      genCount,
-				NoPolicy:   genNoPolicy,
-				JSONOutput: opts.jsonOutput,
+				DBPath:        opts.dbPath,
+				ProblemID:     genProblem,
+				Count:         genCount,
+				NoPolicy:      genNoPolicy,
+				ProposalsFile: genProposalsFile,
+				JSONOutput:    opts.jsonOutput,
 			})
 			if err != nil {
 				return wrapCommandError("frontier generate", err)
@@ -57,6 +59,7 @@ func newFrontierCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) 
 	genCmd.Flags().StringVar(&genProblem, "problem", "", "Problem ID")
 	genCmd.Flags().IntVar(&genCount, "count", 0, "Proposal budget (default 8)")
 	genCmd.Flags().BoolVar(&genNoPolicy, "no-policy", false, "Ignore the persisted search policy (unbiased baseline run)")
+	genCmd.Flags().StringVar(&genProposalsFile, "proposals-file", "", "Route generation through the UNTRUSTED proposer: a proposal-wire/v1 JSON file (captured model output) admitted via the pinned vocabulary")
 	cmd.AddCommand(genCmd)
 
 	var listProblem string
