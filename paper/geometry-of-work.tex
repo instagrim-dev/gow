@@ -172,9 +172,21 @@
 \newtheorem{remark}{Remark}[section]
 
 % ── Draft annotations ────────────────────────────────────────────────
-\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
-\newcommand{\claimnote}[1]{\textcolor{blue}{\textbf{[CLAIM: #1]}}}
-\newcommand{\evidence}[1]{\textcolor{teal}{\textbf{[EVIDENCE: #1]}}}
+% Draft mode is opt-in. To surface red \todo{...} / blue \claimnote{...} /
+% teal \evidence{...} markers during revision, uncomment \gowdrafttrue.
+% For the final/released source, leave it commented so these macros compile
+% to nothing and cannot leak a placeholder to the released PDF.
+\newif\ifgowdraft
+% \gowdrafttrue
+\ifgowdraft
+  \newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+  \newcommand{\claimnote}[1]{\textcolor{blue}{\textbf{[CLAIM: #1]}}}
+  \newcommand{\evidence}[1]{\textcolor{teal}{\textbf{[EVIDENCE: #1]}}}
+\else
+  \newcommand{\todo}[1]{}
+  \newcommand{\claimnote}[1]{}
+  \newcommand{\evidence}[1]{}
+\fi
 
 % ── Title metadata ────────────────────────────────────────────────────
 % The visible title is set by \gowtitlepage (below). PDF metadata is set in
@@ -1793,7 +1805,6 @@ exploratory evidence sufficient to make the framework refereeable.
 
 % ── Acknowledgments ──────────────────────────────────────────────────
 \section*{Acknowledgments}
-\todo{Acknowledge specific reviewers and contributors before submission.}
 The design and evaluation of \texttt{newf} benefited from the frozen artifact
 lineage of the Erd\H{o}s--Straus study corpus, from the adjudication quorum
 protocol that surfaced the N2a and N5 boundary refinements, and from repeated
@@ -1815,6 +1826,53 @@ separately. The complete dated timeline is maintained at
 \path{paper/HISTORY.md} in the project repository. See the compressed
 development window limitation in \cref{sec:limitations} for what this
 timeline does and does not support.
+
+% ── Generative-AI Use Disclosure ─────────────────────────────────────
+\section*{Generative-AI Use Disclosure}
+
+Per arXiv policy, this section describes significant use of generative
+artificial intelligence in the research reported here and in the preparation
+of this manuscript. The named author is responsible for all content,
+references, and any errors, regardless of the tool that produced draft text.
+
+\paragraph{In the research.} Generative models are a load-bearing component
+of the reported instrument, not an incidental drafting aid. Specifically:
+(a)~all shape claims, adversarial-challenge probes, and quorum-lane votes
+recorded in \path{corpus/experiments/pilot-003/} and
+\path{corpus/experiments/pilot-004-discovery/} were produced by
+large-language-model inference under the pinned prompts and pinned recovery
+rule; (b)~the blinded model reviewer described in Experiment~B is itself an
+LLM-family reviewer, distinct from the arms it scored, and its verdict is
+recorded as tier-5 (single-model judgment) per
+\cref{sec:epistemic}; (c)~the three quorum lanes in Pilot-004 are
+independent LLM invocations reading the same 23 proposal occurrences under
+identical instructions. Per-invocation provider and model identifiers, along
+with request/response artifacts, are retained in the frozen experiment
+records; specific provider identities are not load-bearing for the claims
+made in this paper because those claims are made at the level of framework
+behavior (abstention, survival, weakening, boundary refinement), not at the
+level of any specific model's capability.
+
+\paragraph{In manuscript preparation.} Drafts of this manuscript were
+produced with substantial LLM assistance for outlining, prose iteration,
+LaTeX formatting, table generation, and cross-reference bookkeeping.
+Empirical numbers, frozen-artifact paths, and every citation were verified
+against the underlying record files; the claim/evidence ledger in
+\cref{app:claims} exists in part to make that verification traceable to a
+reviewer. The manuscript has undergone repeated adversarial review passes
+that identified and forced correction of specific misstatements
+(experimental parameters, challenge-claim strength, and the separation
+between implemented and proposed capabilities). The current state reflects
+those corrections; no claim in the released text is asserted more strongly
+than the underlying record supports.
+
+\paragraph{What generative AI did not do.} It did not adjudicate its own
+outputs as evidence, did not promote model judgment to verification, did not
+author the frozen experiment protocols, and did not select or approve
+publication. The typed contracts in \texttt{newf} that separate
+\texttt{ModelJudgment} from \texttt{Verification}
+(\cref{sec:epistemic,sec:system}) are enforced in code and were exercised
+during the reported experiments.
 
 % ── Bibliography ─────────────────────────────────────────────────────
 \bibliographystyle{plainnat}
