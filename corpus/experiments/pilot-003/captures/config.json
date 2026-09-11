@@ -1,12 +1,17 @@
 {
   "schema": "pilot-capture-config/v1",
-  "note": "Operator fills ACTUAL values before the first call; identical configuration in isolated sessions for both arms; capture B0 first, seal, then B3.",
-  "model_identity": null,
-  "model_version": null,
+  "proposer": "Cursor generalPurpose subagent (isolated session; no parent conversation context)",
+  "model_identity": "us.anthropic.claude-fable-5 (inherited parent model; same for both arms)",
+  "model_version": "as deployed by Cursor at capture time; exact snapshot not exposed",
   "temperature": null,
   "max_output_tokens": null,
-  "other_exposed_settings": null,
-  "unavailable_settings": null,
-  "session_isolation": null,
-  "captured_at_utc": null
+  "other_exposed_settings": "none exposed by the subagent interface",
+  "unavailable_settings": [
+    "temperature",
+    "max_output_tokens",
+    "top_p",
+    "system prompt bytes (harness-owned)"
+  ],
+  "session_isolation": "fresh subagent per arm; the ONLY context supplied is the assembled prompt file, delivered via a single sanctioned Read of that exact file (transport deviation from provide-only-bytes, recorded below); B0 captured and sealed before B3 was dispatched",
+  "captured_at_utc": "2026-09-11T07:48:43.122129+00:00"
 }

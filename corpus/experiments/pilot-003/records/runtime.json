@@ -1,5 +1,5 @@
 {
-  "status": "prepared_not_captured",
+  "status": "captured_not_executed",
   "protocol_revision": "pilot-003 (successor to pilot-002; PROTOCOL-REVISION.md)",
   "source_commit": "a868dec70e6cb0f5ab6000ec89bbd36e12f43ec4",
   "executable_commit": "00e22b2246c43525877dd6acbb807ab3b0bba812",
@@ -13,6 +13,7 @@
   "recovery_reachability": "ready",
   "target_self_comparison_classification": "mechanism-near",
   "operator_attestations_complete": false,
-  "capture_status": "not_captured",
-  "conclusion": null
+  "capture_status": "captured_sealed",
+  "conclusion": null,
+  "capture_record": "../captures/capture-record.json"
 }

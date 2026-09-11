@@ -1,0 +1,43 @@
+{
+  "schema": "pilot-capture-record/v1",
+  "captured_at_utc": "2026-09-11T07:48:43.122378+00:00",
+  "arms": {
+    "b0_undirected": {
+      "session": "cursor subagent 0725727d-2623-4207-bdec-84e59e8ebc10",
+      "prompt_sha256": "0026e8a3da39a130254c41b274b5dc518d1367f2bdcce51644d6ba25c13a481d",
+      "raw_output_sha256": "0c803f5944a8d1d197f8ec083a833cc30308dd47f2037b551b409c69e53155d3",
+      "proposals": 7,
+      "transcript_audit": {
+        "tool_invocations": [
+          "Read (the sanctioned prompt-file read; no other file, command, or URL)"
+        ],
+        "verdict": "clean"
+      }
+    },
+    "b3_invariant_guided": {
+      "session": "cursor subagent 87cf4fcf-d493-4d15-91a0-de78dd8210e7",
+      "prompt_sha256": "05d4746c95ec64a1e43ef6ca0f0e0e3624fa9ad18f527a5eaeb86098f2b9e8a1",
+      "raw_output_sha256": "6ada60997f98da6bd5bbdb0da3913e6aeaf656c59ae52cfe0708aef3ba6f2582",
+      "proposals": 6,
+      "transcript_audit": {
+        "tool_invocations": [
+          "Read (sanctioned prompt-file read)",
+          "UpdateCurrentStep x2 (harness progress-status emission; no information ingress)"
+        ],
+        "verdict": "clean-with-note: UpdateCurrentStep emits status only and reads nothing; classified as non-deviating because no information entered the session; the independent reviewer may overrule this classification"
+      },
+      "target_id_validation": "all target_invariant_ids present in the frozen survivor list; explicit subsets used; no invented IDs"
+    }
+  },
+  "consumed_inputs_sha256": {
+    "context/train-only.md": "a1c95a6637fbc6f04e9718d5c65af2d9014d98ef048fd6fb57c969b750c018c8",
+    "context/b3-survivors.json": "4aac4181724d26e7b83183a73bf3d57df88f2f38b12dda57e4ef24c569ace365"
+  },
+  "raw_output_extraction": "final assistant text extracted byte-exactly from the persisted subagent transcript JSONL (never re-transcribed through the parent agent generation); JSON parse + schema_version check applied before sealing",
+  "known_deviations": [
+    "prompt delivery via one sanctioned in-session file Read instead of out-of-band paste (transport only; the file bytes are the pinned prompt, digest verified)",
+    "proposer model/config granularity limited to what the subagent interface exposes (see config.json unavailable_settings)",
+    "both arms used the same model family as the orchestrating agent; the orchestrating session (which has read the target) wrote the dispatch instruction but supplied no content beyond the file path"
+  ],
+  "capture_decision": "resolver decision D-CAP: subagent capture with mandatory transcript audit; any tool use beyond the sanctioned Read voids the capture"
+}
