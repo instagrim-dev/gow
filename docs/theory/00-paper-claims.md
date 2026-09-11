@@ -142,6 +142,34 @@ explicitly labeled hypotheses or future directions — not as claims:
   `docs/theory/05-complement-geometry.md` but untested. This is a paper-
   worthy corollary, not a paper-worthy claim, until experimental evidence
   exists. See below for the complementarity principle and its placement.
+- **Relational structure (H-R).** GoW can infer outcome-relevant *relations*
+  among aspects of prior Work (not just per-feature regularities) and use
+  them to select next attempts at lower cost than individual-feature
+  analysis and an ordinary interaction-aware baseline. The mathematical
+  possibility is established (Proposition R, proved in
+  `docs/theory/07-relational-structure.md`: marginal summaries can discard
+  all jointly available predictive information); the instrument capability
+  is calibrated by the executable XOR/main-effect control in
+  `internal/relational`; the *method* claim awaits the pre-registered
+  comparative experiment (`corpus/experiments/pilot-005-relational/`).
+  Until then the extension is admissible in the conceptual model only as a
+  labeled hypothesis.
+- **Self-referential programmatic cartography (H-SRC).** A GoW implementation
+  can treat its own mapping and search decisions as Work — including its
+  representational choices — detect a decision-relevant limitation in its
+  current representation, commit to a revised representation and a
+  discriminating prediction *before* seeing the outcome, and select next
+  domain Work whose checked outcome (against an unchanged objective) supports
+  that prediction at a useful cost relative to not revising. The capability is
+  architecturally admissible (it is the `M(W)` selection history admitted as
+  Work) and its boundary is stated in
+  `docs/theory/10-self-referential-cartography.md`: **self-reference, not
+  self-certification** — describing itself never establishes the correctness
+  of its descriptions. The safeguards are the temporal anti-mythology rule and
+  representation-selection contract of
+  [08](08-earning-operational-authority.md) plus the challenge discipline
+  (`ModelJudgment ≠ Verification`). Until the prospective loop is run against a
+  comparator, the extension is admissible only as a labeled hypothesis.
 - GoW applies to domains beyond number theory.
 - The failure-invariant instrument is the most productive reading of the geometry.
 - Shape-guided search converges faster than undirected search.

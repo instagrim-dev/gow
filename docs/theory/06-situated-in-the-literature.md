@@ -28,63 +28,87 @@ Most neighboring frameworks search a space of *candidates*, *hypotheses*, or
 *instances*. GoW lifts landscape-based search into the space of the
 problem-solving **Work** used to produce them. That lift is the thing to defend.
 
+**This is the canonical statement of the lift.** Every later formulation in
+this document — and any novelty sentence in the manuscript — is a restatement
+of this one and is labeled as such.
+
 ## The closest ancestors
 
-Each row is a real, mature idea GoW overlaps with. The point of listing them is
-discipline: if GoW reduces to any one of them, it is not new.
+Each unit below is a real, mature idea GoW overlaps with, in one fixed form:
+the tradition's **pattern**, what it **gives** GoW, and what it **withholds**.
+Every "withholds" line is a *claimed* difference, pending the reduction test
+its linked attack states in full. The point of listing them is discipline: if
+GoW reduces to any one of them, it is not new. Full treatments live in
+[docs/research/summaries/](../research/summaries/); the steelmanned objections
+in the [composite attack surface](../research/composite-attack-surface.md).
 
-### Lakatos — *Proofs and Refutations* (recursive knowledge refinement)
+### Lakatos — *Proofs and Refutations*
 
-The eerily close philosophical ancestor. Lakatos's pattern is:
+**Pattern.**
 
 ```text
 conjecture → proof decomposition → counterexample → locate the "guilty lemma"
            → incorporate the exposed condition into a refined conjecture
 ```
 
-That is almost exactly the GoW/`newf` challenge loop
-([02-epistemic-model.md](02-epistemic-model.md), [03-shape-guided-search.md](03-shape-guided-search.md)):
+**Gives GoW.** The philosophy of recursive refinement. The pattern is almost
+exactly the GoW/`newf` challenge loop ([02-epistemic-model.md](02-epistemic-model.md),
+[03-shape-guided-search.md](03-shape-guided-search.md)) — `I0 → challenge →
+boundary_delta → I1 → …` — including the observation that a refined invariant
+tends to expose a new micro-failure.
 
-```text
-I0 → challenge → boundary_delta → I1 → …
-```
+**Withholds (claimed).** The *Work geometry* — the space, its regimes, and the
+distance/boundary structure over a population of attempts. Lakatos describes
+one conjecture's biography, not a corpus.
 
-including the observation that a refined invariant tends to expose a new
-micro-failure. Lakatos gives GoW a **philosophy of recursive refinement**. What
-he does not give is the *Work geometry* — the space, its regimes, and the
-distance/boundary structure over a population of attempts.
+→ *Deeper:* [summary 01](../research/summaries/01-lakatos-proofs-and-refutations.md)
+· *Reduction test:* [A2](../research/composite-attack-surface.md#a2)
 
-### CEGIS / CEGAR (counterexample-guided refinement)
+### CEGIS / CEGAR — counterexample-guided refinement
 
-From program synthesis and formal verification:
+**Pattern.**
 
 ```text
 candidate → checker → counterexample → constrained candidate space → new candidate
 ```
 
-The load-bearing point is that a counterexample does not merely reject *one*
-candidate — it excludes a whole *class* that would fail similarly. That is the
-discrete, mature form of GoW's complement-geometry "anti-vacuum"
-([05-complement-geometry.md](05-complement-geometry.md)):
+**Gives GoW.** The load-bearing point that a counterexample does not merely
+reject *one* candidate — it excludes a whole *class* that would fail similarly:
+the discrete, mature form of the complement-geometry "anti-vacuum"
+([05-complement-geometry.md](05-complement-geometry.md)), `Ω_{t+1} = Ω_t \ F_t`.
+CEGAR adds the representation-refinement instinct: refine the abstraction via
+counterexamples until it is adequate.
 
-```text
-Ω_{t+1} = Ω_t \ F_t
-```
+**Withholds (claimed).** CEGIS/CEGAR know the specification and checker in
+advance, and CEGAR earns each refinement with a spuriousness proof. GoW is
+harder/weirder because the relevant *dimensions of the space* may themselves
+have to be inferred from historical Work — with no soundness theorem to lean on.
 
-CEGAR similarly begins with an abstraction and refines it via counterexamples
-until the representation is adequate — a direct ancestor of GoW's
-representation-refinement instinct. The difference: **CEGIS/CEGAR know the
-specification and checker in advance.** GoW is harder/weirder because the
-relevant *dimensions of the space* may themselves have to be inferred from
-historical Work.
+→ *Deeper:* [summary 02](../research/summaries/02-cegis.md),
+[summary 03](../research/summaries/03-cegar.md)
+· *Reduction tests:* [A2](../research/composite-attack-surface.md#a2),
+[A8](../research/composite-attack-surface.md#a8)
 
-### Version spaces / active learning / Bayesian experimental design
+### Version spaces — candidate elimination
 
-Version-space learning maintains the hypothesis set consistent with positive and
-negative examples; evidence shrinks it. Active learning focuses queries where
-surviving hypotheses disagree (maximal information per observation). Bayesian
-experimental design formalizes "probe where expected information gain is
-highest." Together they are the mature ancestor of GoW's **Probe** reading:
+**Pattern.** Maintain the entire hypothesis set consistent with positive and
+negative examples; each observation monotonically shrinks it, and the
+surviving region is represented by its frontier.
+
+**Gives GoW.** The eliminative reading of evidence behind the anti-vacuum:
+the object worth representing is the surviving region and its boundary, not
+the individual eliminations.
+
+**Withholds (claimed).** A fixed hypothesis language with known semantics and
+noise-free, boolean-labeled evidence. GoW's constraints are semantic, graded
+in strength, and stated in a language that is itself under revision.
+
+→ *Deeper:* [summary 04](../research/summaries/04-version-spaces.md)
+· *Reduction test:* [A4](../research/composite-attack-surface.md#a4)
+
+### Active learning / Bayesian experimental design
+
+**Pattern.**
 
 ```text
 ambient possibility-space → evidence → surviving region → disagreement/boundary
@@ -92,81 +116,155 @@ ambient possibility-space → evidence → surviving region → disagreement/bou
 next Work ≈ argmax_W  information gained about the geometry
 ```
 
-The recurring difference: these frameworks search hypothesis/parameter spaces
-with **known coordinates**. GoW wants to infer *the coordinates of useful
-reasoning* from Work itself.
+**Gives GoW.** The mature ancestor of the **Probe** reading: query where
+surviving hypotheses disagree; choose experiments by expected information
+gain; iterate from the observed landing point (sequential design).
 
-### Where "geometry" has precedent
+**Withholds (claimed).** These frameworks search hypothesis/parameter spaces
+with **known coordinates**, a fixed model class, and a likelihood. GoW wants
+to infer *the coordinates of useful reasoning* from Work itself, with no
+forward model from shape to outcome.
 
-- **Conceptual Spaces (Gärdenfors).** Concepts modeled geometrically over
-  quality dimensions, with similarity and concept formation spatial. This gives
-  philosophical legitimacy to GoW's core move: *semantic structure can carry
-  useful geometry even when it is not ordinary Euclidean space* — precisely the
-  disclaimer C1 already makes ("geometry" in the informal sense; see
-  [00-paper-claims.md](00-paper-claims.md)).
-- **Instance Space Analysis (ISA).** Maps problem *instances* by features,
-  overlays algorithm performance, and identifies success/failure regions, holes,
-  and difficulty-associated features — even iterating by generating data where
-  the map has gaps. Structurally the nearest relative to GoW's
-  geometry-of-performance. The lift is *what counts as a point* (below).
-- **Fitness landscapes.** Map candidate solutions/configurations to a scalar
-  fitness. The classical baseline GoW generalizes.
+→ *Deeper:* [summary 05](../research/summaries/05-active-learning.md),
+[summary 06](../research/summaries/06-bayesian-experimental-design.md)
+· *Reduction test:* [A3](../research/composite-attack-surface.md#a3)
 
-### Quality-Diversity (QD / MAP-Elites)
+### Conceptual Spaces — Gärdenfors
 
-Illuminates a behavioral feature space rather than driving everything to one
-scalar optimum; different niches hold different high performers. Compatible with
-GoW's instinct that there may be **multiple regimes, bridges, voids, and
-boundaries** rather than one hill. But QD generally *starts* with a behavior
-characterization; GoW's harder problem is that the characterization may itself
-have to emerge from comparing Work.
+**Pattern.** Concepts modeled geometrically over quality dimensions, with
+similarity as distance and natural concepts as convex regions.
 
-### Constraint propagation / feasible-region contraction
+**Gives GoW.** Philosophical legitimacy for the core move: *semantic structure
+can carry useful geometry even when it is not ordinary Euclidean space* —
+precisely the disclaimer C1 already makes ("geometry" in the informal sense;
+see [00-paper-claims.md](00-paper-claims.md)).
 
-The nearest dual to "collapse the space around it." Begin with `Ω`; every
-observation imposes a constraint and the feasible region shrinks:
+**Withholds (claimed).** Gärdenfors pays for the word "geometry" with axioms
+(betweenness, convexity, a metric); GoW currently pays with component-wise
+ordinal comparison and owes an analog of the naturalness criterion.
+
+→ *Deeper:* [summary 07](../research/summaries/07-conceptual-spaces.md)
+· *Reduction test:* [A6](../research/composite-attack-surface.md#a6)
+
+### Instance Space Analysis
+
+**Pattern.** Map problem *instances* by features, overlay algorithm
+performance, and identify success/failure regions, holes, and
+difficulty-associated features — iterating by generating data where the map
+has gaps.
+
+**Gives GoW.** Nearly the whole geometric reading: outcome-conditioned
+regions, boundary and hole analysis, and the discipline of generating new
+points where the map is uninformative. Structurally the nearest relative, and
+the comparison to study hardest before any novelty claim.
+
+**Withholds (claimed).** The lift is *what counts as a point*: ISA maps
+instances with engineered features over large homogeneous populations; GoW
+maps attempts described by inferred mechanism structure over small
+heterogeneous ones.
+
+→ *Deeper:* [summary 08](../research/summaries/08-instance-space-analysis.md)
+· *Reduction tests:* [A1](../research/composite-attack-surface.md#a1),
+[A7](../research/composite-attack-surface.md#a7)
+
+### Fitness landscapes
+
+**Pattern.** Map candidate solutions/configurations to a scalar fitness; the
+surface's topography (peaks, valleys, ruggedness) governs what search can do.
+
+**Gives GoW.** The classical baseline it generalizes — and the standing
+warning that topographic language is operator-relative and easy to over-read.
+
+**Withholds (claimed).** A defined (X, N, f) triple. GoW must state its analog
+explicitly or confine its geometric vocabulary.
+
+→ *Deeper:* [summary 09](../research/summaries/09-fitness-landscapes.md)
+· *Reduction tests:* [A6](../research/composite-attack-surface.md#a6),
+[A7](../research/composite-attack-surface.md#a7)
+
+### Quality-Diversity — MAP-Elites
+
+**Pattern.** Illuminate a behavioral feature space rather than driving
+everything to one scalar optimum; different niches hold different high
+performers.
+
+**Gives GoW.** The instinct that there may be **multiple regimes, bridges,
+voids, and boundaries** rather than one hill, and that structurally distinct
+attempts — including failures — are worth preserving over ranking.
+
+**Withholds (claimed).** QD describes *behavior*; GoW describes *mechanism*.
+And while later QD (AURORA-style) learns its characterization too, it carries
+no epistemic lifecycle: an archive entry is a measurement, never a claim under
+challenge.
+
+→ *Deeper:* [summary 10](../research/summaries/10-quality-diversity.md)
+· *Reduction tests:* [A9](../research/composite-attack-surface.md#a9),
+[A7](../research/composite-attack-surface.md#a7)
+
+### Constraint propagation — feasible-region contraction
+
+**Pattern.**
 
 ```text
 Ω' = { x ∈ Ω : C_1(x) ∧ C_2(x) ∧ … ∧ C_n(x) }
 ```
 
-GoW's twist: the constraints are not native problem constraints (`x > 4`) but
-**semantic structural constraints** ("must break class locality", "cannot rely
-solely on asymptotic coverage"). So the anti-vacuum is, less cinematically but
-more usefully, **semantic constraint propagation over a learned representation
-of Work**.
+**Gives GoW.** The nearest dual to "collapse the space around it": the
+anti-vacuum is, less cinematically but more usefully, **semantic constraint
+propagation over a learned representation of Work** — constraints such as
+"must break class locality" rather than `x > 4`.
+
+**Withholds (claimed).** Soundness. In CSP a removed value is *provably* in no
+solution; GoW's removals are interpretive claims with graded strength, which
+is why the epistemic lifecycle must be carried explicitly.
+
+→ *Deeper:* [summary 11](../research/summaries/11-constraint-propagation.md)
+· *Reduction test:* [A4](../research/composite-attack-surface.md#a4)
 
 ### Inverse design
 
-Materials science distinguishes forward discovery from **inverse design**:
-specify desired functionality, then search for structures realizing it. GoW's
-[classical projection](04-classical-projection.md) is an inverse-design step:
+**Pattern.**
 
 ```text
 desired structural delta (cross boundary B, break P, retain Q,R)
    → inverse projection → domain-native candidate
 ```
 
-"Derive desired properties in shape-space, then solve the inverse problem of
-constructing an object that has them."
+**Gives GoW.** The shape of [classical projection](04-classical-projection.md):
+derive desired properties in shape-space, then solve the inverse problem of
+constructing an object that has them.
 
-## The synthesis table
+**Withholds (claimed).** The enabling asset — a cheap, trusted forward model
+that scores candidates before the expensive step. GoW has no shape→outcome
+evaluator; its affordable proxy is structural self-consistency checking, and
+projection failure (falsification condition 4) is the standing risk.
 
-| GoW operation | Closest established relative |
-|---|---|
-| Treat semantic structure geometrically | Conceptual Spaces |
-| Map features against outcomes | Instance Space Analysis / fitness landscapes |
-| Preserve diverse regimes instead of scalarizing | Quality-Diversity / MAP-Elites |
-| Learn from counterexamples | Lakatos / CEGIS / CEGAR |
-| Collapse possibilities via negative evidence | Version spaces / constraint propagation |
-| Choose maximally informative next Work | Active learning / Bayesian experimental design |
-| Construct something satisfying an inferred target shape | Inverse design |
-| Iterate from an observed landing point | Sequential experimental design |
+→ *Deeper:* [summary 12](../research/summaries/12-inverse-design.md)
+· *Reduction test:* [A8](../research/composite-attack-surface.md#a8)
+
+## The synthesis table (canonical)
+
+*This is the single canonical copy; other documents link here rather than
+duplicating it.*
+
+| GoW operation | Closest established relative | Summary | Reduction test |
+|---|---|---|---|
+| Treat semantic structure geometrically | Conceptual Spaces | [07](../research/summaries/07-conceptual-spaces.md) | [A6](../research/composite-attack-surface.md#a6) |
+| Map features against outcomes | Instance Space Analysis / fitness landscapes | [08](../research/summaries/08-instance-space-analysis.md), [09](../research/summaries/09-fitness-landscapes.md) | [A1](../research/composite-attack-surface.md#a1), [A7](../research/composite-attack-surface.md#a7) |
+| Preserve diverse regimes instead of scalarizing | Quality-Diversity / MAP-Elites | [10](../research/summaries/10-quality-diversity.md) | [A9](../research/composite-attack-surface.md#a9) |
+| Learn from counterexamples | Lakatos / CEGIS / CEGAR | [01](../research/summaries/01-lakatos-proofs-and-refutations.md), [02](../research/summaries/02-cegis.md), [03](../research/summaries/03-cegar.md) | [A2](../research/composite-attack-surface.md#a2) |
+| Collapse possibilities via negative evidence | Version spaces / constraint propagation | [04](../research/summaries/04-version-spaces.md), [11](../research/summaries/11-constraint-propagation.md) | [A4](../research/composite-attack-surface.md#a4) |
+| Choose maximally informative next Work | Active learning / Bayesian experimental design | [05](../research/summaries/05-active-learning.md), [06](../research/summaries/06-bayesian-experimental-design.md) | [A3](../research/composite-attack-surface.md#a3) |
+| Construct something satisfying an inferred target shape | Inverse design | [12](../research/summaries/12-inverse-design.md) | [A8](../research/composite-attack-surface.md#a8) |
+| Iterate from an observed landing point | Sequential experimental design | [06](../research/summaries/06-bayesian-experimental-design.md) | [A3](../research/composite-attack-surface.md#a3) |
 
 Assembled, GoW looks far less like an isolated invention and far more like a
 **missing synthesis sitting between several mature fields**.
 
 ## What appears genuinely distinct
+
+*This section is the operational restatement of the
+[canonical lift statement](#the-one-sentence-position).*
 
 Most neighbors assume, in advance, one or more of: the feature space, the
 hypothesis language, the specification, the fitness function, the search
@@ -249,29 +347,40 @@ eventually:            history of shapes/outcomes → geometry → next attempt
 If GoW is the larger pattern, the theory currently lacks four things. These are
 `hypothesis`/`future work` per the [claim registry](00-paper-claims.md), and
 each aligns with an existing GoW falsification condition.
+[08-earning-operational-authority](08-earning-operational-authority.md)
+sharpens each into a precise missing contract with a minimum-closure
+condition; the headings below are the coarse form.
 
 1. **Representation learning.** What makes one Work-shape basis better than
    another? Needs a criterion beyond "compresses nicely" — the
    [abstraction-safety](../abstraction-safety.md) predictive-discrimination
    test is the seed, but the *selection* rule over bases in `M(W)` is unstated.
-   *(Ties to falsification condition 1: geometry-is-vacuous.)*
+   *(Ties to falsification condition 1: geometry-is-vacuous; pressed hardest by
+   [attack A4](../research/composite-attack-surface.md#a4).)*
 
 2. **Geometry.** What do "distance," "boundary," "void," and "trajectory"
    formally mean when the dimensions are symbolic/semantic and partly learned?
    `newf` uses component-wise ordinal comparison (`CompareWithProfile`), which
    is a deliberate refusal of false precision, not yet a metric.
+   [07-relational-structure](07-relational-structure.md) sharpens the stakes:
+   marginal reads of shape axes can be blind to outcome-determining relations
+   (Proposition R), so whatever geometry is adopted must be able to carry
+   relational structure. *(Pressed hardest by
+   [attack A6](../research/composite-attack-surface.md#a6).)*
 
 3. **Causality.** How to distinguish a merely outcome-correlated shape from a
    genuine obstruction/enabler? The [epistemic model](02-epistemic-model.md)
    already forbids the leap (`observed regularity ≠ obstruction`; `claim_role`
    gates it), but forbidding the error is not the same as having a method that
-   *establishes* causal role. *(Ties to condition 2: shape-space dominated.)*
+   *establishes* causal role. *(Ties to condition 2: shape-space dominated;
+   pressed hardest by [attack A5](../research/composite-attack-surface.md#a5).)*
 
 4. **Convergence.** Under what conditions does repeated `map → probe → update`
    actually improve the geometry rather than produce an increasingly elaborate
    mythology? This is the one that keeps everyone employed, and it is the
    sharpest risk: a representation that can always be refined to "explain" the
-   last failure is unfalsifiable. *(Ties to conditions 3 and 5.)*
+   last failure is unfalsifiable. *(Ties to conditions 3 and 5; pressed hardest
+   by [attack A2](../research/composite-attack-surface.md#a2).)*
 
 These are the *right* holes — the kind that appear when something is becoming a
 research program rather than a clever workflow.
@@ -296,6 +405,9 @@ one of them, the interesting thesis is not "we invented failure analysis." It is
 > **We unified counterexample refinement, semantic geometry, outcome
 > landscapes, and inverse construction at the level of Work itself.**
 
+That sentence is the manuscript-facing form of the
+[canonical lift statement](#the-one-sentence-position), not a new claim.
+
 ## Relationship to the rest of the series
 
 - The lift is over [00-geometry-of-work.md](00-geometry-of-work.md)'s objects;
@@ -311,3 +423,12 @@ one of them, the interesting thesis is not "we invented failure analysis." It is
   [docs/research/summaries/](../research/summaries/); the strongest objections
   across the composite are consolidated in the
   [composite attack surface](../research/composite-attack-surface.md).
+- [07-relational-structure](07-relational-structure.md) admits relational
+  structure into the conceptual model (Proposition R proved; instrument
+  calibrated by `internal/relational`); whether GoW exploits it is
+  pre-registered as hypothesis H-R in
+  [pilot-005](../../corpus/experiments/pilot-005-relational/PROTOCOL-DRAFT.md).
+- [08-earning-operational-authority](08-earning-operational-authority.md)
+  takes the four pieces above and states, per gap, the contract whose absence
+  currently lends the theory unearned authority — with the minimum closure
+  each requires.

@@ -27,6 +27,10 @@ practitioner field guide is the reach-for-it-Monday-morning companion to both.
 | 04 | [Classical Projection](04-classical-projection.md) | Operational | How does a shape-space move get verified in domain-space? |
 | 05 | [Complement Geometry](05-complement-geometry.md) | Semantic (dual) | What shape does accumulated Work force the remaining possibility-space to take? |
 | 06 | [Situated in the Literature](06-situated-in-the-literature.md) | Research program | What established fields does GoW compose, what is the distinct lift, and what rigorous pieces are still missing? |
+| 07 | [Relational Structure](07-relational-structure.md) | Semantic (extension) | Can relations among aspects of Work carry information no individual feature carries — and what would prove GoW exploits them? |
+| 08 | [Earning Operational Authority](08-earning-operational-authority.md) | Research program (contracts) | What must connect representation changes to realizable actions and future evidence before the geometry earns search authority? |
+| 09 | [Falsification Review](09-falsification-review.md) | Operational (review) | What is the one bounded operation every claim must survive, and why can it damage but never promote? |
+| 10 | [Self-Referential Programmatic Cartography](10-self-referential-cartography.md) | Semantic (extension) | Can the system map its own mapping and search decisions and use that map to choose next Work — without letting self-description become self-certification? |
 | — | [Paper Claims](00-paper-claims.md) | Claim registry | Which four claims may the manuscript make, and at what evidence standard? |
 | — | [Glossary / ontology](glossary.md) | Anchor | What does each term mean, and its legacy implementation name? |
 
