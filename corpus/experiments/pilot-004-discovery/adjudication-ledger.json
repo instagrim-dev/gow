@@ -42,7 +42,7 @@
       "falsification": "Exhibiting a fixed-modulus congruence identity family in the notes (or a new one) that provably covers a quadratic-residue class, or a failed approach in this family whose stall point is unrelated to the quadratic-residue classes, would refute the property.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d1-run2 (index 0, arm=d1)"
       ],
       "category": null,
       "reference_match": null,
@@ -81,7 +81,7 @@
       "falsification": "Exhibiting a fixed-modulus polynomial-identity congruence family that provably eliminates a quadratic-residue class (e.g., a covered class in which n is a quadratic residue to the relevant small moduli) would refute the claimed confinement.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d1-run3 (index 0, arm=d1)"
       ],
       "category": null,
       "reference_match": null,
@@ -115,7 +115,7 @@
       "falsification": "A proof that the survivor set of one of these finite families is actually finite (for instance, a candidate covering or class battery whose exceptional set is provably finite or empty) would refute the property.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d1-run3 (index 1, arm=d1)"
       ],
       "category": null,
       "reference_match": null,
@@ -158,7 +158,7 @@
       "falsification": "An approach sharing this aggregate or characterizing posture that nonetheless yields a per-prime existence proof — for example an averaging bound with growth strong enough to force f(p) > 0 for every prime — would refute the claim that this posture participates in the stall.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d0-run2 (index 1, arm=d0)"
       ],
       "category": null,
       "reference_match": null,
@@ -196,7 +196,7 @@
       "falsification": "A demonstration that one of these evidence types does admit an upgrade path — e.g., an averaging argument whose growth rate forces per-prime existence, or a density argument reaching zero exceptional density — or a note showing the stall was due to effort or computation limits rather than the evidence type.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d1-run1 (index 1, arm=d1)"
       ],
       "category": null,
       "reference_match": null,
@@ -230,7 +230,7 @@
       "falsification": "Evidence that one of these unifications transported an existence argument onto a survivor class it did not previously cover would refute the property for that pair.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d0-run1 (index 3, arm=d0)"
       ],
       "category": null,
       "reference_match": null,
@@ -264,7 +264,7 @@
       "falsification": "Showing that one of these measures can in principle force universality (e.g., upgrading the averaging bound to at least polynomial growth so a positive average forces existence, or a density argument that provably reaches zero) would refute the property.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d1-run2 (index 1, arm=d1)"
       ],
       "category": null,
       "reference_match": null,
@@ -302,7 +302,7 @@
       "falsification": "A note showing one of these three approaches derives a genuinely global statement about the full solution set from its local mechanism, or a partially successful approach in the corpus that is equally class-local and unorganized globally yet crosses the survivor classes.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d1-run1 (index 2, arm=d1)"
       ],
       "category": null,
       "reference_match": null,
@@ -345,7 +345,7 @@
       "falsification": "Exhibiting a fixed-modulus congruence identity family, or a finite covering assembled from such identities, that provably eliminates a quadratic-residue class would refute the claimed confinement.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d0-run2 (index 0, arm=d0)"
       ],
       "category": null,
       "reference_match": null,
@@ -379,7 +379,7 @@
       "falsification": "Demonstrating that one of these three mechanisms in fact induces cross-class or cross-instance coupling that constrains the survivor classes (e.g., a factorization-scheme lattice organization with global consequences) would refute the property.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d1-run2 (index 2, arm=d1)"
       ],
       "category": null,
       "reference_match": null,
@@ -418,7 +418,7 @@
       "falsification": "A passage showing one of these approaches directly producing certified (x, y, z) for a previously unsettled quadratic-residue prime would refute the property for that member.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d0-run1 (index 1, arm=d0)"
       ],
       "category": null,
       "reference_match": null,
@@ -465,7 +465,7 @@
       "falsification": "Exhibiting, within the corpus's terms, a fixed-modulus congruence identity or identity-built covering that eliminates a quadratic-residue class (or a note recording that one of these approaches stalled somewhere other than the QR survivor classes) would refute the property.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d0-run3 (index 0, arm=d0)"
       ],
       "category": null,
       "reference_match": null,
@@ -502,7 +502,7 @@
       "falsification": "Evidence that either method's bound can be upgraded within its own machinery to an empty exceptional set — e.g., a note showing polynomial rather than polylog average growth, or a class assembly whose leftover density provably reaches zero — would refute the property.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d0-run3 (index 2, arm=d0)"
       ],
       "category": null,
       "reference_match": null,
@@ -536,7 +536,7 @@
       "falsification": "A note showing that one of these re-organization moves by itself produced a new existence result (positivity) for quadratic-residue survivor primes — e.g., the variety lift forcing a solution on a previously uncovered class — would refute the property.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d0-run3 (index 1, arm=d0)"
       ],
       "category": null,
       "reference_match": null,
@@ -574,7 +574,7 @@
       "falsification": "A failed approach in the corpus that explicitly breaks the residue/congruence structure it inherits and still stalls at the same wall for that reason, or a partial success whose mechanism record breaks nothing yet crosses the quadratic-residue survivor classes.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d1-run1 (index 3, arm=d1)"
       ],
       "category": null,
       "reference_match": null,
@@ -603,7 +603,7 @@
       "falsification": "A note showing the density or average bound reaching zero exceptions, or a valid inference from positive average to per-prime existence at polylog growth, would refute the property.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d0-run1 (index 2, arm=d0)"
       ],
       "category": null,
       "reference_match": null,
@@ -641,7 +641,7 @@
       "falsification": "Exhibiting a fixed-modulus polynomial-identity congruence family that provably solves a quadratic-residue class (e.g., an identity covering an n ≡ 1 (mod 24) survivor class), or a note showing one of these three approaches stalls somewhere other than the quadratic-residue survivor classes.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d1-run1 (index 0, arm=d1)"
       ],
       "category": null,
       "reference_match": null,
@@ -680,7 +680,7 @@
       "falsification": "Exhibiting a fixed-modulus polynomial identity or finite congruence covering in the notes that provably yields solutions on a quadratic-residue class would refute the claim that these mechanisms conserve the wall.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d0-run1 (index 0, arm=d0)"
       ],
       "category": null,
       "reference_match": null,
@@ -713,7 +713,7 @@
       "falsification": "Exhibiting an aggregation or covering construction that yields a certified solution for an n in a class covered by no member identity (solvability created by the assembly itself) would refute the property.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d1-run2 (index 3, arm=d1)"
       ],
       "category": null,
       "reference_match": null,
@@ -746,7 +746,7 @@
       "falsification": "Producing an averaging or density argument within this family whose bound is quantitatively strong enough (e.g., the at-least-polynomial growth es-05 says such an upgrade needs) to force existence for every prime would refute the claimed intrinsic weakness.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d1-run3 (index 3, arm=d1)"
       ],
       "category": null,
       "reference_match": null,
@@ -779,7 +779,7 @@
       "falsification": "A structural unification or lift in this family that produces an existence proof for a class previously uncovered — i.e., compression that demonstrably adds positivity — would refute the property.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d0-run2 (index 2, arm=d0)"
       ],
       "category": null,
       "reference_match": null,
@@ -813,7 +813,7 @@
       "falsification": "Demonstrating that a purely class-local, uncoupled identity or search mechanism certifies an entire infinite quadratic-residue survivor class — or evidence that one of the three cited approaches in fact couples classes globally — would refute the property.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d1-run3 (index 2, arm=d1)"
       ],
       "category": null,
       "reference_match": null,
@@ -846,7 +846,7 @@
       "falsification": "Showing that either bound can be strengthened past its stated rate limit — e.g., an average with polynomial growth or an exceptional-set bound reaching zero — would refute the claim that the ceiling is structural.",
       "occurrence_count": 1,
       "capture_refs": [
-        "SEALED — see adjudication key after unblinding"
+        "d0-run2 (index 3, arm=d0)"
       ],
       "category": null,
       "reference_match": null,
@@ -854,5 +854,8 @@
       "evidence_notes": null
     }
   ],
-  "note": "Entries are individual proposals from all six captures, shuffled arm-blind (seed derived from sorted capture digests). NO mechanical dedup was applied: grouping near-identical entries with occurrence counts is the OPERATOR'S judgment during adjudication (decision D3 forbids model pre-screening). Unblinding key sealed separately."
+  "note": "Entries are individual proposals from all six captures, shuffled arm-blind (seed derived from sorted capture digests). NO mechanical dedup was applied: grouping near-identical entries with occurrence counts is the OPERATOR'S judgment during adjudication (decision D3 forbids model pre-screening). Unblinding key sealed separately.",
+  "key_sha256": "378d11fd9cff8f7da813dbd6ce03413b16215dd97915e73c73f6c5d43affe682",
+  "key_sealed": "post_adjudication",
+  "key_seal_note": "Key was produced and committed before quorum dispatch but key_sha256 was not populated in the ledger before adjudication began (tamper-evidence gap — see records/RESULT.md §Provenance limitations). Populated here after result record was written; git history provides temporal ordering."
 }
