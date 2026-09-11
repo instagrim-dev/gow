@@ -34,16 +34,16 @@ $$
 | Stage | Deliverable | Gate | Status |
 |---|---|---|---|
 | **0. Freeze claims** | `docs/theory/00-paper-claims.md` | Every major sentence classified | ✅ **Done** — 4 claims frozen; sentence-level classification key written; falsification conditions stated |
-| **1. Semantic foundation** | GoW ontology + glossary | Shape, Work, outcome, regime, boundary, delta, projection, landing point defined without `newf` terminology | ✅ **Done** — `docs/theory/00-04` + glossary; `paper/geometry-of-work.tex` §3 has skeleton definitions |
-| **2. Epistemic foundation** | Claims/evidence model | Conditioning, claim role, epistemic status separated; no invariant laundering | 🔄 **Partial** — `docs/domain-model.md` three-axis model written; `paper/geometry-of-work.tex` §4 is skeleton; needs full prose + verification hierarchy |
-| **3. Formalize the method** | Algorithm box | Reader can reconstruct Map→Boundary→Move→Measure from definitions | 🔄 **Partial** — Algorithm 1 is in the LaTeX; prose walkthrough and recursive-refinement discussion still `\todo{}` |
-| **4. Position against prior work** | Related-work section | Matrix complete; narrow novelty claim stated | 🔄 **Partial** — `docs/research/related-work-matrix.md` written; `docs/theory/06-situated-in-the-literature.md` drafted; LaTeX §10 is a `\todo{}`; needs full prose section |
-| **5. Reduce `newf` to paper-relevant** | System architecture section | Only machinery necessary to instantiate GoW | 🔄 **Partial** — LaTeX §6 skeleton exists; pipeline diagram and epistemic-guarantee framing still `\todo{}` |
-| **6. Finish empirical evidence** | Experiment section + frozen artifacts | Claims match what Pilot-003/004 establish; no result promoted beyond evidence | 🔄 **Partial** — All artifacts frozen; LaTeX §8 sub-sections are skeletons with `\todo{}`; numbers correct in prose but not yet in LaTeX tables |
+| **1. Semantic foundation** | GoW ontology + glossary | Shape, Work, outcome, regime, boundary, delta, projection, landing point defined without `newf` terminology | ✅ **Done** — `docs/theory/00-04` + glossary; LaTeX §3 has full definitions for regime, boundary, boundary delta, structural delta, projection, landing point |
+| **2. Epistemic foundation** | Claims/evidence model | Conditioning, claim role, epistemic status separated; no invariant laundering | ✅ **Done** — three-axis model in domain doc; LaTeX §4 has full prose: four separations, verification hierarchy, epistemic state transitions, adversarial challenge, anti-fractal discipline |
+| **3. Formalize the method** | Algorithm box | Reader can reconstruct Map→Boundary→Move→Measure from definitions | ✅ **Done** — Algorithm 1 + full step-by-step prose walkthrough + recursive-refinement discussion; Figure 2 (shape-space / domain-space loop) |
+| **4. Position against prior work** | Related-work section | Matrix complete; narrow novelty claim stated | ✅ **Done** — 12 traditions compared paragraph-by-paragraph, narrow novelty claim stated as conjunction of features no single tradition fills |
+| **5. Reduce `newf` to paper-relevant** | System architecture section | Only machinery necessary to instantiate GoW | ✅ **Done** — LaTeX §6 has 9-layer architecture + three epistemic guarantees + Figure 4 (architecture diagram) |
+| **6. Finish empirical evidence** | Experiment section + frozen artifacts | Claims match what Pilot-003/004 establish; no result promoted beyond evidence | ✅ **Done** — §8A negative controls, §8B Pilot-003, §8C Pilot-004 (7/10/4/2 counts from quorum-result.json), §8D N2a challenge lifecycle; Appendix D claim/evidence ledger maps every empirical claim to artifact |
 | **7. One novel-shape loop closed** | One reference-absent hypothesis challenged end-to-end | At least one model-generated shape grounded and challenged, survive or fail | ✅ **Done** — N2a (`density_averaging_ceiling`) challenged end-to-end; survived with boundary_delta (C4); N5 (`reorganisation_without_qr_existence`) also challenged; both admitted to vocabulary |
-| **8. Limitations / falsifiability** | Explicit failure conditions | Paper states what evidence would make GoW uninteresting or wrong | ✅ **Done** — `docs/theory/00-paper-claims.md` has 5 falsification conditions; LaTeX §11 skeleton exists; needs prose |
-| **9. Produce submission manuscript** | LaTeX + figures + bibliography | Clean compilation; artifact references; external review | ⬜ **Not started** — `paper/geometry-of-work.tex` scaffolded (452 lines); `paper/references.bib` populated (223 lines); figures not yet produced |
-| **10. Freeze arXiv v1** | Tagged paper/repo release | Every empirical number traceable to immutable artifact | ⬜ **Not started** |
+| **8. Limitations / falsifiability** | Explicit failure conditions | Paper states what evidence would make GoW uninteresting or wrong | ✅ **Done** — LaTeX §11 (7 limitations); Appendix E (F1–F5 falsification conditions with test procedures) |
+| **9. Produce submission manuscript** | LaTeX + figures + bibliography | Clean compilation; artifact references; external review | 🔄 **Partial** — `paper/geometry-of-work.tex` **compiles cleanly under tectonic** (PDF 185 KB); 3 figures done (fig:gow-schematic, fig:loop, fig:newf-arch); 2 figures still to draft (epistemic decomposition, pilot progression); external review not yet requested |
+| **10. Freeze arXiv v1** | Tagged paper/repo release | Every empirical number traceable to immutable artifact | ⬜ **Not started** — traceability is established (Appendix D); tagged release + author metadata + abstract revision still pending |
 
 ---
 
@@ -79,10 +79,10 @@ The paper is ready to submit when ALL of these are true:
 
 | # | Description | Status |
 |---|---|---|
-| 1 | Geometry of Work: work items in failure/partial/success regimes; conserved shapes; boundary-crossing delta | ⬜ draft |
-| 2 | Search in shape-space, verify in domain-space: full pipeline loop | ⬜ draft |
+| 1 | Geometry of Work: work items in failure/partial/success regimes; conserved shapes; boundary-crossing delta | ✅ `fig:gow-schematic` (TikZ, inline) |
+| 2 | Search in shape-space, verify in domain-space: full pipeline loop | ✅ `fig:loop` (TikZ, inline) |
 | 3 | Epistemic decomposition: shape × conditioning × claim role × epistemic state | ⬜ draft |
-| 4 | `newf` architecture: the 9-step GoW loop as implemented | ⬜ draft |
+| 4 | `newf` architecture: the 9-layer GoW loop as implemented | ✅ `fig:newf-arch` (TikZ, inline) |
 | 5 | Pilot progression: negative controls → curated-feature → discovery → novel-shape challenge | ⬜ draft |
 
 ---
