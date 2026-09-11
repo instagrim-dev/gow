@@ -29,6 +29,7 @@
 \usepackage{fancyhdr}            % running heads for a book-like page
 \usepackage{titlesec}           % designed section headings
 \usepackage{tocloft}            % styled table of contents
+\usepackage{needspace}          % prevent stranded section headings
 \usepackage{hyperref}           % load late
 \usepackage{cleveref}           % after hyperref
 \urlstyle{tt}
@@ -131,7 +132,7 @@
   {\normalfont\large Jonathan Maye-Hobbs\,\orcidlink{0009-0007-9831-2465}}\\[0.6em]
   {\footnotesize\color{gowsoft} Independent researcher}\\[0.2em]
   {\footnotesize\ttfamily\color{gowsoft} jonmhobbs@gmail.com}\\[0.2em]
-  {\footnotesize\color{gowsoft} ORCID: \href{https://orcid.org/0009-0007-9831-2465}{0009-0007-9831-2465}}
+  {\footnotesize\color{gowsoft} ORCID: \href{https://orcid.org/0009-0007-9831-2465}{0009-0007-9831-2465}}\\
   \vspace{\stretch{1.4}}
   {\footnotesize\color{gowsoft} September 11, 2026}\\[0.8em]
   {\color{gowaccent}\rule{0.34\textwidth}{1.2pt}}
@@ -228,9 +229,10 @@ trials, an adjudication quorum classified 10 of 23 generated shape claims as
 defensible-novel (i.e., not present in the reference ledger), collapsing into
 approximately six distinct themes; the predeclared aggregate effectiveness
 endpoint was not met. One model-generated reference-absent hypothesis
-(``density-averaging ceiling'') underwent the complete challenge lifecycle,
-weakening with a resolution-gaining boundary refinement that split one
-structural ceiling into two distinct sub-mechanisms. The experiments do not
+(``density-averaging ceiling'') was subjected to a seven-part, model-assisted
+analysis that proposed a boundary refinement splitting one structural ceiling
+into two sub-mechanisms; counterexample coverage remained incomplete and the
+mathematical arguments were not independently verified. The experiments do not
 establish mathematical validity, general discovery effectiveness, or autonomous
 theorem solving; they demonstrate the framework's epistemic behavior and a
 constituent set of capabilities.
@@ -1046,17 +1048,31 @@ the train atlas at ingestion, normalization, or signature time.
 
 \paragraph{Predeclared assessment protocol.}
 Each experiment predeclares its success criterion before generation begins.
-For curated-feature and discovery experiments, the criterion is
-\emph{criterion recovery}: at least one generated proposal must structurally
-match the withheld target move under the code-owned recovery rule
-(\texttt{recovery-rule/v1}). The classification profile is pinned per
-experiment: Pilot-003 was assessed under \texttt{classify/v1} (a post-hoc
+The two experiment families use \emph{different} assessment designs, and we do
+not impose a single description on them.
+
+For the \emph{curated-feature} experiment (Pilot-003) and the M7 blinded
+benchmark, the criterion is \emph{criterion recovery}: at least one generated
+proposal must structurally match the withheld target move under the code-owned
+recovery rule (\texttt{recovery-rule/v1}). The classification profile is pinned
+per experiment: Pilot-003 was assessed under \texttt{classify/v1} (a post-hoc
 \texttt{classify/v2} reassessment was recorded under a separate experiment
 identity and replaces nothing); the M7 blinded benchmark runs under
-\texttt{classify/v3}. The rule abstains on
-out-of-vocabulary wording rather than guessing; it does not recover proposals
-that are mechanistically distinct from the target. Judgment-level review is
-separately recorded and distinguished from rule-based assessment.
+\texttt{classify/v3}. The rule abstains on out-of-vocabulary wording rather
+than guessing; it does not recover proposals that are mechanistically distinct
+from the target.
+
+For the \emph{discovery} experiment (Pilot-004) there is no single withheld
+target to recover. Instead, a three-lane adjudication quorum classifies each
+proposal occurrence (as reference-property match, defensible-novel,
+unsupported, or over-merge/prohibited-promotion), and success is judged against
+a predeclared \emph{composite} endpoint (criteria C1--C3 in
+\cref{sec:results-pilot004}) comparing a discovery arm against a permuted
+control. Reference-property recovery and novelty classification are distinct
+measurements and are reported separately.
+
+Judgment-level review is separately recorded and distinguished from rule-based
+assessment throughout.
 
 \paragraph{Provenance.}
 Every experiment record is immutable and content-addressed. Frozen artifacts
@@ -1237,8 +1253,21 @@ Over-merge / prohibited promotion & 2 \\
 Against the predeclared criteria: C1 \emph{failed} (the required
 majority-of-runs reference recovery held in 1 of 3 D1 runs); C2 \emph{failed}
 (D1 recorded 2 over-merge/prohibited-promotion entries against D0's 0, both
-conservative fallbacks); C3 \emph{met} (D0 novel rate 36\% vs.\ D1 50\%).
+conservative fallbacks); C3, as frozen (\emph{``D0 does not match the unnamed
+properties at D1's rate''}), concerns \emph{reference-property} recovery: of
+the withheld references, L1 was matched in both arms (three D1, three D0
+occurrences, with the D0 matches partially attributable to prose retention),
+L3 was matched once and in D1 only, and L4 was not recovered by either arm. On
+the reference-recovery measurement that C3 names, D0 did not exceed D1 (D0
+recovered no reference property that D1 did not, and did not recover L3). We
+therefore do not read C3 as a positive discovery signal; it is at most weakly
+consistent with the criterion, and the composite endpoint is unmet regardless.
 Predeclared verdict: \textbf{negative / inconclusive}.
+
+\emph{Separately}, as a descriptive observation (not the C3 endpoint), the
+\texttt{defensible\_novel} classification rate was 36\% in D0 versus 50\% in D1;
+this is a novelty-classification rate, a different event from reference-property
+recovery, and we report it only as context.
 
 Of the 10 defensible-novel occurrences, five recurring themes were identified,
 including density-averaging ceiling (N2a), reorganization without existence
@@ -1249,7 +1278,8 @@ sensitivity and unstable category edges.
 \paragraph{Key distinction.}
 The experiment was \textbf{negative under its predeclared composite endpoint}
 (majority-of-runs reference recovery failed and the error-count comparison
-failed, though the novel-rate comparison was met) while
+failed; the reference-recovery comparison that C3 names did not favor D0, but
+neither did it produce a positive discovery signal) while
 \textbf{positive on a constituent capability observation}: models generated
 plausible structural hypotheses absent from the reference ledger. These two
 statements are compatible. The predeclared criteria tested method reliability;
@@ -1331,11 +1361,16 @@ two corpus instances and therefore not yet admitted.
 
 \paragraph{Significance for C4.}
 This experiment provides the evidence required for Claim C4: a reference-absent,
-model-generated structural hypothesis underwent an explicit seven-probe challenge
-lifecycle --- with per-probe evidential character recorded --- and survived with
-a resolution-gaining boundary refinement. Whether the hypothesis
-is mathematically correct is outside the scope of this paper; the claim is that
-the framework can subject such a hypothesis to explicit evidentiary challenge.
+model-generated structural hypothesis was subjected to an explicit seven-probe,
+model-assisted challenge --- with per-probe evidential character recorded ---
+that proposed a boundary refinement. Two probes were not fully discharged: the
+synthetic counterexample construction was not produced and the counterexample
+search was not completed, so the outcome is a recorded challenge with incomplete
+coverage rather than a survival across all seven probes. Whether the hypothesis
+is mathematically correct is outside the scope of this paper, and the individual
+mathematical steps were not independently verified; the claim is only that the
+framework can subject such a hypothesis to explicit, recorded evidentiary
+challenge.
 
 % ── 9. Discussion ────────────────────────────────────────────────────
 \section{Discussion}
@@ -1384,9 +1419,12 @@ The N2a challenge (Experiment D) produced a boundary delta that decomposed one
 of the GoW loop running at finer granularity: the challenge step itself is a
 recursive cartography pass, and its productive output is not merely a verdict
 but a sharper map. The delta --- rate-ceiling (es-05) vs.\ reach-ceiling (es-10)
---- was not observable from the corpus without challenge. This is evidence that
-the challenge step adds map-resolution value independent of whether the
-challenged hypothesis ultimately survives.
+--- emerged during the challenge step rather than from the initial mapping. We
+did not run an ablation isolating challenge from other operations, so we do not
+claim the distinction was unobtainable without challenge; we report only that,
+in this instance, it surfaced during challenge. This is suggestive that the
+challenge step can add map-resolution value independent of whether the
+challenged hypothesis ultimately survives, not a demonstration of its necessity.
 
 \subsection{Human use of GoW}
 
@@ -1458,9 +1496,16 @@ geometric force:
 \end{itemize}
 
 Under this reading, a heavily worked problem with many diverse, well-characterized
-failures is not hopeless but \emph{highly constrained}: $\dim(\Omega_n) \ll
-\dim(\Omega)$. Community resistance becomes an asset rather than a discouragement,
-because the residual cavity may be increasingly well defined.
+failures is \emph{plausibly} highly constrained rather than hopeless. One might
+hope that the residual region concentrates --- informally, $\dim(\Omega_n) \ll
+\dim(\Omega)$ --- but this is a proposed possibility, not an established
+consequence: excluding possibilities does not by itself lower dimension, and a
+smaller residual region can retain the original dimension. Whether accumulated
+constraints reduce the effective dimension of the residual region, and under
+what conditions, is left open here (see the discussion of $\Omega$ as a research
+problem below). Under favorable constraints, community resistance may become an
+asset rather than a discouragement, because the residual cavity may be
+increasingly well defined.
 
 This gives the three modes of failed work:
 \begin{quote}
@@ -1520,12 +1565,14 @@ be operationalized.
 
 Several research traditions inform GoW, and a careful comparison is necessary
 to identify where the contribution lies. The main finding of the comparison is
-that no single tradition combines all of the following: (1) representing prior
+that, \emph{among the traditions surveyed here}, none combines all of the
+following: (1) representing prior
 attempts as structured objects, (2) conditioning shape claims on outcome class,
 (3) inferring conserved structure across a \emph{population} of attempts, (4)
 defining boundaries between outcome regimes, (5) generating next work from the
 boundary analysis, and (6) tracking epistemic provenance of structural claims.
-The conjunction is the novelty, not any single ingredient.
+We claim this conjunction as a proposed synthesis relative to the surveyed
+work; we do not claim to have established its absence across every field.
 
 \paragraph{Metaheuristics and search-space methods.}
 Simulated annealing, genetic algorithms, and related methods operate on a
@@ -1607,12 +1654,19 @@ assumes the space is parametric and fixed; GoW allows the representation itself
 to move (normalizing and abstracting as the geometry is refined).
 
 \paragraph{LLM self-reflection, debate, and process reward models.}
-Reflexion \citep{shinn2023reflexion} and debate \citep{irving2018debate} let models
-reflect on or challenge their own single generation. Process reward models
-\citep{lightman2023process} supervise individual reasoning steps. These operate
-at the generation level, on a single attempt, in a single session. GoW operates
-at the meta level, over a persistent geometry that outlasts any single session
-and is not owned by any single model.
+Reflexion \citep{shinn2023reflexion} converts feedback into verbal
+self-reflections stored in an episodic memory buffer and reused to improve
+decisions on \emph{subsequent} trials; debate \citep{irving2018debate} has models
+challenge each other's generations. Process reward models
+\citep{lightman2023process} supervise individual reasoning steps. Reflexion is
+therefore not confined to a single attempt --- it explicitly carries reflections
+across trials. The distinction we draw is representational rather than one of
+adaptivity: Reflexion's carried object is natural-language self-feedback scoped
+to an agent's own task episodes, whereas GoW maintains a typed, provenance-carrying
+geometry of \emph{many} attempts (across models and sessions) with explicit
+epistemic status and an adversarial challenge contract, not owned by any single
+model. We do not claim these methods fail to persist information; we claim a
+different persisted object and evidence discipline.
 
 \paragraph{Lakatos and the logic of mathematical discovery.}
 Lakatos's \emph{Proofs and Refutations} \citep{lakatos1976proofs} is the
@@ -1633,7 +1687,7 @@ structural vocabulary. The two framings are dual: ISA asks which algorithm to
 use for which problem; GoW asks which structural move to make on which problem.
 
 \paragraph{The narrow novelty claim.}
-No single tradition above combines outcome-conditioned regime construction,
+None of the traditions surveyed above combines outcome-conditioned regime construction,
 conserved-structure inference over a population of heterogeneous attempts, an
 explicit boundary concept, structural delta generation, and epistemic provenance
 of structural claims. The conjunction of these properties --- particularly the
@@ -1780,8 +1834,10 @@ silently promoting claims. Empirically and narrowly (C4), in project-authored
 Erd\H{o}s--Straus study corpora, large language models proposed structural
 regularities absent from the reference ledger, shape-guided context produced at
 least one proposal judged by a blinded reviewer to match a withheld structural
-move, and one reference-absent hypothesis underwent a complete challenge lifecycle
-and survived with a resolution-gaining boundary refinement. The experiments
+move, and one reference-absent hypothesis was subjected to a seven-part,
+model-assisted challenge that proposed a boundary refinement, with counterexample
+coverage left incomplete and the mathematical steps not independently verified.
+The experiments
 establish epistemic behavior and constituent capabilities; they do not establish
 mathematical validity, general discovery effectiveness, or autonomous theorem
 solving.
@@ -1795,7 +1851,7 @@ separations load-bearing rather than advisory.
 
 The nearest intellectual ancestors --- Lakatos's \emph{Proofs and Refutations},
 CEGIS/CEGAR, and instance space analysis --- each contribute one component.
-None combines outcome-conditioned regime construction, conserved-structure
+Among these, none combines outcome-conditioned regime construction, conserved-structure
 inference over a heterogeneous attempt population, an explicit challenge
 lifecycle, and epistemic provenance of structural claims. The conjunction is
 the contribution.
@@ -1833,6 +1889,7 @@ development window limitation in \cref{sec:limitations} for what this
 timeline does and does not support.
 
 % ── Generative-AI Use Disclosure ─────────────────────────────────────
+\Needspace{5\baselineskip}
 \section*{Generative-AI Use Disclosure}
 
 Per arXiv policy, this section describes significant use of generative
@@ -1864,23 +1921,54 @@ level of any specific model's capability.
 \paragraph{In manuscript preparation.} Drafts of this manuscript were
 produced with substantial LLM assistance for outlining, prose iteration,
 LaTeX formatting, table generation, and cross-reference bookkeeping.
-Empirical numbers, frozen-artifact paths, and every citation were verified
-against the underlying record files; the claim/evidence ledger in
-\cref{app:claims} exists in part to make that verification traceable to a
-reviewer. The manuscript has undergone repeated adversarial review passes
-that identified and forced correction of specific misstatements
-(experimental parameters, challenge-claim strength, and the separation
-between implemented and proposed capabilities). The current state reflects
-those corrections; no claim in the released text is asserted more strongly
-than the underlying record supports.
+Empirical numbers, frozen-artifact paths, and citations were checked against
+the underlying record files, and the claim/evidence ledger in
+\cref{app:claims} exists in part to make that checking traceable to a
+reviewer; this checking is ongoing and has not been exhaustive --- adversarial
+review passes have repeatedly found and forced correction of specific
+misstatements (experimental parameters, challenge-claim strength, endpoint
+measurement, bibliographic details, and the separation between implemented and
+proposed capabilities), and further errors may remain. We therefore do not
+assert that every statement has been independently verified; we assert that
+identified errors were corrected and that the released text aims not to exceed
+the underlying record.
 
-\paragraph{What generative AI did not do.} It did not adjudicate its own
-outputs as evidence, did not promote model judgment to verification, did not
-author the frozen experiment protocols, and did not select or approve
-publication. The typed contracts in \texttt{newf} that separate
-\texttt{ModelJudgment} from \texttt{Verification}
-(\cref{sec:epistemic,sec:system}) are enforced in code and were exercised
-during the reported experiments.
+\paragraph{Division of work.} Generative AI assisted with protocol and
+manuscript drafting (including the experiment protocols and runbooks),
+proposal generation, and model-based review. The human author controlled
+experimental decisions, protocol approval and freezing, exception
+adjudication, and the decision to publish. Model-review outputs are recorded
+as judgments (tier-4/tier-5), not as independent verification. Concretely,
+generative AI \emph{did not} adjudicate its own outputs as authoritative
+evidence and \emph{did not} promote model judgment to verification; the typed
+contracts in \texttt{newf} that separate \texttt{ModelJudgment} from
+\texttt{Verification} (\cref{sec:epistemic,sec:system}) are enforced in code
+and were exercised during the reported experiments. Where protocols were
+AI-drafted, a human reviewed, approved, and froze them; approval authority and
+responsibility rest with the named author.
+
+% ── Evidence Availability ─────────────────────────────────────────────
+\Needspace{5\baselineskip}
+\section*{Evidence Availability}
+
+The empirical claims in this paper reference frozen artifacts under
+\path{corpus/experiments/} in the project repository. That repository is
+currently private, so the relative paths cited here support \emph{internal}
+traceability; they do not, on their own, let a reader independently audit the
+cited records. We distinguish ``traceable internally'' from ``auditable by the
+reader'' and do not conflate them.
+
+To make the cited evidence reader-accessible without releasing unrelated
+working material, the intended arrangement is a limited, immutable evidence
+supplement containing the specific frozen records the paper depends on --- the
+negative-control experiment, the Pilot-003 and Pilot-004 record directories
+(including \path{RESULT.md}, \path{CLOSURE-SCORECARD.md}, and the independent
+review results), the N2a/N5 challenge records, and the M7 blinded-run
+artifacts --- deposited in a citable archive. Until such a supplement is
+posted, the methods and results in the manuscript are intended to be
+self-contained enough to evaluate the framework's epistemic behavior, and
+access to the underlying records is available on request subject to the
+stated restrictions.
 
 % ── Bibliography ─────────────────────────────────────────────────────
 \bibliographystyle{plainnat}
@@ -2141,12 +2229,16 @@ visible to the blinded model reviewer.
 \section{Claim/Evidence Ledger}
 \label{app:claims}
 
-Every empirical sentence in this paper is traceable to a frozen artifact.
-This ledger enumerates the mapping. Traceability is necessary but not
-sufficient: the completion gate for this ledger is that every sentence
-\emph{agrees with} the identified source, verified by re-reading the artifact,
-not merely that a path exists. Artifact paths are relative to the
-project repository root.
+Every empirical sentence in this paper is intended to be traceable to a frozen
+artifact. This ledger enumerates the mapping. Traceability is necessary but not
+sufficient: the intended standard for this ledger is that every sentence
+\emph{agrees with} the identified source on re-reading the artifact, not merely
+that a path exists. Verification against this standard is ongoing rather than
+certified complete --- adversarial review has found and corrected discrepancies,
+and the standard is what we aim for, not a guarantee that no discrepancy
+remains. Artifact paths are relative to the project repository root, and (see
+the evidence-availability note below) are reader-auditable only to the extent
+the referenced records are released.
 
 \begin{center}
 \scriptsize
@@ -2164,7 +2256,7 @@ B3 rank 4 = fiberwise lattice-point / geometry-of-numbers proposal & \cref{sec:r
 Automatic assessment: no recovery in either arm under \texttt{classify/v1}; conclusion \texttt{inconclusive}; \texttt{classify/v2} reassessment post-hoc, separate identity & \cref{sec:results-pilot003} & \path{corpus/experiments/pilot-003/records/EXECUTION-RESULT.md}, \path{records/reassessment-v2/} \\
 Pilot-004: 23 proposal occurrences, three-lane quorum & \cref{sec:results-pilot004} & \path{corpus/experiments/pilot-004-discovery/quorum-result.json} \\
 7 matches\_reference / 10 defensible\_novel / 4 unsupported / 2 over\_merge & \cref{sec:results-pilot004}, \cref{app:tables} & idem. \\
-Predeclared composite endpoint not met (C1 fail: 1/3 runs; C2 fail: 2 vs 0; C3 met: 36\% vs 50\%) & \cref{sec:results-pilot004} & \path{corpus/experiments/pilot-004-discovery/records/CLOSURE-SCORECARD.md} \\
+Predeclared composite endpoint not met (C1 fail: 1/3 runs; C2 fail: 2 vs 0; C3 reference-recovery comparison did not favor D0 --- L3 recovered in D1 only, L4 not recovered; the 36\%/50\% figures are a separate novelty-classification rate, not the C3 measurement) & \cref{sec:results-pilot004} & \path{corpus/experiments/pilot-004-discovery/records/CLOSURE-SCORECARD.md} \\
 Reference-absent shape generation observed (10 defensible\_novel) & \cref{sec:results-pilot004}, \cref{sec:conclusion} & \path{docs/findings/001-unencoded-shape-generation.md} \\
 N2a (density-averaging ceiling) proposed as reference-absent hypothesis & \cref{sec:results-challenge} & \path{corpus/experiments/pilot-004-discovery/quorum-result.json} (E13, E16, E20, E23) \\
 N2a seven-probe campaign: survived with required refinement (boundary delta at C4), model-judgment strength; C2/C7 evidential character qualified & \cref{sec:results-challenge}, \cref{sec:discussion} & \path{corpus/experiments/pilot-004-discovery/records/N2a-challenge.md} incl.\ attributed reassessment \\

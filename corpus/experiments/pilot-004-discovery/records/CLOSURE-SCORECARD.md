@@ -17,9 +17,21 @@ for downstream use.
 |---|---|
 | C1: D1 recovers ≥2 of {L1,L3,L4} in ≥2/3 runs, including L3 or L4 | ❌ 1/3 runs |
 | C2: D1 over_merge + prohibited_promotion ≤ D0 | ❌ 2 vs 0 (conservative fallbacks) |
-| C3: D0 novel rate < D1 novel rate | ✓ 36% vs 50% |
+| C3 (frozen protocol): "D0 does not match the unnamed properties at D1's rate" | reference-recovery comparison — did **not** favor D0 (L3 recovered in D1 only; L4 not recovered; D0's L1 matches partially explained by prose retention) |
+
+> **Endpoint-definition note (2026-09-11).** The frozen protocol defines C3 in
+> terms of *reference-property* recovery ("the unnamed properties"). An earlier
+> row here paraphrased C3 as "D0 novel rate < D1 novel rate (36% vs 50%)" — that
+> is a *defensible-novel classification* rate, a **different measurement** from
+> reference-property recovery. The frozen protocol controls: C3 is a
+> reference-recovery comparison. On that measurement D0 did not exceed D1. The
+> 36%/50% novel rates are retained below only as a separately labeled
+> descriptive observation, not as the C3 endpoint.
 
 **Predeclared verdict: negative / inconclusive.**
+
+Descriptive-only (not the C3 endpoint): defensible-novel classification rate
+D0 36% vs D1 50%.
 
 ---
 
