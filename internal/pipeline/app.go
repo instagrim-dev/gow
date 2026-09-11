@@ -53,6 +53,8 @@ type problemStore interface {
 	ListApproaches(context.Context, string) ([]store.ApproachListItem, error)
 	GetApproachDetail(context.Context, string) (store.ApproachDetail, error)
 	GetMechanismDetail(context.Context, string) (store.ApproachDetail, error)
+	AddInterpretationClaim(context.Context, store.InterpretationClaimRow, string) (store.InterpretationClaimRow, bool, error)
+	ListInterpretationClaims(context.Context, string) ([]store.InterpretationClaimRow, error)
 	ListApproachRevisions(context.Context, string) (domain.Approach, []domain.ApproachRevision, error)
 	SeedVocabulary(context.Context, store.VocabularySeedInput) error
 	ListVocabularies(context.Context) ([]store.VocabularyRecord, error)

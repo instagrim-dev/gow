@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 32
+const currentSchemaVersion = 33
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -1025,6 +1025,20 @@ END;
 		// actually produced, and the sha256 of the supplied proposals file —
 		// so reuse never obscures which capture was assessed.
 		apply: migrateV32ExperimentExecutions,
+	},
+	{
+		version: 33,
+		// v33 (pilot-001 mapping review): interpretation_claims stores
+		// operator-adjudicated, ledger-provenanced GeneratedInterpretation
+		// claims attached to a specific mechanism. They exist so an accepted
+		// shared-property hypothesis (e.g. adjudication-ledger L1/L3/L4) can
+		// enter signature construction as an explicit ClaimInferred claim
+		// WITHOUT editing frozen source notes, altering per-field support
+		// rows, or being disguised as a label alias. Rows are immutable;
+		// status is never stored because code fixes it to `inferred` at
+		// signature-build time — an interpretation can never carry or acquire
+		// explicit source-backed status.
+		apply: migrateV33InterpretationClaims,
 	},
 }
 
@@ -3403,5 +3417,44 @@ END;
 
 func migrateV32ExperimentExecutions(ctx context.Context, tx *sql.Tx) error {
 	_, err := tx.ExecContext(ctx, experimentExecutionsSQL)
+	return err
+}
+
+// interpretationClaimsSQL is the additive DDL for operator-adjudicated
+// interpretation claims (migration v33). One immutable row per
+// (mechanism, field_kind, normalized label); provenance names the adjudication
+// artifact so a claim is always traceable to its accepted ledger entry.
+const interpretationClaimsSQL = `
+CREATE TABLE IF NOT EXISTS interpretation_claims (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  mechanism_id TEXT NOT NULL REFERENCES mechanisms(id),
+  field_kind TEXT NOT NULL CHECK (field_kind IN ('representation','operator','assumption','preserves','breaks','auxiliary_object')),
+  surface_label TEXT NOT NULL,
+  label_normalized TEXT NOT NULL,
+  provenance_ref TEXT NOT NULL,
+  basis TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  UNIQUE(mechanism_id, field_kind, label_normalized)
+);
+
+CREATE INDEX IF NOT EXISTS idx_interpretation_claims_mechanism
+  ON interpretation_claims(mechanism_id);
+
+CREATE TRIGGER IF NOT EXISTS interpretation_claims_immutable_update
+BEFORE UPDATE ON interpretation_claims
+BEGIN
+  SELECT RAISE(ABORT, 'interpretation claims are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS interpretation_claims_immutable_delete
+BEFORE DELETE ON interpretation_claims
+BEGIN
+  SELECT RAISE(ABORT, 'interpretation claims are immutable');
+END;
+`
+
+func migrateV33InterpretationClaims(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, interpretationClaimsSQL)
 	return err
 }

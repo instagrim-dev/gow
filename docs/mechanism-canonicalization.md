@@ -44,6 +44,17 @@ term has a canonical ID, a field kind, optional aliases, and an optional parent
 (for hierarchy distance). The vocabulary is seeded from an in-repo definition on
 first store use and is immutable per version at the database layer (triggers).
 
+Revisions never mutate an existing version: `mechanism/v2` is a strict
+superset of `mechanism/v1` adding the three shared-property concepts accepted
+by the pilot-001 mapping review (adjudication ledger L1/L3/L4). Those terms
+are GeneratedInterpretation hypotheses — the only source labels they alias
+are ones that directly NAME the property (es-08's obstruction label for L1,
+es-02's preserves label for L4); no alias merges two distinct operations, and
+es-12's form-indexed variant deliberately stays unresolved as a preserved
+distinction. Property claims reach signatures through `interpretation_claims`
+(migration `v33`, `docs/persistence.md`), entering as `inferred` claims with
+`interpretation:` provenance — never by editing sources.
+
 The set-valued field kinds (`representation`, `assumption`, `operator`,
 `preserves`, `breaks`, `auxiliary_object`) match the existing
 `mechanism_attributes.kind` values one-to-one, so canonicalization maps directly

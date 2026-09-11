@@ -371,3 +371,35 @@ func TestValidateReferencesAgainstVocabulary(t *testing.T) {
 		t.Fatalf("ValidateReferences(field-kind mismatch) = %v, want ErrInvalidPredicate", err)
 	}
 }
+
+// TestContainsPresenceBeatsUnresolvedCoClaims pins the contains ordering fix:
+// a RESOLVED claim matching the queried id verifies containment even when the
+// same field carries unresolved co-claims (unresolved labels can only add
+// possible members, never retract a verified one). Absence stays unknown while
+// any claim is unresolved. Before the fix, any unresolved co-claim made every
+// contains on the field unknown — zeroing mining support on real corpora where
+// some labels never resolve.
+func TestContainsPresenceBeatsUnresolvedCoClaims(t *testing.T) {
+	sig := predBaseSignature()
+	sig.Preserves = append(sig.Preserves, canon.FieldClaim{
+		FieldKind:    domain.FieldPreserves,
+		State:        domain.ResolutionUnknown,
+		SurfaceLabel: "never-resolves",
+		Status:       domain.ClaimExplicit,
+	})
+
+	// Presence: the resolved residue claim satisfies despite the unresolved
+	// co-claim.
+	p := Predicate{Schema: PredicateSchemaV1, Root: predContains(FieldPreserves, predIDResidue)}
+	if got := Evaluate(p, sig); got != VerdictSatisfies {
+		t.Fatalf("verified presence with unresolved co-claim: got %s, want satisfies", got)
+	}
+
+	// Absence: the queried id is not among the resolved claims and an
+	// unresolved claim could still be it, so the verdict stays unknown even
+	// though the field is marked complete.
+	q := Predicate{Schema: PredicateSchemaV1, Root: predContains(FieldPreserves, "core.operator.density_averaging")}
+	if got := Evaluate(q, sig); got != VerdictUnknown {
+		t.Fatalf("absence with unresolved co-claim: got %s, want unknown", got)
+	}
+}

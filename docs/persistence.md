@@ -1290,6 +1290,25 @@ reverts to an earlier cohort genuinely reverts the applied policy.
 code-derived generators, populated when the untrusted-proposal boundary
 corrects, downgrades, strips, or rejects.
 
+## Interpretation claims (migration `v33`)
+
+The pilot-001 mapping review (adjudication ledger, accepted entries L1/L3/L4)
+established that distinct mechanisms can share a failure-relevant property
+without being aliases of one another — a relationship the deterministic miner
+cannot see unless the property is encoded. `interpretation_claims` is the
+honest encoding seam: one immutable row per
+`(mechanism, field_kind, normalized label)` carrying the surface label of the
+accepted property, a **required provenance ref** naming the adjudication
+entry (e.g. `pilot-001/adjudication-ledger:L1`), and an optional
+supporting-passage basis. Rows never touch source notes or per-field support
+rows, and the table stores NO claim status: at signature-build time code
+fixes the status to `inferred` and stamps the support locator
+`interpretation:<provenance-ref>`, so a GeneratedInterpretation can never be
+stored as — or drift into — an explicit source-backed claim. The CLI surface
+is `newf interpretation add|list`; `interpretation add` refuses an empty
+provenance ref and reports the label's deterministic resolution under a
+requested vocabulary version (a `rejected` resolution refuses the claim).
+
 ## Justified field completeness (migration `v25`, admission split `v26`)
 
 The signature builder's conservative default marks every set-valued field

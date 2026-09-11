@@ -81,7 +81,28 @@ func (a *App) buildAndPersistSignature(ctx context.Context, repoStore problemSto
 		return store.SignatureRecord{}, false, err
 	}
 
-	sig := canon.BuildSignature(mechanismInputFromDetail(detail), vocab)
+	input := mechanismInputFromDetail(detail)
+
+	// Merge operator-adjudicated interpretation claims (v33). The status is
+	// FIXED here to inferred — an interpretation is a GeneratedInterpretation
+	// hypothesis and can never enter as (or be promoted to) an explicit
+	// source-backed claim. The provenance ref (adjudication-ledger entry) is
+	// carried in the support locator so the claim stays traceable without
+	// fabricating a source snapshot.
+	interp, err := repoStore.ListInterpretationClaims(ctx, mechanismID)
+	if err != nil {
+		return store.SignatureRecord{}, false, err
+	}
+	for _, ic := range interp {
+		input.Claims = append(input.Claims, canon.MechanismClaimInput{
+			FieldKind:      domain.FieldKind(ic.FieldKind),
+			SurfaceLabel:   ic.SurfaceLabel,
+			Status:         domain.ClaimInferred,
+			SupportLocator: "interpretation:" + ic.ProvenanceRef,
+		})
+	}
+
+	sig := canon.BuildSignature(input, vocab)
 
 	// Attach a run for provenance.
 	now := a.now()

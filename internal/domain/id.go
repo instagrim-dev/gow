@@ -45,6 +45,7 @@ const (
 	ExperimentIDPrefix            = "exp_"
 	SearchPolicyRevisionIDPrefix  = "spr_"
 	SearchPolicyDirectiveIDPrefix = "spd_"
+	InterpretationClaimIDPrefix   = "icl_"
 )
 
 var (
@@ -191,6 +192,10 @@ func NewInvariantRevisionID(now time.Time) string {
 
 func NewCandidateInvariantID(now time.Time) string {
 	return newID(CandidateInvariantIDPrefix, now)
+}
+
+func NewInterpretationClaimID(now time.Time) string {
+	return newID(InterpretationClaimIDPrefix, now)
 }
 
 func ValidateInvariantRevisionID(id string) error {

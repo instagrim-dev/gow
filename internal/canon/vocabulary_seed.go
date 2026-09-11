@@ -6,6 +6,14 @@ import "github.com/instagrim-dev/newf/internal/domain"
 const (
 	// VocabularyMechanismV1 is the canonical semantic spine #9 ships with.
 	VocabularyMechanismV1 = "mechanism/v1"
+	// VocabularyMechanismV2 is the pilot-001 mapping-review revision: a strict
+	// superset of mechanism/v1 adding three GeneratedInterpretation property
+	// concepts adjudicated in
+	// corpus/experiments/pilot-001/review/adjudication-ledger.json (L1/L3/L4).
+	// mechanism/v1 is immutable; this revision exists so accepted shared
+	// properties can be encoded without mutating v1 or disguising them as
+	// aliases of unrelated labels.
+	VocabularyMechanismV2 = "mechanism/v2"
 	// VocabularyMechanismV0Lossy is a deliberately over-compressed vocabulary
 	// used only to exercise the abstraction-loss regression: it merges two
 	// outcome-predictive operators into one canonical ID.
@@ -118,6 +126,57 @@ var mechanismV1Seed = vocabularyBuilder{
 	},
 }
 
+// mechanismV2Terms are the pilot-001 mapping-review additions layered on top of
+// the (unchanged) mechanism/v1 terms to form mechanism/v2. Each is an accepted
+// shared-property HYPOTHESIS (GeneratedInterpretation): the ledger established
+// the relationship from train-note passages, and support is earned only through
+// the ordinary mine -> challenge path. No alias here merges two OPERATIONS: the
+// only source labels aliased are ones that directly NAME the property itself —
+// es-08's preserves label names the L1 property (its note is the obstruction
+// analysis), and es-02's preserves label names the L4 property verbatim.
+// Deliberately NOT aliased: es-12's "polynomial-identity solvability per form"
+// (the form-indexed variant is a preserved distinction, ledger L4 contrast).
+var mechanismV2Terms = []Term{
+	{
+		CanonicalID: "domain.number_theory.property.confined_to_quadratic_nonresidues",
+		FieldKind:   domain.FieldPreserves,
+		Description: "GeneratedInterpretation (pilot-001 ledger L1, accepted): the method's coverage is carried by congruence relations that, by quadratic reciprocity, cannot catch quadratic-residue classes. Scope: es-01/es-02/es-03/es-10 style mechanisms; NOT growth-rate-bounded (es-05) or finiteness-bounded (es-07) methods.",
+		Aliases: []string{
+			"confined to quadratic nonresidues",
+			"confinement of congruence methods to non-residues",
+			"qr confinement",
+		},
+	},
+	{
+		CanonicalID: "domain.number_theory.property.class_union_construction",
+		FieldKind:   domain.FieldPreserves,
+		Description: "GeneratedInterpretation (pilot-001 ledger L3, accepted): builds a union of congruence classes each admitting a polynomial identity. The exhaustive-cover vs bounded-density-leftover distinction is deliberately NOT erased by this concept.",
+		Aliases: []string{
+			"class union construction",
+		},
+	},
+	{
+		CanonicalID: "domain.number_theory.property.identity_carried_solvability",
+		FieldKind:   domain.FieldPreserves,
+		Description: "GeneratedInterpretation (pilot-001 ledger L4, accepted): solvability inside a congruence class is supplied by a fixed polynomial identity keyed to that class.",
+		Aliases: []string{
+			"identity carried solvability",
+			"polynomial identity solvability per class",
+		},
+	},
+}
+
+// MechanismV2 builds the mechanism/v2 vocabulary: every mechanism/v1 term
+// unchanged plus the pilot-001 mapping-review property concepts.
+func MechanismV2() *Vocabulary {
+	seed := vocabularyBuilder{
+		version:  VocabularyMechanismV2,
+		terms:    append(append([]Term{}, mechanismV1Seed.terms...), mechanismV2Terms...),
+		rejected: append([]string{}, mechanismV1Seed.rejected...),
+	}
+	return mustBuild(seed)
+}
+
 // mechanismV0LossySeed merges the two distinct operators of mechanismV1 into one
 // canonical ID, deliberately erasing an outcome-predictive distinction. It is
 // used only by the abstraction-loss regression (U7 case 5).
@@ -165,7 +224,7 @@ func MechanismV0Lossy() *Vocabulary {
 
 // SeededVocabularies returns every in-repo vocabulary, used to seed persistence.
 func SeededVocabularies() []*Vocabulary {
-	return []*Vocabulary{MechanismV1(), MechanismV0Lossy()}
+	return []*Vocabulary{MechanismV1(), MechanismV2(), MechanismV0Lossy()}
 }
 
 func mustBuild(b vocabularyBuilder) *Vocabulary {

@@ -429,13 +429,21 @@ func evalNode(n Node, sig canon.MechanismSignature) Verdict {
 	switch n.Op {
 	case OpContains:
 		claims := setFieldClaims(n.Field, sig)
-		if hasUnresolvedClaims(claims) {
-			return VerdictUnknown
-		}
+		// Presence first: a RESOLVED claim matching the queried id verifies
+		// containment regardless of any unresolved co-claims — unresolved
+		// labels can only add possible further members, never retract a
+		// verified one. (Checking unresolved first made every contains on a
+		// partially-resolved field unknown, which zeroed support on any real
+		// corpus where some labels never resolve.)
 		for _, c := range claims {
-			if string(c.CanonicalID) == n.CanonicalID {
+			if c.State == domain.ResolutionResolved && string(c.CanonicalID) == n.CanonicalID {
 				return VerdictSatisfies
 			}
+		}
+		// Absence is weaker: an unresolved claim COULD be the queried id, so
+		// the verdict is unknown until every claim is resolved.
+		if hasUnresolvedClaims(claims) {
+			return VerdictUnknown
 		}
 		// Value absent. This is a verified negative ONLY when the field was
 		// exhaustively extracted; otherwise the value could be absent merely

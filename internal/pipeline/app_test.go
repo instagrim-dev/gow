@@ -283,6 +283,14 @@ func (f *fakeProblemStore) GetMechanismDetail(context.Context, string) (store.Ap
 	return store.ApproachDetail{}, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) AddInterpretationClaim(context.Context, store.InterpretationClaimRow, string) (store.InterpretationClaimRow, bool, error) {
+	return store.InterpretationClaimRow{}, false, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListInterpretationClaims(context.Context, string) ([]store.InterpretationClaimRow, error) {
+	return nil, nil
+}
+
 func (f *fakeProblemStore) ListApproachRevisions(context.Context, string) (domain.Approach, []domain.ApproachRevision, error) {
 	return domain.Approach{}, nil, errors.New("unexpected call")
 }
