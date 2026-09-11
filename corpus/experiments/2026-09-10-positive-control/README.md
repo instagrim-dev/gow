@@ -81,8 +81,12 @@ in `internal/invariant` — component coverage, distinct from this control's
 bias-recount campaign.
 
 Note: these are **input mutations**. The separate verification-contract
-requirement — disabling a guard and confirming the test catches the defect — is
-not replaced by them and remains future work.
+requirement — disabling a guard and confirming the test catches the defect —
+is satisfied by the guard-mutation block
+(`internal/pipeline/guard_mutation_test.go`,
+`internal/store/guard_mutation_test.go`): five named mutants pair each
+production guard with its exact pre-fix behavior and require the named
+semantic assertion to fail under the mutant.
 
 ## Two structural findings (narrowed)
 

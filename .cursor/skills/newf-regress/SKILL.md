@@ -163,15 +163,28 @@ ability.
 
 ## Existing anchors to extend (do not duplicate)
 
-- `internal/pipeline/reassessment_integration_test.go` — the A → B →
-  reassess-B → cohort-selection chain (steps 1–7 partially landed).
+- `internal/pipeline/reassessment_integration_test.go` — the full lifecycle:
+  A → B reassess-B (`ReassessRevisedOccurrence`), A → B → A recompression
+  (`ReemittedOccurrenceRecompresses`), retraction → selection → policy
+  (`CompressionSelectionGovernsPolicy`), and the pending interval
+  (`PendingIntervalIsNotSupport`, incl. `HISTORY_RETAINED` snapshots).
+- `internal/pipeline/guard_mutation_test.go` +
+  `internal/store/guard_mutation_test.go` — the guard-mutation block:
+  `use_origin_occurrence`, `trust_nonempty_basis`, `use_origin_break_flag`,
+  `use_max_revision_current_view`, `use_latest_revision_not_selection` — each
+  pairs the production guard with the exact pre-fix behavior and requires the
+  named semantic assertion to fail under the mutant.
 - `internal/pipeline/persisted_input_control_integration_test.go` —
   ordinary-path seeding + completeness admission regressions.
-- `internal/store/success_store_test.go` — both-direction cohort admission
-  probes (`ExcludesWhenAssessedBreakDegraded`, `AdmitsWhenAssessedBreakVerified`).
-- Gaps as of v26: the recompress/pending-interval steps (8), A → B → A replay
-  through `CompressSuccesses`, idempotent-recompress, and the guard-mutation
-  block are **not yet implemented**.
+- `internal/pipeline/frontier_admission_integration_test.go` — the untrusted
+  proposal-admission boundary (`canon.AdmitProposalSignature`).
+- `internal/store/success_store_test.go` — cohort admission probes: both
+  verdict directions, legacy binding-unknown handling, current-content
+  vs stale strength, v27 reclassification.
+- Remaining gaps: idempotent-recompress is only partially pinned (artifact
+  reuse is asserted in `CompressionSelectionGovernsPolicy`; a dedicated
+  same-manifest no-duplicate-support case is not), and no text parser/runner
+  for the DSL exists (the typed Go adapter is the implementation).
 
 ## Full syntax reference
 

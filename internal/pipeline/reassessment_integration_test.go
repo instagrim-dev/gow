@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
@@ -370,5 +371,106 @@ func TestIntegrationCompressionSelectionGovernsPolicy(t *testing.T) {
 		if d.Kind == "prefer" && d.TargetKind == "success_invariant" {
 			t.Fatalf("policy must not follow R2's stale support after retraction: %+v", d)
 		}
+	}
+}
+
+// TestIntegrationPendingIntervalIsNotSupport closes the recompression pending
+// interval (follow-on P2; newf-regress scenario matrix): after B is EMITTED
+// but before it is REASSESSED, the only available assessment (EA) belongs to
+// stale content — "we have some assessment for this proposal" must not read
+// as "we assessed this interpretation". The member is pending, contributes no
+// support, history is retained byte-for-byte, and reassessing B resolves the
+// pending state into the next revision.
+func TestIntegrationPendingIntervalIsNotSupport(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = minPreservesMiner{}
+	app.challengerFn = biasOnlyChallenger{}
+	app.generatorFn = pcGenerator{signatures: []canon.MechanismSignature{pcSignature(pcResidueLocality, "", true)}}
+
+	problemID, invID, _ := mineOneCandidate(t, ctx, app, dbPath)
+	if resp, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID}); err != nil || resp.Reports[0].StateAfter != "surviving" {
+		t.Fatalf("challenge: %v / %+v", err, resp.Reports)
+	}
+
+	// Emit A, reassess decisively, compress: supported.
+	gen1, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("generate A: %v", err)
+	}
+	proposalID := gen1.Generation.Proposals[0].ID
+	app.modelVerifierFn = provider.NewFixtureModelVerifier(verify.VerdictPartialSuccess, "medium")
+	resA, err := app.Evaluate(ctx, EvaluateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("evaluate A: %v", err)
+	}
+	supported, err := app.CompressSuccesses(ctx, SuccessCompressInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("compress supported: %v", err)
+	}
+	if supported.Revision.InvariantCount == 0 || supported.Revision.PendingReassessment != 0 {
+		t.Fatalf("assessed A must be support: %+v", supported.Revision)
+	}
+
+	// Snapshot history BEFORE the pending interval.
+	repo := openTestStore(t, ctx, dbPath)
+	defer repo.Close()
+	runABefore, err := repo.GetEvaluationRun(ctx, resA.Run.ID)
+	if err != nil {
+		t.Fatalf("snapshot run A: %v", err)
+	}
+	occ1Before, err := repo.ListGenerationOccurrenceContents(ctx, gen1.Generation.ID)
+	if err != nil {
+		t.Fatalf("snapshot occ1: %v", err)
+	}
+
+	// PENDING INTERVAL: emit B, do NOT reassess it.
+	app.generatorFn = pcGenerator{signatures: []canon.MechanismSignature{pcSignature(pcResidueLocality, "", false)}}
+	if _, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID}); err != nil {
+		t.Fatalf("generate B: %v", err)
+	}
+	pending, err := app.CompressSuccesses(ctx, SuccessCompressInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("compress pending: %v", err)
+	}
+	if pending.Revision.PendingReassessment != 1 {
+		t.Fatalf("unassessed current B with only EA available must be PENDING: %+v", pending.Revision)
+	}
+	if pending.Revision.InvariantCount != 0 {
+		t.Fatalf("a pending member must contribute NO support: %+v", pending.Revision)
+	}
+
+	// HISTORY_RETAINED: the pre-interval records re-read unchanged.
+	runAAfter, err := repo.GetEvaluationRun(ctx, resA.Run.ID)
+	if err != nil {
+		t.Fatalf("re-read run A: %v", err)
+	}
+	if !reflect.DeepEqual(runABefore, runAAfter) {
+		t.Fatalf("history must be retained unchanged:\nbefore %+v\nafter  %+v", runABefore, runAAfter)
+	}
+	occ1After, err := repo.ListGenerationOccurrenceContents(ctx, gen1.Generation.ID)
+	if err != nil {
+		t.Fatalf("re-read occ1: %v", err)
+	}
+	if !reflect.DeepEqual(occ1Before, occ1After) {
+		t.Fatal("G1 occurrence bindings must be retained unchanged")
+	}
+
+	// Reassess B: its break degrades to unknown, so the pending state resolves
+	// into the NEXT revision — excluded on evidence, no longer pending.
+	app.modelVerifierFn = provider.NewFixtureModelVerifier(verify.VerdictUnknown, "low")
+	if _, err := app.Evaluate(ctx, EvaluateInput{DBPath: dbPath, ProblemID: problemID, ProposalID: proposalID}); err != nil {
+		t.Fatalf("reassess B: %v", err)
+	}
+	resolved, err := app.CompressSuccesses(ctx, SuccessCompressInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("compress resolved: %v", err)
+	}
+	if resolved.Revision.ID == pending.Revision.ID {
+		t.Fatal("resolving the pending state must produce the next revision, not replay the pending one")
+	}
+	if resolved.Revision.PendingReassessment != 0 || resolved.Revision.InvariantCount != 0 {
+		t.Fatalf("after B's assessment the member is excluded on evidence, not pending: %+v", resolved.Revision)
 	}
 }
