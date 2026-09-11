@@ -2,6 +2,8 @@ package pipeline
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -182,10 +184,18 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 	if err != nil {
 		// Finding 3: a REJECTED attempt keeps its durable trail. The adapter
 		// returns the attempted payload envelope alongside the error; persist
-		// it on the (failed) run before failing, so audit can read back
-		// exactly what was submitted and rejected.
+		// it on the (failed) run before failing. An audit-write failure must
+		// be VISIBLE too (622fb6e finding 2): the original rejection stays the
+		// primary cause, and the retention failure is appended — the caller
+		// can always distinguish "rejected, audit saved" from "rejected,
+		// payload lost".
 		if resp.RequestPayload != "" || resp.ResponsePayload != "" {
-			_ = repoStore.RecordFailedProviderInvocation(ctx, store.FrontierProviderInvocation{
+			reqHash := ""
+			if resp.RequestPayload != "" {
+				sum := sha256.Sum256([]byte(resp.RequestPayload))
+				reqHash = hex.EncodeToString(sum[:])
+			}
+			if aerr := repoStore.RecordFailedProviderInvocation(ctx, store.FrontierProviderInvocation{
 				ID:              domain.NewProviderInvocationID(now),
 				RunID:           run.ID,
 				Role:            opts.role,
@@ -193,10 +203,13 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 				ProviderVersion: resp.Metadata.ProviderVersion,
 				ModelName:       resp.Metadata.ModelName,
 				SchemaVersion:   resp.Metadata.SchemaVersion,
+				RequestHash:     reqHash,
 				RequestPayload:  resp.RequestPayload,
 				ResponsePayload: resp.ResponsePayload,
 				CreatedAt:       now.Format(timeLayout),
-			})
+			}); aerr != nil {
+				err = fmt.Errorf("%w; additionally, the rejected payload could NOT be retained for audit: %v", err, aerr)
+			}
 		}
 		a.failRun(ctx, repoStore, run.ID, err)
 		return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
@@ -220,8 +233,19 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 			a.failRun(ctx, repoStore, run.ID, verr)
 			return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, verr
 		}
-		admittedProposals = make([]provider.FrontierProposal, 0, len(resp.Proposals))
-		for _, p := range resp.Proposals {
+		// Finding 2 (622fb6e refinement): the requested count bounds ADMISSION
+		// work too, not only scoring — the cap counts SUBMITTED proposals and
+		// truncates deterministically in wire order BEFORE any vocabulary
+		// resolution runs. The raw response retains the full set; the overflow
+		// is persisted on the generation audit. (The transport/decoding bound
+		// is separate: provider.MaxProposalResponseBytes.)
+		submitted := resp.Proposals
+		if count > 0 && len(submitted) > count {
+			admOverflow = len(submitted) - count
+			submitted = submitted[:count]
+		}
+		admittedProposals = make([]provider.FrontierProposal, 0, len(submitted))
+		for _, p := range submitted {
 			sig := p.ProposedSignature
 			if (sig.SchemaVersion != "" && sig.SchemaVersion != canon.SchemaMechanismV1) ||
 				(sig.VocabularyVersion != "" && sig.VocabularyVersion != clusterRun.VocabularyVersion) {
@@ -238,14 +262,6 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 			admitted.VocabularyVersion = clusterRun.VocabularyVersion
 			p.ProposedSignature = admitted
 			admittedProposals = append(admittedProposals, p)
-		}
-		// Finding 2: the requested count bounds admission/scoring work — never
-		// left to provider cooperation. Excess proposals are deterministically
-		// TRUNCATED in wire order (the raw response retains the full set) and
-		// the overflow is persisted on the generation audit.
-		if count > 0 && len(admittedProposals) > count {
-			admOverflow = len(admittedProposals) - count
-			admittedProposals = admittedProposals[:count]
 		}
 	}
 

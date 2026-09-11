@@ -147,21 +147,27 @@ Wire semantics:
 
 - `target_invariant_ids` names the survivors THIS proposal claims to break,
   validated against the supplied survivor set (referencing a target grants no
-  authority over its truth). **Omitted means break-all** — the strict default,
-  which a later-added unrelated survivor can legitimately refute; an explicit
-  subset keeps the claim fixed, so preserving an untargeted invariant is never
-  a refutation.
+  authority over its truth). **Omission means break-all** — the strict
+  default, which a later-added unrelated survivor can legitimately refute; an
+  explicit subset keeps the claim fixed, so preserving an untargeted
+  invariant is never a refutation; an explicitly **empty or `null` list is a
+  violation** — a target-selection step that produced nothing must not
+  silently broaden its claim to everything.
 - all three prose fields are required; supplied ordinals must be valid.
 - decoding is strict over the WHOLE payload: unknown fields (e.g. a smuggled
   `canonical_id` or `field_completeness`) and trailing content are visible
   schema violations, never silent drops. Trailing whitespace is fine.
-- the requested `--count` bounds admission/scoring: excess proposals are
-  deterministically truncated in wire order, with the overflow persisted on
-  the generation audit (`admission_overflow`) and the full set retained in the
-  raw response payload.
-- a REJECTED payload still leaves a durable invocation envelope (request, raw
-  response, provider identity) on the failed run, so audit can read back
-  exactly what was submitted and refused.
+- three separate resource bounds: the transport/decoding bound
+  (`provider.MaxProposalResponseBytes`) rejects oversized payloads before
+  parsing; the requested `--count` caps **submitted** proposals BEFORE
+  vocabulary admission (deterministic truncation in wire order, overflow
+  persisted as `admission_overflow`, full set retained in the raw response);
+  and the M7 evaluation budget bounds comparisons separately.
+- a REJECTED payload still leaves a durable invocation envelope (request +
+  hash, raw response, provider identity) on the failed run. If that audit
+  write itself fails, the returned error keeps the original rejection primary
+  and appends the retention failure — "rejected, audit saved" and "rejected,
+  payload lost" are always distinguishable.
 
 The wire deliberately CANNOT express canonical ids, resolution states, or
 field completeness. Claims enter unresolved and pass

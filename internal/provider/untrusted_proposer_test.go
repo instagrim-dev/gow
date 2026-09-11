@@ -185,6 +185,31 @@ func TestUntrustedProposerTargetAttribution(t *testing.T) {
 	if _, err := p.Generate(context.Background(), req); !errors.Is(err, ErrProposalWireViolation) {
 		t.Fatalf("an unknown target id must be a wire violation, got %v", err)
 	}
+
+	// 622fb6e finding 3: an EXPLICITLY empty or null list is a violation — a
+	// target-selection step that produced nothing must not silently broaden
+	// the claim to every invariant. Only OMISSION means break-all.
+	for name, targetLine := range map[string]string{
+		"explicit empty": `"target_invariant_ids": [],`,
+		"explicit null":  `"target_invariant_ids": null,`,
+	} {
+		raw := strings.Replace(validWire, `"mechanism": {`, targetLine+` "mechanism": {`, 1)
+		p = NewUntrustedProposer(stringTransport{raw: raw}, Metadata{})
+		if _, err := p.Generate(context.Background(), req); !errors.Is(err, ErrProposalWireViolation) {
+			t.Fatalf("%s targeting must be a wire violation, got %v", name, err)
+		}
+	}
+
+	// Duplicate ids collapse to one fixed claim.
+	dup := strings.Replace(validWire, `"mechanism": {`, `"target_invariant_ids": ["inv_a", "inv_a"], "mechanism": {`, 1)
+	p = NewUntrustedProposer(stringTransport{raw: dup}, Metadata{})
+	resp, err = p.Generate(context.Background(), req)
+	if err != nil {
+		t.Fatalf("generate dup: %v", err)
+	}
+	if got := resp.Proposals[0].TargetInvariantIDs; len(got) != 1 || got[0] != "inv_a" {
+		t.Fatalf("duplicate target ids must dedupe: %+v", got)
+	}
 }
 
 // Finding-3 regression (adapter layer): a rejected payload still returns its

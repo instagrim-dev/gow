@@ -3,6 +3,7 @@ package pipeline
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/instagrim-dev/newf/internal/domain"
 	"github.com/instagrim-dev/newf/internal/invariant"
 	"github.com/instagrim-dev/newf/internal/provider"
+	"github.com/instagrim-dev/newf/internal/store"
 )
 
 // untrustedGenerator simulates a LIVE MODEL proposer: it does NOT implement
@@ -435,6 +437,14 @@ func TestIntegrationCountBoundsExternalProposals(t *testing.T) {
 	if rec.AdmissionOverflow != 1 || rec.RequestedCount != 1 {
 		t.Fatalf("overflow disposition must be persisted (overflow=1, requested=1): overflow=%d requested=%d", rec.AdmissionOverflow, rec.RequestedCount)
 	}
+	// 622fb6e finding 1 (ordering): the cap bounds ADMISSION work, not only
+	// scoring. Each submitted proposal carries one unresolved label whose
+	// admission is one correction — a persisted count of 1 (not 2) proves
+	// vocabulary resolution ran only on the capped subset. Checking the final
+	// proposal count alone cannot catch the ordering defect.
+	if rec.AdmissionCorrected != 1 {
+		t.Fatalf("admission must run on the CAPPED subset only (corrected=1, not 2): got %d", rec.AdmissionCorrected)
+	}
 }
 
 // TestIntegrationRejectedWirePayloadIsRetained is the 512bc54 finding-3
@@ -486,5 +496,77 @@ func TestIntegrationRejectedWirePayloadIsRetained(t *testing.T) {
 	}
 	if invs[0].RequestPayload == "" || invs[0].ProviderName != "external-file" {
 		t.Fatalf("the envelope must carry request + provider identity: %+v", invs[0])
+	}
+}
+
+// auditFailingStore delegates everything except failed-invocation retention,
+// simulating a storage failure during rejection handling.
+type auditFailingStore struct {
+	problemStore
+}
+
+func (s auditFailingStore) RecordFailedProviderInvocation(context.Context, store.FrontierProviderInvocation) error {
+	return errors.New("simulated audit storage failure")
+}
+
+// TestIntegrationAuditWriteFailureIsVisible is the 622fb6e finding-2
+// regression: when the rejected payload CANNOT be retained, the returned
+// failure exposes BOTH causes — the original wire rejection stays primary and
+// the retention failure is appended — and the attempt is never represented as
+// durably captured.
+func TestIntegrationAuditWriteFailureIsVisible(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = minPreservesMiner{}
+	app.challengerFn = biasOnlyChallenger{}
+
+	problemID, invID, _ := mineOneCandidate(t, ctx, app, dbPath)
+	if resp, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID}); err != nil || resp.Reports[0].StateAfter != "surviving" {
+		t.Fatalf("challenge: %v / %+v", err, resp.Reports)
+	}
+
+	// From here on, failed-invocation retention is broken.
+	inner := app.openStoreFn
+	app.openStoreFn = func(ctx context.Context, dbPath string) (string, problemStore, error) {
+		path, repo, err := inner(ctx, dbPath)
+		if err != nil {
+			return "", nil, err
+		}
+		return path, auditFailingStore{problemStore: repo}, nil
+	}
+
+	smuggled := `{"schema_version": "proposal-wire/v1", "proposals": [{
+    "mechanism": {"preserves": ["residue locality"], "canonical_id": "core.x", "locality": "global", "construction_mode": "constructive", "uncertainty_mode": "deterministic"},
+    "structural_violation_claim": "x", "novelty_argument": "y", "cheapest_falsification_path": "z"}]}`
+	path := filepath.Join(t.TempDir(), "smuggled.json")
+	if err := os.WriteFile(path, []byte(smuggled), 0o644); err != nil {
+		t.Fatalf("write wire: %v", err)
+	}
+	_, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID, ProposalsFile: path})
+	if err == nil {
+		t.Fatal("generation must fail")
+	}
+	if !errors.Is(err, provider.ErrProposalWireViolation) {
+		t.Fatalf("the ORIGINAL rejection must stay the primary cause: %v", err)
+	}
+	if !strings.Contains(err.Error(), "could NOT be retained") || !strings.Contains(err.Error(), "simulated audit storage failure") {
+		t.Fatalf("the audit-write failure must be visible alongside the rejection: %v", err)
+	}
+
+	// The attempt is genuinely not captured: no invocation envelope exists.
+	app.openStoreFn = inner
+	repo := openTestStore(t, ctx, dbPath)
+	defer repo.Close()
+	run, found, ferr := repo.LatestRunForOperation(ctx, problemID, "frontier generate")
+	if ferr != nil || !found {
+		t.Fatalf("failed run: %v %v", ferr, found)
+	}
+	invs, ierr := repo.ListProviderInvocationsForRun(ctx, run.ID)
+	if ierr != nil {
+		t.Fatalf("list invocations: %v", ierr)
+	}
+	if len(invs) != 0 {
+		t.Fatalf("the attempt must not be represented as captured: %+v", invs)
 	}
 }

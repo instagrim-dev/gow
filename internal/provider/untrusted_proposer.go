@@ -48,16 +48,18 @@ type WireProposal struct {
 	// TargetInvariantIDs names the surviving invariants THIS proposal claims
 	// to break, validated against the request's survivor set (referencing an
 	// allowed target grants no authority over its truth — code verifies the
-	// violation). When omitted, the proposal claims to break EVERY supplied
-	// survivor — the strict documented default, which a later-added unrelated
-	// survivor can legitimately refute. An explicit subset keeps the claim
-	// fixed: preserving an untargeted invariant is never a refutation.
-	TargetInvariantIDs        []string `json:"target_invariant_ids,omitempty"`
-	StructuralViolationClaim  string   `json:"structural_violation_claim"`
-	NoveltyArgument           string   `json:"novelty_argument"`
-	CheapestFalsificationPath string   `json:"cheapest_falsification_path"`
-	ExpectedInformationGain   string   `json:"expected_information_gain,omitempty"`
-	EvaluationCost            string   `json:"evaluation_cost,omitempty"`
+	// violation). Decoded as a raw message so the three cases stay distinct:
+	// OMITTED means the strict documented break-all default; an explicit
+	// SUBSET keeps the claim fixed (preserving an untargeted invariant is
+	// never a refutation); an explicitly EMPTY or NULL list is a wire
+	// violation — a target-selection step that produced nothing must not
+	// silently broaden its claim to every invariant.
+	TargetInvariantIDs        json.RawMessage `json:"target_invariant_ids,omitempty"`
+	StructuralViolationClaim  string          `json:"structural_violation_claim"`
+	NoveltyArgument           string          `json:"novelty_argument"`
+	CheapestFalsificationPath string          `json:"cheapest_falsification_path"`
+	ExpectedInformationGain   string          `json:"expected_information_gain,omitempty"`
+	EvaluationCost            string          `json:"evaluation_cost,omitempty"`
 }
 
 // WireResponse is the full untrusted proposer payload.
@@ -106,15 +108,21 @@ func NewUntrustedProposer(transport ProposalTransport, meta Metadata) *Untrusted
 	return &UntrustedProposer{transport: transport, meta: meta}
 }
 
-// Generate fetches, strictly parses, and adapts the wire payload. Every
-// emitted proposal targets the full surviving set the request supplied (the
-// model was asked to break the surviving invariants; per-target attribution
-// is the engine's verification job, not a provider claim).
+// MaxProposalResponseBytes bounds the raw response ACCEPTED for decoding —
+// the transport/decoding resource limit, separate from the pipeline's
+// submitted-proposal cap and the scoring budget. Oversized payloads are a
+// wire violation before any parsing work.
+const MaxProposalResponseBytes = 4 << 20
+
+// Generate fetches, strictly parses, and adapts the wire payload.
 func (p *UntrustedProposer) Generate(ctx context.Context, req GenerationRequest) (GenerationResponse, error) {
 	reqRaw, _ := json.Marshal(req)
 	raw, err := p.transport.Fetch(ctx, req)
 	if err != nil {
 		return payloadEnvelope(string(reqRaw), "", p.meta), err
+	}
+	if len(raw) > MaxProposalResponseBytes {
+		return payloadEnvelope(string(reqRaw), "", p.meta), fmt.Errorf("%w: response is %d bytes (limit %d)", ErrProposalWireViolation, len(raw), MaxProposalResponseBytes)
 	}
 
 	dec := json.NewDecoder(bytes.NewReader([]byte(raw)))
@@ -163,14 +171,23 @@ func (p *UntrustedProposer) Generate(ctx context.Context, req GenerationRequest)
 				return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: proposal[%d]: invalid %s %q", ErrProposalWireViolation, i, ord.name, ord.value)
 			}
 		}
-		// Target attribution (finding 1): an explicit subset keeps the claim
-		// FIXED — validated against the survivor set, deduplicated. Omitted
-		// means the strict break-all default.
+		// Target attribution (finding 1, refined per the 622fb6e review):
+		// OMITTED -> the strict break-all default; explicit SUBSET -> the
+		// claim stays fixed, validated against the survivor set and deduped;
+		// explicit NULL or [] -> violation (an empty selection must not
+		// silently broaden the claim to everything).
 		targetIDs := allTargets
-		if len(wp.TargetInvariantIDs) > 0 {
+		if wp.TargetInvariantIDs != nil {
+			var explicit []string
+			if uerr := json.Unmarshal(wp.TargetInvariantIDs, &explicit); uerr != nil {
+				return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: proposal[%d]: target_invariant_ids: %v", ErrProposalWireViolation, i, uerr)
+			}
+			if len(explicit) == 0 {
+				return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: proposal[%d]: target_invariant_ids is explicitly empty; omit the field for break-all semantics", ErrProposalWireViolation, i)
+			}
 			seen := map[string]bool{}
-			targetIDs = make([]string, 0, len(wp.TargetInvariantIDs))
-			for _, id := range wp.TargetInvariantIDs {
+			targetIDs = make([]string, 0, len(explicit))
+			for _, id := range explicit {
 				if !allowed[id] {
 					return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: proposal[%d]: target %q is not a supplied surviving invariant", ErrProposalWireViolation, i, id)
 				}
