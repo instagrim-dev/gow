@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    name: Repository gates (gofmt, vet, build, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: gofmt (output must be empty)
+        run: |
+          out="$(gofmt -l .)"
+          if [ -n "$out" ]; then
+            echo "gofmt violations:" >&2
+            echo "$out" >&2
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go build
+        run: go build ./...
+
+      - name: go test
+        run: go test ./...
+
+  m7-reproducibility:
+    name: M7 blinded run (offline, deterministic)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # Fully offline and deterministic (deriving-fixture providers; no
+      # model/network calls). Rebuilds the M7 substrate from corpus/ in an
+      # isolated DB and runs the leakage-audited blinded experiment across
+      # all four arms. Exit status is the gate.
+      - name: Run M7 blinded benchmark
+        run: bash corpus/experiments/m7-blinded-run/run.sh

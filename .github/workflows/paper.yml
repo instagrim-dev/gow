@@ -1,0 +1,55 @@
+name: Paper
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "paper/**"
+      - ".github/workflows/paper.yml"
+  pull_request:
+    paths:
+      - "paper/**"
+      - ".github/workflows/paper.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    name: Compile manuscript (tectonic)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache tectonic bundle
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Tectonic
+          key: tectonic-${{ runner.os }}-${{ hashFiles('paper/geometry-of-work.tex') }}
+          restore-keys: |
+            tectonic-${{ runner.os }}-
+
+      - name: Install tectonic
+        run: |
+          curl -fsSL https://drop-sh.fullyjustified.net | sh
+          sudo mv tectonic /usr/local/bin/
+
+      - name: Compile
+        working-directory: paper
+        run: tectonic geometry-of-work.tex
+
+      - name: Duplicate-label guard
+        run: |
+          dups="$(grep -o '\\label{[^}]*}' paper/geometry-of-work.tex | sort | uniq -d)"
+          if [ -n "$dups" ]; then
+            echo "duplicate labels:" >&2
+            echo "$dups" >&2
+            exit 1
+          fi
+
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: geometry-of-work-pdf
+          path: paper/geometry-of-work.pdf
+          retention-days: 30
