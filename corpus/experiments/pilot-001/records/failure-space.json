@@ -1,0 +1,80 @@
+{
+  "ok": true,
+  "command": "failure-space build",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-001/newf.db",
+  "created": true,
+  "failure_space": {
+    "id": "fsp_01M27GTZQ1RV3B7KNCZJ4KPBHV",
+    "problem_id": "prb_01M27GTZHJN2V42W73DFVBY2SK",
+    "cluster_run_id": "clr_01M27GTZPNHPT5XJBF6R1H4T1H",
+    "revision": 1,
+    "distinct_family_count": 12,
+    "redundant_member_count": 0,
+    "outcomes": [
+      {
+        "outcome_class": "failure",
+        "family_count": 2
+      },
+      {
+        "outcome_class": "partial_failure",
+        "family_count": 5
+      },
+      {
+        "outcome_class": "partial_success",
+        "family_count": 5
+      }
+    ],
+    "axes": [
+      {
+        "axis_kind": "assumption",
+        "distinct_value_count": 0,
+        "under_sampled": true
+      },
+      {
+        "axis_kind": "auxiliary_object",
+        "distinct_value_count": 0,
+        "under_sampled": true
+      },
+      {
+        "axis_kind": "breaks",
+        "distinct_value_count": 0,
+        "under_sampled": true
+      },
+      {
+        "axis_kind": "operator",
+        "distinct_value_count": 1,
+        "under_sampled": true
+      },
+      {
+        "axis_kind": "outcome",
+        "distinct_value_count": 3,
+        "under_sampled": false
+      },
+      {
+        "axis_kind": "posture.construction",
+        "distinct_value_count": 2,
+        "under_sampled": false
+      },
+      {
+        "axis_kind": "posture.locality",
+        "distinct_value_count": 3,
+        "under_sampled": false
+      },
+      {
+        "axis_kind": "posture.uncertainty",
+        "distinct_value_count": 2,
+        "under_sampled": false
+      },
+      {
+        "axis_kind": "preserves",
+        "distinct_value_count": 1,
+        "under_sampled": true
+      },
+      {
+        "axis_kind": "representation",
+        "distinct_value_count": 1,
+        "under_sampled": true
+      }
+    ]
+  }
+}

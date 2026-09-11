@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "command": "invariants mine",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-001/newf.db",
+  "created": true,
+  "revision": {
+    "id": "ivr_01M27GTZQDFGC49T1SEX5ZPE5J",
+    "problem_id": "prb_01M27GTZHJN2V42W73DFVBY2SK",
+    "failure_space_id": "fsp_01M27GTZQ1RV3B7KNCZJ4KPBHV",
+    "cluster_run_id": "clr_01M27GTZPNHPT5XJBF6R1H4T1H",
+    "run_id": "run_01M27GTZQDFGC49T1SET363ZPC",
+    "miner_version": "invariant/v1+671cf5d70015c34a",
+    "predicate_schema": "invariant-predicate/v1",
+    "min_support": 2,
+    "revision": 1,
+    "candidate_count": 0,
+    "created_at": "2026-09-11T06:00:21.485921Z",
+    "candidates": null
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "ok": true,
+  "command": "experiment readiness",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-001/newf.db",
+  "problem_id": "prb_01M27GTZHJN2V42W73DFVBY2SK",
+  "ready": false,
+  "checks": [
+    {
+      "check": "failure_cohort",
+      "status": "ready",
+      "detail": "failure-side families=7 (min-support 2); partition: failure:2 partial_failure:5 partial_success:5 "
+    },
+    {
+      "check": "decisive_axis_resolution",
+      "status": "ready",
+      "detail": "signatures=12 with-resolved-decisive=1 resolved-claims=2 unresolved-claims=83"
+    },
+    {
+      "check": "completeness_admissions",
+      "status": "info",
+      "detail": "accepted=0 declared_only=0 — with zero accepted, absence-based verified violations are unreachable (assessments degrade to unknown, honestly)"
+    },
+    {
+      "check": "surviving_invariants",
+      "status": "blocked",
+      "detail": "no surviving candidate invariant; mine and run the challenge campaign first — B3 has no eligible guided target"
+    },
+    {
+      "check": "withheld_target",
+      "status": "ready",
+      "detail": "mode=blinded targets=1 resolved-claims=2 unresolved-claims=9"
+    },
+    {
+      "check": "recovery_criterion",
+      "status": "info",
+      "detail": "recovery-rule/v1 under classify/v1 (profile-sha256:f3334d08f073785c169efe798cf4e62570cba89ee2889720c192566bf5166ec3) — a reproducible classification; the pilot independently assesses whether it corresponds to the intended mechanism"
+    }
+  ],
+  "operator_attestations": [
+    "each selected failure case states a JUSTIFIED scope and outcome (method + assumptions + documented boundary), not a generic failure label",
+    "the withheld target's information was NOT supplied to the proposer (prompts and permitted context retained as evidence)",
+    "both arms' captures came from the same model/configuration under the predeclared budget policy (model identity, configuration, prompts, and capture hashes retained)",
+    "B0's capture context genuinely excluded the inferred invariants at capture time",
+    "the structural-recovery classification will be independently assessed against the intended mechanism (package 4 rubric)"
+  ]
+}

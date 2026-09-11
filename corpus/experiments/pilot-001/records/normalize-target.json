@@ -1,0 +1,24 @@
+{
+  "ok": true,
+  "command": "normalize",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-001/newf.db",
+  "problem_id": "prb_01M27GTZHW9NDHDGQ2RKZEQRY0",
+  "run_id": "run_01M27GTZKWX4Z1A29X43TZ4DXC",
+  "provider": "fixture",
+  "schema_version": "normalize/v1",
+  "results": [
+    {
+      "source_snapshot_id": "snap_01M27GTZJYKGG4YRGT3YGGSR23",
+      "status": "created",
+      "revision_id": "nrev_01M27GTZKWX4Z1A29X469EDFVX",
+      "approaches": [
+        {
+          "approach_id": "app_01M27GTZKWX4Z1A29X4MDNQSTQ",
+          "revision_id": "apr_01M27GTZKWX4Z1A29X48291W29",
+          "mechanism_id": "mech_01M27GTZKWX4Z1A29X48ZPX038",
+          "created_approach": true
+        }
+      ]
+    }
+  ]
+}

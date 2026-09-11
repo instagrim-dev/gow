@@ -1,0 +1,7 @@
+{
+  "ok": true,
+  "command": "invariant list",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-001/newf.db",
+  "state": "surviving",
+  "invariants": []
+}

@@ -1,0 +1,13 @@
+{
+  "status": "prepared_not_captured",
+  "source_commit": "a868dec70e6cb0f5ab6000ec89bbd36e12f43ec4",
+  "executable_commit": "5eea271621d9da247050b3c20b27e13f8dbc1d1d",
+  "train_problem_id": "prb_01M27GTZHJN2V42W73DFVBY2SK",
+  "target_problem_id": "prb_01M27GTZHW9NDHDGQ2RKZEQRY0",
+  "holdout_set_id": "hset_01M27GTZRCS648Z6DVZZRAWK74",
+  "database_snapshot_sha256": "1324a668ff889112c9c3368bf78b64f94fae40d1d6421cb8fcc86f2b8dc3c95d",
+  "mechanically_ready": false,
+  "operator_attestations_complete": false,
+  "capture_status": "not_captured",
+  "conclusion": null
+}

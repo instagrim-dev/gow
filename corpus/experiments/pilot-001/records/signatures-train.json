@@ -1,0 +1,80 @@
+{
+  "ok": true,
+  "command": "mechanism signature",
+  "store": "/Users/jmh/dev/gh/newf/.newf/pilot-001/newf.db",
+  "problem_id": "prb_01M27GTZHJN2V42W73DFVBY2SK",
+  "signatures": [
+    {
+      "mechanism_id": "mech_01M27GTZKATHDWEESAX4DNJZ8R",
+      "signature_id": "msig_01M27GTZMA9PBVS86J8N9MC5DG",
+      "fingerprint": "abda7563eac977cd724318e573f30fae513e953a411ca30df4adcbf1c55818b2",
+      "status": "created"
+    },
+    {
+      "mechanism_id": "mech_01M27GTZKATHDWEESAXHPJNMPK",
+      "signature_id": "msig_01M27GTZMFG1N2135SHS4AXM8G",
+      "fingerprint": "5f5996aae2a427389394526ece055fab6006f9580c6c987301fa55b32ba99e70",
+      "status": "created"
+    },
+    {
+      "mechanism_id": "mech_01M27GTZKBE5KCCDJSXA86Y727",
+      "signature_id": "msig_01M27GTZMKM8VE46CFQFGSQ4RX",
+      "fingerprint": "3600e217541d6703907adf899477be93be38f19a1e6ef73db1beaf1a239b9009",
+      "status": "created"
+    },
+    {
+      "mechanism_id": "mech_01M27GTZKCW1MPFX7WV8VWWQK4",
+      "signature_id": "msig_01M27GTZMQQ9G5ERYYN1TF0RS5",
+      "fingerprint": "27e90b642354f9beb0a2789f3509a3bdf70d7572f3c643dcb3281b06a3c7804c",
+      "status": "created"
+    },
+    {
+      "mechanism_id": "mech_01M27GTZKCW1MPFX7WVX2YQKTF",
+      "signature_id": "msig_01M27GTZMV3M87SZGBKR4TW88M",
+      "fingerprint": "d3f5ae07f6df568dc30ef05ecacf3d89fe55b266cf44f0acf256382c2132b49e",
+      "status": "created"
+    },
+    {
+      "mechanism_id": "mech_01M27GTZKDPJPGKZDF0JEHENNA",
+      "signature_id": "msig_01M27GTZN0PW8NA4G7QQTQDPJE",
+      "fingerprint": "82e9208a6356b5f0b2e23d89c3817d75574d682e3192ddb938dabede87a570de",
+      "status": "created"
+    },
+    {
+      "mechanism_id": "mech_01M27GTZKDPJPGKZDF1669W8XM",
+      "signature_id": "msig_01M27GTZN4P4Y45S59RTZBA6YW",
+      "fingerprint": "3600e217541d6703907adf899477be93be38f19a1e6ef73db1beaf1a239b9009",
+      "status": "created"
+    },
+    {
+      "mechanism_id": "mech_01M27GTZKE0FPHP8R01401F8GQ",
+      "signature_id": "msig_01M27GTZN8RJ4SYC9FHHRSAGQ5",
+      "fingerprint": "0f2074b6ccc2bc576294fcafc40e7e5344a54448b627731d253e20bae171c441",
+      "status": "created"
+    },
+    {
+      "mechanism_id": "mech_01M27GTZKF6M4F9YTGYK2XCDNF",
+      "signature_id": "msig_01M27GTZNCM2DSN4ESJKCN8XH6",
+      "fingerprint": "82e9208a6356b5f0b2e23d89c3817d75574d682e3192ddb938dabede87a570de",
+      "status": "created"
+    },
+    {
+      "mechanism_id": "mech_01M27GTZKGZ0ZF19C2EVKTYJP8",
+      "signature_id": "msig_01M27GTZNGMGJZRBZNGY8J5B4D",
+      "fingerprint": "11509cf0a5c6f65da819f2bc5c53fc7410254983b3e120d32d77bcb3a72287c2",
+      "status": "created"
+    },
+    {
+      "mechanism_id": "mech_01M27GTZKGZ0ZF19C2FCVDHDM1",
+      "signature_id": "msig_01M27GTZNMBQHA063M39QCZ9BB",
+      "fingerprint": "27e90b642354f9beb0a2789f3509a3bdf70d7572f3c643dcb3281b06a3c7804c",
+      "status": "created"
+    },
+    {
+      "mechanism_id": "mech_01M27GTZKHNMHNP8DTH194JWER",
+      "signature_id": "msig_01M27GTZNR7T3BG8BH1YYZ0NWC",
+      "fingerprint": "e474ae88c90ba10414557439222ce9186e8f422c5ca85fc4c3f8d78c26f088f9",
+      "status": "created"
+    }
+  ]
+}
