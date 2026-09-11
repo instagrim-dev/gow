@@ -230,6 +230,19 @@ func mechanismInputFromDetail(detail store.ApproachDetail) canon.MechanismInput 
 		OutcomeProvenance: claimStatusForPaths(supportByField, domain.OutcomeSupportPaths()),
 	}
 
+	// Justified completeness declarations (v25): overlaying only DECLARED
+	// fields keeps the conservative unobserved default for everything else.
+	if len(detail.FieldCompleteness) > 0 {
+		in.DeclaredCompleteness = map[domain.FieldKind]domain.FieldCompleteness{}
+		for _, fc := range detail.FieldCompleteness {
+			kind, err := domain.AttributeFieldKind(fc.Kind)
+			if err != nil {
+				continue
+			}
+			in.DeclaredCompleteness[kind] = fc.Completeness
+		}
+	}
+
 	for _, attr := range detail.Attributes {
 		fieldKind, err := domain.AttributeFieldKind(attr.Kind)
 		if err != nil {
@@ -441,6 +454,19 @@ func signatureFromRecord(rec store.SignatureRecord) canon.MechanismSignature {
 			CanonicalID:  domain.CanonicalID(b.CanonicalID),
 			Relation:     b.Relation,
 		})
+	}
+	// Rehydrate the justified completeness declarations (v25) so a persisted
+	// signature evaluates absence exactly as the build path did: declared
+	// fields are complete/partial, everything else stays unobserved.
+	if len(rec.FieldCompleteness) > 0 {
+		sig.SetFieldCompleteness = map[domain.FieldKind]domain.FieldCompleteness{}
+		for _, fc := range rec.FieldCompleteness {
+			kind, err := domain.AttributeFieldKind(fc.Kind)
+			if err != nil {
+				continue
+			}
+			sig.SetFieldCompleteness[kind] = fc.Completeness
+		}
 	}
 	return sig
 }

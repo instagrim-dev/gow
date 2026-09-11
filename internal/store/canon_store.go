@@ -269,6 +269,11 @@ type SignatureRecord struct {
 	PostureStatus     map[string]string
 	FieldClaims       []SignatureFieldClaimRow
 	Boundaries        []SignatureBoundaryRow
+	// FieldCompleteness is the mechanism's justified per-field exhaustiveness
+	// declarations (v25), loaded by mechanism id so a rehydrated signature
+	// carries the same completeness the build path used. The declarations are
+	// immutable provenance, so this read is stable across replays.
+	FieldCompleteness []domain.MechanismFieldCompleteness
 }
 
 // PersistSignatureResult reports the persisted signature and whether it was new.
@@ -357,7 +362,14 @@ INSERT INTO signature_outcomes(signature_id, class, claim_status) VALUES(?, ?, ?
 	if err := tx.Commit(); err != nil {
 		return PersistSignatureResult{}, err
 	}
-	return PersistSignatureResult{Record: record, Created: true}, nil
+	// Return the LOADED record so both paths (created / existing) carry the
+	// same derived fields — in particular the mechanism's field-completeness
+	// declarations (v25), which the caller-supplied record does not populate.
+	full, err := s.loadSignature(ctx, record.ID)
+	if err != nil {
+		return PersistSignatureResult{}, err
+	}
+	return PersistSignatureResult{Record: full, Created: true}, nil
 }
 
 func (s *Store) findSignature(ctx context.Context, mechanismID, schemaVersion, vocabVersion string) (string, bool, error) {
@@ -455,6 +467,12 @@ FROM signature_boundaries WHERE signature_id = ? ORDER BY ordinal
 	if err := outcomeRow.Scan(&rec.OutcomeClass, &rec.OutcomeStatus); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return SignatureRecord{}, err
 	}
+
+	completeness, err := s.listFieldCompleteness(ctx, rec.MechanismID)
+	if err != nil {
+		return SignatureRecord{}, err
+	}
+	rec.FieldCompleteness = completeness
 	return rec, nil
 }
 

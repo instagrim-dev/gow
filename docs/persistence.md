@@ -1242,6 +1242,22 @@ later model-judged "success" cannot displace a decisive deterministic
 completed reassessment exists. The earliest-result view stays in the
 append-only ledger.
 
+## Justified field completeness (migration `v25`)
+
+The signature builder's conservative default marks every set-valued field
+`unobserved`, so a `contains`-absence evaluates `unknown`. An extractor that
+can HONESTLY assert a field was exhaustively extracted persists that
+declaration in `mechanism_field_completeness` — one immutable row per
+`(mechanism, field_kind)` carrying `complete | partial` plus a **required
+basis** (the scope and justification, persisted verbatim for audit; a
+declaration without a basis is rejected at the schema boundary and again by a
+`CHECK`). The signature build path overlays declared fields onto the default,
+and every signature reader (`GetSignature`/`loadSignature`) rehydrates the
+declarations, so absence on a declared-complete field is a verified negative
+in mining contrast verdicts, challenge searches, and frontier violation
+checks. Undeclared fields are unaffected; the record strengthens what a
+justified claim can express without weakening the default.
+
 ## Immutable vs mutable/revisioned
 
 - Immutable: `source`, `evidence_record` (enforced with update/delete-rejecting

@@ -123,12 +123,22 @@ the answer built in. Testing the research thesis requires independently assessed
 source cases and a proposal-producing system whose outputs are not predetermined
 by the fixture.
 
-**Next milestone (per review): a persisted-input positive control** — the same
-synthetic scenario entering through ordinary ingestion and normalization,
-carrying justified completeness and vocabulary mappings through storage, then
-challenged, generated against, and assessed, with exact records asserted at each
-boundary. Deterministic proposals suffice; a live model is not needed to prove
-the interface works.
+**Next milestone (per review): a persisted-input positive control** — LANDED as
+`internal/pipeline/persisted_input_control_integration_test.go` (run with
+`go test ./internal/pipeline/ -run PersistedInput`). The same synthetic
+scenario enters through ordinary ingestion and normalization, carries
+**justified completeness declarations** (`field_completeness` +
+`completeness_basis`, persisted per `(mechanism, field)` by migration v25) and
+vocabulary mappings through storage, and is then challenged (CLI-default
+challenger; three completed negatives → surviving), generated against
+(deterministic proposal), and assessed (verified break read back; decisive
+structural recovery), with records asserted at each boundary. The proposal's
+resolved claims are asserted to agree with the pinned vocabulary's own
+resolution of their surface labels, and a same-path mutation shows that
+stripping only the declaration degrades the persisted contrast verdict from a
+decisive violation to unknown. This resolves finding 1's production caveat the
+narrow way: completeness is declarable only with a scoped, persisted basis —
+never an unqualified provider assertion.
 
 ## Validation scope
 

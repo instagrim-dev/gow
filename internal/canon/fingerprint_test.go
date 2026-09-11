@@ -153,3 +153,33 @@ func TestOutcomeInFingerprint(t *testing.T) {
 		t.Fatal("differing outcome.class produced equal fingerprints (outcome not hashed)")
 	}
 }
+
+// TestBuildSignatureDeclaredCompletenessOverlay (v25): a justified declaration
+// upgrades exactly the declared field; every undeclared field keeps the
+// conservative unobserved default, and an invalid declared value is ignored.
+func TestBuildSignatureDeclaredCompletenessOverlay(t *testing.T) {
+	t.Parallel()
+	v := MechanismV1()
+	in := baseInput("mech_a")
+	in.DeclaredCompleteness = map[domain.FieldKind]domain.FieldCompleteness{
+		domain.FieldPreserves: domain.CompletenessComplete,
+		domain.FieldOperator:  domain.FieldCompleteness("bogus"), // ignored
+	}
+	sig := BuildSignature(in, v)
+	if got := sig.FieldCompleteness(domain.FieldPreserves); got != domain.CompletenessComplete {
+		t.Fatalf("declared preserves completeness = %q, want complete", got)
+	}
+	if got := sig.FieldCompleteness(domain.FieldOperator); got != domain.CompletenessUnobserved {
+		t.Fatalf("invalid declared value must not upgrade the field, got %q", got)
+	}
+	if got := sig.FieldCompleteness(domain.FieldBreaks); got != domain.CompletenessUnobserved {
+		t.Fatalf("undeclared field must stay unobserved, got %q", got)
+	}
+
+	// The overlay must not change mechanism identity: fingerprint deliberately
+	// excludes extraction completeness (evidence revision, not identity).
+	plain := BuildSignature(baseInput("mech_a"), v)
+	if Fingerprint(sig) != Fingerprint(plain) {
+		t.Fatal("completeness overlay must not change the mechanism fingerprint")
+	}
+}

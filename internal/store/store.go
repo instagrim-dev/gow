@@ -945,6 +945,7 @@ func validateSchemaTables(ctx context.Context, tx *sql.Tx) error {
 		"problems", "runs", "sources", "source_snapshots",
 		"provider_invocations", "approaches", "normalization_revisions",
 		"approach_revisions", "mechanisms", "mechanism_attributes",
+		"mechanism_field_completeness",
 		"outcomes", "failure_boundaries", "source_supports",
 		"canonical_vocabulary", "canonical_terms", "canonical_term_aliases",
 		"canonical_rejected_terms",

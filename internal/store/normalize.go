@@ -27,9 +27,13 @@ type ApproachInput struct {
 	Revision        domain.ApproachRevision
 	Mechanism       domain.Mechanism
 	Attributes      []domain.MechanismAttribute
-	Outcome         domain.Outcome
-	Boundaries      []domain.FailureBoundary
-	Support         []domain.SourceSupport
+	// FieldCompleteness carries the extractor's JUSTIFIED per-field
+	// exhaustiveness declarations (v25). Optional; undeclared fields keep the
+	// conservative unobserved default at signature build time.
+	FieldCompleteness []domain.MechanismFieldCompleteness
+	Outcome           domain.Outcome
+	Boundaries        []domain.FailureBoundary
+	Support           []domain.SourceSupport
 }
 
 // ApproachRef is the created identity trio for one approach in a revision.
@@ -250,6 +254,22 @@ VALUES(?, ?, ?, ?)
 		}
 	}
 
+	for _, fc := range input.FieldCompleteness {
+		// Domain-validate before write: a declaration without a basis (or with
+		// a vacuous 'unobserved' value) must never reach the table.
+		declared := fc
+		declared.MechanismID = input.Mechanism.ID
+		if err := declared.Validate(); err != nil {
+			return ApproachRef{}, fmt.Errorf("field completeness declaration: %w", err)
+		}
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO mechanism_field_completeness(mechanism_id, field_kind, completeness, basis)
+VALUES(?, ?, ?, ?)
+`, declared.MechanismID, string(declared.Kind), string(declared.Completeness), declared.Basis); err != nil {
+			return ApproachRef{}, err
+		}
+	}
+
 	if _, err := tx.ExecContext(ctx, `
 INSERT INTO outcomes(id, approach_revision_id, class, boundary_statement, notes)
 VALUES(?, ?, ?, ?, ?)
@@ -456,10 +476,13 @@ type ApproachDetail struct {
 	SnapshotID    string
 	Mechanism     domain.Mechanism
 	Attributes    []domain.MechanismAttribute
-	Outcome       domain.Outcome
-	Boundaries    []domain.FailureBoundary
-	Support       []domain.SourceSupport
-	RevisionCount int
+	// FieldCompleteness is the mechanism's justified per-field exhaustiveness
+	// declarations (v25); empty when the extractor declared none.
+	FieldCompleteness []domain.MechanismFieldCompleteness
+	Outcome           domain.Outcome
+	Boundaries        []domain.FailureBoundary
+	Support           []domain.SourceSupport
+	RevisionCount     int
 }
 
 // GetApproachDetail loads the latest revision detail for an approach.
@@ -599,19 +622,51 @@ func (s *Store) approachDetailForRevision(ctx context.Context, approach domain.A
 	if err != nil {
 		return ApproachDetail{}, err
 	}
+	completeness, err := s.listFieldCompleteness(ctx, mechanism.ID)
+	if err != nil {
+		return ApproachDetail{}, err
+	}
 	return ApproachDetail{
-		Approach:      approach,
-		Revision:      revision,
-		Normalization: normalization,
-		Invocation:    invocation,
-		SnapshotID:    normalization.SnapshotID,
-		Mechanism:     mechanism,
-		Attributes:    attributes,
-		Outcome:       outcome,
-		Boundaries:    boundaries,
-		Support:       support,
-		RevisionCount: revisionCount,
+		Approach:          approach,
+		Revision:          revision,
+		Normalization:     normalization,
+		Invocation:        invocation,
+		SnapshotID:        normalization.SnapshotID,
+		Mechanism:         mechanism,
+		Attributes:        attributes,
+		FieldCompleteness: completeness,
+		Outcome:           outcome,
+		Boundaries:        boundaries,
+		Support:           support,
+		RevisionCount:     revisionCount,
 	}, nil
+}
+
+// listFieldCompleteness loads the justified per-field exhaustiveness
+// declarations for one mechanism (v25). Deterministic order by field kind.
+func (s *Store) listFieldCompleteness(ctx context.Context, mechanismID string) ([]domain.MechanismFieldCompleteness, error) {
+	rows, err := s.db.QueryContext(ctx, `
+SELECT field_kind, completeness, basis
+FROM mechanism_field_completeness WHERE mechanism_id = ? ORDER BY field_kind
+`, mechanismID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.MechanismFieldCompleteness
+	for rows.Next() {
+		var kind, completeness, basis string
+		if err := rows.Scan(&kind, &completeness, &basis); err != nil {
+			return nil, err
+		}
+		out = append(out, domain.MechanismFieldCompleteness{
+			MechanismID:  mechanismID,
+			Kind:         domain.MechanismAttributeKind(kind),
+			Completeness: domain.FieldCompleteness(completeness),
+			Basis:        basis,
+		})
+	}
+	return out, rows.Err()
 }
 
 func (s *Store) getApproach(ctx context.Context, approachID string) (domain.Approach, error) {

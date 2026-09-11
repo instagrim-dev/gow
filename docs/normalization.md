@@ -72,6 +72,37 @@ A merely different vocabulary or notation must not create mechanistic novelty:
 two approaches with different prose but the same axes/attributes are comparable
 by construction.
 
+### Justified field-completeness declarations (v25)
+
+By default every set-valued field is treated as **unobserved**: the extractor
+recorded the values it found but did not assert the list is exhaustive, so a
+later absence check evaluates `unknown`, never a verified negative. An extractor
+that CAN honestly assert exhaustiveness declares it in the payload:
+
+```json
+"mechanism": {
+  "preserves": ["residue locality"],
+  "field_completeness": { "preserves": "complete" },
+  "completeness_basis": "all entries of the declared payload's preserves list were parsed"
+}
+```
+
+Rules (enforced at the schema boundary and again at persistence):
+
+- a declaration **requires** a non-empty `completeness_basis` (persisted
+  verbatim for audit);
+- keys must be set-valued fields; values are `complete | partial` (declaring
+  `unobserved` is vacuous and rejected);
+- the declaration is scoped: *"all entries in this declared field were parsed"*
+  is enforceable; *"all properties preserved by this method were identified"*
+  is a much stronger claim — an unqualified provider must not declare it.
+
+Declarations persist per `(mechanism, field)` (immutable rows), overlay the
+conservative default at signature build time, and round-trip through
+`mechanism_signatures` readers — so `contains`-absence on a declared-complete
+field is a **verified violation** wherever that signature is evaluated
+(mining contrast verdicts, challenge searches, frontier violation checks).
+
 ## Provider role and provenance
 
 Normalization runs behind a replaceable, provider-independent interface:

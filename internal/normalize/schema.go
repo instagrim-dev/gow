@@ -52,6 +52,20 @@ type Mechanism struct {
 	ConstructionMode domain.ConstructionMode `json:"construction_mode"`
 	UncertaintyMode  domain.UncertaintyMode  `json:"uncertainty_mode"`
 	Notes            string                  `json:"notes,omitempty"`
+
+	// FieldCompleteness declares, per set-valued field (keys are
+	// MechanismAttributeKind strings: representation|assumption|operator|
+	// preserves|breaks|auxiliary_object), that the field's value list is an
+	// EXHAUSTIVE extraction — so a later absence check is a verified negative,
+	// not an epistemic gap. A declaration is a strong claim: it is admissible
+	// only with a non-empty CompletenessBasis stating its scope and
+	// justification (e.g. "all entries of the declared payload's preserves
+	// list were parsed"). An unqualified provider must not set this; leaving a
+	// field undeclared keeps the conservative default (unobserved).
+	FieldCompleteness map[string]string `json:"field_completeness,omitempty"`
+	// CompletenessBasis is the required justification for any FieldCompleteness
+	// declaration. It is persisted verbatim for audit.
+	CompletenessBasis string `json:"completeness_basis,omitempty"`
 }
 
 // Outcome is the normalized result and boundary for one approach.
@@ -164,6 +178,22 @@ func (a Approach) validate(index int) error {
 	}
 	if !a.Outcome.Class.Valid() {
 		return schemaErr("approach[%d] invalid outcome class %q", index, a.Outcome.Class)
+	}
+	// Completeness declarations are strong claims and must be scoped +
+	// justified: valid field keys, valid enum values, and a non-empty basis.
+	// "unobserved" is the default and may not be declared (a vacuous
+	// declaration would let a basis-free payload look justified).
+	if len(a.Mechanism.FieldCompleteness) > 0 && strings.TrimSpace(a.Mechanism.CompletenessBasis) == "" {
+		return schemaErr("approach[%d] field_completeness requires a non-empty completeness_basis", index)
+	}
+	for key, value := range a.Mechanism.FieldCompleteness {
+		if !domain.MechanismAttributeKind(key).Valid() {
+			return schemaErr("approach[%d] field_completeness key %q is not a set-valued mechanism field", index, key)
+		}
+		fc := domain.FieldCompleteness(value)
+		if !fc.Valid() || fc == domain.CompletenessUnobserved {
+			return schemaErr("approach[%d] field_completeness[%s] invalid value %q (complete|partial)", index, key, value)
+		}
 	}
 	for j, support := range a.Support {
 		if strings.TrimSpace(support.FieldPath) == "" {

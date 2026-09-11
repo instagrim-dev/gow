@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 24
+const currentSchemaVersion = 25
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -921,6 +921,19 @@ END;
 		// no compatible reassessment are excluded from current guidance and
 		// counted, never silently carried forward.
 		apply: migrateV24OccurrenceBindings,
+	},
+	{
+		version: 25,
+		// Justified field-completeness declarations (persisted-input positive
+		// control). The signature builder's conservative default marks every
+		// set field `unobserved`, so `contains`-absence evaluates unknown. An
+		// extractor that can HONESTLY declare a field exhaustively extracted
+		// (e.g. "all entries of the declared payload's preserves list were
+		// parsed") now persists that declaration per (mechanism, field) with a
+		// REQUIRED basis, and the signature build/rehydrate path carries it —
+		// making absence-based verified negatives reachable from persisted
+		// inputs without letting an unqualified provider assert completeness.
+		apply: migrateV25FieldCompleteness,
 	},
 }
 
@@ -3023,4 +3036,35 @@ JOIN frontier_proposal_signature_revisions r ON r.proposal_id = p.id AND r.revis
 		}
 	}
 	return nil
+}
+
+// fieldCompletenessSQL is the additive DDL for justified field-completeness
+// declarations (migration v25): one row per (mechanism, set field) an extractor
+// HONESTLY declared exhaustively extracted, with the required audit basis.
+// Immutable: a declaration is provenance, never edited in place.
+const fieldCompletenessSQL = `
+CREATE TABLE IF NOT EXISTS mechanism_field_completeness (
+  mechanism_id TEXT NOT NULL REFERENCES mechanisms(id),
+  field_kind TEXT NOT NULL CHECK (field_kind IN ('representation', 'assumption', 'operator', 'preserves', 'breaks', 'auxiliary_object')),
+  completeness TEXT NOT NULL CHECK (completeness IN ('complete', 'partial')),
+  basis TEXT NOT NULL CHECK (length(basis) > 0),
+  PRIMARY KEY(mechanism_id, field_kind)
+);
+
+CREATE TRIGGER IF NOT EXISTS mechanism_field_completeness_immutable_update
+BEFORE UPDATE ON mechanism_field_completeness
+BEGIN
+  SELECT RAISE(ABORT, 'field completeness declarations are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS mechanism_field_completeness_immutable_delete
+BEFORE DELETE ON mechanism_field_completeness
+BEGIN
+  SELECT RAISE(ABORT, 'field completeness declarations are immutable');
+END;
+`
+
+func migrateV25FieldCompleteness(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, fieldCompletenessSQL)
+	return err
 }

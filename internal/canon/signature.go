@@ -151,6 +151,12 @@ type MechanismInput struct {
 	// entries default to ClaimUnknown in BuildSignature, never explicit.
 	PostureProvenance PostureProvenance
 	OutcomeProvenance domain.ClaimStatus
+
+	// DeclaredCompleteness carries the extractor's JUSTIFIED per-field
+	// exhaustiveness declarations (persisted with a required basis, v25).
+	// BuildSignature overlays them on the conservative unobserved default —
+	// only declared fields are upgraded; an absent map changes nothing.
+	DeclaredCompleteness map[domain.FieldKind]domain.FieldCompleteness
 }
 
 // BuildSignature projects a mechanism into a versioned MechanismSignature by
@@ -177,15 +183,12 @@ func BuildSignature(input MechanismInput, vocab *Vocabulary) MechanismSignature 
 		Breaks:           []FieldClaim{},
 		AuxiliaryObjects: []FieldClaim{},
 		Boundaries:       []Boundary{},
-		// Every set field starts `unobserved`: the current extractor records the
-		// attributes it FOUND but never asserts a field was exhaustively covered,
-		// so we must not let a missing value read as a verified negative (F3/F-A).
-		// This is a deliberate default, not a nil-map accident — evaluation treats
-		// `unobserved` absence as unknown, never violates. When an extractor can
-		// honestly declare a field complete, it will populate this map (and, at
-		// that point, a persisted completeness column); until then production
-		// signatures are uniformly `unobserved` and the `complete` path is
-		// exercised only by tests that supply fully-specified synthetic fields.
+		// Every set field starts `unobserved`: the extractor records the
+		// attributes it FOUND but does not implicitly assert a field was
+		// exhaustively covered, so a missing value must not read as a verified
+		// negative (F3/F-A). An extractor that CAN honestly declare a field
+		// complete persists that declaration with a required basis (v25), and
+		// the overlay below upgrades exactly the declared fields.
 		SetFieldCompleteness: map[domain.FieldKind]domain.FieldCompleteness{
 			domain.FieldRepresentation:  domain.CompletenessUnobserved,
 			domain.FieldOperator:        domain.CompletenessUnobserved,
@@ -194,6 +197,12 @@ func BuildSignature(input MechanismInput, vocab *Vocabulary) MechanismSignature 
 			domain.FieldBreaks:          domain.CompletenessUnobserved,
 			domain.FieldAuxiliaryObject: domain.CompletenessUnobserved,
 		},
+	}
+
+	for kind, declared := range input.DeclaredCompleteness {
+		if _, known := sig.SetFieldCompleteness[kind]; known && declared.Valid() {
+			sig.SetFieldCompleteness[kind] = declared
+		}
 	}
 
 	for _, claim := range input.Claims {

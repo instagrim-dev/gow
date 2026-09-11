@@ -119,3 +119,36 @@ func TestResultValidateSkippedAcceptsTypedReason(t *testing.T) {
 		t.Fatalf("Validate() error = %v", err)
 	}
 }
+
+// Field-completeness declarations are strong claims: admissible only with a
+// non-empty basis, valid set-field keys, and non-vacuous values (v25).
+func TestResultValidateFieldCompletenessRequiresBasis(t *testing.T) {
+	t.Parallel()
+	approach := validApproach()
+	approach.Mechanism.FieldCompleteness = map[string]string{"preserves": "complete"}
+	result := Result{SchemaVersion: SchemaVersion, Approaches: []Approach{approach}}
+	if err := result.Validate(); !errors.Is(err, ErrSchemaViolation) {
+		t.Fatalf("a basis-free completeness declaration must be rejected, got %v", err)
+	}
+
+	approach.Mechanism.CompletenessBasis = "all entries of the declared payload's preserves list were parsed"
+	result = Result{SchemaVersion: SchemaVersion, Approaches: []Approach{approach}}
+	if err := result.Validate(); err != nil {
+		t.Fatalf("a justified declaration must validate, got %v", err)
+	}
+}
+
+func TestResultValidateFieldCompletenessRejectsBadKeyAndVacuousValue(t *testing.T) {
+	t.Parallel()
+	approach := validApproach()
+	approach.Mechanism.CompletenessBasis = "basis"
+	approach.Mechanism.FieldCompleteness = map[string]string{"outcome": "complete"} // not a set field
+	if err := (Result{SchemaVersion: SchemaVersion, Approaches: []Approach{approach}}).Validate(); !errors.Is(err, ErrSchemaViolation) {
+		t.Fatalf("a non-set-field key must be rejected, got %v", err)
+	}
+
+	approach.Mechanism.FieldCompleteness = map[string]string{"preserves": "unobserved"} // vacuous
+	if err := (Result{SchemaVersion: SchemaVersion, Approaches: []Approach{approach}}).Validate(); !errors.Is(err, ErrSchemaViolation) {
+		t.Fatalf("a vacuous 'unobserved' declaration must be rejected, got %v", err)
+	}
+}

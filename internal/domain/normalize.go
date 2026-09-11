@@ -365,6 +365,36 @@ func (k MechanismAttributeKind) Valid() bool {
 	}
 }
 
+// MechanismFieldCompleteness is one persisted, justified completeness
+// declaration: the extractor asserts that a set-valued mechanism field's value
+// list is an exhaustive extraction (so a later absence check is a verified
+// negative rather than an epistemic gap). It exists ONLY with a basis — the
+// scope and justification for the claim — persisted verbatim for audit.
+// Undeclared fields keep the conservative default (unobserved); this record
+// never weakens epistemic discipline, it makes a stronger claim auditable.
+type MechanismFieldCompleteness struct {
+	MechanismID  string
+	Kind         MechanismAttributeKind
+	Completeness FieldCompleteness
+	Basis        string
+}
+
+func (c MechanismFieldCompleteness) Validate() error {
+	if err := ValidateMechanismID(c.MechanismID); err != nil {
+		return err
+	}
+	if !c.Kind.Valid() {
+		return fmt.Errorf("invalid field completeness kind %q", c.Kind)
+	}
+	if !c.Completeness.Valid() || c.Completeness == CompletenessUnobserved {
+		return fmt.Errorf("invalid declared completeness %q (complete|partial)", c.Completeness)
+	}
+	if strings.TrimSpace(c.Basis) == "" {
+		return fmt.Errorf("field completeness declaration requires a non-empty basis")
+	}
+	return nil
+}
+
 // Canonical SourceSupport.FieldPath values. FieldPath is free-form in the #7
 // schema, but a stable canonical vocabulary is required so the #9 read side can
 // join support rows to the fields they justify without silently defaulting an

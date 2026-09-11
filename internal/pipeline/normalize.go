@@ -313,6 +313,25 @@ func buildApproachInputs(revision domain.NormalizationRevision, snapshotID strin
 
 		attributes := buildAttributes(mechanismID, approach.Mechanism)
 
+		// Justified completeness declarations (v25): schema validation already
+		// enforced valid keys/values + a non-empty basis; sort for determinism.
+		var completeness []domain.MechanismFieldCompleteness
+		if len(approach.Mechanism.FieldCompleteness) > 0 {
+			kinds := make([]string, 0, len(approach.Mechanism.FieldCompleteness))
+			for kind := range approach.Mechanism.FieldCompleteness {
+				kinds = append(kinds, kind)
+			}
+			sort.Strings(kinds)
+			for _, kind := range kinds {
+				completeness = append(completeness, domain.MechanismFieldCompleteness{
+					MechanismID:  mechanismID,
+					Kind:         domain.MechanismAttributeKind(kind),
+					Completeness: domain.FieldCompleteness(approach.Mechanism.FieldCompleteness[kind]),
+					Basis:        approach.Mechanism.CompletenessBasis,
+				})
+			}
+		}
+
 		boundaries := make([]domain.FailureBoundary, 0, len(approach.Outcome.BoundaryConditions))
 		for _, condition := range approach.Outcome.BoundaryConditions {
 			boundaries = append(boundaries, domain.FailureBoundary{
@@ -344,8 +363,9 @@ func buildApproachInputs(revision domain.NormalizationRevision, snapshotID strin
 				Description:             approach.Description,
 				CreatedAt:               now,
 			},
-			Mechanism:  mechanism,
-			Attributes: attributes,
+			Mechanism:         mechanism,
+			Attributes:        attributes,
+			FieldCompleteness: completeness,
 			Outcome: domain.Outcome{
 				ID:                 outcomeID,
 				ApproachRevisionID: approachRevisionID,
