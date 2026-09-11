@@ -42,8 +42,8 @@ $$
 | **6. Finish empirical evidence** | Experiment section + frozen artifacts | Claims match what Pilot-003/004 establish; no result promoted beyond evidence | ✅ **Done** — §8A negative controls, §8B Pilot-003, §8C Pilot-004 (7/10/4/2 counts from quorum-result.json), §8D N2a challenge lifecycle; Appendix D claim/evidence ledger maps every empirical claim to artifact |
 | **7. One novel-shape loop closed** | One reference-absent hypothesis challenged end-to-end | At least one model-generated shape grounded and challenged, survive or fail | ✅ **Done** — N2a (`density_averaging_ceiling`) challenged end-to-end; survived with boundary_delta (C4); N5 (`reorganisation_without_qr_existence`) also challenged; both admitted to vocabulary |
 | **8. Limitations / falsifiability** | Explicit failure conditions | Paper states what evidence would make GoW uninteresting or wrong | ✅ **Done** — LaTeX §11 (7 limitations); Appendix E (F1–F5 falsification conditions with test procedures) |
-| **9. Produce submission manuscript** | LaTeX + figures + bibliography | Clean compilation; artifact references; external review | 🔄 **Partial** — `paper/geometry-of-work.tex` **compiles cleanly under tectonic** (PDF 185 KB); 3 figures done (fig:gow-schematic, fig:loop, fig:newf-arch); 2 figures still to draft (epistemic decomposition, pilot progression); external review not yet requested |
-| **10. Freeze arXiv v1** | Tagged paper/repo release | Every empirical number traceable to immutable artifact | ⬜ **Not started** — traceability is established (Appendix D); tagged release + author metadata + abstract revision still pending |
+| **9. Produce submission manuscript** | LaTeX + figures + bibliography | Clean compilation; artifact references; external review | 🔄 **Mostly done** — `paper/geometry-of-work.tex` **compiles cleanly under tectonic** (PDF ~200 KB, 28 pages); all 5 mandatory figures done as inline TikZ (`fig:gow-schematic`, `fig:loop`, `fig:epistemic-decomp`, `fig:newf-arch`, `fig:progression`); revised abstract in place; acknowledgments template drafted (specific attributions pending); author metadata and external review pending |
+| **10. Freeze arXiv v1** | Tagged paper/repo release | Every empirical number traceable to immutable artifact | 🔄 **Ready-modulo-user** — traceability is established (Appendix D); only user-owned steps remain: author metadata, external review pass, git tag |
 
 ---
 
@@ -81,9 +81,9 @@ The paper is ready to submit when ALL of these are true:
 |---|---|---|
 | 1 | Geometry of Work: work items in failure/partial/success regimes; conserved shapes; boundary-crossing delta | ✅ `fig:gow-schematic` (TikZ, inline) |
 | 2 | Search in shape-space, verify in domain-space: full pipeline loop | ✅ `fig:loop` (TikZ, inline) |
-| 3 | Epistemic decomposition: shape × conditioning × claim role × epistemic state | ⬜ draft |
+| 3 | Epistemic decomposition: shape × conditioning × claim role × epistemic state | ✅ `fig:epistemic-decomp` (TikZ, inline) |
 | 4 | `newf` architecture: the 9-layer GoW loop as implemented | ✅ `fig:newf-arch` (TikZ, inline) |
-| 5 | Pilot progression: negative controls → curated-feature → discovery → novel-shape challenge | ⬜ draft |
+| 5 | Pilot progression: negative controls → curated-feature → discovery → novel-shape challenge | ✅ `fig:progression` (TikZ, inline) |
 
 ---
 

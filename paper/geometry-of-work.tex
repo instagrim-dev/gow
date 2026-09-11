@@ -24,7 +24,9 @@
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, backgrounds, calc}
+\usepackage{url}
+\urlstyle{tt}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, backgrounds, calc, decorations.pathreplacing}
 
 % ── Theorem environments ──────────────────────────────────────────────
 \newtheorem{definition}{Definition}[section]
@@ -58,24 +60,29 @@ When repeated work on a hard problem stops producing information, we propose
 treating the work itself as data. \emph{Geometry of Work} (GoW) represents a
 history of problem-solving attempts as a structured search space---a
 \emph{shape-space}---whose regions, boundaries, and conserved properties contain
-information about how search is failing or progressing. The methodology
-separates structural shape from outcome and epistemic status, searches by
-inferring and traversing regime boundaries in shape-space, and projects proposed
-structural moves back into the original domain for verification. We formalize
-the GoW loop (\textsc{Map}~$\to$~\textsc{Boundary}~$\to$~\textsc{Move}~$\to$
-\textsc{Project}~$\to$~\textsc{Measure}), describe \texttt{newf}---an
-instrumented realization with typed representations, immutable provenance, and
-adversarial challenge---and report exploratory experiments on an Erd\H{o}s--Straus
-study corpus. In curated-feature trials, shape-guided context produced proposals
-judged closer to a withheld structural move. In discovery trials, large language
-models proposed structural regularities absent from the reference ledger, though
-the predeclared aggregate endpoint was not met. One model-generated hypothesis
-underwent a full challenge lifecycle, surviving with a resolution-gaining
-boundary refinement. The experiments do not establish mathematical validity or
-general discovery effectiveness; they demonstrate the framework's epistemic
-behavior and constituent capabilities.
-
-\todo{Revise abstract after all sections are drafted.}
+information about how search is failing or progressing. GoW separates structural
+shape from outcome and epistemic status, mines the geometry for boundaries
+between outcome regimes, proposes a structural move $\Delta S$ that crosses a
+boundary, and projects the move back into the original domain for verification.
+We formalize the GoW loop
+(\textsc{Map}$\to$\textsc{Boundary}$\to$\textsc{Move}$\to$\textsc{Project}$\to$
+\textsc{Measure}), describe \texttt{newf}---an instrumented realization with
+typed representations, immutable provenance, and an adversarial challenge
+lifecycle---and report exploratory experiments on an Erd\H{o}s--Straus study
+corpus organized as a four-experiment progression. In negative controls, the
+system abstains rather than manufacturing structure when preconditions are
+absent. In curated-feature trials, shape-guided context produced the only
+proposal a blinded reviewer judged a full criterion recovery. In discovery
+trials, an adjudication quorum classified 10 of 23 generated shape claims as
+defensible-novel (i.e., not present in the reference ledger), collapsing into
+approximately six distinct themes; the predeclared aggregate effectiveness
+endpoint was not met. One model-generated reference-absent hypothesis
+(``density-averaging ceiling'') underwent the complete challenge lifecycle,
+weakening with a resolution-gaining boundary refinement that split one
+structural ceiling into two distinct sub-mechanisms. The experiments do not
+establish mathematical validity, general discovery effectiveness, or autonomous
+theorem solving; they demonstrate the framework's epistemic behavior and a
+constituent set of capabilities.
 \end{abstract}
 
 % ── 1. Introduction ──────────────────────────────────────────────────
@@ -401,6 +408,44 @@ where the four components are orthogonal axes, not a single confidence scalar.
     \emph{weakened}, \emph{falsified}, or \emph{operator-attested}.
 \end{itemize}
 \end{definition}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  every node/.style={font=\small},
+  axis/.style={draw, thick, rounded corners=2pt, minimum width=32mm,
+               minimum height=6mm, align=center},
+  shapebox/.style={axis, fill=blue!8},
+  cond/.style={axis, fill=orange!12},
+  role/.style={axis, fill=green!10},
+  state/.style={axis, fill=violet!8},
+  ex/.style={font=\scriptsize\itshape, align=center, text=black!65},
+  ->,>={Stealth[length=2mm]},
+]
+\node[shapebox] (sh) {shape};
+\node[cond, below=6mm of sh] (co) {conditioning};
+\node[role, below=6mm of co] (ro) {role};
+\node[state, below=6mm of ro] (st) {epistemic state};
+
+\node[ex, right=8mm of sh] {``polylog rate ceiling''\\ (outcome-blind description)};
+\node[ex, right=8mm of co] {failure\_conditioned $\mid$ success\_conditioned\\ mixed $\mid$ frontier\_conditioned};
+\node[ex, right=8mm of ro] {regularity $\mid$ obstruction\\ enabling\_condition $\mid$ boundary\_hypothesis};
+\node[ex, right=8mm of st] {proposed $\to$ challenged $\to$ surviving\\ (or weakened, split, falsified, attested)};
+
+% Cartesian-product bracket
+\draw[decorate, decoration={brace, amplitude=6pt}]
+  ($(sh.north west)+(-2mm,2mm)$) -- ($(st.south west)+(-2mm,-2mm)$)
+  node[midway, left=8pt, font=\small, align=center]
+  {ShapeClaim\\ = shape\\ $\times$ conditioning\\ $\times$ role\\ $\times$ state};
+\end{tikzpicture}
+\caption{Epistemic decomposition of a shape claim. The four axes are
+orthogonal: a claim's meaning changes when any axis changes, and no axis can
+be inferred from the others. ``Candidate'' is a value on the epistemic-state
+axis (namely, \emph{proposed}), not a kind of shape claim. The failure modes
+of the four separations (\S\ref{sec:epistemic}) each correspond to silently
+collapsing two axes into one.}
+\label{fig:epistemic-decomp}
+\end{figure}
 
 \subsection{The four separations}
 
@@ -817,6 +862,43 @@ section is traceable to a specific file and row in those artifacts.
 \section{Results}
 \label{sec:results}
 
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  every node/.style={font=\scriptsize},
+  exp/.style={draw, rounded corners=2pt, minimum width=28mm,
+              minimum height=14mm, align=center, fill=blue!5},
+  negexp/.style={exp, fill=red!8},
+  posexp/.style={exp, fill=green!8},
+  mixexp/.style={exp, fill=yellow!12},
+  ->,>={Stealth[length=2mm]}, thick,
+]
+\node[negexp] (A) {\textbf{A. Negative controls}\\ \scriptsize empty failure pop.\\ \scriptsize M7 Stage 1 (pristine)\\[1pt] \tiny \emph{inconclusive}};
+\node[mixexp, right=8mm of A] (B) {\textbf{B. Curated features}\\ \scriptsize Pilot-003 B0/B1/B3\\ \scriptsize target withheld\\[1pt] \tiny \emph{rule: inconclusive}\\ \tiny \emph{review: 1 recovery (B3)}};
+\node[mixexp, right=8mm of B] (C) {\textbf{C. Shape discovery}\\ \scriptsize Pilot-004 (23 entries)\\ \scriptsize reference withheld\\[1pt] \tiny \emph{aggregate criterion:}\\ \tiny \emph{not met}\\ \tiny \emph{10 defensible novel}};
+\node[posexp, right=8mm of C] (D) {\textbf{D. Novel challenge}\\ \scriptsize N2a: 7-probe lifecycle\\ \scriptsize reference-absent\\[1pt] \tiny \emph{disposition: weakened}\\ \tiny \emph{boundary\_delta @ C4}};
+
+\draw (A) -- (B);
+\draw (B) -- (C);
+\draw (C) -- (D);
+
+\node[below=6mm of A, font=\tiny, text=black!60, align=center]
+  {\emph{tests epistemic}\\ \emph{abstention}};
+\node[below=6mm of B, font=\tiny, text=black!60, align=center]
+  {\emph{tests shape-guided}\\ \emph{proposal quality}};
+\node[below=6mm of C, font=\tiny, text=black!60, align=center]
+  {\emph{tests reference-absent}\\ \emph{shape generation}};
+\node[below=6mm of D, font=\tiny, text=black!60, align=center]
+  {\emph{tests challenge}\\ \emph{lifecycle on a novel}\\ \emph{hypothesis}};
+\end{tikzpicture}
+\caption{Pilot progression. Each experiment addresses a different constituent
+capability, cumulatively supporting Claim~C4 without any single experiment
+being asked to establish it alone. Negative-outcome experiments (A, C's
+predeclared aggregate endpoint) are as informative as positive-outcome
+experiments (B's blinded review, D's completed lifecycle).}
+\label{fig:progression}
+\end{figure}
+
 \subsection{Experiment A: Negative controls}
 \label{sec:results-negative}
 
@@ -973,7 +1055,7 @@ All seven probes were completed:
     consistent way; contrast stable.
   \item \textbf{C4} (lower abstraction --- splits?): \textbf{Partial split found.}
     es-05 (Bombieri--Vinogradov / Titchmarsh--Korobov type) exhibits a
-    density-rate ceiling; es-10 (\texttt{confined\_to\_quadratic\_nonresidues})
+    density-rate ceiling; es-10 (\path{confined_to_quadratic_nonresidues})
     exhibits a reach ceiling. These are distinct sub-mechanisms. A boundary
     delta $\delta_{\text{N2a}}$ was identified: \emph{rate-framing vs.\
     reach-framing of the same exhaustion argument.}
@@ -1459,7 +1541,15 @@ exploratory evidence sufficient to make the framework refereeable.
 
 % ── Acknowledgments ──────────────────────────────────────────────────
 \section*{Acknowledgments}
-\todo{Acknowledge tools, models, reviewers.}
+\todo{Acknowledge specific reviewers and contributors before submission.}
+The design and evaluation of \texttt{newf} benefited from the frozen artifact
+lineage of the Erd\H{o}s--Straus study corpus, from the adjudication quorum
+protocol that surfaced the N2a and N5 boundary refinements, and from repeated
+adversarial review passes that identified specific evidence-laundering risks
+in the earlier drafts of this manuscript. Large-language-model providers used
+for generation and adjudication are recorded per-invocation in the frozen
+experiment artifacts cited in \cref{app:claims}; specific provider identities
+are not load-bearing for any claim in this paper.
 
 % ── Bibliography ─────────────────────────────────────────────────────
 \bibliographystyle{plainnat}
@@ -1565,8 +1655,8 @@ Code-owned; abstains on out-of-vocabulary wording; does not manufacture verdicts
 (1) Automatic rule-based recovery classification. (2) Blinded model reviewer
 scoring proposals against target without arm labels.
 
-\paragraph{Frozen artifacts.} \texttt{corpus/experiments/pilot-003/}, including
-\texttt{captures/}, \texttt{records/}, and \texttt{records/INDEPENDENT-REVIEW-RESULT.md}.
+\paragraph{Frozen artifacts.} \path{corpus/experiments/pilot-003/}, including
+\path{captures/}, \path{records/}, and \path{records/INDEPENDENT-REVIEW-RESULT.md}.
 
 \subsection{Pilot-004 (Shape discovery)}
 
@@ -1586,10 +1676,12 @@ independent adjudication subagent scoring the same 23 proposal occurrences.
 Aggregation rule: 2-of-3 majority determines \texttt{cemented\_category};
 non-unanimous outcomes recorded as \texttt{disputed}.
 
-\paragraph{Frozen artifacts.} \texttt{corpus/experiments/pilot-004-discovery/}:
-\texttt{quorum-result.json} (23 entries, all lane votes), \texttt{quorum-adjudication-packet.json},
-\texttt{records/RESULT.md}, \texttt{records/CLOSURE-SCORECARD.md}, and per-lane
-vote files.
+\paragraph{Frozen artifacts.}
+\path{corpus/experiments/pilot-004-discovery/} containing
+\path{quorum-result.json} (23 entries, all lane votes),
+\path{quorum-adjudication-packet.json},
+\path{records/RESULT.md}, \path{records/CLOSURE-SCORECARD.md},
+and per-lane vote files.
 
 \subsection{M7 blinded benchmark}
 
@@ -1672,7 +1764,7 @@ themes:
   \item \textbf{N2b} reach-ceiling variant (subset of N2a's population).
   \item \textbf{N3} locality without global coupling (E08).
   \item \textbf{N5} reorganization without existence forcing (E15, E21) ---
-    also challenged (\texttt{records/N5-challenge.md}).
+    also challenged (\path{records/N5-challenge.md}).
   \item \textbf{N6} annotation-pattern observation (E15, subject to scope
     correction).
 \end{itemize}
@@ -1704,29 +1796,30 @@ This ledger enumerates the mapping. Artifact paths are relative to the
 project repository root.
 
 \begin{center}
-\small
-\begin{tabular}{p{0.42\linewidth}lp{0.32\linewidth}}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{p{0.44\linewidth}lp{0.30\linewidth}}
 \toprule
 Claim / observation in main text & Section & Artifact \\
 \midrule
-System refuses to manufacture failure support when none exists & \cref{sec:results-negative} & \texttt{corpus/experiments/2026-09-10-esr-negative-control/} \\
-M7 Stage 1: pristine target yields \texttt{inconclusive} for all arms & \cref{sec:results-negative} & \texttt{corpus/experiments/m7-blinded-run/RESULT.md} \\
-M7 Stage 2: operator-attested target yields \texttt{no\_recovery} & \cref{sec:results-negative} & \texttt{corpus/experiments/m7-blinded-run/compare-b0-b3.json} \\
-B0 7 proposals, 0 full recovery, 1 rank-2 partial & \cref{sec:results-pilot003} & \texttt{corpus/experiments/pilot-003/records/INDEPENDENT-REVIEW-RESULT.md} \\
+System refuses to manufacture failure support when none exists & \cref{sec:results-negative} & \path{corpus/experiments/2026-09-10-esr-negative-control/} \\
+M7 Stage 1: pristine target yields \texttt{inconclusive} for all arms & \cref{sec:results-negative} & \path{corpus/experiments/m7-blinded-run/RESULT.md} \\
+M7 Stage 2: operator-attested target yields \texttt{no\_recovery} & \cref{sec:results-negative} & \path{corpus/experiments/m7-blinded-run/compare-b0-b3.json} \\
+B0 7 proposals, 0 full recovery, 1 rank-2 partial & \cref{sec:results-pilot003} & \path{corpus/experiments/pilot-003/records/INDEPENDENT-REVIEW-RESULT.md} \\
 B3 6 proposals, 1 full recovery (rank 4), 1 rank-5 partial & \cref{sec:results-pilot003} & idem. \\
-B3 rank 4 = fiberwise lattice-point / geometry-of-numbers proposal & \cref{sec:results-pilot003,sec:example} & idem., cross-checked \texttt{records/CLOSURE.md} \\
-Automatic recovery rule abstained (out-of-vocabulary wording) & \cref{sec:results-pilot003} & \texttt{corpus/experiments/pilot-003/records/reassessment-v2/} \\
-Pilot-004: 23 proposal occurrences, three-lane quorum & \cref{sec:results-pilot004} & \texttt{corpus/experiments/pilot-004-discovery/quorum-result.json} \\
+B3 rank 4 = fiberwise lattice-point / geometry-of-numbers proposal & \cref{sec:results-pilot003,sec:example} & idem., cross-checked \path{records/CLOSURE.md} \\
+Automatic recovery rule abstained (out-of-vocabulary wording) & \cref{sec:results-pilot003} & \path{corpus/experiments/pilot-003/records/reassessment-v2/} \\
+Pilot-004: 23 proposal occurrences, three-lane quorum & \cref{sec:results-pilot004} & \path{corpus/experiments/pilot-004-discovery/quorum-result.json} \\
 7 matches\_reference / 10 defensible\_novel / 4 unsupported / 2 over\_merge & \cref{sec:results-pilot004}, \cref{app:tables} & idem. \\
-Predeclared success criterion not met (C2 fail: 2 vs 0) & \cref{sec:results-pilot004} & \texttt{corpus/experiments/pilot-004-discovery/records/CLOSURE-SCORECARD.md} \\
-Reference-absent shape generation observed (10 defensible\_novel) & \cref{sec:results-pilot004}, \cref{sec:conclusion} & \texttt{docs/findings/001-unencoded-shape-generation.md} \\
-N2a (density-averaging ceiling) proposed as reference-absent hypothesis & \cref{sec:results-challenge} & \texttt{corpus/experiments/pilot-004-discovery/quorum-result.json} (E13, E16, E20, E23) \\
-N2a survived 7-probe challenge with boundary delta at C4 & \cref{sec:results-challenge}, \cref{sec:discussion} & \texttt{corpus/experiments/pilot-004-discovery/records/N2a-challenge.md} \\
+Predeclared success criterion not met (C2 fail: 2 vs 0) & \cref{sec:results-pilot004} & \path{corpus/experiments/pilot-004-discovery/records/CLOSURE-SCORECARD.md} \\
+Reference-absent shape generation observed (10 defensible\_novel) & \cref{sec:results-pilot004}, \cref{sec:conclusion} & \path{docs/findings/001-unencoded-shape-generation.md} \\
+N2a (density-averaging ceiling) proposed as reference-absent hypothesis & \cref{sec:results-challenge} & \path{corpus/experiments/pilot-004-discovery/quorum-result.json} (E13, E16, E20, E23) \\
+N2a survived 7-probe challenge with boundary delta at C4 & \cref{sec:results-challenge}, \cref{sec:discussion} & \path{corpus/experiments/pilot-004-discovery/records/N2a-challenge.md} \\
 Boundary delta: rate-ceiling (es-05) vs reach-ceiling (es-10) sub-mechanisms & \cref{sec:results-challenge}, \cref{sec:example} & idem. \\
-N5 (reorganization without existence forcing) similarly challenged & \cref{sec:results-pilot004}, \cref{app:tables} & \texttt{corpus/experiments/pilot-004-discovery/records/N5-challenge.md} \\
-N2a admitted to \texttt{mechanism/v4} vocabulary & \cref{sec:results-challenge} & \texttt{internal/canon/vocabulary\_seed.go} \\
-N5 admitted to \texttt{mechanism/v5} vocabulary & \cref{sec:results-pilot004} & idem. \\
-Blinding audit clean (0 leakage across snapshots/normalizations/signatures) & \cref{sec:results-negative} & \texttt{corpus/experiments/m7-blinded-run/RESULT.md} \\
+N5 (reorganization without existence forcing) similarly challenged & \cref{sec:results-pilot004}, \cref{app:tables} & \path{corpus/experiments/pilot-004-discovery/records/N5-challenge.md} \\
+N2a admitted to \path{mechanism/v4} vocabulary & \cref{sec:results-challenge} & \path{internal/canon/vocabulary\_seed.go} \\
+N5 admitted to \path{mechanism/v5} vocabulary & \cref{sec:results-pilot004} & idem. \\
+Blinding audit clean (0 leakage across snapshots/normalizations/signatures) & \cref{sec:results-negative} & \path{corpus/experiments/m7-blinded-run/RESULT.md} \\
 \bottomrule
 \end{tabular}
 \end{center}
