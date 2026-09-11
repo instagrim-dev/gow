@@ -26,7 +26,14 @@ type BreakCohortRow struct {
 	SignatureJSON     string
 	Fingerprint       string
 	ContentHash       string // the revision the selected evaluation ASSESSED
-	LatestContentHash string // the proposal's newest revision (pending detection)
+	LatestContentHash string // the proposal's CURRENT-VIEW revision (pending detection)
+	// BindingUnknown marks a legacy evaluation with NO recorded assessed hash on
+	// a proposal with MULTIPLE retained revisions: which bytes it assessed is
+	// unknowable, so its content fields are deliberately EMPTY (never filled
+	// from current content) and the caller must treat it as pending, not
+	// support. A hash-less evaluation on a single-revision proposal is not
+	// flagged — only one content ever existed, so the binding is establishable.
+	BindingUnknown bool
 }
 
 // ListBreakCohortRows returns every proposal whose SELECTED evaluation
@@ -36,12 +43,19 @@ type BreakCohortRow struct {
 //
 //   - The evaluation is selected under selection-policy/v3: CONTENT
 //     COMPATIBILITY ranks first — an evaluation whose assessed revision is the
-//     proposal's CURRENT (latest) revision outranks every stale-content
+//     proposal's CURRENT-VIEW revision outranks every stale-content
 //     evaluation, however decisive or strong the stale one is. Stronger stale
 //     evidence must never override a completed reassessment of the current
-//     interpretation: it remains history/replay, not current guidance. A
-//     legacy evaluation with no recorded hash ranks as compatible (its binding
-//     is unknowable and it already falls back to the latest revision below).
+//     interpretation: it remains history/replay, not current guidance. The
+//     CURRENT VIEW is the proposal's LATEST EMITTED OCCURRENCE (A -> B -> A
+//     re-emission makes A current again even though B holds the higher
+//     retained revision number), falling back to the highest retained
+//     revision only for pre-v24 history without occurrence bindings. A
+//     hash-less legacy evaluation ranks compatible ONLY when the proposal has
+//     a single retained revision (the binding is establishable); with
+//     multiple revisions it is BINDING-UNKNOWN — ranked below every bound
+//     assessment, its content fields left empty (never filled from current
+//     bytes), and flagged so the caller treats it as pending, not support.
 //     WITHIN a compatibility tier the v2 ordering holds: DECISIVE outcomes
 //     (success/partial_success/failure/partial_failure) are eligible before
 //     non-decisive ones (unknown/verification_blocked) — certainty that
@@ -54,14 +68,18 @@ type BreakCohortRow struct {
 //     unconditional latest-revision join. LatestContentHash is returned
 //     alongside so the caller can detect a newer, unassessed interpretation
 //     and mark the member pending instead of splicing old outcomes onto new
-//     evidence. Legacy evaluations without a recorded hash fall back to the
-//     latest revision (binding unknowable; mismatch undetectable).
+//     evidence. A hash-less legacy evaluation acquires content ONLY on a
+//     single-revision proposal; otherwise its content stays empty and the row
+//     is flagged BindingUnknown (v27 finding 1) — an assessment of unknown
+//     content must never emerge looking bound to current bytes.
 //   - Break admission comes from the SELECTED evaluation's own recomputed
 //     per-target verdicts (v26), never from the origin-time
-//     frontier_target_invariants flags: a revised interpretation whose break
-//     degraded to unknown is excluded even though the origin row says
-//     violated, and one whose break became verified is admitted even though
-//     the origin row says unknown.
+//     frontier_target_invariants flags, and rows whose verdict provenance is
+//     'unverified_legacy' (v27: an unestablishable backfill binding) never
+//     admit support: a revised interpretation whose break degraded to unknown
+//     is excluded even though the origin row says violated, and one whose
+//     break became verified is admitted even though the origin row says
+//     unknown.
 //
 // Verdict, strength, and evaluation id are taken from that ONE record (H1).
 func (s *Store) ListBreakCohortRows(ctx context.Context, problemID string) ([]BreakCohortRow, error) {
@@ -69,11 +87,28 @@ func (s *Store) ListBreakCohortRows(ctx context.Context, problemID string) ([]Br
 		return nil, err
 	}
 	rows, err := s.db.QueryContext(ctx, `
-WITH latest_rev AS (
-  SELECT r.proposal_id, r.content_hash, r.signature_json, r.canonical_fingerprint
+WITH latest_occ AS (
+  SELECT proposal_id, content_hash FROM (
+    SELECT gc.proposal_id, gc.content_hash,
+           ROW_NUMBER() OVER (
+             PARTITION BY gc.proposal_id
+             ORDER BY g.revision DESC, g.id DESC, gc.content_hash
+           ) AS rn
+    FROM frontier_generation_contents gc
+    JOIN frontier_generation_runs g ON g.id = gc.generation_run_id
+  ) WHERE rn = 1
+),
+rev_stats AS (
+  SELECT proposal_id, COUNT(*) AS revcount, MAX(revision) AS mr
+  FROM frontier_proposal_signature_revisions GROUP BY proposal_id
+),
+current_rev AS (
+  SELECT r.proposal_id, r.content_hash, r.signature_json, r.canonical_fingerprint, rs.revcount
   FROM frontier_proposal_signature_revisions r
-  JOIN (SELECT proposal_id, MAX(revision) AS mr FROM frontier_proposal_signature_revisions GROUP BY proposal_id) lr
-    ON lr.proposal_id = r.proposal_id AND lr.mr = r.revision
+  JOIN rev_stats rs ON rs.proposal_id = r.proposal_id
+  LEFT JOIN latest_occ lo ON lo.proposal_id = r.proposal_id
+  WHERE (lo.content_hash IS NOT NULL AND r.content_hash = lo.content_hash)
+     OR (lo.content_hash IS NULL AND r.revision = rs.mr)
 ),
 selected_eval AS (
   SELECT e.proposal_id, e.id AS evaluation_id, e.verdict, e.verification_strength,
@@ -81,8 +116,9 @@ selected_eval AS (
          ROW_NUMBER() OVER (
            PARTITION BY e.proposal_id
            ORDER BY CASE
-                      WHEN COALESCE(e.signature_content_hash, '') = '' THEN 0
-                      WHEN e.signature_content_hash = lr.content_hash THEN 0
+                      WHEN COALESCE(e.signature_content_hash, '') = '' AND COALESCE(cr.revcount, 1) = 1 THEN 0
+                      WHEN e.signature_content_hash = cr.content_hash THEN 0
+                      WHEN COALESCE(e.signature_content_hash, '') = '' THEN 2
                       ELSE 1
                     END ASC,
                     CASE WHEN e.verdict IN ('success','partial_success','failure','partial_failure') THEN 0 ELSE 1 END ASC,
@@ -96,19 +132,32 @@ selected_eval AS (
                     e.created_at DESC, e.id DESC
          ) AS rn
   FROM evaluations e
-  LEFT JOIN latest_rev lr ON lr.proposal_id = e.proposal_id
+  LEFT JOIN current_rev cr ON cr.proposal_id = e.proposal_id
 )
 SELECT t.invariant_id, p.id, fe.evaluation_id, fe.verdict, COALESCE(fe.verification_strength, ''),
-       COALESCE(ar.signature_json, lr.signature_json, ''),
-       COALESCE(ar.canonical_fingerprint, lr.canonical_fingerprint, ''),
-       CASE WHEN fe.assessed_hash <> '' THEN fe.assessed_hash ELSE COALESCE(lr.content_hash, '') END,
-       COALESCE(lr.content_hash, '')
+       CASE
+         WHEN fe.assessed_hash <> '' THEN COALESCE(ar.signature_json, '')
+         WHEN COALESCE(cr.revcount, 1) = 1 THEN COALESCE(cr.signature_json, '')
+         ELSE ''
+       END,
+       CASE
+         WHEN fe.assessed_hash <> '' THEN COALESCE(ar.canonical_fingerprint, '')
+         WHEN COALESCE(cr.revcount, 1) = 1 THEN COALESCE(cr.canonical_fingerprint, '')
+         ELSE ''
+       END,
+       CASE
+         WHEN fe.assessed_hash <> '' THEN fe.assessed_hash
+         WHEN COALESCE(cr.revcount, 1) = 1 THEN COALESCE(cr.content_hash, '')
+         ELSE ''
+       END,
+       COALESCE(cr.content_hash, ''),
+       CASE WHEN fe.assessed_hash = '' AND COALESCE(cr.revcount, 1) > 1 THEN 1 ELSE 0 END
 FROM frontier_proposals p
 JOIN selected_eval fe ON fe.proposal_id = p.id AND fe.rn = 1
 JOIN evaluation_target_verdicts t ON t.evaluation_id = fe.evaluation_id
 LEFT JOIN frontier_proposal_signature_revisions ar ON ar.proposal_id = p.id AND ar.content_hash = fe.assessed_hash
-LEFT JOIN latest_rev lr ON lr.proposal_id = p.id
-WHERE p.problem_id = ? AND t.violated = 1
+LEFT JOIN current_rev cr ON cr.proposal_id = p.id
+WHERE p.problem_id = ? AND t.violated = 1 AND COALESCE(t.provenance, 'recomputed') <> 'unverified_legacy'
 ORDER BY t.invariant_id, p.id
 `, problemID)
 	if err != nil {
@@ -118,9 +167,11 @@ ORDER BY t.invariant_id, p.id
 	var out []BreakCohortRow
 	for rows.Next() {
 		var r BreakCohortRow
-		if err := rows.Scan(&r.TargetInvariantID, &r.ProposalID, &r.EvaluationID, &r.Result, &r.Strength, &r.SignatureJSON, &r.Fingerprint, &r.ContentHash, &r.LatestContentHash); err != nil {
+		var bindingUnknown int
+		if err := rows.Scan(&r.TargetInvariantID, &r.ProposalID, &r.EvaluationID, &r.Result, &r.Strength, &r.SignatureJSON, &r.Fingerprint, &r.ContentHash, &r.LatestContentHash, &bindingUnknown); err != nil {
 			return nil, err
 		}
+		r.BindingUnknown = bindingUnknown != 0
 		out = append(out, r)
 	}
 	return out, rows.Err()

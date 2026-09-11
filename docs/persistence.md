@@ -1235,18 +1235,31 @@ interpretation lacks a compatible reassessment is excluded and counted in
 
 Success compression selects its per-proposal evaluation under
 `selection-policy/v3`: **content compatibility ranks first** — an evaluation
-whose assessed revision is the proposal's current (latest) revision outranks
-every stale-content evaluation, however decisive or strong, so stronger stale
+whose assessed revision is the proposal's **current view** outranks every
+stale-content evaluation, however decisive or strong, so stronger stale
 evidence can never override a completed reassessment of the current
-interpretation (it remains history/replay; a legacy evaluation with no
-recorded hash ranks as compatible since its binding is unknowable). Within a
-compatibility tier the v2 ordering holds: decisive outcomes are eligible
-before non-decisive blockers, then the strongest verification class wins with
-ties to the latest — an accepted deterministic reassessment displaces an
-earlier model judgment, a later model-judged "success" cannot displace a
-decisive deterministic "failure" of the same revision, and a stale-target
-refusal cannot monopolize selection once a completed reassessment exists. The
-earliest-result view stays in the append-only ledger.
+interpretation (it remains history/replay). The current view is the
+proposal's **latest emitted occurrence** (A → B → A re-emission makes A
+current again even though B holds the higher retained revision number),
+falling back to the highest retained revision only for pre-v24 history
+without occurrence bindings. A hash-less legacy evaluation ranks compatible
+only on a single-revision proposal (the binding is establishable); on a
+multi-revision proposal it is **binding-unknown** (v27) — ranked below every
+bound assessment, its content fields left empty rather than filled from
+current bytes, flagged to the caller, and counted `pending_reassessment`,
+never support. Within a compatibility tier the v2 ordering holds: decisive
+outcomes are eligible before non-decisive blockers, then the strongest
+verification class wins with ties to the latest. The earliest-result view
+stays in the append-only ledger.
+
+Migration `v27` also adds `evaluation_target_verdicts.provenance`
+(`recomputed | unverified_legacy`): v26's origin-flag backfill rows whose
+binding is not establishable (hash-less evaluation, multiple retained
+revisions) are reclassified `unverified_legacy` — retained for inspection,
+excluded from cohort admission. Establishable bindings (a recorded assessed
+hash, or hash-less on a single-revision proposal) remain authoritative;
+pre-v26 evaluations could not reach revised occurrences, so their
+establishable origin-flag backfills stay valid.
 
 ## Justified field completeness (migration `v25`, admission split `v26`)
 
@@ -1278,7 +1291,11 @@ Artifact lookup and assessment-context selection are different questions.
 the proposal's latest occurrence generation (so a revised interpretation bound
 by a fully-deduped later generation is reachable), batch evaluation consumes
 the latest generation with occurrence membership, and `--generation` pins a
-specific occurrence (historical replay of the original included).
+specific occurrence (historical replay of the original included). Batch
+ELIGIBILITY is content-scoped (v27): a proposal is skipped only when the
+selected generation's occurrence content has itself been assessed — an
+artifact-level result from an earlier interpretation never hides a newly
+emitted, never-assessed occurrence.
 
 Each evaluation also persists `evaluation_target_verdicts` — the per-target
 break verdicts it ACTUALLY recomputed against its assessed content revision.

@@ -84,17 +84,20 @@ promoted. M6.2 can weight policy by strength; this slice only reports honestly.
 - Each cohort member's outcome carries the provenance of the **single evaluation**
   it came from (`evaluation_id`) — verdict, strength, and id are taken **together**
   from ONE evaluation record selected under `selection-policy/v3` — CONTENT
-  COMPATIBILITY ranks first (an evaluation of the proposal's current revision
-  outranks every stale-content evaluation, however decisive or strong, so
-  stronger stale evidence never overrides a completed reassessment of the
-  current interpretation), then within a compatibility tier DECISIVE
-  outcomes (success/partial_success/failure/partial_failure) are eligible before
-  non-decisive ones (a deterministic-strength `verification_blocked` is certainty
-  that evaluation was blocked, not stronger evidence about the outcome), then the
-  strongest verification class wins with ties to the latest; a later model-judged
-  "success" still cannot displace a decisive deterministic "failure" of the same
-  revision (the earliest-result view stays in the append-only ledger for
-  historical analysis).
+  COMPATIBILITY ranks first (an evaluation of the proposal's CURRENT VIEW —
+  its latest EMITTED occurrence, so A → B → A re-emission makes A current
+  again — outranks every stale-content evaluation, however decisive or
+  strong; a hash-less legacy evaluation on a multi-revision proposal is
+  binding-unknown: flagged, its content never filled from current bytes, and
+  counted pending rather than support), then within a compatibility tier
+  DECISIVE outcomes (success/partial_success/failure/partial_failure) are
+  eligible before non-decisive ones (a deterministic-strength
+  `verification_blocked` is certainty that evaluation was blocked, not
+  stronger evidence about the outcome), then the strongest verification class
+  wins with ties to the latest; a later model-judged "success" still cannot
+  displace a decisive deterministic "failure" of the same revision (the
+  earliest-result view stays in the append-only ledger for historical
+  analysis).
   Each cohort member is bound to the signature content revision its selected
   evaluation ACTUALLY assessed; a member whose newest interpretation has no
   compatible reassessment is excluded and counted `pending_reassessment` — an

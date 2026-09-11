@@ -125,10 +125,20 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 		membership = gen.Proposals
 	}
 
-	// Select proposals: a single id, or all un-evaluated proposals in the
-	// membership. (The un-evaluated filter reads the artifact-level result;
-	// re-evaluating an occurrence of an already-evaluated proposal is an
-	// explicit single-id / generation-pinned operation.)
+	// Round-2 F1: select the assessed signature revision BEFORE verification —
+	// the occurrence binding of the generation under evaluation. Loaded here
+	// (not later) because batch ELIGIBILITY is content-scoped too.
+	occurrences, oerr := repoStore.ListGenerationOccurrenceContents(ctx, gen.ID)
+	if oerr != nil {
+		return EvaluateResponse{}, oerr
+	}
+
+	// Select proposals: a single id, or every proposal whose occurrence in
+	// THIS generation has not been assessed. Eligibility is CONTENT-scoped
+	// (a47dd24 finding 3): an artifact-level result from an earlier
+	// interpretation must not hide a newly emitted, never-assessed occurrence.
+	// Proposals without persisted occurrence content (pre-v17) fall back to
+	// the artifact-level result.
 	selected := make([]store.FrontierProposalRow, 0, len(membership))
 	for _, p := range membership {
 		if input.ProposalID != "" {
@@ -137,8 +147,16 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 			}
 			continue
 		}
-		if p.Result.Valid {
-			continue // already evaluated; re-evaluation is an explicit single-id op
+		if oc, ok := occurrences[p.ID]; ok && oc.ContentHash != "" {
+			assessed, herr := repoStore.HasEvaluationForContent(ctx, p.ID, oc.ContentHash)
+			if herr != nil {
+				return EvaluateResponse{}, herr
+			}
+			if assessed {
+				continue // THIS interpretation already assessed; re-evaluation is explicit
+			}
+		} else if p.Result.Valid {
+			continue // pre-v17 content gap: artifact-level result is all we have
 		}
 		selected = append(selected, p)
 	}
@@ -167,14 +185,9 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 		return EvaluateResponse{}, err
 	}
 
-	// Round-2 F1: select the assessed signature revision BEFORE verification —
-	// the occurrence binding of the generation under evaluation. Verdicts are
-	// recomputed against those exact bytes and the persisted evaluation stores
-	// the SUPPLIED hash, never an independent "latest" lookup.
-	occurrences, oerr := repoStore.ListGenerationOccurrenceContents(ctx, gen.ID)
-	if oerr != nil {
-		return EvaluateResponse{}, oerr
-	}
+	// (occurrences were loaded above, before selection: verdicts are recomputed
+	// against those exact bytes and the persisted evaluation stores the
+	// SUPPLIED hash, never an independent "latest" lookup.)
 
 	model := a.modelVerifier()
 	verifiers := a.verifiers(model)

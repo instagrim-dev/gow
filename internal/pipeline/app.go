@@ -109,6 +109,9 @@ type problemStore interface {
 	// ListOccurrenceProposalRows returns the full proposal rows for a
 	// generation's occurrence membership (what it emitted, owned or deduped).
 	ListOccurrenceProposalRows(context.Context, string) ([]store.FrontierProposalRow, error)
+	// HasEvaluationForContent reports whether any evaluation assessed exactly
+	// this content revision — content-scoped batch eligibility (a47dd24 f3).
+	HasEvaluationForContent(context.Context, string, string) (bool, error)
 	RedundantAttackKeys(context.Context, string, int) ([]string, error)
 	ListBreakCohortRows(context.Context, string) ([]store.BreakCohortRow, error)
 	PersistSuccessRevision(context.Context, store.SuccessRevisionRecord) (store.PersistSuccessRevisionResult, error)

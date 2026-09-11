@@ -447,6 +447,9 @@ func (f *fakeProblemStore) LatestFrontierGenerationWithOccurrences(context.Conte
 func (f *fakeProblemStore) ListOccurrenceProposalRows(context.Context, string) ([]store.FrontierProposalRow, error) {
 	return nil, errors.New("unexpected call")
 }
+func (f *fakeProblemStore) HasEvaluationForContent(context.Context, string, string) (bool, error) {
+	return false, errors.New("unexpected call")
+}
 
 func (f *fakeProblemStore) RedundantAttackKeys(context.Context, string, int) ([]string, error) {
 	return nil, errors.New("unexpected call")

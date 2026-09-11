@@ -601,3 +601,237 @@ func TestListBreakCohortRowsCurrentContentOutranksStrongerStale(t *testing.T) {
 		t.Fatalf("stale-only selection must expose the hash mismatch for pending detection: %+v", rows2[0])
 	}
 }
+
+// v27 finding-1 regression: a legacy success with NO recorded content hash on
+// a MULTI-revision proposal must not override a known-current assessment, and
+// must never silently acquire current bytes.
+func TestListBreakCohortRowsLegacyUnknownBindingCannotBecomeCurrent(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+
+	rec := sampleFrontier(t, st)
+	res, err := st.PersistFrontierGeneration(ctx, rec)
+	if err != nil {
+		t.Fatalf("persist frontier: %v", err)
+	}
+	problemID := res.Record.ProblemID
+	proposalID := res.Record.Proposals[0].ID
+	targetInvID := res.Record.Proposals[0].Targets[0].InvariantID
+
+	aJSON := `{"schema_version":"mechanism/v1","rev":"A"}`
+	insertTestSignatureContent(t, st, proposalID, aJSON, "cfp-la")
+	bJSON := `{"schema_version":"mechanism/v1","rev":"B"}`
+	insertTestSignatureContent(t, st, proposalID, bJSON, "cfp-lb")
+	sumB := sha256.Sum256([]byte(bJSON))
+	hashB := hex.EncodeToString(sumB[:])
+
+	now := time.Now().UTC()
+	legacyID := domain.NewEvaluationID(now)
+	currentID := domain.NewEvaluationID(now.Add(time.Second))
+	run := EvaluationRunRecord{
+		ID:        domain.NewEvaluationRunID(now),
+		ProblemID: problemID,
+		RunID:     res.Record.RunID,
+		Mode:      "proposal",
+		CreatedAt: formatTime(now),
+		Evaluations: []EvaluationRow{
+			{
+				// Legacy: decisive historical success, NO content binding.
+				ID: legacyID, ProposalID: proposalID, Verdict: "partial_success",
+				VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment",
+				ConfidenceOrdinal: "medium", ToolName: "m", ToolVersion: "v1",
+				TargetVerdicts: []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "violates", Violated: true}},
+			},
+			{
+				// Known-current: assessed B, verification_blocked, break UNKNOWN.
+				ID: currentID, ProposalID: proposalID, Verdict: "verification_blocked",
+				VerifierKind: "deterministic-check", VerificationStrength: "deterministic",
+				ConfidenceOrdinal: "low", ToolName: "d", ToolVersion: "v1",
+				SignatureContentHash: hashB,
+				TargetVerdicts:       []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "unknown", Violated: false}},
+			},
+		},
+	}
+	if _, err := st.PersistEvaluationRun(ctx, run); err != nil {
+		t.Fatalf("persist evaluations: %v", err)
+	}
+
+	// The known-current assessment governs: its break is unknown, so the
+	// proposal is EXCLUDED — the legacy success must not displace it.
+	rows, err := st.ListBreakCohortRows(ctx, problemID)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("a legacy unknown-binding success must not override the known-current assessment: %+v", rows)
+	}
+}
+
+// v27 finding-1 regression (only legacy evidence exists): the row is flagged
+// BindingUnknown with EMPTY content fields — an assessment of unknown content
+// must never emerge from the query looking bound to current bytes.
+func TestListBreakCohortRowsLegacyOnlyIsFlaggedNotFilled(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+
+	rec := sampleFrontier(t, st)
+	res, err := st.PersistFrontierGeneration(ctx, rec)
+	if err != nil {
+		t.Fatalf("persist frontier: %v", err)
+	}
+	problemID := res.Record.ProblemID
+	proposalID := res.Record.Proposals[0].ID
+	targetInvID := res.Record.Proposals[0].Targets[0].InvariantID
+
+	aJSON := `{"schema_version":"mechanism/v1","rev":"A"}`
+	insertTestSignatureContent(t, st, proposalID, aJSON, "cfp-fa")
+	bJSON := `{"schema_version":"mechanism/v1","rev":"B"}`
+	insertTestSignatureContent(t, st, proposalID, bJSON, "cfp-fb")
+	sumB := sha256.Sum256([]byte(bJSON))
+	hashB := hex.EncodeToString(sumB[:])
+
+	now := time.Now().UTC()
+	legacyID := domain.NewEvaluationID(now)
+	run := EvaluationRunRecord{
+		ID:        domain.NewEvaluationRunID(now),
+		ProblemID: problemID,
+		RunID:     res.Record.RunID,
+		Mode:      "proposal",
+		CreatedAt: formatTime(now),
+		Evaluations: []EvaluationRow{{
+			ID: legacyID, ProposalID: proposalID, Verdict: "partial_success",
+			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment",
+			ConfidenceOrdinal: "medium", ToolName: "m", ToolVersion: "v1",
+			TargetVerdicts: []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "violates", Violated: true}},
+		}},
+	}
+	if _, err := st.PersistEvaluationRun(ctx, run); err != nil {
+		t.Fatalf("persist evaluation: %v", err)
+	}
+
+	rows, err := st.ListBreakCohortRows(ctx, problemID)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("legacy evidence must remain inspectable, got %d rows", len(rows))
+	}
+	r := rows[0]
+	if !r.BindingUnknown {
+		t.Fatalf("a hash-less evaluation on a multi-revision proposal must be flagged BindingUnknown: %+v", r)
+	}
+	if r.ContentHash != "" || r.SignatureJSON != "" || r.Fingerprint != "" {
+		t.Fatalf("unknown-binding content must stay EMPTY, never filled from current bytes: %+v", r)
+	}
+	if r.LatestContentHash != hashB {
+		t.Fatalf("current-view hash must still be exposed for pending detection: %+v", r)
+	}
+}
+
+// v27 upgrade fixture: re-running the reclassification against staged rows
+// marks the UNESTABLISHABLE binding (hash-less evaluation, multi-revision
+// proposal) 'unverified_legacy' while an establishable one (hash-less,
+// single-revision) stays 'recomputed' — and the cohort admission filter
+// excludes the unverified row even though violated=1.
+func TestMigrateV27ReclassifiesUnestablishableBackfills(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+
+	// Proposal 1: multi-revision, hash-less evaluation -> unestablishable.
+	rec := sampleFrontier(t, st)
+	res, err := st.PersistFrontierGeneration(ctx, rec)
+	if err != nil {
+		t.Fatalf("persist frontier: %v", err)
+	}
+	problemID := res.Record.ProblemID
+	multiID := res.Record.Proposals[0].ID
+	multiInv := res.Record.Proposals[0].Targets[0].InvariantID
+	insertTestSignatureContent(t, st, multiID, `{"schema_version":"mechanism/v1","rev":"A"}`, "cfp-ma")
+	insertTestSignatureContent(t, st, multiID, `{"schema_version":"mechanism/v1","rev":"B"}`, "cfp-mb")
+
+	now := time.Now().UTC()
+	multiEval := domain.NewEvaluationID(now)
+	run := EvaluationRunRecord{
+		ID: domain.NewEvaluationRunID(now), ProblemID: problemID, RunID: res.Record.RunID,
+		Mode: "proposal", CreatedAt: formatTime(now),
+		Evaluations: []EvaluationRow{{
+			ID: multiEval, ProposalID: multiID, Verdict: "partial_success",
+			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment",
+			ConfidenceOrdinal: "medium", ToolName: "m", ToolVersion: "v1",
+			TargetVerdicts: []EvaluationTargetVerdictRow{{InvariantID: multiInv, Verdict: "violates", Violated: true}},
+		}},
+	}
+	if _, err := st.PersistEvaluationRun(ctx, run); err != nil {
+		t.Fatalf("persist evaluation: %v", err)
+	}
+
+	// Re-run the v27 reclassification (idempotent over establishable rows).
+	tx, err := st.db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	if err := migrateV27TargetVerdictProvenance(ctx, tx); err != nil {
+		t.Fatalf("reclassify: %v", err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("commit: %v", err)
+	}
+
+	var prov string
+	if err := st.db.QueryRowContext(ctx, `SELECT provenance FROM evaluation_target_verdicts WHERE evaluation_id = ?`, multiEval).Scan(&prov); err != nil {
+		t.Fatalf("read provenance: %v", err)
+	}
+	if prov != "unverified_legacy" {
+		t.Fatalf("unestablishable binding must reclassify to unverified_legacy, got %q", prov)
+	}
+
+	// The admission filter excludes the unverified row despite violated=1.
+	rows, err := st.ListBreakCohortRows(ctx, problemID)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("unverified_legacy verdicts must never admit support: %+v", rows)
+	}
+
+	// Control: hash-less on a SINGLE-revision proposal stays recomputed.
+	st2 := openMigratedStore(t)
+	rec2 := sampleFrontier(t, st2)
+	res2, err := st2.PersistFrontierGeneration(ctx, rec2)
+	if err != nil {
+		t.Fatalf("persist frontier 2: %v", err)
+	}
+	singleID := res2.Record.Proposals[0].ID
+	singleInv := res2.Record.Proposals[0].Targets[0].InvariantID
+	insertTestSignatureContent(t, st2, singleID, `{"schema_version":"mechanism/v1"}`, "cfp-s1")
+	singleEval := domain.NewEvaluationID(now)
+	run2 := EvaluationRunRecord{
+		ID: domain.NewEvaluationRunID(now), ProblemID: res2.Record.ProblemID, RunID: res2.Record.RunID,
+		Mode: "proposal", CreatedAt: formatTime(now),
+		Evaluations: []EvaluationRow{{
+			ID: singleEval, ProposalID: singleID, Verdict: "partial_success",
+			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment",
+			ConfidenceOrdinal: "medium", ToolName: "m", ToolVersion: "v1",
+			TargetVerdicts: []EvaluationTargetVerdictRow{{InvariantID: singleInv, Verdict: "violates", Violated: true}},
+		}},
+	}
+	if _, err := st2.PersistEvaluationRun(ctx, run2); err != nil {
+		t.Fatalf("persist evaluation 2: %v", err)
+	}
+	tx2, err := st2.db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("begin 2: %v", err)
+	}
+	if err := migrateV27TargetVerdictProvenance(ctx, tx2); err != nil {
+		t.Fatalf("reclassify 2: %v", err)
+	}
+	if err := tx2.Commit(); err != nil {
+		t.Fatalf("commit 2: %v", err)
+	}
+	if err := st2.db.QueryRowContext(ctx, `SELECT provenance FROM evaluation_target_verdicts WHERE evaluation_id = ?`, singleEval).Scan(&prov); err != nil {
+		t.Fatalf("read provenance 2: %v", err)
+	}
+	if prov != "recomputed" {
+		t.Fatalf("establishable single-revision binding must stay recomputed, got %q", prov)
+	}
+}

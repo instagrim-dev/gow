@@ -218,6 +218,21 @@ func (s *Store) GetEvaluationRun(ctx context.Context, id string) (EvaluationRunR
 	return s.loadEvaluationRun(ctx, id)
 }
 
+// HasEvaluationForContent reports whether ANY evaluation assessed exactly this
+// signature content revision of the proposal. Batch evaluation eligibility is
+// content-scoped (a47dd24 finding 3): an artifact-level result from an earlier
+// interpretation must not hide a newly emitted, never-assessed occurrence.
+func (s *Store) HasEvaluationForContent(ctx context.Context, proposalID, contentHash string) (bool, error) {
+	row := s.db.QueryRowContext(ctx, `
+SELECT EXISTS(SELECT 1 FROM evaluations WHERE proposal_id = ? AND COALESCE(signature_content_hash, '') = ?)
+`, proposalID, contentHash)
+	var found int
+	if err := row.Scan(&found); err != nil {
+		return false, err
+	}
+	return found != 0, nil
+}
+
 func (s *Store) loadEvaluationRun(ctx context.Context, id string) (EvaluationRunRecord, error) {
 	row := s.db.QueryRowContext(ctx, `
 SELECT id, problem_id, run_id, COALESCE(frontier_generation_run_id,''), COALESCE(invariant_revision_id,''), COALESCE(cluster_run_id,''), COALESCE(normalization_revision_id,''), mode, routing_policy, evaluation_count, created_at

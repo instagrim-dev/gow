@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 26
+const currentSchemaVersion = 27
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -952,6 +952,20 @@ END;
 		// Existing evaluations are backfilled from the origin rows they
 		// historically consumed.
 		apply: migrateV26CompletenessAdmissionAndTargetVerdicts,
+	},
+	{
+		version: 27,
+		// Legacy-binding honesty (review of a47dd24, finding 1).
+		// evaluation_target_verdicts gains a provenance column and existing
+		// rows whose evaluation binding is NOT establishable — no recorded
+		// assessed hash on a proposal with multiple retained revisions — are
+		// reclassified 'unverified_legacy': retained for inspection, excluded
+		// from cohort admission. Establishable bindings (assessed hash equals
+		// a retained revision, or hash-less on a single-revision proposal)
+		// stay 'recomputed'. Pre-v26 evaluations could not reach revised
+		// occurrences (selection resolved the owning generation), so their
+		// origin-flag backfills with establishable bindings remain valid.
+		apply: migrateV27TargetVerdictProvenance,
 	},
 }
 
@@ -3152,4 +3166,44 @@ FROM evaluations e
 JOIN frontier_target_invariants t ON t.proposal_id = e.proposal_id
 `)
 	return err
+}
+
+func migrateV27TargetVerdictProvenance(ctx context.Context, tx *sql.Tx) error {
+	has, err := columnExists(ctx, tx, "evaluation_target_verdicts", "provenance")
+	if err != nil {
+		return err
+	}
+	if !has {
+		if _, err := tx.ExecContext(ctx, `ALTER TABLE evaluation_target_verdicts ADD COLUMN provenance TEXT NOT NULL DEFAULT 'recomputed' CHECK (provenance IN ('recomputed', 'unverified_legacy'))`); err != nil {
+			return err
+		}
+	}
+	// Reclassify unestablishable bindings. The rows are immutable by trigger;
+	// a migration legitimately owns this one-time reclassification, so the
+	// triggers are dropped around the UPDATE and recreated. A binding is
+	// unestablishable when the evaluation recorded NO assessed hash and the
+	// proposal retains MULTIPLE content revisions — which bytes it assessed is
+	// unknowable, so its verdict rows must not read as assessment-context
+	// facts. (Hash-less on a single-revision proposal is establishable: only
+	// one content ever existed. A recorded hash pins the binding directly.)
+	for _, ddl := range []string{
+		`DROP TRIGGER IF EXISTS evaluation_target_verdicts_immutable_update`,
+		`UPDATE evaluation_target_verdicts SET provenance = 'unverified_legacy'
+WHERE provenance = 'recomputed' AND evaluation_id IN (
+  SELECT e.id FROM evaluations e
+  JOIN (SELECT proposal_id, COUNT(*) AS c FROM frontier_proposal_signature_revisions GROUP BY proposal_id) rc
+    ON rc.proposal_id = e.proposal_id
+  WHERE COALESCE(e.signature_content_hash, '') = '' AND rc.c > 1
+)`,
+		`CREATE TRIGGER IF NOT EXISTS evaluation_target_verdicts_immutable_update
+BEFORE UPDATE ON evaluation_target_verdicts
+BEGIN
+  SELECT RAISE(ABORT, 'evaluation target verdicts are immutable');
+END`,
+	} {
+		if _, err := tx.ExecContext(ctx, ddl); err != nil {
+			return err
+		}
+	}
+	return nil
 }

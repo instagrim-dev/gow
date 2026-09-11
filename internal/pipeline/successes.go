@@ -160,6 +160,17 @@ func buildBreakCohorts(rows []store.BreakCohortRow) (builtCohorts, error) {
 		// changes are fingerprint-invisible) changes what every condition C
 		// evaluates against, so it must produce the next cohort revision.
 		hashLines = append(hashLines, r.TargetInvariantID+"|"+r.ProposalID+"|"+r.EvaluationID+"|"+r.Result+"|"+r.Strength+"|"+r.ContentHash+"|"+r.LatestContentHash)
+		// v27 finding 1: the selected evaluation has NO recorded content binding
+		// on a multi-revision proposal. Which bytes it assessed is unknowable,
+		// so its outcome must not become current support — the member is
+		// pending until a BOUND reassessment of the current interpretation
+		// exists. Its content fields are deliberately empty (never filled from
+		// current bytes), so this check must precede the unpersisted-content
+		// check below.
+		if r.BindingUnknown {
+			out.PendingReassessment++
+			continue
+		}
 		if r.SignatureJSON == "" {
 			out.IneligibleUnpersisted++
 			continue
