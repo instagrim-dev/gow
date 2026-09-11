@@ -676,10 +676,15 @@ func TestIntegrationPositiveControlSamePathMatrix(t *testing.T) {
 		app.invariantMinerFn = minPreservesMiner{}
 		app.challengerFn = biasOnlyChallenger{}
 		// Two DISTINCT proposals (different resolved operators), both mechanism-
-		// distinct from the withheld target (which has no operators).
+		// distinct from the withheld target through a RECORDED preserves
+		// conflict (mean_growth_rate vs the target's residue locality) — a
+		// resolved-vs-resolved disagreement stays decisive under classify/v2,
+		// whereas the previous fixture earned distinctness only from the
+		// target's EMPTY+unobserved operators field, exactly the unearned
+		// negative the completeness-aware absence rule now refuses.
 		app.generatorFn = pcGenerator{signatures: []canon.MechanismSignature{
-			pcSignature(pcResidueLocality, "core.operator.modular_decomposition", true),
-			pcSignature(pcResidueLocality, "core.operator.density_averaging", true),
+			pcSignature(pcMeanGrowth, "core.operator.modular_decomposition", true),
+			pcSignature(pcMeanGrowth, "core.operator.density_averaging", true),
 		}}
 
 		trainProblem, targetProblem, _ := seedPositiveControl(t, ctx, app, dbPath, "residue locality")

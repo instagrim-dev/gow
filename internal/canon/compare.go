@@ -41,6 +41,14 @@ type ComparisonProfile struct {
 	// difference. Default keeps it reported-only (outcome is an effect, not a
 	// mechanism).
 	DecisiveOutcome bool
+	// CompletenessAwareAbsence, when true, refuses to read an EMPTY set field
+	// as decisive negative evidence unless that field's completeness is
+	// `complete`: an empty-and-unobserved field against a nonempty one is an
+	// epistemic gap (incomparable), not a verified disagreement. The recorded
+	// descriptions differing is not evidence the MECHANISMS differ on an
+	// omitted property (pilot-003 review, finding 2). false preserves the
+	// classify/v1 semantics under which pre-existing results were pinned.
+	CompletenessAwareAbsence bool
 }
 
 // WeightsMechanismV1 is retained as the default profile version identifier for
@@ -50,6 +58,15 @@ const WeightsMechanismV1 = "weights/v1"
 // ClassifyMechanismV1 is the versioned mechanistic-vs-surface classification
 // rule (the default profile's classifier contract).
 const ClassifyMechanismV1 = "classify/v1"
+
+// ClassifyMechanismV2 is the corrected classification rule: identical axis
+// selection to classify/v1 plus completeness-aware absence (an unobserved
+// empty decisive field is an epistemic gap, never decisive negative
+// evidence). It exists as a SEPARATE pinned version because captures already
+// assessed under classify/v1 keep their pinned results; a reassessment under
+// v2 is a corrected assessment with its own identity, never a silent
+// substitution.
+const ClassifyMechanismV2 = "classify/v2"
 
 // ProfileMechanismV1 is the default comparison profile. It treats the
 // structural moves, conserved/violated properties, and auxiliary constructions
@@ -80,6 +97,17 @@ func ProfileMechanismV1() ComparisonProfile {
 	}
 }
 
+// ProfileMechanismV2 is the corrected default profile (classify/v2): the same
+// decisive axis selection as v1 with CompletenessAwareAbsence enabled. The
+// flag participates in Hash(), so a v2 verdict can never masquerade as (or be
+// silently substituted for) a pinned v1 verdict.
+func ProfileMechanismV2() ComparisonProfile {
+	p := ProfileMechanismV1()
+	p.Version = ClassifyMechanismV2
+	p.CompletenessAwareAbsence = true
+	return p
+}
+
 // Hash returns a stable, content-addressed digest of the profile's decisive
 // axis selection (the semantics that actually determine a verdict): the sorted
 // decisive set fields, the surface field, and the posture/outcome decisiveness
@@ -95,15 +123,17 @@ func (p ComparisonProfile) Hash() string {
 	}
 	sort.Strings(fields)
 	body := struct {
-		DecisiveSetFields []string `json:"decisive_set_fields"`
-		SurfaceField      string   `json:"surface_field"`
-		DecisivePosture   bool     `json:"decisive_posture"`
-		DecisiveOutcome   bool     `json:"decisive_outcome"`
+		DecisiveSetFields        []string `json:"decisive_set_fields"`
+		SurfaceField             string   `json:"surface_field"`
+		DecisivePosture          bool     `json:"decisive_posture"`
+		DecisiveOutcome          bool     `json:"decisive_outcome"`
+		CompletenessAwareAbsence bool     `json:"completeness_aware_absence,omitempty"`
 	}{
-		DecisiveSetFields: fields,
-		SurfaceField:      string(p.SurfaceField),
-		DecisivePosture:   p.DecisivePosture,
-		DecisiveOutcome:   p.DecisiveOutcome,
+		DecisiveSetFields:        fields,
+		SurfaceField:             string(p.SurfaceField),
+		DecisivePosture:          p.DecisivePosture,
+		DecisiveOutcome:          p.DecisiveOutcome,
+		CompletenessAwareAbsence: p.CompletenessAwareAbsence,
 	}
 	raw, _ := json.Marshal(body)
 	sum := sha256.Sum256(raw)
@@ -142,6 +172,12 @@ type FieldResult struct {
 	// Incomparable is true when either side had a non-resolved claim in the
 	// field, so agreement cannot be asserted.
 	Incomparable bool
+	// AbsenceUnverified is true when Incomparable was set by the classify/v2
+	// completeness-aware absence rule: one side's field is empty without a
+	// `complete` justification, so its absence is an epistemic gap rather
+	// than negative evidence. Diagnostic only — the recorded-set difference
+	// stays visible without being promoted to a decisive mismatch.
+	AbsenceUnverified bool
 }
 
 // PostureResult reports enum equality per posture axis.
@@ -227,7 +263,28 @@ func CompareWithProfile(a, b MechanismSignature, profile ComparisonProfile) Comp
 	}
 
 	for _, sf := range setFields {
-		cmp.Fields = append(cmp.Fields, compareSetField(sf.kind, sf.a, sf.b))
+		fr := compareSetField(sf.kind, sf.a, sf.b)
+		if profile.CompletenessAwareAbsence && !fr.Incomparable {
+			// Corrected absence semantics (classify/v2): an EMPTY side whose
+			// completeness is not `complete`, against a nonempty side, is an
+			// epistemic gap — the recorded descriptions differ, but nothing
+			// establishes the mechanisms differ on the omitted property. Mark
+			// the axis incomparable instead of letting zero overlap read as a
+			// verified disagreement. Empty-and-COMPLETE still participates
+			// decisively (a justified absence is real evidence), and two empty
+			// sides remain "identical" (mutual silence is not a disagreement
+			// and is never NEGATIVE evidence).
+			aEmpty := len(resolvedIDs(sf.a)) == 0
+			bEmpty := len(resolvedIDs(sf.b)) == 0
+			if aEmpty != bEmpty {
+				unverified := (aEmpty && a.FieldCompleteness(sf.kind) != domain.CompletenessComplete) ||
+					(bEmpty && b.FieldCompleteness(sf.kind) != domain.CompletenessComplete)
+				if unverified {
+					fr = FieldResult{FieldKind: sf.kind, Incomparable: true, Ordinal: OrdinalIncomparable, AbsenceUnverified: true}
+				}
+			}
+		}
+		cmp.Fields = append(cmp.Fields, fr)
 	}
 
 	// Boundaries are measured too, as a set over resolved canonical IDs, so a

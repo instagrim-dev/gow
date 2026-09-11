@@ -492,7 +492,11 @@ func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore,
 	// evaluation budget is consumed against, so identity must encode it in order,
 	// not as a set (finding 1). Do NOT sort here.
 
-	profile := canon.ProfileMechanismV1()
+	// classify/v2 (completeness-aware absence) is the corrected assessment
+	// rule; its flag participates in the profile hash, so experiments assessed
+	// under it have a distinct identity from pinned classify/v1 results —
+	// a reassessment is a corrected assessment, never a silent substitution.
+	profile := canon.ProfileMechanismV2()
 	var armRows []store.ExperimentArmRow
 	var metricRows []store.ExperimentMetricRow
 	var identityParts []string

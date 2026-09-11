@@ -138,13 +138,20 @@ required directed-generation prose:
     },
     "structural_violation_claim": "...",
     "novelty_argument": "...",
-    "cheapest_falsification_path": "..."
+    "cheapest_falsification_path": "...",
+    "expected_information_gain": "high",
+    "evaluation_cost": "medium"
   }]
 }
 ```
 
 Wire semantics:
 
+- the optional ordinal fields (`expected_information_gain`,
+  `evaluation_cost`) live at the **proposal level, never inside
+  `mechanism`** — misnesting them is a schema violation (the pilot-003 B3
+  capture failed the importer exactly this way; the capture prompts now
+  carry the example above).
 - `target_invariant_ids` names the survivors THIS proposal claims to break,
   validated against the supplied survivor set (referencing a target grants no
   authority over its truth). **Omission means break-all** — the strict

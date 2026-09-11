@@ -176,6 +176,45 @@ func newExperimentCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions
 	showCmd.Flags().StringVar(&showProblem, "problem", "", "Problem ID (used when no id is given)")
 	cmd.AddCommand(showCmd)
 
+	var (
+		validateFile    string
+		validateProblem string
+	)
+	validateCmd := &cobra.Command{
+		Use:   "validate-proposals",
+		Short: "Preflight a captured proposals file through the EXACT importer decode path",
+		Long: "Runs provider.ParseWireProposals — the same implementation `experiment run`\n" +
+			"consumes — against a captured proposal-wire/v1 file. With --problem, the\n" +
+			"problem's surviving invariants are the permitted targets (B3 semantics);\n" +
+			"without it, no targets are permitted (B0 semantics). Read-only: no run rows,\n" +
+			"no writes. A capture must pass this before being declared importable.",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if validateFile == "" {
+				return wrapCommandError("experiment validate-proposals", errors.New("--file is required"))
+			}
+			result, err := app.ValidateProposals(cmd.Context(), pipeline.ProposalsValidateInput{
+				DBPath: opts.dbPath, File: validateFile, ProblemID: validateProblem,
+				JSONOutput: opts.jsonOutput,
+			})
+			if err != nil {
+				return wrapCommandError("experiment validate-proposals", err)
+			}
+			if opts.jsonOutput {
+				return writeJSON(stdout, result)
+			}
+			if result.Valid {
+				fmt.Fprintf(stdout, "valid: %d proposal(s), %d permitted target(s)\n", result.Proposals, len(result.PermittedTargets))
+			} else {
+				fmt.Fprintf(stdout, "INVALID: %s\n", result.Violation)
+			}
+			return nil
+		},
+	}
+	validateCmd.Flags().StringVar(&validateFile, "file", "", "Captured proposal-wire/v1 file")
+	validateCmd.Flags().StringVar(&validateProblem, "problem", "", "Train problem whose surviving invariants are the permitted targets (omit for B0 semantics)")
+	cmd.AddCommand(validateCmd)
+
 	var listProblem string
 	listCmd := &cobra.Command{
 		Use:   "list",

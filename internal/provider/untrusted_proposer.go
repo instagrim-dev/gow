@@ -125,38 +125,65 @@ func (p *UntrustedProposer) Generate(ctx context.Context, req GenerationRequest)
 	if err != nil {
 		return payloadEnvelope(string(reqRaw), "", p.meta), err
 	}
+	allTargets := make([]string, 0, len(req.Targets))
+	for _, t := range req.Targets {
+		allTargets = append(allTargets, t.InvariantID)
+	}
+	proposals, perr := ParseWireProposals(raw, allTargets)
+	if perr != nil {
+		return payloadEnvelope(string(reqRaw), raw, p.meta), perr
+	}
+	return GenerationResponse{
+		Proposals:       proposals,
+		Metadata:        p.meta,
+		RequestPayload:  string(reqRaw),
+		ResponsePayload: raw,
+	}, nil
+}
+
+// ParseWireProposals is the SINGLE proposal-wire/v1 decode + validation
+// implementation. Generate consumes it for live imports, and the
+// `experiment validate-proposals` preflight consumes it for capture
+// validation, so "validates" can never mean anything weaker than what the
+// importer enforces (the pilot-003 B3 capture was sealed after a JSON-parse +
+// schema_version check and then failed the real importer on field nesting —
+// this seam removes that class of divergence). allowedTargetIDs is the set of
+// surviving-invariant IDs the proposer was permitted to target; empty means
+// the arm supplies no targets and any explicit target reference is a
+// violation.
+func ParseWireProposals(raw string, allowedTargetIDs []string) ([]FrontierProposal, error) {
 	if len(raw) > MaxProposalResponseBytes {
-		return payloadEnvelope(string(reqRaw), "", p.meta), fmt.Errorf("%w: response is %d bytes (limit %d)", ErrProposalWireViolation, len(raw), MaxProposalResponseBytes)
+		return nil, fmt.Errorf("%w: response is %d bytes (limit %d)", ErrProposalWireViolation, len(raw), MaxProposalResponseBytes)
 	}
 
 	dec := json.NewDecoder(bytes.NewReader([]byte(raw)))
 	dec.DisallowUnknownFields()
 	var wire WireResponse
 	if err := dec.Decode(&wire); err != nil {
-		return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: %v", ErrProposalWireViolation, err)
+		return nil, fmt.Errorf("%w: %v", ErrProposalWireViolation, err)
 	}
 	// Strictness covers the WHOLE payload, not just the first JSON value: a
 	// trailing document or garbage suffix is a violation (trailing whitespace
 	// is fine — Token returns io.EOF over it).
 	if _, terr := dec.Token(); terr != io.EOF {
-		return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: trailing content after the wire document", ErrProposalWireViolation)
+		return nil, fmt.Errorf("%w: trailing content after the wire document", ErrProposalWireViolation)
 	}
 	if wire.SchemaVersion != ProposalWireVersion {
-		return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: schema_version %q, want %q", ErrProposalWireViolation, wire.SchemaVersion, ProposalWireVersion)
+		return nil, fmt.Errorf("%w: schema_version %q, want %q", ErrProposalWireViolation, wire.SchemaVersion, ProposalWireVersion)
 	}
 
-	allTargets := make([]string, 0, len(req.Targets))
-	allowed := make(map[string]bool, len(req.Targets))
-	for _, t := range req.Targets {
-		allTargets = append(allTargets, t.InvariantID)
-		allowed[t.InvariantID] = true
+	allTargets := make([]string, 0, len(allowedTargetIDs))
+	allowed := make(map[string]bool, len(allowedTargetIDs))
+	for _, id := range allowedTargetIDs {
+		allTargets = append(allTargets, id)
+		allowed[id] = true
 	}
 
 	proposals := make([]FrontierProposal, 0, len(wire.Proposals))
 	for i, wp := range wire.Proposals {
 		sig, serr := wireSignature(wp.Mechanism)
 		if serr != nil {
-			return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: proposal[%d]: %v", ErrProposalWireViolation, i, serr)
+			return nil, fmt.Errorf("%w: proposal[%d]: %v", ErrProposalWireViolation, i, serr)
 		}
 		for _, field := range []struct{ name, value string }{
 			{"structural_violation_claim", wp.StructuralViolationClaim},
@@ -164,7 +191,7 @@ func (p *UntrustedProposer) Generate(ctx context.Context, req GenerationRequest)
 			{"cheapest_falsification_path", wp.CheapestFalsificationPath},
 		} {
 			if strings.TrimSpace(field.value) == "" {
-				return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: proposal[%d]: %s is required", ErrProposalWireViolation, i, field.name)
+				return nil, fmt.Errorf("%w: proposal[%d]: %s is required", ErrProposalWireViolation, i, field.name)
 			}
 		}
 		for _, ord := range []struct{ name, value string }{
@@ -172,7 +199,7 @@ func (p *UntrustedProposer) Generate(ctx context.Context, req GenerationRequest)
 			{"evaluation_cost", wp.EvaluationCost},
 		} {
 			if ord.value != "" && !domain.Ordinal(ord.value).Valid() {
-				return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: proposal[%d]: invalid %s %q", ErrProposalWireViolation, i, ord.name, ord.value)
+				return nil, fmt.Errorf("%w: proposal[%d]: invalid %s %q", ErrProposalWireViolation, i, ord.name, ord.value)
 			}
 		}
 		// Target attribution (finding 1, refined per the 622fb6e review):
@@ -184,16 +211,16 @@ func (p *UntrustedProposer) Generate(ctx context.Context, req GenerationRequest)
 		if wp.TargetInvariantIDs != nil {
 			var explicit []string
 			if uerr := json.Unmarshal(wp.TargetInvariantIDs, &explicit); uerr != nil {
-				return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: proposal[%d]: target_invariant_ids: %v", ErrProposalWireViolation, i, uerr)
+				return nil, fmt.Errorf("%w: proposal[%d]: target_invariant_ids: %v", ErrProposalWireViolation, i, uerr)
 			}
 			if len(explicit) == 0 {
-				return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: proposal[%d]: target_invariant_ids is explicitly empty; omit the field for break-all semantics", ErrProposalWireViolation, i)
+				return nil, fmt.Errorf("%w: proposal[%d]: target_invariant_ids is explicitly empty; omit the field for break-all semantics", ErrProposalWireViolation, i)
 			}
 			seen := map[string]bool{}
 			targetIDs = make([]string, 0, len(explicit))
 			for _, id := range explicit {
 				if !allowed[id] {
-					return payloadEnvelope(string(reqRaw), raw, p.meta), fmt.Errorf("%w: proposal[%d]: target %q is not a supplied surviving invariant", ErrProposalWireViolation, i, id)
+					return nil, fmt.Errorf("%w: proposal[%d]: target %q is not a supplied surviving invariant", ErrProposalWireViolation, i, id)
 				}
 				if !seen[id] {
 					seen[id] = true
@@ -211,13 +238,7 @@ func (p *UntrustedProposer) Generate(ctx context.Context, req GenerationRequest)
 			EvaluationCost:            domain.Ordinal(wp.EvaluationCost),
 		})
 	}
-
-	return GenerationResponse{
-		Proposals:       proposals,
-		Metadata:        p.meta,
-		RequestPayload:  string(reqRaw),
-		ResponsePayload: raw,
-	}, nil
+	return proposals, nil
 }
 
 // payloadEnvelope returns a proposal-free response that still carries the

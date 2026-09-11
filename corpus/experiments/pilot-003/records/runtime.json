@@ -19,7 +19,8 @@
   "operator_attestation": {
     "recorded_at_utc": "2026-09-11T07:51:23.622814+00:00",
     "form": "operator approval token 'approv' in the driving session",
-    "scope": "pre-capture attestations per PROTOCOL (source/mapping review sign-off freeze; independent assessment arrangement); the independent unlabeled review itself remains owed after execution"
+    "scope": "pre-capture attestations per PROTOCOL (source/mapping review sign-off freeze; independent assessment arrangement); the independent unlabeled review itself remains owed after execution",
+    "timing_qualification": "This attestation was recorded AFTER the captures were sealed and before execution. It documents a decision made at that time; it is NOT a prospective pre-capture freeze, and no dated pre-capture freeze artifact exists for pilot-003. The distinction is preserved rather than backdated."
   },
   "executed_at_utc": "2026-09-11T07:54:58.873762+00:00",
   "experiment_id": "exp_01M27QA4137EYA7S1FPTF2Q0SM",
@@ -37,6 +38,8 @@
       "unknown": 4,
       "recovered": false
     },
-    "note": "no arm recovered under recovery-rule/v1; unknowns are proposals whose surface labels do not resolve under the pinned mechanism/v3, making decisive fields incomparable. The automatic classifier abstained rather than guessed. Post-capture vocabulary changes to resolve proposal wording would be outcome-selected and are prohibited; adjudication of unknowns belongs to the independent unlabeled review."
+    "note": "no arm recovered under recovery-rule/v1; unknowns are proposals whose surface labels do not resolve under the pinned mechanism/v3, making decisive fields incomparable. The automatic classifier abstained rather than guessed. Post-capture vocabulary changes to resolve proposal wording would be outcome-selected and are prohibited; adjudication of unknowns belongs to the independent unlabeled review.",
+    "b3_result_classification": "repaired-input assessment (derivative): the primary B3 captured attempt is WIRE-INVALID and produced no assessable payload; the executed assessment consumed the recorded lossless derivative b3-consumed.json",
+    "assessment_rule_note": "assessed under classify/v1 (profile f3334d08...) \u2014 the rule pinned before execution. classify/v2 (completeness-aware absence) now exists as the corrected production rule with a distinct profile hash; any reassessment under it is a corrected assessment with its own experiment identity, never a substitution for this pinned result."
   }
 }

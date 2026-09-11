@@ -12,7 +12,8 @@
           "Read (the sanctioned prompt-file read; no other file, command, or URL)"
         ],
         "verdict": "clean"
-      }
+      },
+      "wire_validity": "VALID \u2014 passed the production importer at execution and the experiment validate-proposals preflight (which consumes the importer implementation, provider.ParseWireProposals)"
     },
     "b3_invariant_guided": {
       "session": "cursor subagent 87cf4fcf-d493-4d15-91a0-de78dd8210e7",
@@ -24,9 +25,11 @@
           "Read (sanctioned prompt-file read)",
           "UpdateCurrentStep x2 (harness progress-status emission; no information ingress)"
         ],
-        "verdict": "clean-with-note: UpdateCurrentStep emits status only and reads nothing; classified as non-deviating because no information entered the session; the independent reviewer may overrule this classification"
+        "verdict": "protocol_deviation_pending_adjudication: the recorded capture rule was unconditional (\"any tool use beyond the sanctioned Read voids the capture\") and the session emitted UpdateCurrentStep twice. No pre-capture exception permitted status-only emissions, so the deviation stands recorded rather than excused; the earlier no-information-ingress analysis is retained below as commentary, not as satisfaction of the rule. The independent reviewer adjudicates whether the capture is admissible for the blinded comparison or only for exploratory analysis.",
+        "ingress_commentary": "UpdateCurrentStep emits progress status and reads nothing; no target information could enter through it. This explains why the deviation is plausibly harmless; it does not make the capture satisfy the unconditional rule."
       },
-      "target_id_validation": "all target_invariant_ids present in the frozen survivor list; explicit subsets used; no invented IDs"
+      "target_id_validation": "all target_invariant_ids present in the frozen survivor list; explicit subsets used; no invented IDs",
+      "wire_validity": "INVALID as captured \u2014 the sealed b3-raw.json fails the production importer (unknown field \"expected_information_gain\" nested inside mechanism). The primary captured attempt is classified WIRE-INVALID: not a research failure and not no_recovery. The assessable derivative is b3-consumed.json (see repair_policy)."
     }
   },
   "consumed_inputs_sha256": {
@@ -45,5 +48,16 @@
     "transform": "deterministic jq re-nesting moving ONLY those two fields from mechanism to the proposal level; losslessness machine-verified (all other content byte-identical); sealed raw bytes untouched",
     "consumed_file": "captures/b3-consumed.json",
     "consumed_sha256": "8128831bcd508177407e35129a6cf0c91a8ad3254031deec9695df18d7ce979c"
+  },
+  "revision_2": {
+    "revised_at_utc": "2026-09-11T08:17:50.015681+00:00",
+    "reason": "post-execution review findings 1 and 3: wire-validity classification was missing from sealing, and the B3 tool-use disposition contradicted the unconditional capture rule"
+  },
+  "sealing_limitation": "Sealing validated JSON parse + schema_version + (for B3) target-id membership. Those checks are weaker than the production wire contract, which is why the B3 nesting defect passed sealing and failed the importer. Corrected going forward: newf experiment validate-proposals runs the exact importer decode path and is required before a capture is declared importable.",
+  "repair_policy": {
+    "statement": "Sealed originals are never edited, regenerated, or decoder-relaxed. A wire-invalid capture may yield an assessable DERIVATIVE only through a deterministic, machine-verified-lossless, recorded transformation, hashed alongside the original. Assessments of a derivative are repaired-input assessments, always reported as distinct from the primary captured attempt. This policy is symmetric across arms: B0 was preflighted under the same rule and required no transformation.",
+    "applied": {
+      "b3_invariant_guided": "jq re-nesting of exactly expected_information_gain/evaluation_cost from mechanism to proposal level; losslessness machine-verified; consumed digest pinned in extraction_details"
+    }
   }
 }

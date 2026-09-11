@@ -1,20 +1,42 @@
 # Pilot 003 — execution result (automatic classification only)
 
 Status: `executed_awaiting_independent_review`. Experiment
-`exp_01M27QA4137EYA7S1FPTF2Q0SM`, leakage audit passed, both arms consumed
-their sealed captures (v32 execution rows in `executions.json` bind arm →
-generation → consumed file hash). Budgets 8/8 as predeclared. Admission
-audits: B0 corrected=1, all other counters zero for both arms.
+`exp_01M27QA4137EYA7S1FPTF2Q0SM`, leakage audit passed, budgets 8/8 as
+predeclared. v32 execution rows in `executions.json` bind arm → generation →
+consumed file hash. Admission audits: B0 corrected=1, all other counters
+zero for both arms.
+
+Revision 2 (post-execution review): result classifications corrected. The
+**primary B3 captured attempt is WIRE-INVALID** — the sealed `b3-raw.json`
+fails the production importer (optional enums nested inside `mechanism`).
+It is not a research failure and not `no_recovery`. What executed for B3 is
+a **repaired-input assessment** of the recorded lossless derivative
+`b3-consumed.json` (transform + digests in the capture record; repair
+policy symmetric across arms — B0 required none and passed the importer as
+captured). B3's transcript audit is reclassified
+`protocol_deviation_pending_adjudication` (see capture record): the capture
+rule was unconditional and no pre-capture exception existed; the
+independent reviewer adjudicates admissibility.
 
 ## Automatic result under recovery-rule/v1 (classify/v1, mechanism/v3)
 
-| Arm | Proposals | Recovered | Decisive non-recovery | Unknown |
-|---|---:|---|---:|---:|
-| B0 undirected | 7 | no | 2 | 5 |
-| B3 invariant-guided | 6 | no | 2 | 4 |
+| Arm | Input class | Proposals | Recovered | Decisive non-recovery | Unknown |
+|---|---|---:|---|---:|---:|
+| B0 undirected | as captured | 7 | no | 2 | 5 |
+| B3 invariant-guided | repaired-input derivative | 6 | no | 2 | 4 |
 
 Recovery delta: **inconclusive** — "at least one arm was not decisively
 assessed on this split; no recovery negative can be claimed."
+
+Assessment-rule note: this pinned result was computed under `classify/v1`
+(profile `f3334d08…`). The corrected production rule `classify/v2`
+(completeness-aware absence: an unobserved empty decisive field is an
+epistemic gap, never decisive negative evidence) now exists with a distinct
+profile hash; a reassessment under it would be a **corrected assessment
+with its own experiment identity**, reported separately — never substituted
+for this result. Under v2, decisive_no verdicts that depended on unrecorded
+(empty+unobserved) fields would instead be unknown; the reviewer should
+weigh the four decisive_no counts above with that caveat.
 
 ## Interpretation discipline (read before quoting any number)
 

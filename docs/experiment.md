@@ -147,6 +147,28 @@ unknown) is pinned in `internal/pipeline/recovery_calibration_integration_test.g
 The non-mechanical half is emitted as operator attestations, never assumed.
 The pilot template lives at `corpus/experiments/pilot-001/PROTOCOL.md`.
 
+`newf experiment validate-proposals --file <capture> [--problem <id>]`
+preflights a captured proposals file through the EXACT importer decode path
+(`provider.ParseWireProposals` — the same implementation `experiment run`
+consumes), so "validated" can never mean anything weaker than what the
+importer enforces. With `--problem`, the problem's surviving invariants are
+the permitted targets (B3 semantics); without it no targets are permitted
+(B0 semantics). Read-only. A capture must pass this preflight before being
+declared importable; sealing checks alone (JSON parse + schema_version) are
+not wire validation — the pilot-003 B3 capture passed sealing and failed
+the importer on field nesting.
+
+Assessment runs under the corrected `classify/v2` profile
+(completeness-aware absence): an EMPTY decisive field without a `complete`
+justification, against a nonempty one, is an epistemic gap — never decisive
+negative evidence — because recorded descriptions differing does not
+establish the mechanisms differ on an omitted property. Justified-complete
+empty fields still participate decisively, and two empty sides are never
+negative evidence. The flag participates in the profile hash, so results
+pinned under `classify/v1` keep their identity; a reassessment under v2 is
+a corrected assessment with its own experiment identity, never a silent
+substitution.
+
 ### Pilot freeze gate
 
 Harness development stops for the pilot when this chain demonstrably holds:

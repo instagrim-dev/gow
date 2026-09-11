@@ -189,9 +189,7 @@ func TestIntegrationRecoveryCalibrationAgainstFrozenTarget(t *testing.T) {
 	// Case 4: an insufficiently represented case — matches the target on the
 	// other decisive fields but carries an unresolved operator label, making
 	// that field incomparable — must stay UNKNOWN (neither recovered nor
-	// decisively distinct). Note an EMPTY decisive field is not this case: a
-	// resolved-empty set against the target's non-empty one is a verified
-	// disagreement (mechanism-distinct), which case 3 semantics already cover.
+	// decisively distinct).
 	underRepresented := calibSeedMechanism(t, ctx, app, dbPath, problemID, runID, snapshotID, &MechanismFixture{
 		Approaches: []MechanismFixtureApproach{{
 			LogicalIdentity:  "calibration/under-represented",
@@ -209,12 +207,45 @@ func TestIntegrationRecoveryCalibrationAgainstFrozenTarget(t *testing.T) {
 		}},
 	})
 	assertRecovery(t, ctx, app, dbPath, underRepresented, target, false, canon.ClassUnknown)
+
+	// Case 5 (classify/v2 correction, pilot-003 review finding 2): the same
+	// matching mechanism with its operators OMITTED entirely — empty and
+	// completeness unobserved through the persisted/admitted path. The
+	// recorded descriptions differ, but nothing establishes the mechanisms
+	// differ on the omitted property: under the corrected production rule
+	// this is UNKNOWN. Under legacy classify/v1 the identical pair reads as a
+	// decisive negative — pinned below as the rule pilot-003's automatic
+	// result was assessed under, never silently substituted.
+	omittedOperators := calibSeedMechanism(t, ctx, app, dbPath, problemID, runID, snapshotID, &MechanismFixture{
+		Approaches: []MechanismFixtureApproach{{
+			LogicalIdentity:  "calibration/omitted-operators",
+			Label:            "Matching variant with operators omitted",
+			Locality:         "global",
+			ConstructionMode: "constructive",
+			UncertaintyMode:  "deterministic",
+			Representations:  []string{"affine lattice", "linear forms", "positive cone"},
+			Assumptions:      []string{"solution set is an affine class", "lattice point existence is decidable via geometry of numbers"},
+			Preserves:        []string{"denominator positivity"},
+			Breaks:           []string{"residue class locality", "qr confinement"},
+			AuxiliaryObjects: []string{"affine sublattice", "convex body"},
+			Outcome:          MechanismFixtureOutcome{Class: "partial_success"},
+		}},
+	})
+	assertRecovery(t, ctx, app, dbPath, omittedOperators, target, false, canon.ClassUnknown)
+	assertRecoveryUnderProfile(t, ctx, app, dbPath, omittedOperators, target, canon.ProfileMechanismV1(), false, canon.ClassSurfaceNearMechDistinct)
 }
 
 // assertRecovery runs the REAL recovery rule (experiment.DetectRecovery under
-// the pinned profile) with the candidate's persisted v3 signature against the
-// target's persisted v3 signature.
+// the corrected production profile, classify/v2) with the candidate's
+// persisted v3 signature against the target's persisted v3 signature.
 func assertRecovery(t *testing.T, ctx context.Context, app *App, dbPath, candidateMech, targetMech string, wantRecovered bool, wantClass canon.Classification) {
+	t.Helper()
+	assertRecoveryUnderProfile(t, ctx, app, dbPath, candidateMech, targetMech, canon.ProfileMechanismV2(), wantRecovered, wantClass)
+}
+
+// assertRecoveryUnderProfile is the profile-explicit variant, used to pin
+// legacy classify/v1 behavior alongside the corrected rule.
+func assertRecoveryUnderProfile(t *testing.T, ctx context.Context, app *App, dbPath, candidateMech, targetMech string, profile canon.ComparisonProfile, wantRecovered bool, wantClass canon.Classification) {
 	t.Helper()
 	load := func(mechID string) canon.MechanismSignature {
 		sigResp, err := app.SignatureMechanism(ctx, SignatureInput{DBPath: dbPath, MechanismID: mechID, VocabVersion: canon.VocabularyMechanismV3})
@@ -237,7 +268,7 @@ func assertRecovery(t *testing.T, ctx context.Context, app *App, dbPath, candida
 
 	arm := experiment.DetectRecovery([]experiment.ProposalContent{{
 		ProposalID: "calibration", Rank: 1, Signature: candidate,
-	}}, target, canon.ProfileMechanismV1())
+	}}, target, profile)
 
 	if arm.Recovered != wantRecovered {
 		t.Fatalf("recovered=%v want %v (classification %s)", arm.Recovered, wantRecovered, arm.NearestClassification)

@@ -473,3 +473,77 @@ func TestSurfaceStringsAuxiliaryOnly(t *testing.T) {
 		t.Fatalf("expected partial overlap, got jaccard=%v", sim.Jaccard)
 	}
 }
+
+// TestCompletenessAwareAbsence pins the classify/v2 correction (pilot-003
+// review, finding 2): an EMPTY set field without a `complete` justification,
+// against a nonempty one, is an epistemic gap — never decisive negative
+// evidence. The recorded descriptions differing does not establish the
+// mechanisms differ on an omitted property. classify/v1 semantics are pinned
+// alongside as the legacy behavior existing results were assessed under.
+func TestCompletenessAwareAbsence(t *testing.T) {
+	full := MechanismSignature{
+		SchemaVersion:     SchemaMechanismV1,
+		VocabularyVersion: "mechanism/v1",
+		Preserves: []FieldClaim{{
+			FieldKind: domain.FieldPreserves, State: domain.ResolutionResolved,
+			CanonicalID: "domain.number_theory.property.residue_locality", Status: domain.ClaimExplicit,
+		}},
+		Operators: []FieldClaim{{
+			FieldKind: domain.FieldOperator, State: domain.ResolutionResolved,
+			CanonicalID: "core.operator.modular_decomposition", Status: domain.ClaimExplicit,
+		}},
+		Posture: Posture{Locality: domain.LocalityLocal, Construction: domain.ConstructionConstructive, Uncertainty: domain.UncertaintyDeterministic},
+	}
+
+	// The same mechanism with operators OMITTED and completeness unobserved.
+	omitted := full
+	omitted.Operators = nil
+
+	// v1 (legacy): zero overlap on operators reads as a verified disagreement.
+	if got := CompareWithProfile(omitted, full, ProfileMechanismV1()).Classification; got != ClassSurfaceNearMechDistinct {
+		t.Fatalf("v1 legacy pin: got %s, want surface-near+mechanism-distinct", got)
+	}
+	// v2 (corrected): the omitted field is an epistemic gap -> unknown.
+	cmp := CompareWithProfile(omitted, full, ProfileMechanismV2())
+	if cmp.Classification != ClassUnknown {
+		t.Fatalf("v2: omitted unobserved field must yield unknown, got %s", cmp.Classification)
+	}
+	var opField FieldResult
+	for _, f := range cmp.Fields {
+		if f.FieldKind == domain.FieldOperator {
+			opField = f
+		}
+	}
+	if !opField.Incomparable || !opField.AbsenceUnverified {
+		t.Fatalf("operators axis must be flagged absence-unverified: %+v", opField)
+	}
+
+	// Complete-empty control: the SAME empty field, justified complete, is
+	// real evidence and stays decisive under v2.
+	completeEmpty := omitted
+	completeEmpty.SetFieldCompleteness = map[domain.FieldKind]domain.FieldCompleteness{
+		domain.FieldOperator: domain.CompletenessComplete,
+	}
+	if got := CompareWithProfile(completeEmpty, full, ProfileMechanismV2()).Classification; got != ClassSurfaceNearMechDistinct {
+		t.Fatalf("v2: justified-complete empty field must stay decisive, got %s", got)
+	}
+
+	// Both-empty stays identical under v2: mutual silence is not a
+	// disagreement and is never negative evidence.
+	bothEmpty := full
+	bothEmpty.Operators = nil
+	other := full
+	other.Operators = nil
+	if got := CompareWithProfile(bothEmpty, other, ProfileMechanismV2()).Classification; got != ClassMechanismNear {
+		t.Fatalf("v2: both-empty must not degrade a matching pair, got %s", got)
+	}
+
+	// Hash discipline: v1's hash is byte-stable (the pinned pilot-003 value)
+	// and v2's differs, so a corrected verdict can never masquerade as v1.
+	if h := ProfileMechanismV1().Hash(); h != "profile-sha256:f3334d08f073785c169efe798cf4e62570cba89ee2889720c192566bf5166ec3" {
+		t.Fatalf("v1 profile hash drifted: %s", h)
+	}
+	if ProfileMechanismV1().Hash() == ProfileMechanismV2().Hash() {
+		t.Fatal("v2 must have a distinct profile hash")
+	}
+}
