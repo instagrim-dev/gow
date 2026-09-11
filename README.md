@@ -47,6 +47,8 @@ newf mechanism show <mechanism-id>
 newf mechanism signature <mechanism-id>
 newf mechanism compare <mechanism-a> <mechanism-b>
 newf mechanism seed-fixture <fixture-path> --problem <problem-id>
+newf interpretation add <mechanism-id> --field <field-kind> --label <label> --provenance <ref>
+newf interpretation list <mechanism-id>
 newf vocabulary list [--version <vocab-version>] [--field <field-kind>]
 newf vocabulary show <canonical-id>
 newf vocabulary resolve <candidate-label> --field <field-kind> [--vocab-version <v>] [--novel]
@@ -65,7 +67,7 @@ newf challenge <invariant-id> | --problem <problem-id> --all
 newf frontier generate --problem <problem-id> [--count <n>] [--no-policy]
 newf frontier list --problem <problem-id>
 newf frontier show [frontier-generation-id] [--problem <problem-id>]
-newf evaluate <proposal-id> --problem <problem-id> | --problem <problem-id> [--all]
+newf evaluate <proposal-id> --problem <problem-id> | --problem <problem-id> [--all] [--generation <id>]
 newf evaluation list --problem <problem-id>
 newf evaluation show <evaluation-run-id>
 newf evaluation failures --problem <problem-id>
@@ -73,7 +75,9 @@ newf successes compress --problem <problem-id> [--min-support <n>]
 newf success-invariant list --problem <problem-id>
 newf success-invariant show [success-revision-id] [--problem <problem-id>]
 newf experiment define --problem <train-id> --target-problem <target-id> [--mode blinded]
-newf experiment run [--problem <train-id> | --holdout-set <id>] [--proposal-budget <n>]
+newf experiment run [--problem <train-id> | --holdout-set <id>] [--proposal-budget <n>] [--b0-proposals-file <path>] [--b3-proposals-file <path>]
+newf experiment readiness --problem <problem-id> [--holdout-set <id>] [--min-support <n>] [--vocab-version <v>]
+newf experiment validate-proposals --file <capture-path> [--problem <train-id>]
 newf experiment show [experiment-id] [--problem <problem-id>]
 newf experiment list --problem <problem-id>
 newf experiment compare [experiment-id] [--problem <problem-id>] [--baseline <arm>] [--treatment <arm>]

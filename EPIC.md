@@ -478,7 +478,10 @@ re-evaluation is a new append-only `evaluation_run`; all rows are immutable by
 trigger. Holdout mode (`mode='holdout'`) is refused at the service boundary and
 by a gate trigger (deferred to M7); the nullable holdout columns are retained
 so M7 needs no schema retrofit. `newf evaluation list/show` and `--json` expose
-the strength-stamped verdicts. See `docs/evaluation.md`. This slice deliberately
+the strength-stamped verdicts; `newf evaluate --generation <id>` pins the
+assessment context to an explicit frontier-generation occurrence (historical
+replay or a specific revised occurrence) instead of the default latest.
+See `docs/evaluation.md`. This slice deliberately
 does NOT compress the partial-successes it finds (M6.1) or mutate search policy
 (M6.2); it records proposal outcomes only, and never changes any invariant's
 state.
@@ -666,7 +669,15 @@ never contaminate each other. `compare` renders a non-inflating,
 within-experiment arm delta (exact counts + ordinal direction + recovery delta;
 never a significance claim over one deterministic split). The v0 claim is the
 HARNESS, not a victory: the first live-model campaign and the first dated
-corpus drop in without schema or metric retrofit. See
+corpus drop in without schema or metric retrofit. For pilot campaigns,
+`experiment run --b0-proposals-file/--b3-proposals-file` routes B0/B3 through
+captured external `proposal-wire/v1` proposals via the untrusted admission
+boundary; read-only `newf experiment readiness --problem <id>` reports the
+mechanical half of the readiness decision (eligible cohort, decisive-axis
+resolution, surviving invariants, recovery reachability); and `newf experiment
+validate-proposals --file <capture> [--problem <id>]` preflights a capture
+through the exact importer decode path (B3 semantics with `--problem`, B0
+without). See
 [`docs/experiment.md`](docs/experiment.md).
 
 This is the first scientifically meaningful end-to-end milestone.

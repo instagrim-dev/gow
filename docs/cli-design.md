@@ -58,15 +58,18 @@ by command (historical drift, now frozen):
 | `source list` | `sources` | |
 | `approach list` | `approaches` | |
 | `mechanism list` | `mechanisms` | |
+| `interpretation add` / `list` | `claim` / `claims` | operator-adjudicated GeneratedInterpretation claims; `--field`, `--label`, `--provenance` required on `add` |
 | `invariant list` | `revisions` (by problem) / `invariants` (by `--state`) | |
 | `invariants mine` | `revision` (with nested `candidates`) | |
 | `invariant state` | `invariant` + `challenges` | lifecycle state is `invariant.state` |
 | `frontier list` / `show` | `generations` / `generation` (nested `proposals`) | `show` accepts `fgr_` or `fpr_` ids |
-| `evaluate` | `run` | one evaluation run |
+| `evaluate` | `run` | one evaluation run; `--generation` pins an explicit frontier-generation occurrence (default latest) |
 | `evaluation list` | `runs` | |
 | `cluster list` / `show` | `cluster_runs` / `cluster_run` | |
 | `policy list` / `show` | `revisions` / `revision` | |
-| `experiment list` / `show` | `experiments` / `experiment` | |
+| `experiment list` / `show` | `experiments` / `experiment` | `run` accepts `--b0-proposals-file` / `--b3-proposals-file` (captured `proposal-wire/v1` external proposals) |
+| `experiment readiness` | top-level readiness report | read-only mechanical readiness; `--problem`, `--holdout-set`, `--min-support`, `--vocab-version` |
+| `experiment validate-proposals` | `valid` + `proposals` + `permitted_targets` | read-only preflight through the exact importer decode path; `--file`, `--problem` (B3 semantics) / omitted (B0 semantics) |
 
 Conventions for NEW surfaces (not retrofitted onto frozen shapes):
 

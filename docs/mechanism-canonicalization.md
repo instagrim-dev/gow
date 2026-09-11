@@ -232,6 +232,19 @@ properties, structural moves, and auxiliary constructions that predict outcome.
 measured but non-decisive **by default** (a caller may promote posture/outcome
 or add boundaries as decisive via a different profile).
 
+### Production assessment profile (`classify/v2` / `ProfileMechanismV2`)
+
+`classify/v2` is the production **assessment** rule used by `experiment run`
+and `experiment readiness`: the same decisive axis selection as v1 with
+completeness-aware absence enabled — under its missing-data contract (see
+[`experiment.md`](experiment.md)), an empty decisive field without a `complete`
+justification is an epistemic gap (`incomparable`), never decisive negative
+evidence. The flag participates in the profile hash, so `classify/v2` has a
+distinct hash and a v2 verdict can never masquerade as (or be silently
+substituted for) a pinned v1 verdict. Clustering (#11) and frontier ranking
+deliberately remain on `classify/v1` pending a separate research decision:
+switching them would change persisted mechanism-family identity.
+
 ### Profile hash: version strings are not enough for #11
 
 A profile carries a human-authored `Version` (e.g. `classify/v1`), but a version

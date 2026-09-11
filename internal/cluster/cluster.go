@@ -39,6 +39,11 @@ func (p Params) withDefaults() Params {
 		out.AlgoVersion = AlgoMechanismV1
 	}
 	if out.Profile.Version == "" {
+		// Clustering DELIBERATELY defaults to classify/v1: family identity is
+		// persisted per cluster run, and re-clustering a corpus under the v2
+		// missing-data contract would change family membership — a research
+		// decision that requires a new protocol revision, never a silent default
+		// change. Assessment-side callers use ProfileMechanismV2 explicitly.
 		out.Profile = canon.ProfileMechanismV1()
 	}
 	return out

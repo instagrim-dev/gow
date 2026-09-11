@@ -47,6 +47,10 @@ func profileForName(name string) (canon.ComparisonProfile, error) {
 	case "", "mechanism/v1", canon.ProfileMechanismV1().Version:
 		return canon.ProfileMechanismV1(), nil
 	default:
+		// classify/v2 is DELIBERATELY not accepted here: clustering under the
+		// v2 missing-data contract would change persisted family identity, a
+		// research decision requiring a new protocol revision — not a CLI
+		// flag. Assessment (experiment run / readiness) owns classify/v2.
 		return canon.ComparisonProfile{}, fmt.Errorf("unknown comparison profile %q", name)
 	}
 }

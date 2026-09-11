@@ -125,10 +125,15 @@ auto-rerun; re-clustering stays an explicit operator/policy decision.
 ```text
 newf evaluate <proposal-id> --problem <id>   # route one proposal
 newf evaluate --problem <id>                 # every un-evaluated proposal in the latest generation
+newf evaluate --problem <id> --generation <id>  # pin the assessment context to an explicit generation occurrence
 newf evaluation list --problem <id>
 newf evaluation show <evaluation-run-id>
 newf evaluation failures --problem <id>      # proposals eligible for atlas re-entry
 ```
+
+`--generation` pins the assessment context to a specific frontier generation's
+occurrence membership (historical replay or a specific revised occurrence);
+the default is the latest occurrence.
 
 All commands emit stable `--json`. Human output leads with verdict AND strength,
 e.g. `partial_success  [counterexample-search / reproducible]`, so a reader never

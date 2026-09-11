@@ -58,7 +58,7 @@ proposal row while carrying evaluation-relevant changes.
 | Operator | Responsibility | Where it lives in newf |
 |---|---|---|
 | `seed` | Build fixture prerequisites through ordinary services | `mineOneCandidate`, `seedPositiveControl`, `ingestNormalizeSign`, `newRealStoreApp` (`internal/pipeline/*_integration_test.go`) |
-| `pin` | Freeze target, population, vocabulary, policy context | fixed `now`, `minPreservesMiner` (deterministic mined predicate), pinned vocab `mechanism/v1`, `biasOnlyChallenger` |
+| `pin` | Freeze target, population, vocabulary, policy context | fixed `now`, `minPreservesMiner` (deterministic mined predicate), a pinned vocabulary version (`mechanism/v1`; `mechanism/v2`/`v3` exist for interpretation-claim and target-canonicalization scenarios — pin ONE per scenario), `biasOnlyChallenger` |
 | `declare` / `admit` | Separate an asserted completeness claim from accepted, scoped authority | payload `field_completeness` + `completeness_scope` + `completeness_basis`; code-decided `admission` in `buildApproachInputs` (v26). Only `declared_payload` scope via the deterministic embedded-payload parser is `accepted` |
 | `revise` / `emit` | Persist another interpretation without overwriting the earlier one | swap `app.generatorFn` (`pcGenerator` + `pcSignature`) between `GenerateFrontier` calls; same fingerprint ⇒ dedup + new `frontier_proposal_signature_revisions` row + `frontier_generation_contents` binding |
 | `reassess` | Evaluate the explicitly selected occurrence; persist its exact binding | `Evaluate(EvaluateInput{ProposalID, GenerationID})`; by-id default = latest occurrence; `GenerationID` pins historical replay |
@@ -106,7 +106,7 @@ proposal occurrence
 + signature content hash        (evaluations.signature_content_hash)
 + target predicate/context
 + predicate verdict             (evaluation_target_verdicts)
-+ outcome evaluation            (one selected record; selection-policy/v2)
++ outcome evaluation            (one selected record; selection-policy/v3)
 ```
 
 A success outcome cannot supply a missing invariant break. A historical break
@@ -171,20 +171,46 @@ ability.
 - `internal/pipeline/guard_mutation_test.go` +
   `internal/store/guard_mutation_test.go` — the guard-mutation block:
   `use_origin_occurrence`, `trust_nonempty_basis`, `use_origin_break_flag`,
-  `use_max_revision_current_view`, `use_latest_revision_not_selection` — each
-  pairs the production guard with the exact pre-fix behavior and requires the
-  named semantic assertion to fail under the mutant.
+  `use_max_revision_current_view`, `use_latest_revision_not_selection`,
+  `use_latest_policy_revision_not_selection` — each pairs the production
+  guard with the exact pre-fix behavior and requires the named semantic
+  assertion to fail under the mutant. `ListCompressionSelectionsExecutionOrder`
+  (store) pins the selection-log ordering the last two mutants depend on.
 - `internal/pipeline/persisted_input_control_integration_test.go` —
   ordinary-path seeding + completeness admission regressions.
 - `internal/pipeline/frontier_admission_integration_test.go` — the untrusted
-  proposal-admission boundary (`canon.AdmitProposalSignature`).
+  proposal-admission boundary (`canon.AdmitProposalSignature`), external
+  proposal arms + preflight, execution attribution under artifact reuse, and
+  the experiment-readiness checks (incl. vocab parameterization and the
+  real-self-comparison recovery-reachability regression).
 - `internal/store/success_store_test.go` — cohort admission probes: both
   verdict directions, legacy binding-unknown handling, current-content
   vs stale strength, v27 reclassification.
-- Remaining gaps: idempotent-recompress is only partially pinned (artifact
-  reuse is asserted in `CompressionSelectionGovernsPolicy`; a dedicated
-  same-manifest no-duplicate-support case is not), and no text parser/runner
-  for the DSL exists (the typed Go adapter is the implementation).
+- `internal/pipeline/success_integration_test.go` — recompress idempotence at
+  BOTH levels: revision-ID reuse and, on a populated revision, per-invariant
+  support counts unchanged with a new selection row appended
+  (`RecompressSameManifestNoDuplicateSupport`).
+- `internal/pipeline/positive_control_integration_test.go` — the populated
+  positive control (decisive recovery, completeness-flip, input-mutation
+  battery, same-path matrix incl. budget exhaustion).
+- `internal/pipeline/interpretation_integration_test.go` — interpretation
+  claims (v33) enter as `inferred`, unblock mining, require provenance, and
+  change nothing when absent.
+- `internal/pipeline/recovery_calibration_integration_test.go` — evaluator
+  calibration against the frozen benchmark target (v2 defect pin, v3
+  self-match, variant recovery, omitted/unresolved unknowns, v1 legacy pins).
+- `internal/pipeline/proposals_validate_test.go` — the capture preflight uses
+  the importer decode path and agrees with generation on attested targets.
+- `internal/pipeline/experiment_compare_test.go` — epistemic non-promotion of
+  inconclusive assessments in arm comparison.
+- `internal/canon/vocabulary_v2_test.go` / `vocabulary_v3_test.go` — vocabulary
+  revision superset + resolution pins; `TestCompletenessAwareAbsence`
+  (`internal/canon/compare_test.go`) — the classify/v2 missing-data contract.
+- `internal/provider/untrusted_proposer_test.go` — proposal-wire/v1 strictness
+  (smuggled authority, whole-payload decoding, target attribution).
+- Remaining gap: no text parser/runner for the DSL exists (the typed Go
+  adapter is the implementation). The former idempotent-recompress gap is
+  closed by `RecompressSameManifestNoDuplicateSupport`.
 
 ## Full syntax reference
 

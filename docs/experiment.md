@@ -216,10 +216,13 @@ lifecycle change, no policy write, no train-atlas write.
 
 ```text
 newf experiment define --problem <train> --target-problem <target> [--mode blinded|historical] [--cutoff <t>] [--name <n>]
-newf experiment run [--problem <train> | --holdout-set <id>] [--arms b0_undirected,b1_semantic_summary,b2_brainstorm,b3_invariant_guided] [--proposal-budget n] [--evaluation-budget n]
+newf experiment run [--problem <train> | --holdout-set <id>] [--arms b0_undirected,b1_semantic_summary,b2_brainstorm,b3_invariant_guided] [--proposal-budget n] [--evaluation-budget n] [--b0-proposals-file <path>] [--b3-proposals-file <path>]
+newf experiment readiness --problem <id> [--holdout-set <id>] [--min-support n] [--vocab-version <v>]
+newf experiment validate-proposals --file <capture> [--problem <id>]
 newf experiment show [experiment-id] [--problem <id>]
 newf experiment list --problem <id>
 newf experiment compare [experiment-id] [--problem <id>] [--baseline <arm>] [--treatment <arm>]
+newf evaluate --problem <id> [--generation <id>]    # pin the assessment to an explicit generation occurrence
 ```
 
 All support `--json`; runs use `running → completed/failed`. Fully offline.

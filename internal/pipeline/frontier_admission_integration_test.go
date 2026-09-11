@@ -961,3 +961,67 @@ func TestIntegrationExperimentReadinessVocabParameterized(t *testing.T) {
 		t.Fatalf("default (v1) must honestly report the corpus is not signed under it: %s", underDefault)
 	}
 }
+
+// TestIntegrationReadinessReachabilityIsRealSelfComparison pins the corrected
+// recovery_reachability check: it computes the target's ACTUAL self-comparison
+// under the production profile (classify/v2) and requires a recovery-set
+// classification, instead of approximating with claim-level counts. The prior
+// approximation (unresolved-claims only) reported ready for a target whose
+// decisive field was EMPTY without a `complete` justification — a shape the
+// v2 missing-data contract makes incomparable, so recovery was unreachable
+// while readiness said ready.
+func TestIntegrationReadinessReachabilityIsRealSelfComparison(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 9, 11, 10, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = minPreservesMiner{}
+	app.challengerFn = biasOnlyChallenger{}
+
+	trainProblem, invID, _ := mineOneCandidate(t, ctx, app, dbPath)
+	if resp, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID}); err != nil {
+		t.Fatalf("challenge: %v", err)
+	} else if resp.Reports[0].StateAfter != "surviving" {
+		t.Fatalf("state = %q", resp.Reports[0].StateAfter)
+	}
+
+	// Target with resolved preserves but an EMPTY, UNJUSTIFIED operators field
+	// (no CompleteFields): every claim resolves, yet the v2 self-comparison is
+	// unknown — recovery is unreachable and the check must say so.
+	targetProblem, targetRun, targetSnap := seedOtherProblem(t, ctx, dbPath, now.Add(time.Hour))
+	seed, err := app.SeedMechanismFixture(ctx, MechanismFixtureSeedInput{
+		DBPath: dbPath, ProblemID: targetProblem, RunID: targetRun, SnapshotID: targetSnap,
+		Fixture: &MechanismFixture{Approaches: []MechanismFixtureApproach{{
+			LogicalIdentity: "sparse-target", Label: "Sparse withheld target",
+			Locality: "global", ConstructionMode: "constructive", UncertaintyMode: "deterministic",
+			Preserves: []string{"residue locality"},
+			Outcome:   MechanismFixtureOutcome{Class: "success"},
+		}}},
+	})
+	if err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	if _, err := app.SignatureMechanism(ctx, SignatureInput{DBPath: dbPath, MechanismID: seed.MechanismIDs[0], VocabVersion: canon.VocabularyMechanismV1}); err != nil {
+		t.Fatalf("signature: %v", err)
+	}
+	if _, err := app.DefineExperiment(ctx, ExperimentDefineInput{DBPath: dbPath, ProblemID: trainProblem, TargetProblemID: targetProblem}); err != nil {
+		t.Fatalf("define: %v", err)
+	}
+
+	ready, err := app.ExperimentReadiness(ctx, ExperimentReadinessInput{DBPath: dbPath, ProblemID: trainProblem})
+	if err != nil {
+		t.Fatalf("readiness: %v", err)
+	}
+	for _, c := range ready.Checks {
+		if c.Check == "recovery_reachability" {
+			if c.Status != "blocked" {
+				t.Fatalf("empty-unjustified decisive field must block reachability: %+v", c)
+			}
+			if !strings.Contains(c.Detail, "self-comparison") {
+				t.Fatalf("blocked detail must name the self-comparison basis: %q", c.Detail)
+			}
+			return
+		}
+	}
+	t.Fatal("recovery_reachability check missing")
+}

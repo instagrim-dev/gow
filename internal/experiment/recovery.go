@@ -58,6 +58,15 @@ var recoveringClassifications = map[canon.Classification]bool{
 	canon.ClassSurfaceDistinctMechNear: true,
 }
 
+// IsRecovering reports whether a classification satisfies recovery-rule/v1.
+// Exported so callers that must agree with the rule (e.g. the readiness
+// recovery-reachability check, which computes a target self-comparison under
+// the production profile) consume the SAME membership set instead of
+// approximating it.
+func IsRecovering(c canon.Classification) bool {
+	return recoveringClassifications[c]
+}
+
 // classificationStrength orders classifications from nearest to farthest for
 // the "nearest" rollup (identical/near strongest; unknown weakest).
 var classificationStrength = map[canon.Classification]int{

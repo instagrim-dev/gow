@@ -283,6 +283,11 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 			EvaluationCost:            p.EvaluationCost,
 		})
 	}
+	// Generation-time ranking DELIBERATELY stays on classify/v1: proposal
+	// ranking feeds persisted frontier artifacts whose identity predates
+	// classify/v2, and switching the ranking profile is a research decision
+	// (it would reorder candidates across existing corpora), not a default.
+	// Assessment (experiment run / readiness) uses ProfileMechanismV2.
 	candidates := frontier.Rank(frontier.EvaluateProposals(enginePropos, engineFamilies, targets, canon.ProfileMechanismV1()))
 
 	// M6.2: apply the latest persisted search policy as a bounded ordinal bias

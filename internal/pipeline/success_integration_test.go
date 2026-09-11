@@ -211,3 +211,75 @@ func TestIntegrationCompressPersistsDiscriminatingCondition(t *testing.T) {
 		t.Fatal("expected persisted predicate + fingerprint")
 	}
 }
+
+// TestIntegrationRecompressSameManifestNoDuplicateSupport closes the
+// newf-regress gap: idempotent recompression was pinned only at the
+// revision-ID level. This pins the SUPPORT accounting on a POPULATED
+// revision: recompressing an unchanged manifest reuses the artifact, keeps
+// every invariant's distinct-mechanism support identical (no duplicated
+// support units), and appends a NEW selection row (v28: executions log,
+// artifacts dedup).
+func TestIntegrationRecompressSameManifestNoDuplicateSupport(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = minPreservesMiner{}
+	app.challengerFn = biasOnlyChallenger{}
+	app.generatorFn = pcGenerator{signatures: []canon.MechanismSignature{pcSignature(pcResidueLocality, "", true)}}
+
+	problemID, invID, _ := mineOneCandidate(t, ctx, app, dbPath)
+	if resp, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID}); err != nil || resp.Reports[0].StateAfter != "surviving" {
+		t.Fatalf("challenge: %v / %+v", err, resp.Reports)
+	}
+	if _, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID}); err != nil {
+		t.Fatalf("generate: %v", err)
+	}
+	// A decisive assessment makes the cohort admissible (same substrate as
+	// TestIntegrationCompressionSelectionGovernsPolicy's supported revision).
+	app.modelVerifierFn = provider.NewFixtureModelVerifier(verify.VerdictPartialSuccess, "medium")
+	if _, err := app.Evaluate(ctx, EvaluateInput{DBPath: dbPath, ProblemID: problemID}); err != nil {
+		t.Fatalf("evaluate: %v", err)
+	}
+
+	first, err := app.CompressSuccesses(ctx, SuccessCompressInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("compress: %v", err)
+	}
+	if !first.Created || first.Revision.InvariantCount == 0 {
+		t.Fatalf("substrate must produce a POPULATED first revision: %+v", first.Revision)
+	}
+	supportBefore := map[string]int{}
+	for _, inv := range first.Revision.Invariants {
+		supportBefore[inv.PredicateFingerprint] = inv.DistinctSupport
+	}
+
+	repo := openTestStore(t, ctx, dbPath)
+	defer repo.Close()
+	selectionsBefore, err := repo.ListCompressionSelections(ctx, problemID)
+	if err != nil {
+		t.Fatalf("selections: %v", err)
+	}
+
+	again, err := app.CompressSuccesses(ctx, SuccessCompressInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("recompress: %v", err)
+	}
+	if again.Created || again.Revision.ID != first.Revision.ID {
+		t.Fatalf("same manifest must reuse the artifact: %+v", again.Revision)
+	}
+	if len(again.Revision.Invariants) != len(first.Revision.Invariants) {
+		t.Fatalf("recompress duplicated invariants: %d -> %d", len(first.Revision.Invariants), len(again.Revision.Invariants))
+	}
+	for _, inv := range again.Revision.Invariants {
+		if got, want := inv.DistinctSupport, supportBefore[inv.PredicateFingerprint]; got != want {
+			t.Fatalf("support for %s changed on recompress: %d -> %d (duplicated support units)", inv.PredicateFingerprint, want, got)
+		}
+	}
+	selectionsAfter, err := repo.ListCompressionSelections(ctx, problemID)
+	if err != nil {
+		t.Fatalf("selections after: %v", err)
+	}
+	if len(selectionsAfter) != len(selectionsBefore)+1 {
+		t.Fatalf("recompress must append exactly one selection row (execution log): %d -> %d", len(selectionsBefore), len(selectionsAfter))
+	}
+}
