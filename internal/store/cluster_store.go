@@ -352,7 +352,10 @@ SELECT id FROM cluster_runs WHERE problem_id = ? ORDER BY created_at DESC, id DE
 // population selector for challenge campaigns (v34/S1): a re-challenge may
 // only widen its evidence to a population whose signatures are comparable with
 // the claim's predicate — same signature schema, same vocabulary. A newer run
-// under a different vocabulary is not silently substituted.
+// under a different vocabulary is not silently substituted. Recency ties on
+// created_at break by rowid (insertion order): ULID ids minted in the same
+// millisecond carry random entropy, so `id DESC` would pick an arbitrary run,
+// not the latest one.
 func (s *Store) LatestClusterRunForVersions(ctx context.Context, problemID, schemaVersion, vocabularyVersion string) (string, bool, error) {
 	if err := domain.ValidateProblemID(problemID); err != nil {
 		return "", false, err
@@ -360,7 +363,7 @@ func (s *Store) LatestClusterRunForVersions(ctx context.Context, problemID, sche
 	row := s.db.QueryRowContext(ctx, `
 SELECT id FROM cluster_runs
 WHERE problem_id = ? AND schema_version = ? AND vocabulary_version = ?
-ORDER BY created_at DESC, id DESC LIMIT 1
+ORDER BY created_at DESC, rowid DESC LIMIT 1
 `, problemID, schemaVersion, vocabularyVersion)
 	var id string
 	if err := row.Scan(&id); err != nil {

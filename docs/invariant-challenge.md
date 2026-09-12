@@ -78,6 +78,58 @@ inadmissible/inapplicable/inconclusive attempts opens the campaign
 `challenged` is resumable a later campaign can still decide it. Survival cannot be
 requested.
 
+## Discovery vs assessment population (v34/S1)
+
+A challenge campaign runs over **two explicitly identified populations**, fixing
+the 2026-09-12 structural review's finding S1 (the map could advance while an
+invariant's search authority stayed justified against an older population):
+
+- **discovery population** — the cluster run the candidate's mining revision was
+  derived over. This is the claim's *scope*: what the recorded statement is
+  about.
+- **assessment population** — the evidence the campaign's searches actually ran
+  against. Under the default `--population latest` policy this is the newest
+  cluster run with the **same schema and vocabulary versions** as the discovery
+  run (predicate comparability is a precondition for widening evidence, never
+  silently substituted); `--population discovery` replays the original
+  population exactly.
+
+Attacks route by what their claim is about:
+
+| Attack | Population | Why |
+|---|---|---|
+| `known-counterexample`, `success-preserving` | **assessment** | evidence searches: "does *current* evidence contain a violator / a preserving success?" |
+| `bias-critique`, `split`, `merge`, synthetic grounding | **discovery** | claim-scope operations: recounting support or partitioning the claim's own sample over a different population would conflate two claims |
+
+A confirmed counterexample is additionally **scope-classified** by exact
+signature membership in the discovery run:
+
+- an **in-scope** violator (a member of the population the universal claim was
+  made over) **falsifies** the historical claim itself;
+- a violator found **only in the assessment expansion** does **not** rewrite
+  history: the bounded statement about the discovery population stands, its
+  *generalization* to current evidence is refuted, and the invariant transitions
+  to **weaken** — dropping frontier eligibility without fabricating a
+  retroactive falsification.
+
+Membership is exact signature identity: a revised interpretation of an
+in-discovery approach carries a new signature id and counts as new evidence,
+because the claim was made over the signatures actually recorded.
+
+Every population-assessed campaign persists its identity in
+`challenge_assessment_populations` (`run_id`, `invariant_id`, both cluster-run
+ids, the requested policy; immutable rows), so a reader can always tell which
+evidence a campaign searched — it is never inferred from the mining revision.
+Attestation campaigns (`invariant establish`) search no population and persist
+no row.
+
+**Recorded limitation:** survival re-earned by a later campaign is stamped with
+that campaign's population; a `discovery` replay of a weakened invariant can
+re-earn `surviving` against the old population. The transition ledger plus the
+population rows keep this auditable, but the state summary alone does not rank
+populations by recency — readers of `surviving` should check the latest
+campaign's assessment population.
+
 Confirmed split/merge children are persisted as **real candidate invariants**
 in a new revision whose derivation identity (the `miner_version` reuse key)
 **folds the relation, the parent invariant set, and the canonical child
@@ -131,6 +183,9 @@ tables and that the role CHECK admits both `invariant` and `challenge`.
 
 A campaign is persisted **atomically**: an illegal transition anywhere aborts
 the whole campaign — no challenge rows, no partial evidence, no state change.
+Migration v34 adds `challenge_assessment_populations` (immutable; one row per
+population-assessed campaign) recording the discovery/assessment cluster-run
+ids and the requested policy inside the same transaction.
 
 ## Provenance, determinism, offline CI
 
@@ -148,8 +203,8 @@ synthesis needs a real model. CI makes no network/model calls.
 ## CLI
 
 ```text
-newf challenge <invariant-id>
-newf challenge --problem <id> --all
+newf challenge <invariant-id> [--population latest|discovery]
+newf challenge --problem <id> --all [--population latest|discovery]
 newf invariant state <invariant-id>
 newf invariant list --problem <id> --state surviving
 newf invariant establish <invariant-id> --snapshot <snap-id> --locator <loc> [--note ...]
