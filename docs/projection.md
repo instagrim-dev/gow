@@ -71,6 +71,25 @@ policy consumer can weigh a discharge without parsing the prose basis; a
 model-judged observation stays labeled as such
 (ModelJudgment != Verification).
 
+Two coherence gates guard the decision (issue #23 closure):
+
+- **Subject gate (v38):** the backing evaluation's `verification_subject`
+  must be `domain-goal`. An annotation-subject certificate (a deterministic
+  predicate check over the signature) is about the *description*, not the
+  domain — accepting it here would be the wrong-object certification the
+  subject axis exists to prevent. Pre-v38 evaluations with no recorded
+  subject are refused for the same reason.
+- **Verdict–status coherence:** `discharged` (realization holds) requires an
+  unambiguous domain `success`; `failed` requires a failure-side verdict
+  (`failure`/`partial_failure`). Partial, unknown, or blocked verdicts back
+  neither — recording the stronger status over a weaker verdict is a silent
+  epistemic promotion.
+
+The strongest available backing is a **witness-backed evaluation**
+(`newf witness check`, issue #23): an exact-integer domain check recorded at
+`reproducible` strength, whose canonical claim the decision's basis and
+typed columns carry.
+
 > **Current limitation (recorded, 2026-09-12 review F10):** obligations and
 > their decisions are persisted and inspectable, but no search-policy
 > mutation consumes them yet. The typed columns exist so that consumption,
@@ -91,6 +110,10 @@ change to observation is auditable without reading any transcript.
   refuted deterministically with exact gaps, leaves no realization
   obligation, refuses identical re-submission, and admits a fixed plan as a
   new revision.
+- `TestIntegrationWitnessBackedProjectionDischarge` — a domain-realization
+  obligation discharged on an exact witness check, with both coherence gates
+  proven: `discharged`-over-failure refused as an epistemic promotion, and an
+  annotation-subject certificate refused as the wrong object.
 - `internal/projection` unit tests pin the checker's ordering and gap
   semantics; `internal/store` tests pin revision allocation, append-once
   decisions, and SQL-level immutability.

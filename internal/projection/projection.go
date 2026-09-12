@@ -33,6 +33,33 @@ import (
 // SchemaProjectionV1 versions the artifact wire/persistence shape.
 const SchemaProjectionV1 = "projection/v1"
 
+// SchemaProjectionV2 (issue #22, decision D3) extends v1 with the
+// semantic-preservation contract docs/abstraction-safety.md requires of any
+// non-trivial re-representation: source/target domain, preserved properties,
+// known losses, correspondence class, and a grounding plan. v2 is ADDITIVE:
+// composition checking is identical, and v1 artifacts keep parsing (their
+// correspondence is simply unrecorded — never backfilled).
+const SchemaProjectionV2 = "projection/v2"
+
+// Correspondence classes a v2 artifact may claim between source and target
+// domain (docs/abstraction-safety.md): whether the mapping is an equivalence,
+// a one-way implication, an analogy, or honestly unknown. There is no
+// default: an unstated class is a parse error, not "unknown".
+const (
+	CorrespondenceEquivalence       = "equivalence"
+	CorrespondenceOneWayImplication = "one-way-implication"
+	CorrespondenceAnalogy           = "analogy"
+	CorrespondenceUnknown           = "unknown"
+)
+
+func validCorrespondence(c string) bool {
+	switch c {
+	case CorrespondenceEquivalence, CorrespondenceOneWayImplication, CorrespondenceAnalogy, CorrespondenceUnknown:
+		return true
+	}
+	return false
+}
+
 // Step is one claimed concrete operation in a projection artifact. Requires
 // and Provides are exact-match tokens (v1: opaque, artifact-scoped names; a
 // canonical-vocabulary binding is future work and must not be faked by fuzzy
@@ -56,6 +83,32 @@ type Artifact struct {
 	// Target names the tokens the plan claims to deliver overall; each must be
 	// provided by some step (or given) for the plan to compose.
 	Target []string `json:"target,omitempty"`
+
+	// --- projection/v2 semantic-preservation contract (issue #22, D3) ---
+	// All six fields are REQUIRED on a v2 artifact and REFUSED on a v1
+	// artifact (strict parse: no version-blurred payloads). On v1 they are
+	// absent and the correspondence is unrecorded.
+
+	// SourceDomain / TargetDomain name the domains the projection maps
+	// between (author-claimed, recorded as such).
+	SourceDomain string `json:"source_domain,omitempty"`
+	TargetDomain string `json:"target_domain,omitempty"`
+	// Preserves lists the properties the projection claims to preserve. An
+	// abstraction that cannot state what it preserves is defective
+	// (docs/abstraction-safety.md); an empty list is refused.
+	Preserves []string `json:"preserves,omitempty"`
+	// Loses lists information known lost by the projection. It must be
+	// PRESENT on v2 (an explicit empty list is the author's claim that
+	// nothing known is lost; a missing field is an unexamined loss surface
+	// and is refused).
+	Loses []string `json:"loses,omitempty"`
+	// Correspondence is the claimed correspondence class: equivalence,
+	// one-way-implication, analogy, or unknown. Required; no default.
+	Correspondence string `json:"correspondence,omitempty"`
+	// GroundingPlan states how a landing point in the target domain maps
+	// back to source-domain predictions (the `ground` half of the
+	// abstract/ground pair). Required and non-empty.
+	GroundingPlan string `json:"grounding_plan,omitempty"`
 }
 
 // Parse decodes and validates an artifact. Unknown fields are rejected; every
@@ -69,8 +122,46 @@ func Parse(raw []byte) (Artifact, error) {
 	if err := dec.Decode(&a); err != nil {
 		return Artifact{}, fmt.Errorf("decode projection artifact: %w", err)
 	}
-	if a.Schema != SchemaProjectionV1 {
-		return Artifact{}, fmt.Errorf("unsupported projection schema %q (want %s)", a.Schema, SchemaProjectionV1)
+	switch a.Schema {
+	case SchemaProjectionV1:
+		// Strict parse: v2 fields on a v1 payload are refused, not ignored —
+		// a version-blurred artifact would let semantic claims ride without
+		// the v2 obligations they owe.
+		if a.SourceDomain != "" || a.TargetDomain != "" || a.Preserves != nil ||
+			a.Loses != nil || a.Correspondence != "" || a.GroundingPlan != "" {
+			return Artifact{}, fmt.Errorf("projection/v1 artifact carries projection/v2 semantic fields; declare schema %s to make the semantic-preservation contract binding", SchemaProjectionV2)
+		}
+	case SchemaProjectionV2:
+		a.SourceDomain = strings.TrimSpace(a.SourceDomain)
+		a.TargetDomain = strings.TrimSpace(a.TargetDomain)
+		a.GroundingPlan = strings.TrimSpace(a.GroundingPlan)
+		if a.SourceDomain == "" {
+			return Artifact{}, fmt.Errorf("projection/v2: source_domain is required")
+		}
+		if a.TargetDomain == "" {
+			return Artifact{}, fmt.Errorf("projection/v2: target_domain is required")
+		}
+		var err error
+		if a.Preserves, err = cleanTokens(a.Preserves, "preserves"); err != nil {
+			return Artifact{}, err
+		}
+		if len(a.Preserves) == 0 {
+			return Artifact{}, fmt.Errorf("projection/v2: preserves is required and non-empty: an abstraction that cannot state what it preserves is defective (docs/abstraction-safety.md)")
+		}
+		if a.Loses == nil {
+			return Artifact{}, fmt.Errorf("projection/v2: loses is required (an explicit empty list claims nothing known is lost; a missing field is an unexamined loss surface)")
+		}
+		if a.Loses, err = cleanTokens(a.Loses, "loses"); err != nil {
+			return Artifact{}, err
+		}
+		if !validCorrespondence(a.Correspondence) {
+			return Artifact{}, fmt.Errorf("projection/v2: correspondence must be one of equivalence, one-way-implication, analogy, unknown; got %q (there is no default)", a.Correspondence)
+		}
+		if a.GroundingPlan == "" {
+			return Artifact{}, fmt.Errorf("projection/v2: grounding_plan is required: a projection without a way back to source-domain predictions is a one-way escape into nicer prose")
+		}
+	default:
+		return Artifact{}, fmt.Errorf("unsupported projection schema %q (want %s or %s)", a.Schema, SchemaProjectionV1, SchemaProjectionV2)
 	}
 	if len(a.Steps) == 0 {
 		return Artifact{}, fmt.Errorf("projection artifact has no steps: a plan with no concrete operations is prose, not a projection")

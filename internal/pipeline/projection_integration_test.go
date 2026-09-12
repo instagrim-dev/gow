@@ -8,7 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/instagrim-dev/newf/internal/domain"
 	"github.com/instagrim-dev/newf/internal/provider"
+	"github.com/instagrim-dev/newf/internal/store"
 	"github.com/instagrim-dev/newf/internal/verify"
 )
 
@@ -235,5 +237,129 @@ func TestIntegrationProjectionCompositionFailure(t *testing.T) {
 	}
 	if !fixed.Composes || fixed.Projection.Revision != 2 {
 		t.Fatalf("fixed plan must compose as revision 2: %+v", fixed.Projection)
+	}
+}
+
+// TestIntegrationWitnessBackedProjectionDischarge closes issue #23's last
+// acceptance path: a domain-realization projection obligation discharged on
+// the strength of an EXACT witness check — an external-checker-backed domain
+// observation — with two refusal gates proven on the way:
+//
+//  1. verdict–status coherence: `discharged` (realization holds) over a
+//     failure-verdict observation is refused — recording the stronger status
+//     over a weaker verdict is a silent epistemic promotion;
+//  2. subject gate (v38): an annotation-subject evaluation cannot back a
+//     domain-realization decision — a certificate about the DESCRIPTION is
+//     not an observation of the DOMAIN, which is the exact wrong-object
+//     confusion the subject axis exists to prevent.
+func TestIntegrationWitnessBackedProjectionDischarge(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 12, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = dataDrivenMiner{}
+	app.challengerFn = biasOnlyChallenger{}
+	app.modelVerifierFn = provider.NewFixtureModelVerifier(verify.VerdictFailure, "high")
+
+	problemID, invID, _ := mineOneCandidate(t, ctx, app, dbPath)
+	if _, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID}); err != nil {
+		t.Fatalf("challenge: %v", err)
+	}
+	gen, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil || len(gen.Generation.Proposals) == 0 {
+		t.Fatalf("frontier generate: %v", err)
+	}
+	proposalID := gen.Generation.Proposals[0].ID
+
+	proj, err := app.ProjectProposal(ctx, ProjectProposalInput{
+		DBPath: dbPath, ProposalID: proposalID,
+		Path: writeArtifactFile(t, "plan.json", composingArtifact),
+	})
+	if err != nil || !proj.Composes {
+		t.Fatalf("projection propose: %v (composes=%v)", err, proj.Composes)
+	}
+	var realizeID string
+	for _, ob := range proj.Projection.Obligations {
+		if ob.Kind == "domain-realization" {
+			realizeID = ob.ID
+		}
+	}
+	if realizeID == "" {
+		t.Fatal("composing plan must open a domain-realization obligation")
+	}
+
+	// The domain observation: the plan's step-3 output tuple is checked
+	// exactly and refuted (the issue's near-miss vector). This is a
+	// reproducible-computation, domain-goal evaluation of the SAME proposal.
+	wres, err := app.WitnessCheck(ctx, WitnessCheckInput{
+		DBPath: dbPath, ProposalID: proposalID, Tuple: "5,2,4,21",
+		Note: "tuple produced by the projected plan's construction (test fixture)",
+	})
+	if err != nil {
+		t.Fatalf("witness check: %v", err)
+	}
+	if wres.WitnessVerdict != "witness-invalid" {
+		t.Fatalf("near-miss must be refuted: %+v", wres)
+	}
+	witnessEvalID := wres.Evaluation.ID
+
+	// Gate 1: the observation is a domain FAILURE; recording the obligation
+	// as discharged (realization holds) anyway must be refused.
+	if _, err := app.DischargeObligation(ctx, DischargeObligationInput{
+		DBPath: dbPath, ObligationID: realizeID, Status: "discharged",
+		EvaluationID: witnessEvalID, Note: "wishful",
+	}); err == nil || !strings.Contains(err.Error(), "unambiguous domain success") {
+		t.Fatalf("discharged-over-failure must be refused as an epistemic promotion: %v", err)
+	}
+
+	// Gate 2: an annotation-subject evaluation (a certificate about the
+	// signature, not the domain) cannot back a domain-realization decision.
+	repo := openTestStore(t, ctx, dbPath)
+	annRun, err := repo.CreateRun(ctx, domain.NewRun{
+		ID: domain.NewRunID(now), ProblemID: problemID, Operation: "test",
+		Status: domain.RunStatusRunning, InputRef: "test", ToolName: "t", ToolVersion: "v",
+		StartedAt: now, CompletedAt: now,
+	})
+	if err != nil {
+		t.Fatalf("create run: %v", err)
+	}
+	annEvalID := domain.NewEvaluationID(now.Add(time.Minute))
+	if _, err := repo.PersistEvaluationRun(ctx, store.EvaluationRunRecord{
+		ID: domain.NewEvaluationRunID(now.Add(time.Minute)), ProblemID: problemID,
+		RunID: annRun.ID, Mode: "proposal", CreatedAt: now.Format("2006-01-02T15:04:05Z"),
+		Evaluations: []store.EvaluationRow{{
+			ID: annEvalID, ProposalID: proposalID, Verdict: "failure",
+			VerifierKind: "deterministic-check", VerificationStrength: "deterministic",
+			VerificationSubject: "annotation", ToolName: "t", ToolVersion: "v",
+			Notes: "annotation-subject certificate (test)",
+		}},
+	}); err != nil {
+		t.Fatalf("persist annotation evaluation: %v", err)
+	}
+	repo.Close()
+	if _, err := app.DischargeObligation(ctx, DischargeObligationInput{
+		DBPath: dbPath, ObligationID: realizeID, Status: "failed",
+		EvaluationID: annEvalID, Note: "wrong object",
+	}); err == nil || !strings.Contains(err.Error(), "domain-goal observation") {
+		t.Fatalf("annotation-subject backing must be refused: %v", err)
+	}
+
+	// The coherent decision: failed, backed by the witness observation.
+	dis, err := app.DischargeObligation(ctx, DischargeObligationInput{
+		DBPath: dbPath, ObligationID: realizeID, Status: "failed",
+		EvaluationID: witnessEvalID,
+		Note:         "the plan's construction produced a tuple the exact checker refutes",
+	})
+	if err != nil {
+		t.Fatalf("witness-backed discharge: %v", err)
+	}
+	ob := dis.Obligation
+	if ob.Status != "failed" || ob.EvidenceRef != witnessEvalID {
+		t.Fatalf("decision must link the witness observation: %+v", ob)
+	}
+	if ob.EvaluationVerdict != "failure" || ob.EvaluationStrength != "reproducible" {
+		t.Fatalf("typed epistemic weight must record the reproducible witness check: %+v", ob)
+	}
+	if !strings.Contains(ob.Basis, "reproducible") {
+		t.Fatalf("basis must carry the observation's strength: %q", ob.Basis)
 	}
 }

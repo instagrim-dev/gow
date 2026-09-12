@@ -20,6 +20,7 @@ import (
 	"github.com/instagrim-dev/newf/internal/domain"
 	"github.com/instagrim-dev/newf/internal/projection"
 	"github.com/instagrim-dev/newf/internal/store"
+	"github.com/instagrim-dev/newf/internal/verify"
 )
 
 // ProjectProposalInput drives `newf projection propose`.
@@ -211,7 +212,7 @@ func (a *App) ProjectProposal(ctx context.Context, input ProjectProposalInput) (
 			ProposalID:    input.ProposalID,
 			RunID:         run.ID,
 			AuthorKind:    author,
-			SchemaVersion: projection.SchemaProjectionV1,
+			SchemaVersion: artifact.Schema,
 			ContentJSON:   string(raw),
 			ContentHash:   contentHash,
 			CreatedAt:     created,
@@ -248,6 +249,23 @@ func (a *App) ProjectProposal(ctx context.Context, input ProjectProposalInput) (
 			Checker:   "external",
 			CreatedAt: created,
 		})
+		// projection/v2 (issue #22, D3): the semantic-preservation contract is
+		// an OBLIGATION, not a parsed-and-forgotten annotation. It stays open
+		// until an external observation decides whether the projection
+		// actually preserves what it claims across the declared domains.
+		if artifact.Schema == projection.SchemaProjectionV2 {
+			rec.Obligations = append(rec.Obligations, store.ProjectionObligationRow{
+				ID:      domain.NewProjectionObligationID(now),
+				Ordinal: 2,
+				Kind:    "semantic-preservation",
+				Statement: fmt.Sprintf(
+					"the projection preserves [%s] from %s to %s under correspondence %q (known losses: [%s]), and landing points ground back via the recorded plan",
+					strings.Join(artifact.Preserves, ", "), artifact.SourceDomain, artifact.TargetDomain,
+					artifact.Correspondence, strings.Join(artifact.Loses, ", ")),
+				Checker:   "external",
+				CreatedAt: created,
+			})
+		}
 	}
 
 	persisted, err := repoStore.PersistProjection(ctx, rec)
@@ -284,7 +302,7 @@ func (a *App) DischargeObligation(ctx context.Context, input DischargeObligation
 		return DischargeObligationResponse{}, fmt.Errorf("--note is required: an obligation decision records its basis")
 	}
 	if input.EvaluationID == "" {
-		return DischargeObligationResponse{}, fmt.Errorf("--evaluation is required: a domain-realization verdict is backed by a domain observation, not an assertion")
+		return DischargeObligationResponse{}, fmt.Errorf("--evaluation is required: an external-obligation verdict (domain-realization, semantic-preservation) is backed by a domain observation, not an assertion")
 	}
 
 	dbPath, repoStore, err := a.openStoreFn(ctx, input.DBPath)
@@ -309,6 +327,37 @@ func (a *App) DischargeObligation(ctx context.Context, input DischargeObligation
 	}
 	if ev.ProposalID != art.ProposalID {
 		return DischargeObligationResponse{}, fmt.Errorf("evaluation %s assesses proposal %s, not the projected proposal %s: a domain observation must be about the same proposed change", ev.ID, ev.ProposalID, art.ProposalID)
+	}
+	// v38 subject gate (#21/#23): a domain-realization verdict must be backed
+	// by an observation ABOUT THE DOMAIN GOAL. An annotation-subject
+	// evaluation (a deterministic predicate check over the signature)
+	// certifies the description, not the realization — accepting it here
+	// would be exactly the wrong-object certification the subject axis
+	// exists to prevent. Pre-v38 evaluations with no recorded subject are
+	// refused for the same reason: an unrecorded subject cannot certify the
+	// domain goal.
+	if ev.VerificationSubject != string(verify.SubjectDomainGoal) {
+		got := ev.VerificationSubject
+		if got == "" {
+			got = "unrecorded (pre-v38)"
+		}
+		return DischargeObligationResponse{}, fmt.Errorf("evaluation %s has verification subject %s; an external-obligation discharge requires a domain-goal observation, not a certificate about the annotation", ev.ID, got)
+	}
+	// Verdict–status coherence: the decision must FOLLOW the observation. A
+	// `discharged` (realization holds) decision requires an unambiguous
+	// domain success; `failed` requires a failure-side verdict. Anything
+	// else — partial, unknown, blocked — backs neither: recording the
+	// stronger status over a weaker verdict would be a silent epistemic
+	// promotion at the exact boundary this chain exists to type.
+	switch input.Status {
+	case "discharged":
+		if ev.Verdict != "success" {
+			return DischargeObligationResponse{}, fmt.Errorf("evaluation %s has verdict %q; a discharged (realization holds) decision requires an unambiguous domain success — recording it anyway would promote the observation", ev.ID, ev.Verdict)
+		}
+	case "failed":
+		if ev.Verdict != "failure" && ev.Verdict != "partial_failure" {
+			return DischargeObligationResponse{}, fmt.Errorf("evaluation %s has verdict %q; a failed decision requires a failure-side domain verdict", ev.ID, ev.Verdict)
+		}
 	}
 
 	now := a.now()

@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 41
+const currentSchemaVersion = 42
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -1162,6 +1162,21 @@ END;
 		// episode_revisions (the map change between steps, recorded before
 		// step 2 may be committed).
 		apply: migrateV41Episodes,
+	},
+	{
+		version: 42,
+		// v42 (issue #22, decision D3): the projection/v2 semantic-preservation
+		// contract. Widens the projection_obligations.kind CHECK to admit
+		// 'semantic-preservation' — the obligation a v2 artifact owes for its
+		// claimed preserved properties and correspondence class, decided only
+		// by an external observation (checker_kind vocabulary unchanged:
+		// 'external' already covers it). The widening uses the established
+		// in-place writable_schema CHECK edit (FK-safe by construction;
+		// projection_obligation_decisions holds live FKs into the table).
+		// Introspective + idempotent: a DDL already admitting the kind is
+		// left untouched. Artifact schema_version has no CHECK, so
+		// 'projection/v2' rows need no DDL change.
+		apply: migrateV42SemanticPreservationObligations,
 	},
 }
 
@@ -4017,4 +4032,20 @@ END;
 func migrateV41Episodes(ctx context.Context, tx *sql.Tx) error {
 	_, err := tx.ExecContext(ctx, episodesSQL)
 	return err
+}
+
+// migrateV42SemanticPreservationObligations widens the
+// projection_obligations.kind CHECK vocabulary to admit
+// 'semantic-preservation' (issue #22, D3). Introspective + idempotent.
+func migrateV42SemanticPreservationObligations(ctx context.Context, tx *sql.Tx) error {
+	var ddl string
+	if err := tx.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type='table' AND name='projection_obligations'`).Scan(&ddl); err != nil {
+		return err
+	}
+	if strings.Contains(ddl, "'semantic-preservation'") {
+		return nil
+	}
+	return editTableCheckInPlace(ctx, tx, "projection_obligations",
+		"kind IN ('steps-compose','domain-realization')",
+		"kind IN ('steps-compose','domain-realization','semantic-preservation')")
 }
