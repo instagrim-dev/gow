@@ -1,6 +1,6 @@
 # Relativization barrier — contrary oracles (pnp-02)
 
-**Era:** 1975. Pre-cutoff. Anchor: Baker–Gill–Solovay, *Relativizations of the
+**Era:** 1975. Anchor: Baker–Gill–Solovay, *Relativizations of the
 P =? NP question*, SIAM J. Comput. 4(4), 1975.
 
 This entry records the **wall itself** as a first-class failure structure.

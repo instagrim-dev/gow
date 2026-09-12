@@ -1,6 +1,6 @@
 # AC⁰[p] — polynomial approximation over finite fields (pnp-06)
 
-**Era:** 1987. Pre-cutoff. Anchors: Razborov 1987 (majority vs parity gates);
+**Era:** 1987. Anchors: Razborov 1987 (majority vs parity gates);
 Smolensky 1987 (algebraic method over F_p).
 
 The circuit program's second beachhead extends pnp-03 past parity gates. For
@@ -21,7 +21,7 @@ The wall stands exactly one gate type away: for **composite** moduli (AC⁰[6]),
 and a fortiori for TC⁰ and NC¹, no analogous property was found. Two decades
 of effort produced no lower bound against ACC⁰ (constant depth, AND/OR/MOD-m
 for composite m) for any function in NEXP — the sharpest statement of the
-circuit program's stall as of the cutoff.
+circuit program's stall as of 2004.
 
 <!-- newf-normalize
 {
@@ -45,9 +45,9 @@ circuit program's stall as of the cutoff.
       },
       "outcome": {
         "class": "partial_success",
-        "boundary_statement": "exponential AC0[p] bounds for prime p; no analogous property found for composite moduli — ACC0 unseparated from NEXP at cutoff",
+        "boundary_statement": "exponential AC0[p] bounds for prime p; no analogous property found for composite moduli — ACC0 unseparated from NEXP as of 2004",
         "boundary_conditions": ["prime field structure essential to the approximation", "composite-modulus gates defeat the polynomial representation"],
-        "notes": "The stall at ACC0 is the sharpest open edge of the circuit program as of 2005."
+        "notes": "The stall at ACC0 is the sharpest open edge of the circuit program as of 2004."
       },
       "support": [
         {"field_path": "mechanism.operators", "support_kind": "explicit", "locator": "para:1"},

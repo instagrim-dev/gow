@@ -138,6 +138,30 @@ mirroring `corpus/experiments/two-arm-comparison/` (protocol frozen at
       define + dating gate lifecycle verified on this corpus with
       PLACEHOLDER evidence locators (smoke DB destroyed; no experiment
       was run — execution stays behind freeze + audit)
-- [ ] Adversarial pass: search train prose for post-cutoff contamination
+- [x] Adversarial pass: search train prose for post-cutoff contamination —
+      **done 2026-09-12, two-round blind review.** Round 1 (reviewer never
+      shown target or SCOPE): verdict CONTAMINATED — apparatus vocabulary
+      in-band ("cutoff"/"train atlas"/"Pre-cutoff" tags in train prose, one
+      "as of 2005" slip), and pointer sentences in pnp-09/10/11/12 that
+      editorialized toward the target (worst: a pnp-11 payload note that
+      referenced "the withheld advance", and a recipe sentence naming
+      "exhibiting an actual, unconditional algorithm and running such a
+      bridge"). All remediated: apparatus vocabulary replaced with
+      2004-honest dating, pointer/recipe sentences removed or reduced to
+      period-recorded boundaries. Round 2 (fresh blind reviewer): verdict
+      MINOR ISSUES — three residual pnp-12 items ("decades of refinement"
+      anachronism, "hybrid ancestor" teleology, descendant-aware payload
+      note), all fixed; the remaining top telegraph judged "fair in
+      substance — inferable from honestly-recorded failure structure,
+      which is the correct state for a valid holdout."
+      **Accepted residual, with rationale:** pnp-11 is the only train
+      family whose payload breaks `model-analysis-first direction`. This
+      is machine-recoverable, and it stays: it is a true 2003 mechanism
+      fact (the KI03 title itself states the direction), the mechanism
+      axes are the experiment's intended discriminative substrate (as
+      residue-locality is in the ES corpus), and SCOPE's honesty
+      constraint #1 already prices it — a proposal that merely re-lands
+      the KI03 bridge is mechanism-near to TRAIN, not the target, so the
+      unique profile cannot be cashed in for recovery credit by itself.
 - [ ] Fix budgets and arms; record the freeze commit
 - [ ] Only then: `date-source` with audited locators, and run

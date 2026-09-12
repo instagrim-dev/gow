@@ -1,6 +1,6 @@
 # The monotone→general hope and its failure (pnp-05)
 
-**Era:** 1985–1988. Pre-cutoff. Anchors: Razborov 1985 (perfect matching has
+**Era:** 1985–1988. Anchors: Razborov 1985 (perfect matching has
 superpolynomial monotone complexity); Tardos 1988 (exponential monotone/general
 gap, Combinatorica).
 

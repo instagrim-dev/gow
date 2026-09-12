@@ -1,6 +1,6 @@
 # Monotone circuit lower bounds — the approximation method (pnp-04)
 
-**Era:** 1985. Pre-cutoff. Anchor: Razborov 1985 (superpolynomial monotone
+**Era:** 1985. Anchor: Razborov 1985 (superpolynomial monotone
 lower bounds for clique).
 
 Razborov's **approximation method** attacks a restricted but natural model:
@@ -48,7 +48,7 @@ the failed hope of removing the monotonicity restriction.
         "class": "partial_success",
         "boundary_statement": "superpolynomial monotone lower bounds for an NP-complete function; silent on general circuits",
         "boundary_conditions": ["negation-free model only", "approximator lattice exploits monotonicity essentially"],
-        "notes": "Strongest pre-cutoff evidence that circuit analysis reaches NP-hardness; the monotone restriction is load-bearing (pnp-05)."
+        "notes": "Strongest evidence to date that circuit analysis reaches NP-hardness; the monotone restriction is load-bearing (pnp-05)."
       },
       "support": [
         {"field_path": "mechanism.operators", "support_kind": "explicit", "locator": "para:1"},

@@ -1,6 +1,6 @@
 # Time-space tradeoffs for SAT — indirect diagonalization (pnp-12)
 
-**Era:** 1997–2004. Pre-cutoff. Anchors: Fortnow 1997 (nondeterministic
+**Era:** 1997–2004. Anchors: Fortnow 1997 (nondeterministic
 polynomial time vs small-space); Fortnow–van Melkebeek 2000 (time-space
 tradeoffs for satisfiability).
 
@@ -12,21 +12,20 @@ use completeness to translate the assumption into unlikely inclusions between
 nondeterministic and alternating time classes, speed up alternations under
 the space bound, and contradict a hierarchy theorem.
 
-Mechanistically this family is a hybrid ancestor: it runs an
+Mechanistically this family hybridizes the two flanks: it runs an
 **assumption-to-contradiction pipeline through hierarchy theorems** — assume
-an algorithm exists, derive class collapses, contradict a hierarchy — which is
-the same skeleton the pnp-11 bridge uses, and it is unconditional. But the
+an algorithm exists, derive class collapses, contradict a hierarchy — and it
+is unconditional. But the
 assumed algorithm is refuted rather than supplied: the argument consumes a
 *hypothetical* algorithm to power a contradiction, and its strength is capped
 by how much work the hierarchy theorems can do, yielding bounds that are
 model-specific (simultaneous time-space) and quantitatively weak (small
 polynomial exponents).
 
-Boundary at cutoff: decades of refinement moved the exponent slightly; the
+Boundary as of 2004: successive refinements moved the exponent slightly; the
 method showed no path to super-polynomial bounds or to separating P from NP.
-Its structural contribution to the atlas is the working, unconditional
-skeleton: algorithmic assumption → completeness translation → hierarchy
-contradiction.
+The bounds remain model-specific and quantitatively weak, capped by how
+much leverage the hierarchy theorems provide.
 
 <!-- newf-normalize
 {
@@ -52,7 +51,7 @@ contradiction.
         "class": "partial_success",
         "boundary_statement": "unconditional but model-specific and quantitatively weak; small-exponent time-space bounds only, no route to superpolynomial separation",
         "boundary_conditions": ["strength capped by hierarchy-theorem leverage", "bounds tied to the simultaneous time-space model"],
-        "notes": "Contributes the pipeline skeleton the pnp-11 bridge shares; largely relativizing, hence also wall-bounded."
+        "notes": "Largely relativizing, hence also wall-bounded; strength capped by hierarchy-theorem leverage."
       },
       "support": [
         {"field_path": "mechanism.operators", "support_kind": "explicit", "locator": "para:1"},

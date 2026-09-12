@@ -1,6 +1,6 @@
 # Diagonalization and simulation program (pnp-01)
 
-**Era:** 1960s–1975. Pre-cutoff.
+**Era:** 1960s–1975.
 
 The founding program attacks separation directly with the tools that built
 complexity theory: **diagonalization** and **simulation**. The time hierarchy

@@ -1,6 +1,6 @@
 # AC⁰ lower bounds — parity via random restrictions (pnp-03)
 
-**Era:** 1981–1986. Pre-cutoff. Anchors: Ajtai 1983; Furst–Saxe–Sipser 1984;
+**Era:** 1981–1986. Anchors: Ajtai 1983; Furst–Saxe–Sipser 1984;
 Håstad 1986 (switching lemma).
 
 The first escape from the relativization wall: **open the box**. Instead of

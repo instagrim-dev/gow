@@ -1,6 +1,6 @@
 # Proof-complexity program — resolution lower bounds (pnp-07)
 
-**Era:** 1985–2004. Pre-cutoff. Anchors: Haken 1985 (exponential resolution
+**Era:** 1985–2004. Anchors: Haken 1985 (exponential resolution
 lower bounds for the pigeonhole principle); Beame–Pitassi 1998 (survey,
 *Propositional proof complexity: past, present, future*).
 
@@ -16,7 +16,7 @@ mechanically kin to the circuit methods: identify a *distinguishing property*
 of all short resolution proofs (narrowness / bottleneck counting) that the
 target tautology's proofs cannot have. Later work extended to restricted
 subsystems, but bounded-depth Frege with counting gates, and full Frege above
-it, resisted — the strong systems stand unseparated at the cutoff, in direct
+it, resisted — the strong systems stand unseparated as of 2004, in direct
 parallel with the ACC⁰ stall of pnp-06.
 
 The parallel is the informative structure: two independent programs, both
@@ -46,7 +46,7 @@ expressive enough to *count*.
       },
       "outcome": {
         "class": "partial_success",
-        "boundary_statement": "exponential bounds for resolution and weak subsystems; Frege and stronger systems unseparated at cutoff",
+        "boundary_statement": "exponential bounds for resolution and weak subsystems; Frege and stronger systems unseparated as of 2004",
         "boundary_conditions": ["method stalls where the proof system can count", "per-system progress does not compose into all-systems claims"],
         "notes": "Stall level parallels the circuit program's ACC0 edge: expressiveness sufficient for counting defeats the known properties."
       },
