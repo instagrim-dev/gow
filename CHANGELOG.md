@@ -26,6 +26,29 @@ conjecture is likewise explicitly not a `v1.0.0` requirement (`AGENTS.md`,
 
 ## [Unreleased]
 
+### Added
+
+- `internal/measure`: claim-aware measurement checker — a pure,
+  deterministic verifier for property labels attached to recorded
+  observations. Binds the exact claim (sentence, metric, population,
+  budget range, ordering, stopping rule, observed-vs-probabilistic kind);
+  validates applicability (per-instance trace-prefix extension, verdict
+  retention, non-budget condition equality); computes exact transitions
+  (big.Int cross-multiplication; weighted-average sign rule
+  sign(N·s − S·m)); and emits an explanatory certificate that separates
+  total achievement, cumulative yield, and marginal yield, with
+  NOT-ASSESSED scope guards so a certificate answering one question cannot
+  be consumed as an answer to another. Probabilistic/uncertainty claims
+  are refused, not decided; equality at tested points never extends to
+  untested budgets; zero denominators stay unresolved. Certificates adapt
+  to `review.CheckRecord` evidence (`ToCheckRecord`; NOT_ASSESSED maps to
+  `blocked`, never `completed`) — the checker grants itself no authority
+  over policy. Regression suite covers the failure-only decrease,
+  proportional-batch equality, ordering-change attribution refusal,
+  mutated-history rejection, probabilistic refusal, zero-denominator
+  handling, range scoping, monotonicity, and the motivating budget-sweep
+  shape (0/20, 3/40, 3/57).
+
 ### Added — Lean 4 kernel as a deterministic verifier tier
 
 `internal/lean` (commit `5cba8b7`): an asymmetric deterministic verifier —
