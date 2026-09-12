@@ -186,7 +186,12 @@ mirroring `corpus/experiments/two-arm-comparison/` (protocol frozen at
 - [x] Fix budgets and arms; record the freeze commit — **preregistration
       pinned 2026-09-12** (see "Preregistration (pinned)" below); the freeze
       commit is the commit introducing that section
-- [ ] Only then: `date-source` with audited locators, and run
+- [x] Only then: `date-source` with audited locators, and run — **done
+      2026-09-12: dating gate lifted (commit `61bd1d3`), blinded captures
+      taken, run executed. Primary conclusion `inconclusive` as
+      preregistered; secondary endpoint 11/11-concordant two-adjudicator
+      ModelJudgment: both arms' rank-0 proposals recover the withheld
+      algorithm-to-lower-bound move. See `RESULT.md`.**
 
 ## Preregistration (pinned 2026-09-12, before any capture)
 

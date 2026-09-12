@@ -1,0 +1,117 @@
+{
+  "schema": "pvnp-adjudication-concordance/v1",
+  "epistemic_status": "ModelJudgment (cross-model-instance agreement is still model judgment; never promoted to the mechanical conclusion vocabulary)",
+  "concordance": "11/11",
+  "rows": [
+    {
+      "proposal_id": "P01",
+      "arm": "b3_invariant_guided",
+      "arm_rank": 1,
+      "adjudicator_A": "does_not_recover",
+      "adjudicator_B": "does_not_recover",
+      "concordant": true,
+      "train_near_A": false,
+      "train_near_B": false
+    },
+    {
+      "proposal_id": "P02",
+      "arm": "b0_undirected",
+      "arm_rank": 2,
+      "adjudicator_A": "does_not_recover",
+      "adjudicator_B": "does_not_recover",
+      "concordant": true,
+      "train_near_A": true,
+      "train_near_B": true
+    },
+    {
+      "proposal_id": "P03",
+      "arm": "b3_invariant_guided",
+      "arm_rank": 3,
+      "adjudicator_A": "does_not_recover",
+      "adjudicator_B": "does_not_recover",
+      "concordant": true,
+      "train_near_A": false,
+      "train_near_B": false
+    },
+    {
+      "proposal_id": "P04",
+      "arm": "b3_invariant_guided",
+      "arm_rank": 2,
+      "adjudicator_A": "does_not_recover",
+      "adjudicator_B": "does_not_recover",
+      "concordant": true,
+      "train_near_A": false,
+      "train_near_B": false
+    },
+    {
+      "proposal_id": "P05",
+      "arm": "b0_undirected",
+      "arm_rank": 5,
+      "adjudicator_A": "does_not_recover",
+      "adjudicator_B": "does_not_recover",
+      "concordant": true,
+      "train_near_A": false,
+      "train_near_B": false
+    },
+    {
+      "proposal_id": "P06",
+      "arm": "b0_undirected",
+      "arm_rank": 4,
+      "adjudicator_A": "does_not_recover",
+      "adjudicator_B": "does_not_recover",
+      "concordant": true,
+      "train_near_A": false,
+      "train_near_B": false
+    },
+    {
+      "proposal_id": "P07",
+      "arm": "b3_invariant_guided",
+      "arm_rank": 4,
+      "adjudicator_A": "does_not_recover",
+      "adjudicator_B": "does_not_recover",
+      "concordant": true,
+      "train_near_A": false,
+      "train_near_B": false
+    },
+    {
+      "proposal_id": "P08",
+      "arm": "b0_undirected",
+      "arm_rank": 1,
+      "adjudicator_A": "does_not_recover",
+      "adjudicator_B": "does_not_recover",
+      "concordant": true,
+      "train_near_A": true,
+      "train_near_B": true
+    },
+    {
+      "proposal_id": "P09",
+      "arm": "b0_undirected",
+      "arm_rank": 3,
+      "adjudicator_A": "does_not_recover",
+      "adjudicator_B": "does_not_recover",
+      "concordant": true,
+      "train_near_A": false,
+      "train_near_B": false
+    },
+    {
+      "proposal_id": "P10",
+      "arm": "b3_invariant_guided",
+      "arm_rank": 0,
+      "adjudicator_A": "recovers",
+      "adjudicator_B": "recovers",
+      "concordant": true,
+      "train_near_A": false,
+      "train_near_B": false
+    },
+    {
+      "proposal_id": "P11",
+      "arm": "b0_undirected",
+      "arm_rank": 0,
+      "adjudicator_A": "recovers",
+      "adjudicator_B": "recovers",
+      "concordant": true,
+      "train_near_A": false,
+      "train_near_B": false
+    }
+  ]
+}
