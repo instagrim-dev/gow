@@ -254,10 +254,12 @@ changed the committed next action from a failing local move to a succeeding
 global one, and a matched-budget comparison measured the map's ordering value
 (20/20 verified witnesses at 20 checker submissions vs.\ 3/20 at 57 for an
 undirected arm, at a frozen budget of three submissions per instance) at
-demonstration scale on one hard instance class. The
-experiments do not
-establish mathematical validity, general discovery effectiveness, or autonomous
-theorem solving; they demonstrate the framework's epistemic behavior and a
+demonstration scale on one hard instance class. The model-generated structural
+hypotheses and the universal Erd\H{o}s--Straus conjecture are not
+mathematically established by these experiments; the reported witnesses of the
+closed-loop episode are deterministically verified for the tested instances.
+The study does not establish general discovery effectiveness or autonomous
+theorem solving; it demonstrates the framework's epistemic behavior and a
 constituent set of capabilities.
 \end{abstract}
 
@@ -389,9 +391,12 @@ We make four claims, deliberately ordered from broadest to narrowest:
   \item \textbf{Empirical (narrow).} In project-authored Erd\H{o}s--Straus study
     corpora, LLMs can propose structural regularities not explicitly supplied as
     reference properties, and shape-guided context produced the only proposal
-    judged a full criterion recovery of a withheld structural move; the experiments do \emph{not}
-    establish mathematical validity, general discovery effectiveness, or
-    autonomous theorem solving.
+    judged a full criterion recovery of a withheld structural move; a
+    preregistered closed decision loop additionally produced deterministically
+    verified witnesses for its tested instances and a budgeted ordering
+    advantage on one instance class. The experiments do \emph{not} establish
+    the mathematical validity of the model-generated structural hypotheses,
+    general discovery effectiveness, or autonomous theorem solving.
 \end{enumerate}
 
 % ── 2. Motivating Example ────────────────────────────────────────────
@@ -559,6 +564,49 @@ establish a domain result. Projection $\Pi_{\text{domain}}(\Delta S) = W'$
 produces a candidate; verification of $W'$ produces a landing point. These three
 events are separate, carry separate epistemic weights, and must not be conflated.
 Proposing a crossing is not the same as landing across.
+\end{remark}
+
+\begin{remark}[Scope of methodological and domain claims]
+\label{rem:claim-scope}
+The full evidentiary chain runs
+\[
+\text{Map} \;\xrightarrow{\ \text{selection}\ }\; \Delta S
+\;\xrightarrow{\ \Pi_{\text{domain}}\ }\; W'
+\;\xrightarrow{\ \text{verification}\ }\; \Lambda(W'),
+\]
+and GoW separates three evidentiary questions along it. First, a
+\emph{search-policy claim} asks whether the geometry caused the system to
+select more productive or informative next work. Second, a \emph{projection
+claim} asks whether a domain-native candidate faithfully realizes the selected
+structural move while preserving the declared objective and scope. Third, a
+\emph{domain-validity claim} asks whether that candidate satisfies the declared
+objective under the stated verifier. These claims are connected but not
+interchangeable, and a structural move need not have a unique correct
+projection.
+
+A valid candidate therefore does not by itself establish that the map's
+structural explanation was responsible for success; conversely, a failed
+projection does not by itself falsify the structural direction that was
+selected. End-to-end effectiveness claims must nevertheless charge projection
+feasibility, failures, and cost rather than treating projection as somebody
+else's problem.
+
+The declared objective must also be separated from mathematical novelty.
+Recovering a specified reference construction, producing any valid witness, and
+establishing a new theorem or mechanism are different tasks. Reference
+conformity or novelty is an acceptance condition only when explicitly
+predeclared. Where a returned witness is deterministically verified, it
+establishes the stated domain claim for that tested instance; where a universal
+existence claim remains unresolved, neither the structural proposal nor a
+finite set of verified instances establishes the universal result.
+
+A successful search-and-check episode may therefore demonstrate a constituent
+methodological capability by selecting an already-known strategy and producing
+verified outputs. Such success need not reproduce a particular published
+construction or discover a new mechanism. Conversely, it does not by itself
+establish general effectiveness or validate every structural hypothesis
+inferred by the map. Every success, failure, burden of proof, and limitation
+in this paper should be read as naming the layer and claim it belongs to.
 \end{remark}
 
 Each component of the geometry encodes a different kind of information:
@@ -1505,9 +1553,11 @@ shared move pool at a fixed budget, with the contrast compressing as budget
 grows (at budget four the undirected arm reaches the global move); it is a
 demonstration-scale result on a single instance class. It does not measure
 discovery --- the map promoted a known move; it did not find a new mechanism
-family --- and it contributes no evidence about the Erd\H{o}s--Straus
-conjecture itself: every witness is independently checkable by one
-multiplication. Its role in this paper's argument is narrow and specific:
+family. Each verified witness establishes the Erd\H{o}s--Straus equation for
+its tested instance (every witness is independently checkable by one
+multiplication); the experiment does not resolve, or materially advance an
+existence proof of, the universal conjecture beyond those checked instances.
+Its role in this paper's argument is narrow and specific:
 the decision-loop accounting that \cref{sec:superiority} formalizes
 (concentration, budget, when guidance wins) is demonstrated end-to-end on
 real records with code-owned scoring, at the lowest rung of the claimed
@@ -1785,6 +1835,22 @@ would locate the contribution in evidence organization rather than the search
 policy. The provenance required for this attribution --- provider/configuration
 metadata and raw request/response records --- is already produced by
 \texttt{newf} (\cref{sec:system}).
+
+To localize responsibility across the chain of \cref{rem:claim-scope},
+comparisons of \emph{search policy} should hold projection and checking
+machinery fixed where possible; comparisons of \emph{projection quality} should
+hold the selected structural move fixed while varying its realization. The
+first asks whether the map chose better work. The second asks whether the
+chosen work was faithfully compiled into the domain. End-to-end comparisons
+measure both and must account for both, but should not use success or failure
+at one layer as automatic evidence about the other:
+\[
+\begin{aligned}
+\text{vary map, hold projection fixed} &\;\Rightarrow\; \text{map attribution}\\
+\text{hold } \Delta S \text{ fixed, vary projection} &\;\Rightarrow\; \text{projection attribution}\\
+\text{vary whole pipeline} &\;\Rightarrow\; \text{end-to-end performance.}
+\end{aligned}
+\]
 
 \begin{remark}[Status of this section]
 \label{rem:superiority-status}
@@ -2291,10 +2357,22 @@ they state when superiority \emph{would} hold and how it \emph{would} be
 measured, but they are not evidence that the present implementation attains it.
 
 \paragraph{Projection bottleneck.}
-In every experiment, domain projection was model-assisted and produced candidates
-that were mechanistically distinct from the withheld target under the code-owned
-recovery rule. Whether this reflects an inherent limitation of the projection
-step or an artifact of the specific target is unknown.
+In the experiments that posed a withheld reference (Pilot-003's B3 recovery
+and the M7-style holdout framing), domain projection was model-assisted and
+produced candidates that were mechanistically distinct from the withheld
+target under the code-owned recovery rule. Three observations must be kept
+distinct here (\cref{rem:claim-scope}): a candidate that does not match the
+withheld reference supports a \emph{reference-recovery} failure; an assessor
+that cannot decide comparability supports only an \emph{inconclusive
+assessment}; and a candidate that fails to instantiate the intended
+$\Delta S$ supports a \emph{projection-fidelity} failure. Only the third
+diagnoses projection itself, and the recorded outcomes are of the first two
+kinds. Experiment C poses no single withheld target, and Experiment E uses a
+fixed shared move pool scored by exact witness verification rather than
+reference-construction conformity, so neither bears on generic projection
+fidelity. Whether the reference-recovery failures reflect an inherent
+limitation of the projection step or an artifact of the specific targets is
+unknown.
 
 \paragraph{No convergence guarantee.}
 GoW does not guarantee that the geometry converges to a useful representation,
@@ -2408,9 +2486,11 @@ the committed next action and that the map's ordering of a fixed move pool
 earned its checker-submission cost under a frozen decision rule at a frozen
 per-instance budget.
 The experiments
-establish epistemic behavior and constituent capabilities; they do not establish
-mathematical validity, general discovery effectiveness, or autonomous theorem
-solving.
+establish epistemic behavior and constituent capabilities; the closed decision
+loop additionally establishes exact witness validity for its tested instances
+and a budgeted ordering advantage on one instance class. They do not establish
+the mathematical validity of the model-generated structural hypotheses, general
+discovery effectiveness, or autonomous theorem solving.
 
 The framework's epistemic model is as important as the geometric methodology.
 Without explicit separation of shape from conditioning, regularity from
@@ -2426,7 +2506,8 @@ inference over a heterogeneous attempt population, an explicit challenge
 lifecycle, and epistemic provenance of structural claims. The conjunction is
 the contribution.
 
-GoW does not solve hard problems. It makes the structure of the search more
+This study does not establish general hard-problem-solving effectiveness or
+resolve the motivating conjecture. It makes the structure of the search more
 legible, the failures more informative, and the next move more motivated.
 Whether the approach transfers beyond Erd\H{o}s--Straus, whether it produces
 measurably better proposals than undirected generation, and whether the geometry
