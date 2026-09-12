@@ -38,6 +38,7 @@ const (
 	EvaluationRunIDPrefix         = "evr_"
 	EvaluationIDPrefix            = "evl_"
 	EvaluationMetricIDPrefix      = "evm_"
+	EvidenceAdmissionIDPrefix     = "evad_"
 	SuccessRevisionIDPrefix       = "svr_"
 	SuccessInvariantIDPrefix      = "sinv_"
 	HoldoutSetIDPrefix            = "hset_"
@@ -74,6 +75,7 @@ var (
 	ErrInvalidEvaluationRunID         = errors.New("invalid evaluation run id")
 	ErrInvalidEvaluationID            = errors.New("invalid evaluation id")
 	ErrInvalidEvaluationMetricID      = errors.New("invalid evaluation metric id")
+	ErrInvalidEvidenceAdmissionID     = errors.New("invalid evidence admission id")
 	ErrInvalidSuccessRevisionID       = errors.New("invalid success revision id")
 	ErrInvalidSuccessInvariantID      = errors.New("invalid success invariant id")
 	ErrInvalidHoldoutSetID            = errors.New("invalid holdout set id")
@@ -260,6 +262,14 @@ func ValidateEvaluationID(id string) error {
 
 func ValidateEvaluationMetricID(id string) error {
 	return validateID(id, EvaluationMetricIDPrefix, ErrInvalidEvaluationMetricID)
+}
+
+func NewEvidenceAdmissionID(now time.Time) string {
+	return newID(EvidenceAdmissionIDPrefix, now)
+}
+
+func ValidateEvidenceAdmissionID(id string) error {
+	return validateID(id, EvidenceAdmissionIDPrefix, ErrInvalidEvidenceAdmissionID)
 }
 
 func NewSuccessRevisionID(now time.Time) string {

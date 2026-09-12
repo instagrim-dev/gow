@@ -80,6 +80,7 @@ func newRootCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions, vers
 	cmd.AddCommand(newExperimentCommand(stdout, app, opts))
 	cmd.AddCommand(newEvaluateCommand(stdout, app, opts))
 	cmd.AddCommand(newEvaluationCommand(stdout, app, opts))
+	cmd.AddCommand(newEvidenceCommand(stdout, app, opts))
 	cmd.AddCommand(newPolicyCommand(stdout, app, opts))
 
 	return cmd

@@ -99,13 +99,43 @@ Exactly the EPIC.md M5.2 set, CHECK-enforced:
 `failure | partial_failure | partial_success | success | unknown |
 verification_blocked`.
 
-### Failure re-enters the atlas
+### Failure re-enters the atlas — via explicit admission (v35/S2)
 
 A `failure`/`partial_failure` evaluation writes an `evaluated_failures` marker so
 the proposal's mechanism is eligible for the next `cluster build`
 (`FailureSpace(t+1) ⊇ FailureSpace(t) + newly_evaluated_failures`). This is a
 persisted, queryable flag surfaced by `newf evaluation failures` — not an
 auto-rerun; re-clustering stays an explicit operator/policy decision.
+
+The marker alone admits nothing. `ListSignaturesForProblem` — the population
+`cluster build` and invariant mining consume — never reads it. The bridge is
+`newf evidence admit` (structural review finding S2): a typed, immutable
+decision per evaluated failure, recorded in the `evidence_admissions` ledger.
+Observation kinds and their rules:
+
+| Observation kind | What it is | Rule |
+|---|---|---|
+| `structural-claim-failure` | a `deterministic-check` failure: the description failed its own claimed break | never admissible (narrows the description space, not the observed-mechanism space) |
+| `domain-checked-failure` | a `deterministic`/`reproducible` strength failure of an attempt | admitted by rule; `independent-evidence` strength requires operator attestation |
+| `model-judged-failure` | a `model-judgment`/`independent-critic` strength failure | operator attestation only (`--evaluation --attest --note`), permanently labeled model-judged |
+
+Admission materializes the **exact assessed signature content** (matched by the
+evaluation's `signature_content_hash`; a verdict without persisted assessed
+content is withheld — there is nothing admissible to materialize): a source
+snapshot whose bytes are the assessed JSON, a new revision of the stable
+approach `frontier-proposal:<id>`, and the signature persisted verbatim with
+only the outcome set from the verdict (`inferred` provenance — tool-derived,
+not source-explicit). Re-admitting a re-assessed proposal revises the same
+logical approach, so the current-heads population (S4) keeps one current
+interpretation instead of double-counting. Decisions are made once: an
+evaluation is withheld at most once and admitted at most once; a
+withheld-then-attested evaluation keeps both rows, so supersession is visible.
+
+```text
+newf evidence admit --problem <id>                # batch rule pass
+newf evidence admit --problem <id> --evaluation <evl_> --attest --note "…"
+newf evidence list --problem <id>                 # the admission ledger
+```
 
 ### Persistence, provenance, lifecycle
 

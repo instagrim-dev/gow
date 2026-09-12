@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 34
+const currentSchemaVersion = 35
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -1052,6 +1052,26 @@ END;
 		// cluster-run identities plus the requested population policy per
 		// campaign (run_id, invariant_id); rows are immutable.
 		apply: migrateV34ChallengeAssessmentPopulations,
+	},
+	{
+		version: 35,
+		// v35 (2026-09-12 structural review, finding S2): evidence admission.
+		// `evaluated_failures` is a re-entry MARKER, not an admitted
+		// observation — before this migration no code path carried an
+		// evaluated failure back into the atlas population that clustering
+		// and mining consume. The `evidence_admissions` ledger records, per
+		// evaluated failure, an explicit typed admission decision:
+		// admitted (materialized into the atlas as an approach revision +
+		// mechanism + signature holding the EXACT assessed signature content)
+		// or withheld (with the rule that refused it). Decisions distinguish
+		// observation kinds — a description that failed its own structural
+		// claim, a domain-checked failed attempt, and a model-judged failure
+		// are different observations with different admission rules — and
+		// record whether the rule or an operator admitted the row. Rows are
+		// immutable; an evaluation may be withheld once and later admitted by
+		// operator attestation (both rows persist, showing supersession), but
+		// never admitted twice.
+		apply: migrateV35EvidenceAdmissions,
 	},
 }
 
@@ -3511,5 +3531,78 @@ END;
 
 func migrateV34ChallengeAssessmentPopulations(ctx context.Context, tx *sql.Tx) error {
 	_, err := tx.ExecContext(ctx, challengeAssessmentPopulationsSQL)
+	return err
+}
+
+// evidenceAdmissionsSQL is the additive DDL for migration v35 (structural
+// review finding S2): the typed evidence-admission ledger bridging evaluated
+// failures into the atlas population.
+//
+// Decision semantics:
+//   - `admitted`: the evaluated failure was materialized into the atlas — the
+//     four materialization ids are REQUIRED (approach, approach revision,
+//     mechanism, signature) and point at rows holding the exact assessed
+//     signature content.
+//   - `withheld`: the evaluated failure was refused entry — the four ids are
+//     REQUIRED to be absent and `basis` records the refusing rule.
+//
+// Observation kinds (the reviewer's taxonomy, mapped onto what the verifier
+// hierarchy actually records):
+//   - `structural-claim-failure`: a deterministic-check failure — the proposed
+//     DESCRIPTION failed its own structural claim ("claimed break did not
+//     occur"). It narrows the description space, not the observed-mechanism
+//     space, and is never atlas-admissible.
+//   - `domain-checked-failure`: a deterministic / reproducible /
+//     independent-evidence strength failure of an actual attempt.
+//   - `model-judged-failure`: a model-judgment or independent-critic failure;
+//     admissible only by explicit operator attestation, and permanently
+//     labeled as model-judged (ModelJudgment != Verification).
+//
+// UNIQUE(evaluation_id, decision): an evaluation is withheld at most once and
+// admitted at most once; a withheld-then-attested evaluation keeps BOTH rows,
+// so supersession is visible instead of rewritten. Rows are immutable.
+const evidenceAdmissionsSQL = `
+CREATE TABLE IF NOT EXISTS evidence_admissions (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  proposal_id TEXT NOT NULL REFERENCES frontier_proposals(id),
+  evaluation_id TEXT NOT NULL REFERENCES evaluations(id),
+  decision TEXT NOT NULL CHECK (decision IN ('admitted','withheld')),
+  observation_kind TEXT NOT NULL CHECK (observation_kind IN ('domain-checked-failure','structural-claim-failure','model-judged-failure')),
+  admitted_by TEXT NOT NULL CHECK (admitted_by IN ('rule','operator')),
+  basis TEXT NOT NULL CHECK (length(basis) > 0),
+  content_hash TEXT NOT NULL DEFAULT '',
+  approach_id TEXT REFERENCES approaches(id),
+  approach_revision_id TEXT REFERENCES approach_revisions(id),
+  mechanism_id TEXT REFERENCES mechanisms(id),
+  signature_id TEXT REFERENCES mechanism_signatures(id),
+  created_at TEXT NOT NULL,
+  UNIQUE(evaluation_id, decision),
+  CHECK (
+    (decision = 'admitted' AND approach_id IS NOT NULL AND approach_revision_id IS NOT NULL AND mechanism_id IS NOT NULL AND signature_id IS NOT NULL)
+    OR
+    (decision = 'withheld' AND approach_id IS NULL AND approach_revision_id IS NULL AND mechanism_id IS NULL AND signature_id IS NULL)
+  )
+);
+
+CREATE INDEX IF NOT EXISTS idx_evidence_admissions_problem ON evidence_admissions(problem_id);
+CREATE INDEX IF NOT EXISTS idx_evidence_admissions_evaluation ON evidence_admissions(evaluation_id);
+
+CREATE TRIGGER IF NOT EXISTS evidence_admissions_immutable_update
+BEFORE UPDATE ON evidence_admissions
+BEGIN
+  SELECT RAISE(ABORT, 'evidence admissions are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS evidence_admissions_immutable_delete
+BEFORE DELETE ON evidence_admissions
+BEGIN
+  SELECT RAISE(ABORT, 'evidence admissions are immutable');
+END;
+`
+
+func migrateV35EvidenceAdmissions(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, evidenceAdmissionsSQL)
 	return err
 }

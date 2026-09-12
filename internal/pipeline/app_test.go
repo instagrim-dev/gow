@@ -595,3 +595,15 @@ func (f *fakeProblemStore) ListEvaluations(context.Context, string) ([]store.Eva
 func (f *fakeProblemStore) ListEvaluatedFailures(context.Context, string) ([]store.EvaluatedFailureRow, error) {
 	return nil, errors.New("unexpected call")
 }
+
+func (f *fakeProblemStore) PersistEvidenceAdmission(context.Context, store.EvidenceAdmissionRow) (store.EvidenceAdmissionRow, error) {
+	return store.EvidenceAdmissionRow{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListEvidenceAdmissions(context.Context, string) ([]store.EvidenceAdmissionRow, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetProposalSignatureContentByHash(context.Context, string, string) (store.ProposalSignatureContentRow, bool, error) {
+	return store.ProposalSignatureContentRow{}, false, errors.New("unexpected call")
+}

@@ -172,6 +172,12 @@ type problemStore interface {
 	GetEvaluation(context.Context, string) (store.EvaluationRow, error)
 	ListEvaluations(context.Context, string) ([]store.EvaluationRunRecord, error)
 	ListEvaluatedFailures(context.Context, string) ([]store.EvaluatedFailureRow, error)
+	// Evidence admission (v35/S2): the typed decision ledger bridging
+	// evaluated failures into the atlas population, plus the content-addressed
+	// read of the exact assessed proposal-signature bytes.
+	PersistEvidenceAdmission(context.Context, store.EvidenceAdmissionRow) (store.EvidenceAdmissionRow, error)
+	ListEvidenceAdmissions(context.Context, string) ([]store.EvidenceAdmissionRow, error)
+	GetProposalSignatureContentByHash(context.Context, string, string) (store.ProposalSignatureContentRow, bool, error)
 }
 
 type InitProblemInput struct {
