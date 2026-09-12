@@ -43,75 +43,28 @@ Mechanistic distinctions from the train atlas:
       "label": "Faster exhaustive search implies circuit lower bounds",
       "description": "A mildly-better-than-brute-force circuit-SAT algorithm for class C, coupled to the nondeterministic time hierarchy via succinct completeness, yields NEXP not in C.",
       "mechanism": {
-        "representations": [
-          "circuit-SAT instances",
-          "succinct witness encodings",
-          "nondeterministic time hierarchy"
-        ],
-        "assumptions": [
-          "a supplied SAT algorithm with superpolynomial savings over brute force",
-          "succinct completeness for NEXP verification"
-        ],
-        "operators": [
-          "algorithm-to-hardness conversion",
-          "succinct witness compression",
-          "hierarchy contradiction"
-        ],
+        "representations": ["circuit-SAT instances", "succinct witness encodings", "nondeterministic time hierarchy"],
+        "assumptions": ["a supplied SAT algorithm with superpolynomial savings over brute force", "succinct completeness for NEXP verification"],
+        "operators": ["algorithm-to-hardness conversion", "succinct witness compression", "hierarchy contradiction"],
         "preserves": [],
-        "breaks": [
-          "model-analysis-first direction",
-          "black-box relativizing simulation",
-          "large constructive distinguishing property"
-        ],
-        "auxiliary_objects": [
-          "mild-savings circuit-analysis algorithm",
-          "succinct SAT instances"
-        ],
+        "breaks": ["model-analysis-first direction", "black-box relativizing simulation", "large constructive distinguishing property"],
+        "auxiliary_objects": ["mild-savings circuit-analysis algorithm", "succinct SAT instances"],
         "locality": "global",
         "construction_mode": "constructive",
         "uncertainty_mode": "deterministic",
-        "notes": "Inverts the conserved analysis direction: the lower bound is manufactured FROM an algorithm, with no truth-table property exhibited.",
-        "completeness_scope": "declared_payload",
-        "completeness_basis": "the embedded newf-normalize block is the complete declared payload for this corpus file: every representation/assumption/operator/preserves/breaks/auxiliary_object entry the file states is listed here and parsed by construction (deterministic embedded-payload parser). Author-attested 2026-09-12 as part of pvnp-holdout corpus preparation, before freeze and before any capture existed; declared_payload scope, NOT a mechanism-exhaustive extraction judgment.",
-        "field_completeness": {
-          "representation": "complete",
-          "assumption": "complete",
-          "operator": "complete",
-          "preserves": "complete",
-          "breaks": "complete",
-          "auxiliary_object": "complete"
-        }
+        "notes": "Inverts the conserved analysis direction: the lower bound is manufactured FROM an algorithm, with no truth-table property exhibited."
       },
       "outcome": {
         "class": "partial_success",
         "boundary_statement": "reduces circuit lower bounds to designing mildly nontrivial satisfiability algorithms for the target class",
-        "boundary_conditions": [
-          "a concrete algorithm for the class must still be supplied",
-          "savings threshold must beat brute force superpolynomially"
-        ],
+        "boundary_conditions": ["a concrete algorithm for the class must still be supplied", "savings threshold must beat brute force superpolynomially"],
         "notes": "Withheld historical target; the companion entry supplies the algorithm for ACC0 and consummates the conversion."
       },
       "support": [
-        {
-          "field_path": "mechanism.operators",
-          "support_kind": "explicit",
-          "locator": "para:2"
-        },
-        {
-          "field_path": "mechanism.breaks",
-          "support_kind": "explicit",
-          "locator": "para:3"
-        },
-        {
-          "field_path": "outcome.class",
-          "support_kind": "explicit",
-          "locator": "para:2"
-        },
-        {
-          "field_path": "outcome.boundary_statement",
-          "support_kind": "explicit",
-          "locator": "para:2"
-        }
+        {"field_path": "mechanism.operators", "support_kind": "explicit", "locator": "para:2"},
+        {"field_path": "mechanism.breaks", "support_kind": "explicit", "locator": "para:3"},
+        {"field_path": "outcome.class", "support_kind": "explicit", "locator": "para:2"},
+        {"field_path": "outcome.boundary_statement", "support_kind": "explicit", "locator": "para:2"}
       ]
     }
   ]

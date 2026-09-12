@@ -33,72 +33,28 @@ the boundary.
       "label": "Monotone-to-general transfer hope",
       "description": "Leverage monotone lower bounds into general-circuit separations by treating the negation-free restriction as inessential.",
       "mechanism": {
-        "representations": [
-          "monotone circuits",
-          "general circuits",
-          "slice/transfer arguments"
-        ],
-        "assumptions": [
-          "monotone complexity approximates general complexity on monotone functions"
-        ],
-        "operators": [
-          "restriction lifting",
-          "complexity transfer"
-        ],
-        "preserves": [
-          "model-analysis-first direction",
-          "large constructive distinguishing property"
-        ],
+        "representations": ["monotone circuits", "general circuits", "slice/transfer arguments"],
+        "assumptions": ["monotone complexity approximates general complexity on monotone functions"],
+        "operators": ["restriction lifting", "complexity transfer"],
+        "preserves": ["model-analysis-first direction", "large constructive distinguishing property"],
         "breaks": [],
-        "auxiliary_objects": [
-          "perfect matching function",
-          "Tardos function"
-        ],
+        "auxiliary_objects": ["perfect matching function", "Tardos function"],
         "locality": "local",
         "construction_mode": "constructive",
         "uncertainty_mode": "deterministic",
-        "notes": "The transfer step, not the lower-bound step, is where the program dies.",
-        "completeness_scope": "declared_payload",
-        "completeness_basis": "the embedded newf-normalize block is the complete declared payload for this corpus file: every representation/assumption/operator/preserves/breaks/auxiliary_object entry the file states is listed here and parsed by construction (deterministic embedded-payload parser). Author-attested 2026-09-12 as part of pvnp-holdout corpus preparation, before freeze and before any capture existed; declared_payload scope, NOT a mechanism-exhaustive extraction judgment.",
-        "field_completeness": {
-          "representation": "complete",
-          "assumption": "complete",
-          "operator": "complete",
-          "preserves": "complete",
-          "breaks": "complete",
-          "auxiliary_object": "complete"
-        }
+        "notes": "The transfer step, not the lower-bound step, is where the program dies."
       },
       "outcome": {
         "class": "failure",
         "boundary_statement": "monotone and general complexity are exponentially separated, so negation-free bounds do not transfer",
-        "boundary_conditions": [
-          "matching in P has superpolynomial monotone complexity",
-          "exponential monotone/general gap exists"
-        ],
+        "boundary_conditions": ["matching in P has superpolynomial monotone complexity", "exponential monotone/general gap exists"],
         "notes": "The auxiliary restriction that made analysis possible also severed the bridge back to P vs NP."
       },
       "support": [
-        {
-          "field_path": "mechanism.assumptions",
-          "support_kind": "explicit",
-          "locator": "para:1"
-        },
-        {
-          "field_path": "outcome.class",
-          "support_kind": "explicit",
-          "locator": "para:2"
-        },
-        {
-          "field_path": "outcome.boundary_statement",
-          "support_kind": "explicit",
-          "locator": "para:2"
-        },
-        {
-          "field_path": "outcome.notes",
-          "support_kind": "explicit",
-          "locator": "para:3"
-        }
+        {"field_path": "mechanism.assumptions", "support_kind": "explicit", "locator": "para:1"},
+        {"field_path": "outcome.class", "support_kind": "explicit", "locator": "para:2"},
+        {"field_path": "outcome.boundary_statement", "support_kind": "explicit", "locator": "para:2"},
+        {"field_path": "outcome.notes", "support_kind": "explicit", "locator": "para:3"}
       ]
     }
   ]

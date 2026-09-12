@@ -1,0 +1,34 @@
+{
+  "ok": true,
+  "command": "ingest",
+  "store": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/records/pvnp.db",
+  "problem_id": "prb_01M2BTYMXKVHPGSF95YDPCJZR2",
+  "run_id": "run_01M2BTYNEBVQE2DWAN51PZGMXM",
+  "results": [
+    {
+      "input": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/target/pnp-target-01-algorithm-to-lower-bound.md",
+      "source_id": "src_01M2BTYNECR6TS000YYVDRQ4WH",
+      "snapshot_id": "snap_01M2BTYNECR6TS000YYX5346EG",
+      "status": "created_snapshot",
+      "sha256": "4e99dd9a28a7bf9f4053e63142f933ed36cca83403fbcd34b28ec816484537cb",
+      "media_type": "text/markdown",
+      "bytes": 5485,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/target/pnp-target-02-acc0-supplied-algorithm.md",
+      "source_id": "src_01M2BTYNEDCFH9XJ4F2ZYXN5MD",
+      "snapshot_id": "snap_01M2BTYNEDCFH9XJ4F32GZJYTD",
+      "status": "created_snapshot",
+      "sha256": "566f860bca07f0cfc396412a6c0460171878416688c0b0eeed4cd97a214af4e7",
+      "media_type": "text/markdown",
+      "bytes": 5878,
+      "created_source": true
+    }
+  ],
+  "summary": {
+    "total": 2,
+    "succeeded": 2,
+    "failed": 0
+  }
+}

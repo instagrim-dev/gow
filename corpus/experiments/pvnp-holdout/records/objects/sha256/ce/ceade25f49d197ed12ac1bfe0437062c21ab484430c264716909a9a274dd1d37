@@ -35,72 +35,28 @@ the analyzed object is the model in every case.
       "label": "Post-natural-proofs stall (1994-2004)",
       "description": "A decade of attempts against ACC0 and above that either re-encounter the natural-proofs trap or retreat to restricted models; no NEXP lower bound as of 2004.",
       "mechanism": {
-        "representations": [
-          "truth-table properties",
-          "restricted circuit models",
-          "bounded-arithmetic systems"
-        ],
-        "assumptions": [
-          "a property-based route exists that evades largeness or constructivity"
-        ],
-        "operators": [
-          "property search",
-          "polynomial-method extension",
-          "independence proof"
-        ],
-        "preserves": [
-          "model-analysis-first direction",
-          "large constructive distinguishing property"
-        ],
+        "representations": ["truth-table properties", "restricted circuit models", "bounded-arithmetic systems"],
+        "assumptions": ["a property-based route exists that evades largeness or constructivity"],
+        "operators": ["property search", "polynomial-method extension", "independence proof"],
+        "preserves": ["model-analysis-first direction", "large constructive distinguishing property"],
         "breaks": [],
-        "auxiliary_objects": [
-          "bounded-arithmetic fragments"
-        ],
+        "auxiliary_objects": ["bounded-arithmetic fragments"],
         "locality": "local",
         "construction_mode": "existential",
         "uncertainty_mode": "deterministic",
-        "notes": "Absence of movement recorded as structure: the model-to-function direction of analysis is conserved across every attempt of the decade.",
-        "completeness_scope": "declared_payload",
-        "completeness_basis": "the embedded newf-normalize block is the complete declared payload for this corpus file: every representation/assumption/operator/preserves/breaks/auxiliary_object entry the file states is listed here and parsed by construction (deterministic embedded-payload parser). Author-attested 2026-09-12 as part of pvnp-holdout corpus preparation, before freeze and before any capture existed; declared_payload scope, NOT a mechanism-exhaustive extraction judgment.",
-        "field_completeness": {
-          "representation": "complete",
-          "assumption": "complete",
-          "operator": "complete",
-          "preserves": "complete",
-          "breaks": "complete",
-          "auxiliary_object": "complete"
-        }
+        "notes": "Absence of movement recorded as structure: the model-to-function direction of analysis is conserved across every attempt of the decade."
       },
       "outcome": {
         "class": "failure",
         "boundary_statement": "no lower bound against ACC0 or above for any NEXP function in the decade after the natural-proofs barrier",
-        "boundary_conditions": [
-          "attempts conserve the model-to-function analysis direction",
-          "mapped escape space (non-constructive or rare properties) unoccupied"
-        ],
+        "boundary_conditions": ["attempts conserve the model-to-function analysis direction", "mapped escape space (non-constructive or rare properties) unoccupied"],
         "notes": "Attempts vary the property and the model; the analyzed object is the model in every case."
       },
       "support": [
-        {
-          "field_path": "mechanism.preserves",
-          "support_kind": "explicit",
-          "locator": "para:3"
-        },
-        {
-          "field_path": "outcome.class",
-          "support_kind": "explicit",
-          "locator": "para:1"
-        },
-        {
-          "field_path": "outcome.boundary_statement",
-          "support_kind": "explicit",
-          "locator": "para:1"
-        },
-        {
-          "field_path": "outcome.notes",
-          "support_kind": "explicit",
-          "locator": "para:3"
-        }
+        {"field_path": "mechanism.preserves", "support_kind": "explicit", "locator": "para:3"},
+        {"field_path": "outcome.class", "support_kind": "explicit", "locator": "para:1"},
+        {"field_path": "outcome.boundary_statement", "support_kind": "explicit", "locator": "para:1"},
+        {"field_path": "outcome.notes", "support_kind": "explicit", "locator": "para:3"}
       ]
     }
   ]

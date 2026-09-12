@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "command": "init",
+  "problem_id": "prb_01M2BTYMX6ZK2MME5X48GMEWZ1",
+  "run_id": "run_01M2BTYMX6ZK2MME5X461M49E8",
+  "store": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/records/pvnp.db",
+  "created": true,
+  "problem": "P vs NP — historical holdout (train)"
+}

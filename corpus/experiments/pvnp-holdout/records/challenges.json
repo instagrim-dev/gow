@@ -1,0 +1,533 @@
+{
+  "ok": true,
+  "command": "challenge",
+  "store": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/records/pvnp.db",
+  "reports": [
+    {
+      "invariant_id": "inv_01M2BV02J8ZP9BM6EEH4YTR72V",
+      "state_before": "proposed",
+      "state_after": "weaken",
+      "challenges": [
+        {
+          "id": "chl_01M2BV2TKH24X8JA2JW3TNS4DZ",
+          "challenge_type": "known-counterexample",
+          "claimed_verdict": "violates",
+          "result_summary": "unconfirmed",
+          "detail": "3 failure-side violation(s) recorded, but a \"contrast_observed\" claim is not refuted by isolated counterexamples (it asserts discrimination, not a universal regularity)",
+          "evidence": [
+            {
+              "kind": "counterexample_member",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+              "signature_id": "msig_01M2BTYNJMY1RN3H8Z26MYMPKT",
+              "detail": "failure-side member violates the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "counterexample_member",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+              "signature_id": "msig_01M2BTYNG99X49W5B4ZDRZKQJ2",
+              "detail": "failure-side member violates the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "counterexample_member",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+              "signature_id": "msig_01M2BTYNGMF6XA8VYSXCX6XMXX",
+              "detail": "failure-side member violates the predicate",
+              "verification_subject": "annotation"
+            }
+          ],
+          "transitions": [
+            "challenged"
+          ]
+        },
+        {
+          "id": "chl_01M2BV2TKH24X8JA2JW5R774D1",
+          "challenge_type": "success-preserving",
+          "claimed_verdict": "preserves",
+          "result_summary": "confirmed",
+          "detail": "4 success-preserving family(ies)",
+          "evidence": [
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            }
+          ],
+          "transitions": [
+            "weaken"
+          ],
+          "boundary_delta": {
+            "kind": "contrast-collapse",
+            "predicate_fingerprint": "224c765e91c03a89105a61eff439a3e0c0ee71d992249c10c579a94d706cfbe4",
+            "condition": "contains(preserves,domain.complexity_theory.property.large_constructive_distinguishing_property)"
+          }
+        },
+        {
+          "id": "chl_01M2BV2TKH24X8JA2JW69RYMX7",
+          "challenge_type": "bias-critique",
+          "claimed_verdict": "support_collapses",
+          "result_summary": "unconfirmed",
+          "detail": "support holds under recomputation: recomputed distinct-family support = 2 (threshold 2)",
+          "evidence": [
+            {
+              "kind": "support_recount",
+              "detail": "recomputed distinct-family support = 2 (threshold 2)",
+              "verification_subject": "annotation"
+            }
+          ]
+        }
+      ],
+      "run_id": "run_01M2BV2TKH24X8JA2JW2F0MNMJ",
+      "population_policy": "latest",
+      "discovery_cluster_run_id": "clr_01M2BV02HCSWX6G1TNCBCBG6FB",
+      "assessment_cluster_run_id": "clr_01M2BV02HCSWX6G1TNCBCBG6FB"
+    },
+    {
+      "invariant_id": "inv_01M2BV02J8ZP9BM6EEH7S8BQF3",
+      "state_before": "proposed",
+      "state_after": "weaken",
+      "challenges": [
+        {
+          "id": "chl_01M2BV2TKTEFXSDR4ZSYEB853N",
+          "challenge_type": "known-counterexample",
+          "claimed_verdict": "violates",
+          "result_summary": "unconfirmed",
+          "detail": "3 failure-side violation(s) recorded, but a \"contrast_observed\" claim is not refuted by isolated counterexamples (it asserts discrimination, not a universal regularity)",
+          "evidence": [
+            {
+              "kind": "counterexample_member",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+              "signature_id": "msig_01M2BTYNG99X49W5B4ZDRZKQJ2",
+              "detail": "failure-side member violates the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "counterexample_member",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+              "signature_id": "msig_01M2BTYNGMF6XA8VYSXCX6XMXX",
+              "detail": "failure-side member violates the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "counterexample_member",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+              "signature_id": "msig_01M2BTYNHMPGE17RSKBJNEDAJ0",
+              "detail": "failure-side member violates the predicate",
+              "verification_subject": "annotation"
+            }
+          ],
+          "transitions": [
+            "challenged"
+          ]
+        },
+        {
+          "id": "chl_01M2BV2TKTEFXSDR4ZT0TMJ32W",
+          "challenge_type": "success-preserving",
+          "claimed_verdict": "preserves",
+          "result_summary": "confirmed",
+          "detail": "2 success-preserving family(ies)",
+          "evidence": [
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            }
+          ],
+          "transitions": [
+            "weaken"
+          ],
+          "boundary_delta": {
+            "kind": "contrast-collapse",
+            "predicate_fingerprint": "71c913ddd4988368d997be32c80db46c05b1a1478bc52ec2e4eb23c47a54bd2c",
+            "condition": "equals(construction,existential)"
+          }
+        },
+        {
+          "id": "chl_01M2BV2TKTEFXSDR4ZT1Q6H21H",
+          "challenge_type": "bias-critique",
+          "claimed_verdict": "support_collapses",
+          "result_summary": "unconfirmed",
+          "detail": "support holds under recomputation: recomputed distinct-family support = 2 (threshold 2)",
+          "evidence": [
+            {
+              "kind": "support_recount",
+              "detail": "recomputed distinct-family support = 2 (threshold 2)",
+              "verification_subject": "annotation"
+            }
+          ]
+        }
+      ],
+      "run_id": "run_01M2BV2TKTEFXSDR4ZSV0Z3E1A",
+      "population_policy": "latest",
+      "discovery_cluster_run_id": "clr_01M2BV02HCSWX6G1TNCBCBG6FB",
+      "assessment_cluster_run_id": "clr_01M2BV02HCSWX6G1TNCBCBG6FB"
+    },
+    {
+      "invariant_id": "inv_01M2BV02J8ZP9BM6EEHAWWXAE0",
+      "state_before": "proposed",
+      "state_after": "weaken",
+      "challenges": [
+        {
+          "id": "chl_01M2BV2TM2WD0515KXPC1BAET5",
+          "challenge_type": "known-counterexample",
+          "claimed_verdict": "violates",
+          "result_summary": "unconfirmed",
+          "detail": "1 failure-side violation(s) recorded, but a \"contrast_observed\" claim is not refuted by isolated counterexamples (it asserts discrimination, not a universal regularity)",
+          "evidence": [
+            {
+              "kind": "counterexample_member",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+              "signature_id": "msig_01M2BTYNJMY1RN3H8Z26MYMPKT",
+              "detail": "failure-side member violates the predicate",
+              "verification_subject": "annotation"
+            }
+          ],
+          "transitions": [
+            "challenged"
+          ]
+        },
+        {
+          "id": "chl_01M2BV2TM2WD0515KXPFMH9XDF",
+          "challenge_type": "success-preserving",
+          "claimed_verdict": "preserves",
+          "result_summary": "confirmed",
+          "detail": "5 success-preserving family(ies)",
+          "evidence": [
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            }
+          ],
+          "transitions": [
+            "weaken"
+          ],
+          "boundary_delta": {
+            "kind": "contrast-collapse",
+            "predicate_fingerprint": "b4c19517fceec4bf81a7246bc0da3fbd4dc8c82e5f873d29830b33d04ff3bdd0",
+            "condition": "equals(uncertainty,deterministic)"
+          }
+        },
+        {
+          "id": "chl_01M2BV2TM2WD0515KXPJQRV5RD",
+          "challenge_type": "bias-critique",
+          "claimed_verdict": "support_collapses",
+          "result_summary": "unconfirmed",
+          "detail": "support holds under recomputation: recomputed distinct-family support = 4 (threshold 2)",
+          "evidence": [
+            {
+              "kind": "support_recount",
+              "detail": "recomputed distinct-family support = 4 (threshold 2)",
+              "verification_subject": "annotation"
+            }
+          ]
+        }
+      ],
+      "run_id": "run_01M2BV2TM2WD0515KXP7K7HFV6",
+      "population_policy": "latest",
+      "discovery_cluster_run_id": "clr_01M2BV02HCSWX6G1TNCBCBG6FB",
+      "assessment_cluster_run_id": "clr_01M2BV02HCSWX6G1TNCBCBG6FB"
+    },
+    {
+      "invariant_id": "inv_01M2BV02J8ZP9BM6EEHDYZRED5",
+      "state_before": "proposed",
+      "state_after": "weaken",
+      "challenges": [
+        {
+          "id": "chl_01M2BV2TMAS8C63AJ0R9SJ48BR",
+          "challenge_type": "known-counterexample",
+          "claimed_verdict": "violates",
+          "result_summary": "unconfirmed",
+          "detail": "3 failure-side violation(s) recorded, but a \"contrast_observed\" claim is not refuted by isolated counterexamples (it asserts discrimination, not a universal regularity)",
+          "evidence": [
+            {
+              "kind": "counterexample_member",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+              "signature_id": "msig_01M2BTYNJMY1RN3H8Z26MYMPKT",
+              "detail": "failure-side member violates the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "counterexample_member",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+              "signature_id": "msig_01M2BTYNHMPGE17RSKBJNEDAJ0",
+              "detail": "failure-side member violates the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "counterexample_member",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+              "signature_id": "msig_01M2BTYNJZR4C77YQM0ZBNQMGT",
+              "detail": "failure-side member violates the predicate",
+              "verification_subject": "annotation"
+            }
+          ],
+          "transitions": [
+            "challenged"
+          ]
+        },
+        {
+          "id": "chl_01M2BV2TMAS8C63AJ0RA8Q0GV4",
+          "challenge_type": "success-preserving",
+          "claimed_verdict": "preserves",
+          "result_summary": "confirmed",
+          "detail": "1 success-preserving family(ies)",
+          "evidence": [
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            }
+          ],
+          "transitions": [
+            "weaken"
+          ],
+          "boundary_delta": {
+            "kind": "contrast-collapse",
+            "predicate_fingerprint": "c586ab84ab392af3434b7e5003a2240c9dcebf774c3e31fec4c0cc1a271a1518",
+            "condition": "contains(preserves,domain.complexity_theory.property.black_box_relativizing_simulation)"
+          }
+        },
+        {
+          "id": "chl_01M2BV2TMAS8C63AJ0RCF8M2KK",
+          "challenge_type": "bias-critique",
+          "claimed_verdict": "support_collapses",
+          "result_summary": "unconfirmed",
+          "detail": "support holds under recomputation: recomputed distinct-family support = 2 (threshold 2)",
+          "evidence": [
+            {
+              "kind": "support_recount",
+              "detail": "recomputed distinct-family support = 2 (threshold 2)",
+              "verification_subject": "annotation"
+            }
+          ]
+        }
+      ],
+      "run_id": "run_01M2BV2TMAS8C63AJ0R3Z4KE45",
+      "population_policy": "latest",
+      "discovery_cluster_run_id": "clr_01M2BV02HCSWX6G1TNCBCBG6FB",
+      "assessment_cluster_run_id": "clr_01M2BV02HCSWX6G1TNCBCBG6FB"
+    },
+    {
+      "invariant_id": "inv_01M2BV02J8ZP9BM6EEHFX7MNQ8",
+      "state_before": "proposed",
+      "state_after": "weaken",
+      "challenges": [
+        {
+          "id": "chl_01M2BV2TMJSDZC35WEB2G820Q7",
+          "challenge_type": "known-counterexample",
+          "claimed_verdict": "violates",
+          "result_summary": "unconfirmed",
+          "detail": "all 5 eligible failure-side member(s) decisively checked; none violates the predicate",
+          "transitions": [
+            "challenged"
+          ]
+        },
+        {
+          "id": "chl_01M2BV2TMJSDZC35WEB5MX4FAC",
+          "challenge_type": "success-preserving",
+          "claimed_verdict": "preserves",
+          "result_summary": "confirmed",
+          "detail": "5 success-preserving family(ies)",
+          "evidence": [
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            }
+          ],
+          "transitions": [
+            "weaken"
+          ],
+          "boundary_delta": {
+            "kind": "contrast-collapse",
+            "predicate_fingerprint": "e75f9cf18a99b0ee2517c7801f814a5c9714cbcb25a208ecd036adf6e05336e0",
+            "condition": "contains(preserves,domain.complexity_theory.property.model_analysis_first_direction)"
+          }
+        },
+        {
+          "id": "chl_01M2BV2TMJSDZC35WEB5Q8ZJ22",
+          "challenge_type": "bias-critique",
+          "claimed_verdict": "support_collapses",
+          "result_summary": "unconfirmed",
+          "detail": "support holds under recomputation: recomputed distinct-family support = 5 (threshold 2)",
+          "evidence": [
+            {
+              "kind": "support_recount",
+              "detail": "recomputed distinct-family support = 5 (threshold 2)",
+              "verification_subject": "annotation"
+            }
+          ]
+        }
+      ],
+      "run_id": "run_01M2BV2TMJSDZC35WEAXYNRD3X",
+      "population_policy": "latest",
+      "discovery_cluster_run_id": "clr_01M2BV02HCSWX6G1TNCBCBG6FB",
+      "assessment_cluster_run_id": "clr_01M2BV02HCSWX6G1TNCBCBG6FB"
+    },
+    {
+      "invariant_id": "inv_01M2BV02J8ZP9BM6EEHG19WNYR",
+      "state_before": "proposed",
+      "state_after": "weaken",
+      "challenges": [
+        {
+          "id": "chl_01M2BV2TMSGB1HPDDFS1Z8J38S",
+          "challenge_type": "known-counterexample",
+          "claimed_verdict": "violates",
+          "result_summary": "unconfirmed",
+          "detail": "2 failure-side violation(s) recorded, but a \"contrast_observed\" claim is not refuted by isolated counterexamples (it asserts discrimination, not a universal regularity)",
+          "evidence": [
+            {
+              "kind": "counterexample_member",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+              "signature_id": "msig_01M2BTYNHMPGE17RSKBJNEDAJ0",
+              "detail": "failure-side member violates the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "counterexample_member",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+              "signature_id": "msig_01M2BTYNJZR4C77YQM0ZBNQMGT",
+              "detail": "failure-side member violates the predicate",
+              "verification_subject": "annotation"
+            }
+          ],
+          "transitions": [
+            "challenged"
+          ]
+        },
+        {
+          "id": "chl_01M2BV2TMSGB1HPDDFS25J2ZZF",
+          "challenge_type": "success-preserving",
+          "claimed_verdict": "preserves",
+          "result_summary": "confirmed",
+          "detail": "3 success-preserving family(ies)",
+          "evidence": [
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            },
+            {
+              "kind": "success_family",
+              "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+              "detail": "success/partial-success family preserves the predicate",
+              "verification_subject": "annotation"
+            }
+          ],
+          "transitions": [
+            "weaken"
+          ],
+          "boundary_delta": {
+            "kind": "contrast-collapse",
+            "predicate_fingerprint": "fc2b18c008678ea7c3c63f2c251ff060ea6aeea842bc8a91f05d666dda61e852",
+            "condition": "equals(locality,global)"
+          }
+        },
+        {
+          "id": "chl_01M2BV2TMSGB1HPDDFS5NDHTFM",
+          "challenge_type": "bias-critique",
+          "claimed_verdict": "support_collapses",
+          "result_summary": "unconfirmed",
+          "detail": "support holds under recomputation: recomputed distinct-family support = 3 (threshold 2)",
+          "evidence": [
+            {
+              "kind": "support_recount",
+              "detail": "recomputed distinct-family support = 3 (threshold 2)",
+              "verification_subject": "annotation"
+            }
+          ]
+        }
+      ],
+      "run_id": "run_01M2BV2TMSGB1HPDDFRY02N9E3",
+      "population_policy": "latest",
+      "discovery_cluster_run_id": "clr_01M2BV02HCSWX6G1TNCBCBG6FB",
+      "assessment_cluster_run_id": "clr_01M2BV02HCSWX6G1TNCBCBG6FB"
+    }
+  ]
+}

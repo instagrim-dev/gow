@@ -34,70 +34,28 @@ program did not know how to open the box without being natural about it.
       "label": "Natural-proofs barrier",
       "description": "Under standard cryptographic assumptions, no constructive large distinguishing property separates strong circuit classes from hard functions.",
       "mechanism": {
-        "representations": [
-          "natural properties over truth tables",
-          "pseudorandom function families"
-        ],
-        "assumptions": [
-          "strong PRFs exist in the target class"
-        ],
-        "operators": [
-          "property-to-distinguisher reduction"
-        ],
-        "preserves": [
-          "model-analysis-first direction"
-        ],
+        "representations": ["natural properties over truth tables", "pseudorandom function families"],
+        "assumptions": ["strong PRFs exist in the target class"],
+        "operators": ["property-to-distinguisher reduction"],
+        "preserves": ["model-analysis-first direction"],
         "breaks": [],
-        "auxiliary_objects": [
-          "pseudorandom function family",
-          "truth-table property tester"
-        ],
+        "auxiliary_objects": ["pseudorandom function family", "truth-table property tester"],
         "locality": "global",
         "construction_mode": "existential",
         "uncertainty_mode": "probabilistic",
-        "notes": "A meta-result condemning the conserved property of pnp-03/04/06: large constructive distinguishing properties.",
-        "completeness_scope": "declared_payload",
-        "completeness_basis": "the embedded newf-normalize block is the complete declared payload for this corpus file: every representation/assumption/operator/preserves/breaks/auxiliary_object entry the file states is listed here and parsed by construction (deterministic embedded-payload parser). Author-attested 2026-09-12 as part of pvnp-holdout corpus preparation, before freeze and before any capture existed; declared_payload scope, NOT a mechanism-exhaustive extraction judgment.",
-        "field_completeness": {
-          "representation": "complete",
-          "assumption": "complete",
-          "operator": "complete",
-          "preserves": "complete",
-          "breaks": "complete",
-          "auxiliary_object": "complete"
-        }
+        "notes": "A meta-result condemning the conserved property of pnp-03/04/06: large constructive distinguishing properties."
       },
       "outcome": {
         "class": "failure",
         "boundary_statement": "no natural (constructive and large) property proves lower bounds against classes containing strong PRFs",
-        "boundary_conditions": [
-          "constructivity: property decidable in poly(truth-table) time",
-          "largeness: property holds for a non-negligible fraction of functions",
-          "cryptographic hardness assumption in the target class"
-        ],
+        "boundary_conditions": ["constructivity: property decidable in poly(truth-table) time", "largeness: property holds for a non-negligible fraction of functions", "cryptographic hardness assumption in the target class"],
         "notes": "Escape space is explicitly mapped: non-constructive or rare/specific properties; unoccupied as of 2004."
       },
       "support": [
-        {
-          "field_path": "mechanism.assumptions",
-          "support_kind": "explicit",
-          "locator": "para:2"
-        },
-        {
-          "field_path": "outcome.boundary_statement",
-          "support_kind": "explicit",
-          "locator": "para:2"
-        },
-        {
-          "field_path": "outcome.boundary_conditions",
-          "support_kind": "explicit",
-          "locator": "para:1"
-        },
-        {
-          "field_path": "outcome.notes",
-          "support_kind": "explicit",
-          "locator": "para:3"
-        }
+        {"field_path": "mechanism.assumptions", "support_kind": "explicit", "locator": "para:2"},
+        {"field_path": "outcome.boundary_statement", "support_kind": "explicit", "locator": "para:2"},
+        {"field_path": "outcome.boundary_conditions", "support_kind": "explicit", "locator": "para:1"},
+        {"field_path": "outcome.notes", "support_kind": "explicit", "locator": "para:3"}
       ]
     }
   ]

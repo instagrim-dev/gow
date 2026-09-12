@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "command": "init",
+  "problem_id": "prb_01M2BTYMXKVHPGSF95YDPCJZR2",
+  "run_id": "run_01M2BTYMXKVHPGSF95YA6M1S52",
+  "store": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/records/pvnp.db",
+  "created": true,
+  "problem": "P vs NP — historical holdout (quarantined target)"
+}

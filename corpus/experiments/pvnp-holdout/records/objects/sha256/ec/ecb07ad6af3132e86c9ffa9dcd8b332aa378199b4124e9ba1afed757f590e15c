@@ -49,76 +49,28 @@ conditional bridge.
       "label": "ACC0 lower bounds via a supplied evaluation algorithm",
       "description": "A concrete better-than-brute-force ACC0 satisfiability/evaluation algorithm (symmetric-top-gate normal form + fast matrix multiplication), fed through the algorithm-to-hardness conversion, yields NEXP not in ACC0 unconditionally.",
       "mechanism": {
-        "representations": [
-          "ACC0 circuits",
-          "depth-two symmetric-top-gate normal form",
-          "all-inputs evaluation tables"
-        ],
-        "assumptions": [
-          "structural normal form for ACC0 holds at quasipolynomial size"
-        ],
-        "operators": [
-          "circuit normal-form transformation",
-          "dynamic-programming evaluation",
-          "fast rectangular matrix multiplication",
-          "algorithm-to-hardness conversion",
-          "hierarchy contradiction"
-        ],
+        "representations": ["ACC0 circuits", "depth-two symmetric-top-gate normal form", "all-inputs evaluation tables"],
+        "assumptions": ["structural normal form for ACC0 holds at quasipolynomial size"],
+        "operators": ["circuit normal-form transformation", "dynamic-programming evaluation", "fast rectangular matrix multiplication", "algorithm-to-hardness conversion", "hierarchy contradiction"],
         "preserves": [],
-        "breaks": [
-          "model-analysis-first direction",
-          "black-box relativizing simulation",
-          "large constructive distinguishing property"
-        ],
-        "auxiliary_objects": [
-          "supplied ACC0 evaluation algorithm",
-          "symmetric-function top gate"
-        ],
+        "breaks": ["model-analysis-first direction", "black-box relativizing simulation", "large constructive distinguishing property"],
+        "auxiliary_objects": ["supplied ACC0 evaluation algorithm", "symmetric-function top gate"],
         "locality": "global",
         "construction_mode": "constructive",
         "uncertainty_mode": "deterministic",
-        "notes": "Consummates the direction reversal at the exact class where the property-based program stalled; the class structure fuels the algorithm instead of bearing a property.",
-        "completeness_scope": "declared_payload",
-        "completeness_basis": "the embedded newf-normalize block is the complete declared payload for this corpus file: every representation/assumption/operator/preserves/breaks/auxiliary_object entry the file states is listed here and parsed by construction (deterministic embedded-payload parser). Author-attested 2026-09-12 as part of pvnp-holdout corpus preparation, before freeze and before any capture existed; declared_payload scope, NOT a mechanism-exhaustive extraction judgment.",
-        "field_completeness": {
-          "representation": "complete",
-          "assumption": "complete",
-          "operator": "complete",
-          "preserves": "complete",
-          "breaks": "complete",
-          "auxiliary_object": "complete"
-        }
+        "notes": "Consummates the direction reversal at the exact class where the property-based program stalled; the class structure fuels the algorithm instead of bearing a property."
       },
       "outcome": {
         "class": "partial_success",
         "boundary_statement": "unconditional NEXP separation from ACC0, the first movement at the two-decade stall frontier",
-        "boundary_conditions": [
-          "separation reaches ACC0 only; TC0 and above require stronger supplied algorithms",
-          "NEXP not yet lowered toward NP"
-        ],
+        "boundary_conditions": ["separation reaches ACC0 only; TC0 and above require stronger supplied algorithms", "NEXP not yet lowered toward NP"],
         "notes": "Withheld historical target; structural move = supply an algorithm and reverse the analysis direction against the stalled class."
       },
       "support": [
-        {
-          "field_path": "mechanism.operators",
-          "support_kind": "explicit",
-          "locator": "para:2"
-        },
-        {
-          "field_path": "mechanism.breaks",
-          "support_kind": "explicit",
-          "locator": "para:3"
-        },
-        {
-          "field_path": "outcome.class",
-          "support_kind": "explicit",
-          "locator": "para:2"
-        },
-        {
-          "field_path": "outcome.boundary_statement",
-          "support_kind": "explicit",
-          "locator": "para:2"
-        }
+        {"field_path": "mechanism.operators", "support_kind": "explicit", "locator": "para:2"},
+        {"field_path": "mechanism.breaks", "support_kind": "explicit", "locator": "para:3"},
+        {"field_path": "outcome.class", "support_kind": "explicit", "locator": "para:2"},
+        {"field_path": "outcome.boundary_statement", "support_kind": "explicit", "locator": "para:2"}
       ]
     }
   ]

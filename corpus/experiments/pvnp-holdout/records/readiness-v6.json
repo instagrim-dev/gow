@@ -1,0 +1,51 @@
+{
+  "ok": true,
+  "command": "experiment readiness",
+  "store": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/records/pvnp.db",
+  "problem_id": "prb_01M2BTYMX6ZK2MME5X48GMEWZ1",
+  "ready": false,
+  "checks": [
+    {
+      "check": "failure_cohort",
+      "status": "ready",
+      "detail": "failure-side families=5 (min-support 2); partition: failure:5 partial_success:7 "
+    },
+    {
+      "check": "decisive_axis_resolution",
+      "status": "ready",
+      "detail": "signatures=12 with-resolved-decisive=12 resolved-claims=103 unresolved-claims=0"
+    },
+    {
+      "check": "completeness_admissions",
+      "status": "info",
+      "detail": "accepted=72 declared_only=0 — with zero accepted, absence-based verified violations are unreachable (assessments degrade to unknown, honestly)"
+    },
+    {
+      "check": "surviving_invariants",
+      "status": "blocked",
+      "detail": "no surviving candidate invariant; mine and run the challenge campaign first — B3 has no eligible guided target"
+    },
+    {
+      "check": "withheld_target",
+      "status": "ready",
+      "detail": "mode=historical targets=2 resolved-claims=21 unresolved-claims=0"
+    },
+    {
+      "check": "recovery_reachability",
+      "status": "ready",
+      "detail": "all 2 target(s) self-compare into the recovery set under classify/v3; a positive match is reachable"
+    },
+    {
+      "check": "recovery_criterion",
+      "status": "info",
+      "detail": "recovery-rule/v1 under classify/v3 (profile-sha256:34b4bf219dcacebd7c58b1917723d525f19491918e705357c5c6fd63c6ec91b2) — a reproducible classification; the pilot independently assesses whether it corresponds to the intended mechanism"
+    }
+  ],
+  "operator_attestations": [
+    "each selected failure case states a JUSTIFIED scope and outcome (method + assumptions + documented boundary), not a generic failure label",
+    "the withheld target's information was NOT supplied to the proposer (prompts and permitted context retained as evidence)",
+    "both arms' captures came from the same model/configuration under the predeclared budget policy (model identity, configuration, prompts, and capture hashes retained)",
+    "B0's capture context genuinely excluded the inferred invariants at capture time",
+    "the structural-recovery classification will be independently assessed against the intended mechanism (package 4 rubric)"
+  ]
+}

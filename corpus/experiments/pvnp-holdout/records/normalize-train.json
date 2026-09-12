@@ -1,0 +1,167 @@
+{
+  "ok": true,
+  "command": "normalize",
+  "store": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/records/pvnp.db",
+  "problem_id": "prb_01M2BTYMX6ZK2MME5X48GMEWZ1",
+  "run_id": "run_01M2BTYNESDY4A4BHHG9K41B5P",
+  "provider": "fixture",
+  "schema_version": "normalize/v1",
+  "results": [
+    {
+      "source_snapshot_id": "snap_01M2BTYNDSVP1KWS3KSDRF1PQE",
+      "status": "created",
+      "revision_id": "nrev_01M2BTYNETRWWAZJN5REKYGYJ4",
+      "approaches": [
+        {
+          "approach_id": "app_01M2BTYNETRWWAZJN5RWY7RV67",
+          "revision_id": "apr_01M2BTYNETRWWAZJN5RHNE9R0R",
+          "mechanism_id": "mech_01M2BTYNETRWWAZJN5RKY1VA9S",
+          "created_approach": true
+        }
+      ]
+    },
+    {
+      "source_snapshot_id": "snap_01M2BTYNDSVP1KWS3KSJJCFCWS",
+      "status": "created",
+      "revision_id": "nrev_01M2BTYNEVB6HERH8VB6E0M4MD",
+      "approaches": [
+        {
+          "approach_id": "app_01M2BTYNEVB6HERH8VBKERE6ET",
+          "revision_id": "apr_01M2BTYNEVB6HERH8VB6VT33G0",
+          "mechanism_id": "mech_01M2BTYNEVB6HERH8VB9YS4RAS",
+          "created_approach": true
+        }
+      ]
+    },
+    {
+      "source_snapshot_id": "snap_01M2BTYNDT3BASW2F7A1BVA860",
+      "status": "created",
+      "revision_id": "nrev_01M2BTYNEWVSQG5NQS9SB5S9VK",
+      "approaches": [
+        {
+          "approach_id": "app_01M2BTYNEWVSQG5NQSA44269QN",
+          "revision_id": "apr_01M2BTYNEWVSQG5NQS9W5CAF0S",
+          "mechanism_id": "mech_01M2BTYNEWVSQG5NQS9YEF9SZ4",
+          "created_approach": true
+        }
+      ]
+    },
+    {
+      "source_snapshot_id": "snap_01M2BTYNDV0BDKHV6XWYQZWK4H",
+      "status": "created",
+      "revision_id": "nrev_01M2BTYNEX8EGKAS1ST3SG5VKJ",
+      "approaches": [
+        {
+          "approach_id": "app_01M2BTYNEX8EGKAS1STPSQDRW3",
+          "revision_id": "apr_01M2BTYNEX8EGKAS1ST5DG18CP",
+          "mechanism_id": "mech_01M2BTYNEX8EGKAS1ST8JQB6AQ",
+          "created_approach": true
+        }
+      ]
+    },
+    {
+      "source_snapshot_id": "snap_01M2BTYNDV0BDKHV6XX3QVWKZ1",
+      "status": "created",
+      "revision_id": "nrev_01M2BTYNEY2BAJ2CYTAWTPPYBK",
+      "approaches": [
+        {
+          "approach_id": "app_01M2BTYNEY2BAJ2CYTB8MHTFYS",
+          "revision_id": "apr_01M2BTYNEY2BAJ2CYTAZT84DHE",
+          "mechanism_id": "mech_01M2BTYNEY2BAJ2CYTB0GQFCVV",
+          "created_approach": true
+        }
+      ]
+    },
+    {
+      "source_snapshot_id": "snap_01M2BTYNDWFGT9DMQV55R9EW6Z",
+      "status": "created",
+      "revision_id": "nrev_01M2BTYNEY2BAJ2CYTBCTRPX8X",
+      "approaches": [
+        {
+          "approach_id": "app_01M2BTYNEY2BAJ2CYTC0BEQGGS",
+          "revision_id": "apr_01M2BTYNEY2BAJ2CYTBGQ1G44K",
+          "mechanism_id": "mech_01M2BTYNEY2BAJ2CYTBJQ4R5FV",
+          "created_approach": true
+        }
+      ]
+    },
+    {
+      "source_snapshot_id": "snap_01M2BTYNDWFGT9DMQV59FBQNGF",
+      "status": "created",
+      "revision_id": "nrev_01M2BTYNEZ0NKYMRP39R0C2KDD",
+      "approaches": [
+        {
+          "approach_id": "app_01M2BTYNEZ0NKYMRP3A4F1FG6E",
+          "revision_id": "apr_01M2BTYNEZ0NKYMRP39RMMNEG1",
+          "mechanism_id": "mech_01M2BTYNEZ0NKYMRP39T6YEJ72",
+          "created_approach": true
+        }
+      ]
+    },
+    {
+      "source_snapshot_id": "snap_01M2BTYNDX46ZHSDQ7CJCGYCKG",
+      "status": "created",
+      "revision_id": "nrev_01M2BTYNF0Q9WKN5HYP2QDZ03Y",
+      "approaches": [
+        {
+          "approach_id": "app_01M2BTYNF0Q9WKN5HYPK3D39QK",
+          "revision_id": "apr_01M2BTYNF0Q9WKN5HYP49AEKS7",
+          "mechanism_id": "mech_01M2BTYNF0Q9WKN5HYP81ZYG98",
+          "created_approach": true
+        }
+      ]
+    },
+    {
+      "source_snapshot_id": "snap_01M2BTYNDX46ZHSDQ7CPK01PYS",
+      "status": "created",
+      "revision_id": "nrev_01M2BTYNF18PAAP3D9R7VDJ8YE",
+      "approaches": [
+        {
+          "approach_id": "app_01M2BTYNF18PAAP3D9RFFZ5T5X",
+          "revision_id": "apr_01M2BTYNF18PAAP3D9R7XS31M7",
+          "mechanism_id": "mech_01M2BTYNF18PAAP3D9R9AH928H",
+          "created_approach": true
+        }
+      ]
+    },
+    {
+      "source_snapshot_id": "snap_01M2BTYNDYBJEF2S75FF94815M",
+      "status": "created",
+      "revision_id": "nrev_01M2BTYNF29YG4AQPVAAFR568Y",
+      "approaches": [
+        {
+          "approach_id": "app_01M2BTYNF29YG4AQPVATREYTWT",
+          "revision_id": "apr_01M2BTYNF29YG4AQPVACS4QNGP",
+          "mechanism_id": "mech_01M2BTYNF29YG4AQPVAFJ21QRZ",
+          "created_approach": true
+        }
+      ]
+    },
+    {
+      "source_snapshot_id": "snap_01M2BTYNDYBJEF2S75FJ29H3HR",
+      "status": "created",
+      "revision_id": "nrev_01M2BTYNF3FHA13610DF7PG92W",
+      "approaches": [
+        {
+          "approach_id": "app_01M2BTYNF3FHA13610DXPJWGV3",
+          "revision_id": "apr_01M2BTYNF3FHA13610DGH3CE91",
+          "mechanism_id": "mech_01M2BTYNF3FHA13610DJ1538CX",
+          "created_approach": true
+        }
+      ]
+    },
+    {
+      "source_snapshot_id": "snap_01M2BTYNDZSSSYDVQFSWHM07NK",
+      "status": "created",
+      "revision_id": "nrev_01M2BTYNF3FHA13610E2QKTTT8",
+      "approaches": [
+        {
+          "approach_id": "app_01M2BTYNF3FHA13610EKZ8K7T7",
+          "revision_id": "apr_01M2BTYNF3FHA13610E4CMBK04",
+          "mechanism_id": "mech_01M2BTYNF3FHA13610E4HY4T7S",
+          "created_approach": true
+        }
+      ]
+    }
+  ]
+}

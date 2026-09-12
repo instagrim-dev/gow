@@ -36,75 +36,28 @@ much leverage the hierarchy theorems provide.
       "label": "SAT time-space tradeoffs (indirect diagonalization)",
       "description": "Unconditional lower bounds against simultaneous time-space algorithms for SAT via assumption-to-contradiction pipelines through hierarchy theorems.",
       "mechanism": {
-        "representations": [
-          "alternating time classes",
-          "simultaneous time-space machines",
-          "completeness translations"
-        ],
-        "assumptions": [
-          "hypothetical fast low-space SAT algorithm (for contradiction)"
-        ],
-        "operators": [
-          "indirect diagonalization",
-          "alternation speedup",
-          "hierarchy contradiction",
-          "completeness translation"
-        ],
-        "preserves": [
-          "black-box relativizing simulation"
-        ],
-        "breaks": [
-          "large constructive distinguishing property"
-        ],
-        "auxiliary_objects": [
-          "alternation hierarchy",
-          "clocked simulations"
-        ],
+        "representations": ["alternating time classes", "simultaneous time-space machines", "completeness translations"],
+        "assumptions": ["hypothetical fast low-space SAT algorithm (for contradiction)"],
+        "operators": ["indirect diagonalization", "alternation speedup", "hierarchy contradiction", "completeness translation"],
+        "preserves": ["black-box relativizing simulation"],
+        "breaks": ["large constructive distinguishing property"],
+        "auxiliary_objects": ["alternation hierarchy", "clocked simulations"],
         "locality": "global",
         "construction_mode": "constructive",
         "uncertainty_mode": "deterministic",
-        "notes": "Unconditional skeleton: assumed algorithm -> class collapse -> hierarchy contradiction. Assumed algorithm is refuted, never supplied.",
-        "completeness_scope": "declared_payload",
-        "completeness_basis": "the embedded newf-normalize block is the complete declared payload for this corpus file: every representation/assumption/operator/preserves/breaks/auxiliary_object entry the file states is listed here and parsed by construction (deterministic embedded-payload parser). Author-attested 2026-09-12 as part of pvnp-holdout corpus preparation, before freeze and before any capture existed; declared_payload scope, NOT a mechanism-exhaustive extraction judgment.",
-        "field_completeness": {
-          "representation": "complete",
-          "assumption": "complete",
-          "operator": "complete",
-          "preserves": "complete",
-          "breaks": "complete",
-          "auxiliary_object": "complete"
-        }
+        "notes": "Unconditional skeleton: assumed algorithm -> class collapse -> hierarchy contradiction. Assumed algorithm is refuted, never supplied."
       },
       "outcome": {
         "class": "partial_success",
         "boundary_statement": "unconditional but model-specific and quantitatively weak; small-exponent time-space bounds only, no route to superpolynomial separation",
-        "boundary_conditions": [
-          "strength capped by hierarchy-theorem leverage",
-          "bounds tied to the simultaneous time-space model"
-        ],
+        "boundary_conditions": ["strength capped by hierarchy-theorem leverage", "bounds tied to the simultaneous time-space model"],
         "notes": "Largely relativizing, hence also wall-bounded; strength capped by hierarchy-theorem leverage."
       },
       "support": [
-        {
-          "field_path": "mechanism.operators",
-          "support_kind": "explicit",
-          "locator": "para:1"
-        },
-        {
-          "field_path": "mechanism.notes",
-          "support_kind": "explicit",
-          "locator": "para:2"
-        },
-        {
-          "field_path": "outcome.class",
-          "support_kind": "explicit",
-          "locator": "para:1"
-        },
-        {
-          "field_path": "outcome.boundary_statement",
-          "support_kind": "explicit",
-          "locator": "para:3"
-        }
+        {"field_path": "mechanism.operators", "support_kind": "explicit", "locator": "para:1"},
+        {"field_path": "mechanism.notes", "support_kind": "explicit", "locator": "para:2"},
+        {"field_path": "outcome.class", "support_kind": "explicit", "locator": "para:1"},
+        {"field_path": "outcome.boundary_statement", "support_kind": "explicit", "locator": "para:3"}
       ]
     }
   ]

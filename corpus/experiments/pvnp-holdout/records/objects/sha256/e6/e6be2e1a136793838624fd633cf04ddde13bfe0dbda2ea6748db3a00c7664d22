@@ -1,0 +1,62 @@
+# Proof-complexity program — resolution lower bounds (pnp-07)
+
+**Era:** 1985–2004. Anchors: Haken 1985 (exponential resolution
+lower bounds for the pigeonhole principle); Beame–Pitassi 1998 (survey,
+*Propositional proof complexity: past, present, future*).
+
+A structurally different flank: instead of bounding the circuits that *decide*
+NP problems, bound the proofs that *certify* their answers. Cook–Reckhow
+reduce NP vs coNP to proof systems: if every propositional proof system has
+hard tautologies, then NP ≠ coNP (and hence P ≠ NP). The program climbs the
+proof-system hierarchy the way the circuit program climbs circuit classes.
+
+Haken's 1985 exponential lower bound for **resolution** on the pigeonhole
+principle was the breakthrough, via a bottleneck/width argument that is
+mechanically kin to the circuit methods: identify a *distinguishing property*
+of all short resolution proofs (narrowness / bottleneck counting) that the
+target tautology's proofs cannot have. Later work extended to restricted
+subsystems, but bounded-depth Frege with counting gates, and full Frege above
+it, resisted — the strong systems stand unseparated as of 2004, in direct
+parallel with the ACC⁰ stall of pnp-06.
+
+The parallel is the informative structure: two independent programs, both
+model-analysis-first, both powered by large certifiable distinguishing
+properties, both stalled at the level where the analyzed object becomes
+expressive enough to *count*.
+
+<!-- newf-normalize
+{
+  "schema_version": "normalize/v1",
+  "approaches": [
+    {
+      "logical_identity": "pvnp/proof-complexity-resolution",
+      "label": "Proof-complexity program (resolution lower bounds)",
+      "description": "Attack NP vs coNP by proving superpolynomial proof-size lower bounds system-by-system, starting from resolution on the pigeonhole principle.",
+      "mechanism": {
+        "representations": ["propositional proof systems", "resolution refutations", "tautology families"],
+        "assumptions": ["per-system lower bounds accumulate toward all-systems hardness", "width/bottleneck properties certify proof size"],
+        "operators": ["bottleneck counting", "width lower bounds", "restriction on proofs"],
+        "preserves": ["model-analysis-first direction", "large constructive distinguishing property"],
+        "breaks": ["black-box relativizing simulation"],
+        "auxiliary_objects": ["pigeonhole tautologies", "proof-width measure"],
+        "locality": "local",
+        "construction_mode": "constructive",
+        "uncertainty_mode": "deterministic",
+        "notes": "Mechanically kin to the circuit program: distinguishing property over all short proofs in a fixed system."
+      },
+      "outcome": {
+        "class": "partial_success",
+        "boundary_statement": "exponential bounds for resolution and weak subsystems; Frege and stronger systems unseparated as of 2004",
+        "boundary_conditions": ["method stalls where the proof system can count", "per-system progress does not compose into all-systems claims"],
+        "notes": "Stall level parallels the circuit program's ACC0 edge: expressiveness sufficient for counting defeats the known properties."
+      },
+      "support": [
+        {"field_path": "mechanism.operators", "support_kind": "explicit", "locator": "para:2"},
+        {"field_path": "mechanism.preserves", "support_kind": "inferred", "locator": "para:3"},
+        {"field_path": "outcome.class", "support_kind": "explicit", "locator": "para:2"},
+        {"field_path": "outcome.boundary_statement", "support_kind": "explicit", "locator": "para:2"}
+      ]
+    }
+  ]
+}
+newf-normalize -->

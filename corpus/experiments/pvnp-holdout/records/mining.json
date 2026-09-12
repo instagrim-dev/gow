@@ -1,0 +1,848 @@
+{
+  "ok": true,
+  "command": "invariants mine",
+  "store": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/records/pvnp.db",
+  "created": true,
+  "revision": {
+    "id": "ivr_01M2BV02J8ZP9BM6EEH2B0YER3",
+    "problem_id": "prb_01M2BTYMX6ZK2MME5X48GMEWZ1",
+    "failure_space_id": "fsp_01M2BV02HTMDXNMQ28WPE49KDC",
+    "cluster_run_id": "clr_01M2BV02HCSWX6G1TNCBCBG6FB",
+    "run_id": "run_01M2BV02J8ZP9BM6EEH17DXFP7",
+    "miner_version": "invariant/v1+712e5351092a6ecd",
+    "predicate_schema": "invariant-predicate/v1",
+    "min_support": 2,
+    "revision": 1,
+    "candidate_count": 6,
+    "created_at": "2026-09-12T22:14:51.720309Z",
+    "candidates": [
+      {
+        "id": "inv_01M2BV02J8ZP9BM6EEH4YTR72V",
+        "predicate_fingerprint": "224c765e91c03a89105a61eff439a3e0c0ee71d992249c10c579a94d706cfbe4",
+        "predicate": "{\"schema\":\"invariant-predicate/v1\",\"root\":{\"op\":\"contains\",\"field\":\"preserves\",\"canonical_id\":\"domain.complexity_theory.property.large_constructive_distinguishing_property\"}}",
+        "statement": "failed approaches share preserves(domain.complexity_theory.property.large_constructive_distinguishing_property)",
+        "abstraction_level": "mechanism",
+        "state": "proposed",
+        "association_status": "contrast_observed",
+        "obstruction_is_model_hypothesis": false,
+        "distinct_family_support": 2,
+        "failure_coverage_num": 2,
+        "failure_coverage_den": 5,
+        "contrast_violating_num": 3,
+        "contrast_eligible_den": 7,
+        "support_explicit_count": 2,
+        "support_inferred_count": 0,
+        "support_other_count": 2,
+        "family_evaluations": [
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 2,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 2,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "violates",
+            "explicit_count": 2,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 2
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "violates",
+            "explicit_count": 2,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 2
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 2,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 2,
+            "inferred_count": 0,
+            "other_count": 0
+          }
+        ],
+        "counterexamples": [
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+            "reason": "failure family violates predicate"
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+            "reason": "failure family violates predicate"
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+            "reason": "failure family violates predicate"
+          }
+        ]
+      },
+      {
+        "id": "inv_01M2BV02J8ZP9BM6EEH7S8BQF3",
+        "predicate_fingerprint": "71c913ddd4988368d997be32c80db46c05b1a1478bc52ec2e4eb23c47a54bd2c",
+        "predicate": "{\"schema\":\"invariant-predicate/v1\",\"root\":{\"op\":\"equals\",\"field\":\"construction\",\"values\":[\"existential\"]}}",
+        "statement": "failed approaches share construction=existential",
+        "abstraction_level": "mechanism",
+        "state": "proposed",
+        "association_status": "contrast_observed",
+        "obstruction_is_model_hypothesis": false,
+        "distinct_family_support": 2,
+        "failure_coverage_num": 2,
+        "failure_coverage_den": 5,
+        "contrast_violating_num": 5,
+        "contrast_eligible_den": 7,
+        "support_explicit_count": 0,
+        "support_inferred_count": 0,
+        "support_other_count": 2,
+        "family_evaluations": [
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          }
+        ],
+        "counterexamples": [
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+            "reason": "failure family violates predicate"
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+            "reason": "failure family violates predicate"
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+            "reason": "failure family violates predicate"
+          }
+        ]
+      },
+      {
+        "id": "inv_01M2BV02J8ZP9BM6EEHAWWXAE0",
+        "predicate_fingerprint": "b4c19517fceec4bf81a7246bc0da3fbd4dc8c82e5f873d29830b33d04ff3bdd0",
+        "predicate": "{\"schema\":\"invariant-predicate/v1\",\"root\":{\"op\":\"equals\",\"field\":\"uncertainty\",\"values\":[\"deterministic\"]}}",
+        "statement": "failed approaches share uncertainty=deterministic",
+        "abstraction_level": "mechanism",
+        "state": "proposed",
+        "association_status": "contrast_observed",
+        "obstruction_is_model_hypothesis": false,
+        "distinct_family_support": 4,
+        "failure_coverage_num": 4,
+        "failure_coverage_den": 5,
+        "contrast_violating_num": 2,
+        "contrast_eligible_den": 7,
+        "support_explicit_count": 0,
+        "support_inferred_count": 0,
+        "support_other_count": 4,
+        "family_evaluations": [
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          }
+        ],
+        "counterexamples": [
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+            "reason": "failure family violates predicate"
+          }
+        ]
+      },
+      {
+        "id": "inv_01M2BV02J8ZP9BM6EEHDYZRED5",
+        "predicate_fingerprint": "c586ab84ab392af3434b7e5003a2240c9dcebf774c3e31fec4c0cc1a271a1518",
+        "predicate": "{\"schema\":\"invariant-predicate/v1\",\"root\":{\"op\":\"contains\",\"field\":\"preserves\",\"canonical_id\":\"domain.complexity_theory.property.black_box_relativizing_simulation\"}}",
+        "statement": "failed approaches share preserves(domain.complexity_theory.property.black_box_relativizing_simulation)",
+        "abstraction_level": "mechanism",
+        "state": "proposed",
+        "association_status": "contrast_observed",
+        "obstruction_is_model_hypothesis": false,
+        "distinct_family_support": 2,
+        "failure_coverage_num": 2,
+        "failure_coverage_den": 5,
+        "contrast_violating_num": 6,
+        "contrast_eligible_den": 7,
+        "support_explicit_count": 4,
+        "support_inferred_count": 0,
+        "support_other_count": 0,
+        "family_evaluations": [
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 2,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 2,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 2,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 2
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 2,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 2
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 2,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "violates",
+            "explicit_count": 2,
+            "inferred_count": 0,
+            "other_count": 0
+          }
+        ],
+        "counterexamples": [
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+            "reason": "failure family violates predicate"
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+            "reason": "failure family violates predicate"
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+            "reason": "failure family violates predicate"
+          }
+        ]
+      },
+      {
+        "id": "inv_01M2BV02J8ZP9BM6EEHFX7MNQ8",
+        "predicate_fingerprint": "e75f9cf18a99b0ee2517c7801f814a5c9714cbcb25a208ecd036adf6e05336e0",
+        "predicate": "{\"schema\":\"invariant-predicate/v1\",\"root\":{\"op\":\"contains\",\"field\":\"preserves\",\"canonical_id\":\"domain.complexity_theory.property.model_analysis_first_direction\"}}",
+        "statement": "failed approaches share preserves(domain.complexity_theory.property.model_analysis_first_direction)",
+        "abstraction_level": "mechanism",
+        "state": "proposed",
+        "association_status": "contrast_observed",
+        "obstruction_is_model_hypothesis": false,
+        "distinct_family_support": 5,
+        "failure_coverage_num": 5,
+        "failure_coverage_den": 5,
+        "contrast_violating_num": 2,
+        "contrast_eligible_den": 7,
+        "support_explicit_count": 6,
+        "support_inferred_count": 0,
+        "support_other_count": 3,
+        "family_evaluations": [
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 2,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 2,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 2,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 2
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 2,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 2
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 2,
+            "inferred_count": 0,
+            "other_count": 0
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 2,
+            "inferred_count": 0,
+            "other_count": 0
+          }
+        ],
+        "counterexamples": null
+      },
+      {
+        "id": "inv_01M2BV02J8ZP9BM6EEHG19WNYR",
+        "predicate_fingerprint": "fc2b18c008678ea7c3c63f2c251ff060ea6aeea842bc8a91f05d666dda61e852",
+        "predicate": "{\"schema\":\"invariant-predicate/v1\",\"root\":{\"op\":\"equals\",\"field\":\"locality\",\"values\":[\"global\"]}}",
+        "statement": "failed approaches share locality=global",
+        "abstraction_level": "mechanism",
+        "state": "proposed",
+        "association_status": "contrast_observed",
+        "obstruction_is_model_hypothesis": false,
+        "distinct_family_support": 3,
+        "failure_coverage_num": 3,
+        "failure_coverage_den": 5,
+        "contrast_violating_num": 4,
+        "contrast_eligible_den": 7,
+        "support_explicit_count": 0,
+        "support_inferred_count": 0,
+        "support_other_count": 3,
+        "family_evaluations": [
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "satisfies",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+            "outcome_class": "partial_success",
+            "role": "contrast",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+            "outcome_class": "failure",
+            "role": "support",
+            "verdict": "violates",
+            "explicit_count": 0,
+            "inferred_count": 0,
+            "other_count": 1
+          }
+        ],
+        "counterexamples": [
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+            "reason": "failure family violates predicate"
+          },
+          {
+            "cluster_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+            "reason": "failure family violates predicate"
+          }
+        ]
+      }
+    ]
+  }
+}

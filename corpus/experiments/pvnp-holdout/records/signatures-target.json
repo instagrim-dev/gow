@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "command": "mechanism signature",
+  "store": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/records/pvnp.db",
+  "problem_id": "prb_01M2BTYMXKVHPGSF95YDPCJZR2",
+  "signatures": [
+    {
+      "mechanism_id": "mech_01M2BTYNFHKMT3BKD1ESAR2EGN",
+      "signature_id": "msig_01M2BTYNMMYXQCMGHZ42QSM1GJ",
+      "fingerprint": "0a2ceb01879c39a31befb86e28300effb8a4df9dd18145c4373e4108322042c4",
+      "status": "created"
+    },
+    {
+      "mechanism_id": "mech_01M2BTYNFJ5FD3JAFPQSRYDT27",
+      "signature_id": "msig_01M2BTYNMZPZXAN4E6PJX985XG",
+      "fingerprint": "c5a9a922b62628fdd1e58d60773c8b4f45e90764a2dadc69c416209ee958a6fd",
+      "status": "created"
+    }
+  ]
+}

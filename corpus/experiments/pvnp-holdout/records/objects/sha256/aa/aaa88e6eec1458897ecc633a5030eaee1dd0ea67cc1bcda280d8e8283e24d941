@@ -33,74 +33,28 @@ open algorithmic problem, so no unconditional consequence had been extracted.
       "label": "Derandomization-to-lower-bounds bridge",
       "description": "Prove that derandomizing polynomial identity testing implies circuit lower bounds, inverting the classical hardness-to-randomness direction.",
       "mechanism": {
-        "representations": [
-          "identity-testing algorithms",
-          "arithmetic circuits",
-          "conditional implications"
-        ],
-        "assumptions": [
-          "deterministic subexponential PIT exists (hypothesis, not theorem)"
-        ],
-        "operators": [
-          "algorithm-to-hardness implication",
-          "completeness leverage",
-          "hierarchy-theorem coupling"
-        ],
+        "representations": ["identity-testing algorithms", "arithmetic circuits", "conditional implications"],
+        "assumptions": ["deterministic subexponential PIT exists (hypothesis, not theorem)"],
+        "operators": ["algorithm-to-hardness implication", "completeness leverage", "hierarchy-theorem coupling"],
         "preserves": [],
-        "breaks": [
-          "black-box relativizing simulation",
-          "large constructive distinguishing property",
-          "model-analysis-first direction"
-        ],
-        "auxiliary_objects": [
-          "polynomial identity tests",
-          "permanent as hard candidate"
-        ],
+        "breaks": ["black-box relativizing simulation", "large constructive distinguishing property", "model-analysis-first direction"],
+        "auxiliary_objects": ["polynomial identity tests", "permanent as hard candidate"],
         "locality": "global",
         "construction_mode": "existential",
         "uncertainty_mode": "deterministic",
-        "notes": "Reverses the classical analysis direction: from an algorithm's existence to a hardness conclusion. Conditional only.",
-        "completeness_scope": "declared_payload",
-        "completeness_basis": "the embedded newf-normalize block is the complete declared payload for this corpus file: every representation/assumption/operator/preserves/breaks/auxiliary_object entry the file states is listed here and parsed by construction (deterministic embedded-payload parser). Author-attested 2026-09-12 as part of pvnp-holdout corpus preparation, before freeze and before any capture existed; declared_payload scope, NOT a mechanism-exhaustive extraction judgment.",
-        "field_completeness": {
-          "representation": "complete",
-          "assumption": "complete",
-          "operator": "complete",
-          "preserves": "complete",
-          "breaks": "complete",
-          "auxiliary_object": "complete"
-        }
+        "notes": "Reverses the classical analysis direction: from an algorithm's existence to a hardness conclusion. Conditional only."
       },
       "outcome": {
         "class": "partial_success",
         "boundary_statement": "the algorithm-to-hardness implication holds only conditionally; the hypothesis it consumes is itself open",
-        "boundary_conditions": [
-          "hypothesis (derandomized PIT) itself open",
-          "no unconditional lower bound extracted as of 2004"
-        ],
+        "boundary_conditions": ["hypothesis (derandomized PIT) itself open", "no unconditional lower bound extracted as of 2004"],
         "notes": "Converts one open problem into another; the implication's hypothesis is an algorithmic event no one can yet supply."
       },
       "support": [
-        {
-          "field_path": "mechanism.operators",
-          "support_kind": "explicit",
-          "locator": "para:2"
-        },
-        {
-          "field_path": "mechanism.breaks",
-          "support_kind": "explicit",
-          "locator": "para:2"
-        },
-        {
-          "field_path": "outcome.class",
-          "support_kind": "explicit",
-          "locator": "para:3"
-        },
-        {
-          "field_path": "outcome.boundary_statement",
-          "support_kind": "explicit",
-          "locator": "para:3"
-        }
+        {"field_path": "mechanism.operators", "support_kind": "explicit", "locator": "para:2"},
+        {"field_path": "mechanism.breaks", "support_kind": "explicit", "locator": "para:2"},
+        {"field_path": "outcome.class", "support_kind": "explicit", "locator": "para:3"},
+        {"field_path": "outcome.boundary_statement", "support_kind": "explicit", "locator": "para:3"}
       ]
     }
   ]

@@ -1,0 +1,51 @@
+{
+  "ok": true,
+  "command": "experiment readiness",
+  "store": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/records/pvnp.db",
+  "problem_id": "prb_01M2BTA7G60ZVG5K7A0152C2QX",
+  "ready": false,
+  "checks": [
+    {
+      "check": "failure_cohort",
+      "status": "ready",
+      "detail": "failure-side families=5 (min-support 2); partition: failure:5 partial_success:7 "
+    },
+    {
+      "check": "decisive_axis_resolution",
+      "status": "blocked",
+      "detail": "signatures=12 with-resolved-decisive=0 resolved-claims=0 unresolved-claims=103 — nothing resolves on the comparison axes; clustering reflects inability to compare, not structure"
+    },
+    {
+      "check": "completeness_admissions",
+      "status": "info",
+      "detail": "accepted=0 declared_only=0 — with zero accepted, absence-based verified violations are unreachable (assessments degrade to unknown, honestly)"
+    },
+    {
+      "check": "surviving_invariants",
+      "status": "blocked",
+      "detail": "no surviving candidate invariant; mine and run the challenge campaign first — B3 has no eligible guided target"
+    },
+    {
+      "check": "withheld_target",
+      "status": "blocked",
+      "detail": "mode=historical targets=2 resolved-claims=0 unresolved-claims=21 — no resolved decisive content: every recovery assessment would be unknown/incomparable"
+    },
+    {
+      "check": "recovery_reachability",
+      "status": "blocked",
+      "detail": "2 of 2 target(s) cannot receive a positive match under recovery-rule/v1 (target msig_01M2BTCH0GJ92XJHE78X96T3QV self-comparison classifies \"unknown\" under classify/v3) — canonicalize the target's stated labels and/or justify field completeness in a pinned revision (do not ignore the gap, do not add interpretation claims to the target)"
+    },
+    {
+      "check": "recovery_criterion",
+      "status": "info",
+      "detail": "recovery-rule/v1 under classify/v3 (profile-sha256:34b4bf219dcacebd7c58b1917723d525f19491918e705357c5c6fd63c6ec91b2) — a reproducible classification; the pilot independently assesses whether it corresponds to the intended mechanism"
+    }
+  ],
+  "operator_attestations": [
+    "each selected failure case states a JUSTIFIED scope and outcome (method + assumptions + documented boundary), not a generic failure label",
+    "the withheld target's information was NOT supplied to the proposer (prompts and permitted context retained as evidence)",
+    "both arms' captures came from the same model/configuration under the predeclared budget policy (model identity, configuration, prompts, and capture hashes retained)",
+    "B0's capture context genuinely excluded the inferred invariants at capture time",
+    "the structural-recovery classification will be independently assessed against the intended mechanism (package 4 rubric)"
+  ]
+}

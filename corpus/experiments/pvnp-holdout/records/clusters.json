@@ -1,0 +1,610 @@
+{
+  "ok": true,
+  "command": "cluster build",
+  "store": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/records/pvnp.db",
+  "created": true,
+  "cluster_run": {
+    "id": "clr_01M2BV02HCSWX6G1TNCBCBG6FB",
+    "problem_id": "prb_01M2BTYMX6ZK2MME5X48GMEWZ1",
+    "run_id": "run_01M2BV02HCSWX6G1TNCA3HYHJX",
+    "schema_version": "mechanism/v1",
+    "vocabulary_version": "mechanism/v6",
+    "profile_version": "classify/v1",
+    "cluster_algo_version": "cluster/v1",
+    "thresholds_hash": "e92f44f22daf989433907704330391256d5d6956c3c5b2dbd978c8bdb8320412",
+    "input_set_hash": "6bf9caee6e2def4414dc77e75f545689028dc2a5269754fd882425ba8b079dbd",
+    "signature_count": 12,
+    "family_count": 12,
+    "status": "clean",
+    "clusters": [
+      {
+        "id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+        "fingerprint": "4bfa7ba2498abfdf0ac3df56347c70da1c2544c219f7c7a203d95920cf8bdc28",
+        "representative_signature_id": "msig_01M2BTYNJ9WA8B10GPTPEB616M",
+        "member_count": 1,
+        "isolate": false,
+        "outcome_class": "partial_success",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M2BTYNJ9WA8B10GPTPEB616M",
+            "mechanism_id": "mech_01M2BTYNEZ0NKYMRP39T6YEJ72",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+        "fingerprint": "52690443e3522bea4acf0727fad138e61e299e2de9a979acb4371cf7b09c1e21",
+        "representative_signature_id": "msig_01M2BTYNJMY1RN3H8Z26MYMPKT",
+        "member_count": 1,
+        "isolate": false,
+        "outcome_class": "failure",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M2BTYNJMY1RN3H8Z26MYMPKT",
+            "mechanism_id": "mech_01M2BTYNF0Q9WKN5HYP81ZYG98",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+        "fingerprint": "5a703b4f168d717dae86fa48c9b51586d516b18f61078497109bf753b3b9b4c4",
+        "representative_signature_id": "msig_01M2BTYNH9F107KCNVY872YP5M",
+        "member_count": 1,
+        "isolate": false,
+        "outcome_class": "partial_success",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M2BTYNH9F107KCNVY872YP5M",
+            "mechanism_id": "mech_01M2BTYNEX8EGKAS1ST8JQB6AQ",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+        "fingerprint": "7fae6dd79fc4cf42b7cee9ca620173ceeddff232587fd13e460f288dfad4dc3a",
+        "representative_signature_id": "msig_01M2BTYNG99X49W5B4ZDRZKQJ2",
+        "member_count": 1,
+        "isolate": false,
+        "outcome_class": "failure",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M2BTYNG99X49W5B4ZDRZKQJ2",
+            "mechanism_id": "mech_01M2BTYNETRWWAZJN5RKY1VA9S",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+        "fingerprint": "9632c2ff3dcfb4055763b16f655b6083e91bd01883cd9ca365e3cac8ddcd40e3",
+        "representative_signature_id": "msig_01M2BTYNKK91E5TSYERXJCYA5Q",
+        "member_count": 1,
+        "isolate": false,
+        "outcome_class": "partial_success",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M2BTYNKK91E5TSYERXJCYA5Q",
+            "mechanism_id": "mech_01M2BTYNF3FHA13610DJ1538CX",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+        "fingerprint": "a9b2659b25623179d79ef48ab831df15ea4a955b40f4beef47488a1b9a988e66",
+        "representative_signature_id": "msig_01M2BTYNKYGC7G064N5K038M0V",
+        "member_count": 1,
+        "isolate": false,
+        "outcome_class": "partial_success",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M2BTYNKYGC7G064N5K038M0V",
+            "mechanism_id": "mech_01M2BTYNF3FHA13610E4HY4T7S",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+        "fingerprint": "b5c50d39a97379a97ee1e6b0df609aafd759762055673d6f03167455ae6722f0",
+        "representative_signature_id": "msig_01M2BTYNGZ6FNEV9HANHDYXT7N",
+        "member_count": 1,
+        "isolate": false,
+        "outcome_class": "partial_success",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M2BTYNGZ6FNEV9HANHDYXT7N",
+            "mechanism_id": "mech_01M2BTYNEWVSQG5NQS9YEF9SZ4",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+        "fingerprint": "ccff1bc7526b6a740e2e4396fd52c9946eb5d1921d1f48b8c83737f078198d19",
+        "representative_signature_id": "msig_01M2BTYNGMF6XA8VYSXCX6XMXX",
+        "member_count": 1,
+        "isolate": false,
+        "outcome_class": "failure",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M2BTYNGMF6XA8VYSXCX6XMXX",
+            "mechanism_id": "mech_01M2BTYNEVB6HERH8VB9YS4RAS",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+        "fingerprint": "df5ce2df62138d7bd59dd36c053f40dcbcf1739e72fa20ed18ebc1e7f4c8a00d",
+        "representative_signature_id": "msig_01M2BTYNK9B7CW05ZBF1A1K2EX",
+        "member_count": 1,
+        "isolate": false,
+        "outcome_class": "partial_success",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M2BTYNK9B7CW05ZBF1A1K2EX",
+            "mechanism_id": "mech_01M2BTYNF29YG4AQPVAFJ21QRZ",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+        "fingerprint": "e604bf3b6f61cf028a706ee5b73fe1c4e32a09b6e453a6f5929aece6f0528bab",
+        "representative_signature_id": "msig_01M2BTYNHMPGE17RSKBJNEDAJ0",
+        "member_count": 1,
+        "isolate": false,
+        "outcome_class": "failure",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M2BTYNHMPGE17RSKBJNEDAJ0",
+            "mechanism_id": "mech_01M2BTYNEY2BAJ2CYTB0GQFCVV",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+        "fingerprint": "f7b86f5e380606b5834e5f77e9290caec41d7bba739f16312d2befc5d5fccc8d",
+        "representative_signature_id": "msig_01M2BTYNHYZ4VBNKMWS5TY5EDT",
+        "member_count": 1,
+        "isolate": false,
+        "outcome_class": "partial_success",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M2BTYNHYZ4VBNKMWS5TY5EDT",
+            "mechanism_id": "mech_01M2BTYNEY2BAJ2CYTBJQ4R5FV",
+            "redundant": false
+          }
+        ]
+      },
+      {
+        "id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+        "fingerprint": "fa40f3b8f2b70aeb919e7b143642d8a3daec74e6b74c86e45bb12daacc8ee171",
+        "representative_signature_id": "msig_01M2BTYNJZR4C77YQM0ZBNQMGT",
+        "member_count": 1,
+        "isolate": false,
+        "outcome_class": "failure",
+        "outcome_mixed": false,
+        "intra_variation": "identical=0;mechanism_near=0;surface_distinct=0;incomparable=0;mechanism_distinct=0",
+        "members": [
+          {
+            "signature_id": "msig_01M2BTYNJZR4C77YQM0ZBNQMGT",
+            "mechanism_id": "mech_01M2BTYNF18PAAP3D9R9AH928H",
+            "redundant": false
+          }
+        ]
+      }
+    ],
+    "distances": [
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCE5KNVN7",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCFFY7XP6",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCJZHGZ1V",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCMXX2K88",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCQCY5SGC",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCTER0F2C",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCVFH70RX",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCZ0GDZNV",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TNCZ9TB720",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TND01HPB6R",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+        "classification": "mechanism-distinct"
+      },
+      {
+        "cluster_a_id": "mcl_01M2BV02HCSWX6G1TND1E187GA",
+        "cluster_b_id": "mcl_01M2BV02HCSWX6G1TND55RBSYD",
+        "classification": "mechanism-distinct"
+      }
+    ],
+    "coverage_axes": [
+      {
+        "axis": "representation",
+        "distinct_value_count": 31,
+        "under_sampled": false
+      },
+      {
+        "axis": "operator",
+        "distinct_value_count": 33,
+        "under_sampled": false
+      },
+      {
+        "axis": "assumption",
+        "distinct_value_count": 18,
+        "under_sampled": false
+      },
+      {
+        "axis": "preserves",
+        "distinct_value_count": 3,
+        "under_sampled": false
+      },
+      {
+        "axis": "breaks",
+        "distinct_value_count": 3,
+        "under_sampled": false
+      },
+      {
+        "axis": "auxiliary_object",
+        "distinct_value_count": 23,
+        "under_sampled": false
+      },
+      {
+        "axis": "posture.locality",
+        "distinct_value_count": 2,
+        "under_sampled": false
+      },
+      {
+        "axis": "posture.construction",
+        "distinct_value_count": 2,
+        "under_sampled": false
+      },
+      {
+        "axis": "posture.uncertainty",
+        "distinct_value_count": 2,
+        "under_sampled": false
+      },
+      {
+        "axis": "outcome",
+        "distinct_value_count": 2,
+        "under_sampled": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "command": "experiment define",
+  "store": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/records/pvnp.db",
+  "created": true,
+  "holdout_set": {
+    "id": "hset_01M2BV02JWPE35ESA1M69WY93X",
+    "problem_id": "prb_01M2BTYMX6ZK2MME5X48GMEWZ1",
+    "target_problem_id": "prb_01M2BTYMXKVHPGSF95YDPCJZR2",
+    "name": "pvnp-holdout: algorithmic method (Williams 2010-2011)",
+    "mode": "historical",
+    "cutoff_time": "2005-01-01T00:00:00Z",
+    "withheld_sources": [
+      "src_01M2BTYNECR6TS000YYVDRQ4WH",
+      "src_01M2BTYNEDCFH9XJ4F2ZYXN5MD"
+    ]
+  }
+}

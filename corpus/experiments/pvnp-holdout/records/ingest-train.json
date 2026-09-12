@@ -1,0 +1,134 @@
+{
+  "ok": true,
+  "command": "ingest",
+  "store": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/records/pvnp.db",
+  "problem_id": "prb_01M2BTYMX6ZK2MME5X48GMEWZ1",
+  "run_id": "run_01M2BTYNDRT3TG6Y98EB5CEKE1",
+  "results": [
+    {
+      "input": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/train/pnp-01-diagonalization-simulation.md",
+      "source_id": "src_01M2BTYNDSVP1KWS3KSD3E3NN3",
+      "snapshot_id": "snap_01M2BTYNDSVP1KWS3KSDRF1PQE",
+      "status": "created_snapshot",
+      "sha256": "043bcadd053f4293625305cd0b80b03769cada06ae721f769cb25d1ed60ed7c7",
+      "media_type": "text/markdown",
+      "bytes": 4415,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/train/pnp-02-relativization-barrier.md",
+      "source_id": "src_01M2BTYNDSVP1KWS3KSF5PMXHW",
+      "snapshot_id": "snap_01M2BTYNDSVP1KWS3KSJJCFCWS",
+      "status": "created_snapshot",
+      "sha256": "073ec07197710ceabe73539a0d7855a1cb14259395c1b4508ca54473642c09c4",
+      "media_type": "text/markdown",
+      "bytes": 4345,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/train/pnp-03-ac0-random-restrictions.md",
+      "source_id": "src_01M2BTYNDT3BASW2F79XK5PPQV",
+      "snapshot_id": "snap_01M2BTYNDT3BASW2F7A1BVA860",
+      "status": "created_snapshot",
+      "sha256": "f1c4b76de5f1114d42e328550957e7f190b56bde8d1f54d4322594041cc5cc38",
+      "media_type": "text/markdown",
+      "bytes": 4676,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/train/pnp-04-monotone-approximation-method.md",
+      "source_id": "src_01M2BTYNDV0BDKHV6XWV54FEK9",
+      "snapshot_id": "snap_01M2BTYNDV0BDKHV6XWYQZWK4H",
+      "status": "created_snapshot",
+      "sha256": "baf0d32a34605a911f66eb669fcb6dd898262267a0613122785d2e8c32b95ee2",
+      "media_type": "text/markdown",
+      "bytes": 4734,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/train/pnp-05-monotone-transfer-hope.md",
+      "source_id": "src_01M2BTYNDV0BDKHV6XX1QRB2Y1",
+      "snapshot_id": "snap_01M2BTYNDV0BDKHV6XX3QVWKZ1",
+      "status": "created_snapshot",
+      "sha256": "d02a7acfeb5105d59e06ad3cdcdfa7c0413b9337eeb4a000629dd20b1ecd61d6",
+      "media_type": "text/markdown",
+      "bytes": 4441,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/train/pnp-06-ac0p-polynomial-approximation.md",
+      "source_id": "src_01M2BTYNDWFGT9DMQV53AZZSQK",
+      "snapshot_id": "snap_01M2BTYNDWFGT9DMQV55R9EW6Z",
+      "status": "created_snapshot",
+      "sha256": "f7c79dd5a64a2e5f958841a70a273d699a7481e3f6c9e5f234c5664fca5532e6",
+      "media_type": "text/markdown",
+      "bytes": 4722,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/train/pnp-07-proof-complexity-resolution.md",
+      "source_id": "src_01M2BTYNDWFGT9DMQV55SYTFT3",
+      "snapshot_id": "snap_01M2BTYNDWFGT9DMQV59FBQNGF",
+      "status": "created_snapshot",
+      "sha256": "5227015f8dba3b2db2c938b9bb69434c132638ca68a5bc67bd52e9209004a427",
+      "media_type": "text/markdown",
+      "bytes": 4817,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/train/pnp-08-natural-proofs-barrier.md",
+      "source_id": "src_01M2BTYNDX46ZHSDQ7CEMPEJTC",
+      "snapshot_id": "snap_01M2BTYNDX46ZHSDQ7CJCGYCKG",
+      "status": "created_snapshot",
+      "sha256": "8b931cd00dbaf659172306f393951a102e4213938e70bcefd7257582a614edf4",
+      "media_type": "text/markdown",
+      "bytes": 4723,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/train/pnp-09-post-natural-proofs-stall.md",
+      "source_id": "src_01M2BTYNDX46ZHSDQ7CM69RYM1",
+      "snapshot_id": "snap_01M2BTYNDX46ZHSDQ7CPK01PYS",
+      "status": "created_snapshot",
+      "sha256": "a18b8890ab47089ba4abc9237aec4a502117956badc64dfde426c7234fb10bd7",
+      "media_type": "text/markdown",
+      "bytes": 4783,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/train/pnp-10-gct-orbit-closures.md",
+      "source_id": "src_01M2BTYNDYBJEF2S75FEJ4SS2Q",
+      "snapshot_id": "snap_01M2BTYNDYBJEF2S75FF94815M",
+      "status": "created_snapshot",
+      "sha256": "696c3acba6dfb1a7f6d41b597e50108030aa9fb19064e644195ae7304ed62713",
+      "media_type": "text/markdown",
+      "bytes": 4770,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/train/pnp-11-derandomization-bridge.md",
+      "source_id": "src_01M2BTYNDYBJEF2S75FHF07RSC",
+      "snapshot_id": "snap_01M2BTYNDYBJEF2S75FJ29H3HR",
+      "status": "created_snapshot",
+      "sha256": "d5d2872461a650e62b5abd206dbedfa79ca8be5a724d0e6ef14557961955aff1",
+      "media_type": "text/markdown",
+      "bytes": 4780,
+      "created_source": true
+    },
+    {
+      "input": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/train/pnp-12-sat-time-space-tradeoffs.md",
+      "source_id": "src_01M2BTYNDZSSSYDVQFSSG3T2PK",
+      "snapshot_id": "snap_01M2BTYNDZSSSYDVQFSWHM07NK",
+      "status": "created_snapshot",
+      "sha256": "65794c7771b70c4943b25d1d475f274038637b075d0b6f329c2f9080af1ff88a",
+      "media_type": "text/markdown",
+      "bytes": 4918,
+      "created_source": true
+    }
+  ],
+  "summary": {
+    "total": 12,
+    "succeeded": 12,
+    "failed": 0
+  }
+}

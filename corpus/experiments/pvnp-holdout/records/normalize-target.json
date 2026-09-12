@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "command": "normalize",
+  "store": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/records/pvnp.db",
+  "problem_id": "prb_01M2BTYMXKVHPGSF95YDPCJZR2",
+  "run_id": "run_01M2BTYNFHKMT3BKD1EH0TDQVS",
+  "provider": "fixture",
+  "schema_version": "normalize/v1",
+  "results": [
+    {
+      "source_snapshot_id": "snap_01M2BTYNECR6TS000YYX5346EG",
+      "status": "created",
+      "revision_id": "nrev_01M2BTYNFHKMT3BKD1ENWX4K7K",
+      "approaches": [
+        {
+          "approach_id": "app_01M2BTYNFHKMT3BKD1F2NZJ85W",
+          "revision_id": "apr_01M2BTYNFHKMT3BKD1ENZ76M5Y",
+          "mechanism_id": "mech_01M2BTYNFHKMT3BKD1ESAR2EGN",
+          "created_approach": true
+        }
+      ]
+    },
+    {
+      "source_snapshot_id": "snap_01M2BTYNEDCFH9XJ4F32GZJYTD",
+      "status": "created",
+      "revision_id": "nrev_01M2BTYNFJ5FD3JAFPQPRS8K3G",
+      "approaches": [
+        {
+          "approach_id": "app_01M2BTYNFJ5FD3JAFPR1H9XZ63",
+          "revision_id": "apr_01M2BTYNFJ5FD3JAFPQQSE9S5D",
+          "mechanism_id": "mech_01M2BTYNFJ5FD3JAFPQSRYDT27",
+          "created_approach": true
+        }
+      ]
+    }
+  ]
+}
