@@ -89,6 +89,21 @@ Smallest coherent remedy: authority selection should prefer the latest
 unconditionally. Discriminating regression check: exactly the run-2 C7
 positive branch.
 
+**Contradicted artifact (verified 2026-09-12 14:06):** the concurrently
+generated export `docs/reviews/evidence/COVERAGE.md` (untracked at
+verification time; policy `rpol_01M2AQT7G0HXWKFJ6Q4VTNBJKR`, generated 13:14,
+**before** F-2 was demonstrated) still projects `ELIGIBLE_TO_ADVANCE`. Its own
+records carry the F-2 signature: check C6 records `state_after=surviving` over
+the current population A1, and check C7 then records
+`current_selection_excluded=true` — i.e., the compatible current authority was
+displaced, yet the governing assessment remains `conforms`. Its generator
+(`TestIntegrationCurrentAssessmentAuthorityObligation`) asserts the exclusion
+as C7's *pass* condition, so regeneration reproduces the eligibility verdict;
+the export is not hand-editable by design. That gate encodes the F-2 behavior
+as conformance: any `ELIGIBLE_TO_ADVANCE` derived from it is superseded by
+this bundle's demonstrated nonconformance until remediation handoff 1 lands
+(fixing the gate or recording the explicit contract decision).
+
 ### F-1 — reclassified per critique: **reproduced admission omission, supported by a static root-cause trace**
 
 Retained from revision 1 (runtime evidence:
