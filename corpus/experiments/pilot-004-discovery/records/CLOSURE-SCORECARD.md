@@ -254,8 +254,9 @@ These are bounded research questions. They do not require a new harness phase.
 | Open bounded questions | 4 (OQ1–OQ4); **OQ1/OQ3/OQ4 resolved 2026-09-11; OQ2 deferred** |
 | N2a admitted | Yes — `density_averaging_ceiling` (mechanism/v4); C4 boundary_delta recorded |
 | N5 admitted | Yes — `reorganisation_without_qr_existence` (mechanism/v5); C4 boundary_delta recorded |
+| N2a-child-1 challenged 2026-09-12 | State: `challenged` (not surviving). 0 completed decisive negatives; 1 weakening landing at C6 (n=1 corpus mechanism per obstruction; joint-crossing untested). Boundary-delta produced: two-reading split (local reading survives at n=2; general reading weakened by C6). Record: `records/N2a-child-1-challenge.md`. |
 | Cluster revision under v5 | `clr_01M28W6AF7DBAX5363TVXSN3NR` (12 singletons, clean) |
-| **Recommended next action** | **Challenge E08 (N3) after OQ2; address E15 scope correction (OQ4 resolved); challenge N2a-child-1 and N5-child-1 after predicate formalization** |
+| **Recommended next action** | **Two paths, in priority order: (a) generate a frontier proposal against N2a's C4 boundary-delta that attempts the joint crossing (polynomial main-term growth + QR-survivor coverage/avoidance) — this is the specific search direction N2a-child-1's C2 could not construct, and it is now recorded as the highest-information next move against the density/averaging obstruction. (b) Resolve OQ2 to enable the N3 challenge; challenge N5-child-1 after predicate formalization. E15 scope correction remains outstanding (OQ4 resolved).** |
 
 The negative pilot result limits the claim about the *method's reliability*.
 It does not invalidate the candidate invariants. A challenged and surviving
