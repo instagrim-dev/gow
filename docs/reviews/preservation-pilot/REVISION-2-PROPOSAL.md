@@ -9,25 +9,44 @@ spent).
 
 ## What revision 2 changes, and why
 
-The single design change is motivated by the retained double miss on M1d
-(`RESULTS.md` §4): both packagings verified every number against its
-artifact and then affirmed the section as properly hedged, because both
-bias manuscript review toward **numeric agreement** — which a mislabeled
-epistemic property of a correct number passes by construction.
+> **Corrected 2026-09-12 (external audit):** the original framing below —
+> that the packagings lacked a label-checking obligation — was wrong. Both
+> frozen packagings already required listing each result's producing
+> conditions (budget, ordering, stopping rule) and checking the prose
+> against them (`arms/manuscript-baseline.md:31`,
+> `arms/modular-case-bundles.md:76`). The revision-1 miss was a **failure
+> to enforce an existing obligation, cause unresolved**
+> (`RESULTS.md` §8.3). Revision 2 therefore proposes an **enforcement
+> mechanism**, not a new requirement — and it is a proposal to test, not a
+> demonstrated cure.
 
-**Change (applied to BOTH arms, symmetrically):** add one obligation to the
-manuscript case packaging —
+The design change is motivated by the retained double miss on M1d
+(`RESULTS.md` §4 as corrected by §8.3): both packagings verified every
+number against its artifact yet neither discharged the already-present
+conditioning-check obligation.
 
-> For every verified quantity, separately check the *label attached to it*:
-> every classification of a statistic (unconditional vs conditioned,
-> budget-independent vs budget-sensitive, general vs demonstration-scale,
-> tier-N vs tier-M) is itself a claim requiring verification against the
-> producing conditions. Verifying the number does not verify its label.
-> Report quantity-label pairs, not quantities.
+**Change (applied to BOTH arms, symmetrically):** make the existing
+obligation operationally hard to skip — for every verified quantity the
+report must emit a visible row:
 
-No other packaging text changes. Changing only the manuscript obligation in
-both arms preserves the packaging contrast as the sole independent variable
-and does not reward either arm for revision-1 performance.
+> **quantity → producing conditions → claimed property → discriminating
+> check**
+
+where "claimed property" is the label the prose attaches to the quantity
+(unconditional vs conditioned, budget-independent vs budget-sensitive,
+general vs demonstration-scale, tier-N vs tier-M) and the discriminating
+check states what would falsify that label. A missing row for a quantity
+that appears in the manuscript is itself a reportable omission.
+
+Revision 2 must also fix a **procedural defect**: mechanical blinding must
+strip or rewrite report title lines and verify the packet with a
+first-line census before adjudication (revision 1 leaked arm identity in
+6 of 12 titles; `RESULTS.md` §8.1).
+
+No other packaging text changes. Changing only the manuscript obligation's
+enforcement in both arms preserves the packaging contrast as the sole
+independent variable and does not reward either arm for revision-1
+performance.
 
 ## Case discipline for revision 2
 
@@ -38,11 +57,13 @@ and does not reward either arm for revision-1 performance.
   (the deletion control already enforces this), but a fresh
   manuscript-fidelity defect pair with independently verified
   defective/corrected revisions is strongly preferred for the M-case.
-- Candidate fresh M-case source: the M-A finding (stale N2a-child-1
-  characterization, `FINDINGS-TRIAGE.md`) once remediated will yield a new
-  independently verified defective/corrected revision pair — with the
-  attractive property that it is, again, a status/label defect rather than
-  a numeric defect.
+- Candidate M-case correction (audit, 2026-09-12): the M-A finding was
+  **found by all four manuscript runs in revision 1** — it is
+  answer-exposed, not fresh. Once remediated it yields a defective/
+  corrected revision pair usable only as a **known positive control**,
+  not as unseen fault-family evidence and not as proof that the missed
+  budget-independence check has been repaired. A genuinely fresh M-case
+  must come from a defect no revision-1 report surfaced.
 - S3/S4 engineering cases may be reused unchanged (the packaging change
   does not touch them) or replaced by pairs derived from any remediated
   triage lead (e.g., E-D once fixed).
