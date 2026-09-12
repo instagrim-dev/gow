@@ -1,0 +1,61 @@
+{
+  "schema": "pvnp-adjudication-key/v1",
+  "shuffle_seed": 20260912,
+  "key": [
+    {
+      "proposal_id": "P01",
+      "arm": "b3_invariant_guided",
+      "arm_rank": 1
+    },
+    {
+      "proposal_id": "P02",
+      "arm": "b0_undirected",
+      "arm_rank": 2
+    },
+    {
+      "proposal_id": "P03",
+      "arm": "b3_invariant_guided",
+      "arm_rank": 3
+    },
+    {
+      "proposal_id": "P04",
+      "arm": "b3_invariant_guided",
+      "arm_rank": 2
+    },
+    {
+      "proposal_id": "P05",
+      "arm": "b0_undirected",
+      "arm_rank": 5
+    },
+    {
+      "proposal_id": "P06",
+      "arm": "b0_undirected",
+      "arm_rank": 4
+    },
+    {
+      "proposal_id": "P07",
+      "arm": "b3_invariant_guided",
+      "arm_rank": 4
+    },
+    {
+      "proposal_id": "P08",
+      "arm": "b0_undirected",
+      "arm_rank": 1
+    },
+    {
+      "proposal_id": "P09",
+      "arm": "b0_undirected",
+      "arm_rank": 3
+    },
+    {
+      "proposal_id": "P10",
+      "arm": "b3_invariant_guided",
+      "arm_rank": 0
+    },
+    {
+      "proposal_id": "P11",
+      "arm": "b0_undirected",
+      "arm_rank": 0
+    }
+  ]
+}

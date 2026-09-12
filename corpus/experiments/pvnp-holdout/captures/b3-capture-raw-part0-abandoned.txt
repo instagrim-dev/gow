@@ -1,0 +1,185 @@
+{
+  "schema_version": "proposal-wire/v1",
+  "proposals": [
+    {
+      "mechanism": {
+        "representations": [
+          "circuit-satisfiability algorithms for restricted classes",
+          "nondeterministic time hierarchies",
+          "completeness translations"
+        ],
+        "assumptions": [
+          "a nondeterministic ACC0-SAT algorithm beating exhaustive search by any superpolynomial savings is attainable",
+          "an algorithm-to-hardness bridge tolerates modest savings rather than full derandomization"
+        ],
+        "operators": [
+          "algorithm-to-hardness implication",
+          "indirect diagonalization",
+          "alternation speedup",
+          "completeness translation",
+          "circuit-SAT algorithm design"
+        ],
+        "preserves": [],
+        "breaks": [
+          "model-analysis-first direction",
+          "large constructive distinguishing property",
+          "black-box relativizing simulation"
+        ],
+        "auxiliary_objects": [
+          "ACC0 circuit-SAT instances",
+          "nondeterministic hierarchy theorems",
+          "succinct witness circuits"
+        ],
+        "locality": "global",
+        "construction_mode": "constructive",
+        "uncertainty_mode": "deterministic",
+        "expected_information_gain": "high",
+        "evaluation_cost": "medium"
+      },
+      "structural_violation_claim": "Every recorded lower-bound attempt analyzed the model directly, seeking a broadly-shared checkable property of all small circuits (the conserved model-analysis-first posture and large-constructive-property posture the weakened candidates describe, and which the boundary deltas mark as collapsing the failure/success contrast). This direction instead analyzes an algorithm: design a slightly-better-than-brute-force satisfiability algorithm for ACC0 circuits, then convert its existence into a lower bound (e.g. NEXP not in ACC0) by an unconditional pipeline combining the algorithm-to-hardness bridge of the derandomization program with the assumption-to-hierarchy-contradiction skeleton of the SAT time-space program. No large property over random truth tables is exhibited, so the natural-proofs frame is not entered; the argument uses the anatomy of specific complete circuit-SAT problems, so it is not black-box query behavior. This is a hypothesized departure, not a verified construction, and it does not claim the departure list is an exhaustive account of what the pipeline preserves.",
+      "novelty_argument": "Not a relabeling of either parent. The derandomization bridge as recorded consumes an open hypothesis (full deterministic PIT) it cannot supply; the time-space pipeline is unconditional but refutes its assumed algorithm rather than supplying one, and stays largely relativizing. The proposed hybrid changes the consumed object: it demands only a marginal algorithmic gain over 2^n for a class (ACC0) sitting exactly at the recorded stall edge, and it supplies that object rather than refuting it. The load-bearing move is the reversal of analysis direction (algorithm-first rather than model-first), which no recorded failure shares. Remaining obligations: (a) actually construct the modest ACC0-SAT algorithm, plausibly via the same polynomial-representation structure that gave AC0[p] bounds, extended over rings for composite moduli; (b) prove the bridge lemma tolerates savings this small.",
+      "cheapest_falsification_path": "Two cheap tests. (1) Bridge sanity: write out the implication skeleton for a toy pair (e.g. depth-2 symmetric-gate circuits) and check by hand whether the hierarchy machinery still yields a contradiction with only quasi-polynomial savings; if the bridge provably needs subexponential-time PIT-strength input, the direction collapses back into the recorded conditional bridge and fails. (2) Relativization check: test whether the full implication survives substitution of a shared oracle; if it does, the contrary-oracle result already condemns it and the direction fails without any algorithm being built."
+    },
+    {
+      "mechanism": {
+        "representations": [
+          "rare function-specific structural properties",
+          "self-reducibility structure of complete problems",
+          "truth-table ensembles"
+        ],
+        "assumptions": [
+          "the hard function's completeness and downward self-reducibility give it structure a random function lacks",
+          "a lower-bound argument can consume that rare structure instead of a broadly shared property"
+        ],
+        "operators": [
+          "self-reduction exploitation",
+          "hardness condensation onto one function family",
+          "property-rarity verification"
+        ],
+        "preserves": [
+          "model-analysis-first direction"
+        ],
+        "breaks": [
+          "large constructive distinguishing property"
+        ],
+        "auxiliary_objects": [
+          "SAT self-reduction trees",
+          "rarity estimates over random functions"
+        ],
+        "locality": "mixed",
+        "construction_mode": "constructive",
+        "uncertainty_mode": "deterministic",
+        "expected_information_gain": "medium",
+        "evaluation_cost": "medium"
+      },
+      "structural_violation_claim": "The weakened candidates record that every failed circuit-program attempt preserved a large, efficiently certifiable distinguishing property, and the natural-proofs wall condemns exactly the conjunction of largeness and constructivity. This direction keeps constructivity but deliberately breaks largeness: build the distinguishing property out of structure that essentially only the target function family possesses — the downward self-reducibility and completeness of SAT itself — so the property holds for a negligible fraction of functions and cannot serve as a pseudorandom-function distinguisher. The claim of departure is a hypothesis about which conserved feature is load-bearing (largeness), not a verified escape.",
+      "novelty_argument": "Distinct from the recorded escape-space occupant (orbit-closure obstructions), which is also rare-property-based but pays for rarity with open representation-theoretic problems and an unestablished algebraic-to-Boolean transfer. Here the rare structure is native to the Boolean question (self-reduction, completeness), so no transfer obligation exists. Distinct from the post-natural-proofs decade's attempts, which the atlas records as varying the property while keeping it large. Remaining obligations: exhibit one concrete circuit-class consequence of self-reducibility that small circuits cannot mimic, and prove the property's rarity formally.",
+      "cheapest_falsification_path": "Naturalization test: take the candidate property and check whether the proof that small circuits lack it actually uses the self-reduction structure, by re-running the argument on a random function with the self-reducibility hypothesis deleted. If the argument survives, the property was secretly large and the natural-proofs wall applies; the direction fails. This is a pencil-and-paper audit performable on the first draft argument, before any strong lower bound is attempted; a second cheap check is computing the property's density on small n (e.g. n<=4 truth tables, exhaustively) to confirm rarity."
+    },
+    {
+      "mechanism": {
+        "representations": [
+          "non-constructive existence arguments over truth-table properties",
+          "incompressibility and counting measures"
+        ],
+        "assumptions": [
+          "a distinguishing property need not be efficiently decidable to power a lower bound",
+          "counting or incompressibility arguments can certify that small circuits lack the property without a poly(truth-table)-time tester"
+        ],
+        "operators": [
+          "counting argument",
+          "incompressibility argument",
+          "non-constructive property existence proof"
+        ],
+        "preserves": [
+          "model-analysis-first direction"
+        ],
+        "breaks": [
+          "large constructive distinguishing property"
+        ],
+        "auxiliary_objects": [
+          "compression schemes for circuit classes",
+          "counting bounds on class capacity"
+        ],
+        "locality": "global",
+        "construction_mode": "existential",
+        "uncertainty_mode": "mixed",
+        "expected_information_gain": "medium",
+        "evaluation_cost": "low"
+      },
+      "structural_violation_claim": "The conserved property across the circuit-program failures is a distinguishing property that is both large and constructive (poly-time decidable from the truth table). This direction breaks the constructivity half: use properties defined by incompressibility or capacity counting whose membership is not efficiently decidable, established existentially rather than by a tester. The natural-proofs reduction needs an efficient distinguisher; a non-constructive property does not supply one. Also deliberately departs the conserved deterministic uncertainty mode, since the existence arguments are counting/probabilistic. This names the conserved property in ordinary words and is a hypothesized departure, not a proven evasion.",
+      "novelty_argument": "The atlas records the escape space (non-constructive or rare) as explicitly mapped and unoccupied through 2004 except by the orbit-closure program, which chose the rarity horn. This takes the other horn, non-constructivity, which no recorded program occupies. It is mechanically different from bare function-counting (which shows most functions are hard but says nothing explicit): the obligation is precisely the gap this direction must close — converting a non-constructive largeness argument into hardness of an explicit function, e.g. via a downward-translation or padding step that trades explicitness for class strength. That obligation is stated, not discharged.",
+      "cheapest_falsification_path": "The known collapse risk is that any usable variant of the property re-acquires an efficient tester (naturalizes). Cheap test: for the first candidate property, attempt to write a polynomial-time truth-table tester for it directly; success falsifies the departure immediately. Second cheap test: check the explicitness-conversion step on a toy class (e.g. AC0, where the answer is known) — if the non-constructive route cannot even re-derive the known AC0 bound for an explicit function, the conversion step is broken and the direction fails."
+    },
+    {
+      "mechanism": {
+        "representations": [
+          "compressed or sparse versions of NP problems",
+          "weak-bound amplification statements",
+          "local reductions"
+        ],
+        "assumptions": [
+          "slightly-superlinear lower bounds for compressed problem versions imply strong bounds for the original problem",
+          "the weak-bound regime is reachable by existing restricted-model techniques"
+        ],
+        "operators": [
+          "hardness amplification",
+          "problem compression",
+          "local reduction composition"
+        ],
+        "preserves": [
+          "large constructive distinguishing property"
+        ],
+        "breaks": [
+          "model-analysis-first direction"
+        ],
+        "auxiliary_objects": [
+          "sparse problem encodings",
+          "amplifier reductions"
+        ],
+        "locality": "local",
+        "construction_mode": "constructive",
+        "uncertainty_mode": "deterministic",
+        "expected_information_gain": "medium",
+        "evaluation_cost": "low"
+      },
+      "structural_violation_claim": "The recorded failures conserve the expectation that the analyzed object is the full model at full input scale and that only strong (superpolynomial) bounds count as progress. This direction inverts the target: prove only a very weak (barely superlinear) bound, but for a compressed/sparse version of an NP-complete problem, and supply an amplification theorem showing such a weak bound already implies a strong separation. The departure is in where the proof burden sits (a quantitatively tiny bound in a local, restricted regime) rather than in the property machinery, so it may remain natural at the weak end while the amplifier carries the leap. Hypothesized departure; the amplifier's own preserved properties are the unverified part.",
+      "novelty_argument": "No recorded program attacks the quantitative-weakness frontier this way: the time-space program produced weak bounds but had no amplifier, and the circuit program sought strong bounds directly. The mechanism change is the amplifier itself — a reduction-theoretic object, not a distinguishing property. Remaining obligations: (a) prove an amplification statement of the required strength; (b) prove the weak compressed-version bound; (c) verify the amplifier does not smuggle the full difficulty into step (b) — i.e., that the weak regime is genuinely easier than the strong one for known techniques.",
+      "cheapest_falsification_path": "Barrier-relocation audit, cheap and decisive: instantiate the amplifier on a model where the true complexity is known (e.g. a restricted class with proven bounds) and check whether the weak-bound hypothesis it demands is already blocked by the same walls (relativization, naturalization) at the weak scale. If the hypothesis regime inherits the walls, the amplifier only relocated the difficulty and the direction fails. This requires no new lower bound — only careful bookkeeping of what the amplifier preserves."
+    },
+    {
+      "mechanism": {
+        "representations": [
+          "orbit closures under group action",
+          "irreducible-representation multiplicities",
+          "explicit small-parameter computations"
+        ],
+        "assumptions": [
+          "occurrence obstructions or multiplicity gaps exist at computationally reachable parameters",
+          "small-case data can confirm or kill the obstruction hypothesis before deep theory is built"
+        ],
+        "operators": [
+          "multiplicity computation",
+          "randomized search over candidate modules",
+          "symmetry classification"
+        ],
+        "preserves": [
+          "model-analysis-first direction"
+        ],
+        "breaks": [
+          "black-box relativizing simulation",
+          "large constructive distinguishing property"
+        ],
+        "auxiliary_objects": [
+          "permanent and determinant orbit closures",
+          "Kronecker and plethysm coefficient tables"
+        ],
+        "locality": "global",
+        "construction_mode": "mixed",
+        "uncertainty_mode": "probabilistic",
+        "expected_information_gain": "medium",
+        "evaluation_cost": "low"
+      },
+      "structural_violation_claim": "The orbit-closure program is recorded as the sole occupant of the mapped escape space (rare, structured, non-black-box) but stalled as a posture with no extracted bound, its obligations parked inside open multiplicity problems. This direction departs the conserved deterministic, purely-existential handling of those obligations: attack them empirically and probabilistically, computing multiplicities at small parameters and randomly searching module space for one concrete occurrence obstruction, converting the program's open-problem debt into falsifiable finite computations. The conserved property departed from, in ordinary words, is the treatment of obstructions as objects to be classified in full generality before any instance is exhibited.",
+      "novelty_argument": "Mechanistically distinct from the recorded program: same representation-theoretic frame, but the operator set changes from symmetry classification toward explicit finite computation and randomized search, and the uncertainty mode changes from deterministic to probabilistic. This is more than terminology because it produces different artifacts (finite multiplicity tables, found-or-not-found obstruction candidates) with different failure semantics. Remaining obligation: even a found small-parameter obstruction proves nothing asymptotic; a separate lifting argument is owed, and that obligation is stated openly.",
+      "cheapest_falsification_path": "Directly

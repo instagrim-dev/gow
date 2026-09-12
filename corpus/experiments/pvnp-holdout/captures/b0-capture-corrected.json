@@ -1,0 +1,221 @@
+{
+  "schema_version": "proposal-wire/v1",
+  "proposals": [
+    {
+      "mechanism": {
+        "representations": [
+          "ACC0 circuits",
+          "circuit satisfiability algorithms",
+          "nondeterministic time hierarchy"
+        ],
+        "assumptions": [
+          "a satisfiability algorithm for ACC0 circuits beating exhaustive search by a superpolynomial factor is attainable",
+          "completeness translations convert circuit-SAT speedups into nondeterministic time-class collapses",
+          "the collapse contradicts a hierarchy theorem when a hard class is assumed to have small ACC0 circuits"
+        ],
+        "operators": [
+          "algorithm-to-hardness implication",
+          "indirect diagonalization",
+          "completeness translation",
+          "structure-exploiting algorithm design"
+        ],
+        "breaks": [
+          "black-box relativizing simulation",
+          "large constructive distinguishing property",
+          "model-analysis-first direction"
+        ],
+        "auxiliary_objects": [
+          "nontrivial ACC0-SAT solver",
+          "nondeterministic hierarchy theorem",
+          "succinct completeness reductions"
+        ],
+        "locality": "global",
+        "construction_mode": "constructive",
+        "uncertainty_mode": "deterministic"
+      },
+      "structural_violation_claim": "The recorded stall (pnp-06, pnp-09) is that no truth-table property distinguishing ACC0 from hard functions was found, and the derandomization bridge (pnp-11) consumes an open general-PIT hypothesis. The proposed move exhibits no distinguishing property at all: it converts a concrete algorithmic deliverable — a modest ACC0 circuit-satisfiability speedup, which requires opening the circuit's box only algorithmically — into a lower bound for a nondeterministic exponential-time function via the assumption-to-contradiction pipeline of pnp-12. It is a hypothesis that such a speedup exists; the remaining obligation is to actually construct the ACC0-SAT algorithm and to verify the implication chain (speedup implies NTIME collapse implies hierarchy contradiction) without gaps at the succinct-reduction step.",
+      "novelty_argument": "Nearest recorded families: the derandomization bridge (pnp-11) and indirect diagonalization (pnp-12). It differs from pnp-11 because the consumed hypothesis is a restricted-model SAT algorithm — a strictly weaker and plausibly attainable demand than derandomizing general polynomial identity testing — and differs from pnp-12 because the hypothetical algorithm is to be supplied rather than refuted, with the refuted assumption instead being the circuit upper bound. It evades the natural-proofs frame (pnp-08) since nothing large or constructive over truth tables is exhibited, and evades relativization (pnp-02) because the SAT algorithm must exploit the gate-level anatomy of ACC0, which an oracle re-definition destroys. This is a change of which object carries the hypothesis, not a change of terminology.",
+      "cheapest_falsification_path": "Attempt the algorithmic half first on the smallest subclass: seek a satisfiability algorithm beating brute force for depth-2 circuits with MOD-6 gates, where the composite-modulus obstruction of pnp-06 already binds. Independently, stress the implication half: check whether every link in the speedup-to-collapse chain relativizes; if the whole chain survives arbitrary shared oracles, the contrary oracles of pnp-02 refute the route as stated and the non-relativizing ingredient must be located or the direction abandoned.",
+      "expected_information_gain": "high",
+      "evaluation_cost": "medium"
+    },
+    {
+      "mechanism": {
+        "representations": [
+          "arithmetized Boolean formulas",
+          "low-degree polynomial extensions",
+          "interactive-proof-style protocols",
+          "diagonalization arguments"
+        ],
+        "assumptions": [
+          "arithmetization provides non-black-box leverage that pure simulation lacks",
+          "algebraic self-correction of polynomial encodings composes with hierarchy-theorem machinery"
+        ],
+        "operators": [
+          "arithmetization",
+          "sum-check style degree reduction",
+          "indirect diagonalization",
+          "hierarchy contradiction"
+        ],
+        "preserves": [
+          "assumption-to-contradiction pipeline"
+        ],
+        "breaks": [
+          "black-box relativizing simulation"
+        ],
+        "auxiliary_objects": [
+          "polynomial extensions of machine transcripts",
+          "alternation hierarchy"
+        ],
+        "locality": "global",
+        "construction_mode": "constructive",
+        "uncertainty_mode": "mixed"
+      },
+      "structural_violation_claim": "The time-space tradeoff family (pnp-12) is recorded as largely relativizing and therefore wall-bounded by the contrary oracles of pnp-02. The proposed move injects arithmetization — replacing black-box query behavior with low-degree polynomial encodings of computation transcripts — into the assumption-to-contradiction pipeline, so at least one step inspects algebraic structure an oracle cannot preserve. The claim that this strictly enlarges the reachable bounds beyond the recorded small-exponent cap is a hypothesis; the remaining obligation is to prove a single new unconditional bound (even a slightly larger time-space exponent for satisfiability) whose proof demonstrably fails under some shared oracle.",
+      "novelty_argument": "Nearest family: indirect diagonalization (pnp-12), which the atlas records as preserving black-box relativizing simulation. The mechanistic difference is a change in the preserved-property set, not vocabulary: the argument's inner simulation step is replaced by algebraic evaluation of encoded transcripts, an operation absent from every entry in the atlas's diagonalization lineage (pnp-01, pnp-12). It also differs from the circuit-analysis flank (pnp-03 through pnp-06) because no distinguishing property over a circuit class is exhibited, so the naturalness trap of pnp-08 does not apply.",
+      "cheapest_falsification_path": "Before seeking new bounds, run the barrier test: attempt to construct an oracle-like algebraic extension world in which arithmetization-augmented arguments still hold but the target separation fails. If such a world exists, the hybrid is condemned by the same schema as pnp-02 and the direction fails cheaply. If not, attempt to reprove the weakest known time-space bound with the algebraic inner step and check whether the exponent cap moves at all; no movement on the smallest case is failure evidence.",
+      "expected_information_gain": "high",
+      "evaluation_cost": "medium"
+    },
+    {
+      "mechanism": {
+        "representations": [
+          "restricted arithmetic circuits",
+          "hitting-set generators",
+          "polynomial identity tests"
+        ],
+        "assumptions": [
+          "unconditional deterministic identity tests are achievable for structured subclasses (bounded depth, bounded top fan-in, read restrictions)",
+          "the algorithm-to-hardness bridge instantiates on restricted classes with correspondingly restricted lower-bound conclusions"
+        ],
+        "operators": [
+          "explicit hitting-set construction",
+          "algorithm-to-hardness implication",
+          "completeness leverage"
+        ],
+        "breaks": [
+          "large constructive distinguishing property",
+          "model-analysis-first direction"
+        ],
+        "auxiliary_objects": [
+          "hitting sets for depth-bounded arithmetic circuits",
+          "permanent as hard candidate"
+        ],
+        "locality": "global",
+        "construction_mode": "constructive",
+        "uncertainty_mode": "deterministic"
+      },
+      "structural_violation_claim": "The recorded boundary of the bridge (pnp-11) is that it is conditional in the wrong direction: its hypothesis, deterministic subexponential identity testing, is open in full generality. The proposed move attacks the hypothesis incrementally rather than accepting or refuting it wholesale: supply unconditional deterministic identity tests for progressively richer restricted arithmetic classes, and determine for each whether a restricted version of the implication already yields an unconditional lower-bound consequence. That any restricted instantiation of the bridge produces an unconditional consequence is a hypothesis; the obligation is both the algorithm and a re-derivation of the implication under the restriction.",
+      "novelty_argument": "Nearest family: the derandomization bridge itself (pnp-11). The difference is operational, not terminological: pnp-11 as recorded consumes a hypothesis nobody can supply, whereas this program manufactures partial hypotheses and asks what each one buys, converting a single all-or-nothing conditional into a ladder of unconditional sub-results. Unlike the circuit program (pnp-03 through pnp-06), progress is measured in algorithms delivered, not properties found, so pnp-08 does not bind.",
+      "cheapest_falsification_path": "Attempt an explicit hitting set for the smallest nontrivial class (depth-3 arithmetic circuits with constant top fan-in) and, in parallel, re-derive the bridge implication under that restriction. Failure modes are cheap to observe: either the restricted hitting set resists construction for the same reason general PIT does, or the restricted implication yields only conclusions already known unconditionally, in which case the ladder has no first rung and the direction is abandoned.",
+      "expected_information_gain": "medium",
+      "evaluation_cost": "low"
+    },
+    {
+      "mechanism": {
+        "representations": [
+          "succinct or compressed versions of satisfiability",
+          "weak-model lower bounds",
+          "completeness reductions"
+        ],
+        "assumptions": [
+          "for suitably compressed problems, slightly superlinear lower bounds in weak models imply strong separations for the uncompressed problem",
+          "the transfer failure of the monotone program is a property of that restriction, not of transfer as such"
+        ],
+        "operators": [
+          "complexity transfer",
+          "padding and compression translation",
+          "threshold identification"
+        ],
+        "preserves": [
+          "model-analysis-first direction"
+        ],
+        "breaks": [
+          "large constructive distinguishing property"
+        ],
+        "auxiliary_objects": [
+          "compressed SAT variants",
+          "translation lemmas"
+        ],
+        "locality": "global",
+        "construction_mode": "existential",
+        "uncertainty_mode": "deterministic"
+      },
+      "structural_violation_claim": "The recorded transfer failure (pnp-05) shows a specific bridge — monotone bounds to general bounds — severed by an exponential gap. The proposed move inverts where the strength is demanded: instead of proving strong bounds in a weak model and hoping the restriction is inessential, identify problem/model pairs where provably weak (barely superlinear) bounds already amplify through padding and completeness into superpolynomial general bounds. The existence of such amplification thresholds for natural compressed problems is a hypothesis; the obligation is to prove the amplification lemma itself unconditionally and locate a weak bound above the threshold.",
+      "novelty_argument": "Nearest family: the monotone-to-general transfer hope (pnp-05). It is mechanistically distinct because the failed program transferred a bound across models at fixed strength, whereas this transfers across strength at a carefully chosen problem encoding — the load-bearing object is the translation lemma, not the restricted-model lower bound. It is also distinct from pure padding arguments in the diagonalization lineage (pnp-01) because the amplification must be non-black-box in the problem encoding to avoid the pnp-02 schema.",
+      "cheapest_falsification_path": "Prove or refute the amplification implication for one toy case: a sparse or succinctly-encoded language and a weak model where near-linear bounds are already provable. If every provable weak bound sits below the amplification threshold, or if the threshold argument itself relativizes and thus meets the contrary-oracle wall, the direction fails at the cost of one lemma. A second cheap check: verify the amplification does not smuggle in a large constructive property, which would re-enter the pnp-08 trap.",
+      "expected_information_gain": "medium",
+      "evaluation_cost": "low"
+    },
+    {
+      "mechanism": {
+        "representations": [
+          "algebraic proof systems over composite-modulus rings",
+          "polynomial calculus refutations",
+          "counting tautologies"
+        ],
+        "assumptions": [
+          "the circuit-program stall at composite moduli and the proof-program stall at counting-capable systems share one mechanism",
+          "degree lower bounds over rings with composite modulus are provable in restricted cases"
+        ],
+        "operators": [
+          "degree lower bounds",
+          "bottleneck counting",
+          "cross-program comparison of stall structure"
+        ],
+        "preserves": [
+          "model-analysis-first direction",
+          "large constructive distinguishing property"
+        ],
+        "auxiliary_objects": [
+          "pigeonhole tautologies",
+          "ring Z_m for composite m"
+        ],
+        "locality": "local",
+        "construction_mode": "constructive",
+        "uncertainty_mode": "deterministic"
+      },
+      "structural_violation_claim": "The atlas records two independent stalls at the same expressiveness level — composite-modulus gates (pnp-06) and counting-capable proof systems (pnp-07) — but records no attempt to treat them as one object. The proposed move studies algebraic proof systems over composite-modulus rings directly, where both stalls coexist in a single analyzable system, to either extract the shared obstruction as a theorem or find that the stalls are distinct. The claim of a shared mechanism is explicitly a hypothesis inferred from the recorded parallel, not an established invariant. This direction knowingly retains the large-constructive-property posture, so any bound it produces is confined to systems below the pnp-08 threshold; its value is diagnostic — locating the shared wall precisely — rather than separational, and the remaining obligation is a degree lower bound over Z_m for composite m in even one restricted subsystem.",
+      "novelty_argument": "Nearest families: AC0[p] algebraic approximation (pnp-06) and resolution lower bounds (pnp-07). The recorded programs each climbed their own hierarchy; the mechanism here is the cross-program fusion object — a proof system whose lines are polynomials over a composite-modulus ring — which appears in neither entry. The move is not a terminology change because the analyzed object (refutations over Z_m) is syntactically and semantically distinct from both circuits over F_p and resolution clauses, and the target theorem (a shared-obstruction characterization) is a new claim type in the atlas.",
+      "cheapest_falsification_path": "Attempt a degree lower bound for the pigeonhole tautology in a polynomial-calculus-style system over Z_6. If standard degree arguments transfer unchanged from the prime case, the composite-modulus obstruction is not proof-theoretically visible and the shared-mechanism hypothesis is weakened at the cost of one exercise. If instead the argument fails at the same step where the pnp-06 polynomial representation fails, that is positive diagnostic evidence worth recording either way.",
+      "expected_information_gain": "medium",
+      "evaluation_cost": "low"
+    },
+    {
+      "mechanism": {
+        "representations": [
+          "non-constructive counting arguments over truth tables",
+          "rare structured properties",
+          "anti-checkability certificates"
+        ],
+        "assumptions": [
+          "the escape space mapped by the natural-proofs barrier (non-constructive or rare properties) contains a usable property besides the GCT occupant",
+          "non-constructivity can be certified rather than merely suspected"
+        ],
+        "operators": [
+          "property search restricted to the mapped escape space",
+          "self-defeating-property test",
+          "reduction to distinguisher construction"
+        ],
+        "preserves": [
+          "model-analysis-first direction"
+        ],
+        "breaks": [
+          "large constructive distinguishing property"
+        ],
+        "auxiliary_objects": [
+          "pseudorandom function family as adversary",
+          "candidate rare properties"
+        ],
+        "locality": "global",
+        "construction_mode": "existential",
+        "uncertainty_mode": "probabilistic"
+      },
+      "structural_violation_claim": "The recorded decade after the natural-proofs barrier (pnp-09) shows attempts that re-encountered the largeness/constructivity trap because candidate properties were never screened against the barrier before investment. The proposed move makes the barrier itself an operator: every candidate distinguishing property for a strong class is first run through the property-to-distinguisher reduction of pnp-08 as a mandatory filter, and only candidates that provably fail to yield a PRF distinguisher are pursued. That the filtered space is non-empty for TC0-level classes is a hypothesis; the obligation for any surviving candidate is a full lower-bound derivation, and survival of the filter is not evidence of success.",
+      "novelty_argument": "Nearest families: the post-natural-proofs attempts (pnp-09) and GCT (pnp-10). Unlike pnp-09's attempts, which are recorded as conserving the trapped posture in new vocabulary, the mechanism here changes the search procedure, not just the candidates: the barrier is used generatively as a screening oracle rather than encountered post hoc. Unlike pnp-10, no commitment is made to representation theory; the escape space is searched broadly with the filter as the only fixed element, so failure localizes to candidates rather than to the whole program.",
+      "cheapest_falsification_path": "Formalize the filter as a checkable schema and run the three known lower-bound properties (pnp-03, pnp-04, pnp-06) through it; each must be correctly flagged as natural, otherwise the filter is broken and the direction fails immediately. Then test whether the GCT obstruction posture (rare multiplicity obstructions, pnp-10) passes; if even the one known escape-space occupant is rejected, the filter is too strong and must be repaired or abandoned before any new search is funded.",
+      "expected_information_gain": "medium",
+      "evaluation_cost": "low"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "command": "experiment validate-proposals",
+  "file": "captures/b0-capture-corrected.json",
+  "valid": true,
+  "proposals": 6,
+  "permitted_targets": null
+}
