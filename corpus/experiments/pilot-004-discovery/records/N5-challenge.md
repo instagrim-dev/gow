@@ -8,6 +8,18 @@ Scope: [es-09, es-11] — both `partial_success`
 
 ---
 
+> [!IMPORTANT]
+> **Authoritative current claim (banner added 2026-09-12; historical text
+> below is unchanged).** This record's verdict is **qualified in strength**
+> by the [Attributed reassessment](#attributed-reassessment-2026-09-11-source-faithfulness-review)
+> appended 2026-09-11. Current status: probe coverage is **six-of-seven**
+> (C3 structurally inapplicable — an IIP, not a passed probe; it re-activates
+> when a `success` outcome enters the corpus); C2 is PE (definitional
+> scoping, not a completed search); the operator-type causal implication is
+> **not established** — all at model-judgment strength for this corpus.
+> Authoritative view with supersession links:
+> [`CURRENT-CLAIMS.md`](CURRENT-CLAIMS.md).
+
 ## Canonical statement
 
 > **Reorganisation approaches (es-09, es-11) deliver structural improvements —

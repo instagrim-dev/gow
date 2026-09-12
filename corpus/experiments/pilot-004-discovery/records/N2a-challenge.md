@@ -7,6 +7,18 @@ All four unanimous (3-0) in quorum.
 
 ---
 
+> [!IMPORTANT]
+> **Authoritative current claim (banner added 2026-09-12; historical text
+> below is unchanged).** The verdict line in this record ("property survives
+> challenge with one refinement required") is **superseded in strength** by
+> the [Attributed reassessment](#attributed-reassessment-2026-09-11-source-faithfulness-review)
+> appended 2026-09-11. Current status: seven-part challenge **recorded**,
+> refinement **proposed** (rate-ceiling vs reach-ceiling), coverage
+> **incomplete** — C2 is IIP+PE (no completed synthetic search), C7 is
+> SGO+PE (causal insufficiency not established at CMA) — at model-judgment
+> strength for this corpus. Authoritative view with supersession links:
+> [`CURRENT-CLAIMS.md`](CURRENT-CLAIMS.md).
+
 ## Canonical statement (consolidated from four occurrences)
 
 > **Density/averaging approaches produce a quantitative almost-all statement
