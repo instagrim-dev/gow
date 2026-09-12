@@ -50,12 +50,57 @@ type AssessmentRecord struct {
 	ManifestID      string
 	CheckAttemptIDs []string
 	CreatedAt       string
-	// StaleDependency marks an assessment whose manifest names a dependency
-	// that changed RELEVANTLY since it was made. Staleness is supplied by the
-	// caller that knows current dependency values; this package does not guess
-	// at repository state, and an unrelated edit must never set it.
-	StaleDependency bool
-	StaleReason     string
+	// Compatibility is the caller-supplied three-state judgment about whether
+	// this assessment's declared dependencies match the current request's
+	// context.
+	//
+	//   - CompatibilityCompatible: every declared dep matches (or no deps).
+	//   - CompatibilityStale:      at least one declared dep's current ref
+	//                              differs from the assessed value.
+	//   - CompatibilityUnknown:    at least one declared dep is missing a
+	//                              supplied current ref; current relevance
+	//                              undetermined.
+	//
+	// The empty string is treated as `compatible` for backward compatibility
+	// with callers that predate the three-state model. New callers should set
+	// it explicitly.
+	Compatibility Compatibility
+	// CompatibilityReason is a short human-readable explanation naming the
+	// declared dependency and (when known) the current ref that produced the
+	// judgment. It is retained regardless of state so a reader can audit why
+	// an assessment was treated as compatible / stale / unknown.
+	CompatibilityReason string
+
+	// ProjectRevision, ContractHash and RecipeHash are the manifest revisions
+	// this assessment was bound to. They are carried onto the record so the
+	// export can name the exact inputs a reader needs to judge compatibility,
+	// instead of printing only a manifest id that forces a query back into the
+	// store the export was meant to summarize.
+	ProjectRevision string
+	ContractHash    string
+	RecipeHash      string
+
+	// ManifestDependencies is the declared dependency manifest for this
+	// assessment — every dep kind, ref, and why-relevant reason the assessment
+	// itself cited. Carrying the manifest contents into the projection is what
+	// lets the coverage export be an auditable evidence bundle rather than a
+	// summary that forces the reader back into the source database.
+	ManifestDependencies []ManifestDependency
+	// EvidenceCutoff is the assessment's declared evidence-cutoff timestamp,
+	// carried alongside the manifest so a reader can see the temporal boundary
+	// the assessment was made against.
+	EvidenceCutoff string
+}
+
+// ManifestDependency is one declared dependency of an assessment's manifest.
+// The projection carries the manifest contents through so the coverage export
+// can be independently audited; without them, a reader has to trust the manifest
+// ID and query the source database.
+type ManifestDependency struct {
+	Ordinal        int
+	DependencyKind string
+	DependencyRef  string
+	WhyRelevant    string
 }
 
 // CheckRecord is one check attempt.
@@ -71,6 +116,16 @@ type CheckRecord struct {
 	StartedAt    string
 	EndedAt      string
 	ResourceNote string
+
+	// ProcedureRevision, InputsRef, and Environment carry checker provenance
+	// through to the coverage export. Without them a reader with only the
+	// export cannot reconstruct which version of a procedure produced the
+	// outcome, what inputs it was given, or in which environment it ran —
+	// which the recipe requires to be independently auditable evidence rather
+	// than a rendered summary.
+	ProcedureRevision string
+	InputsRef         string
+	Environment       string
 }
 
 // PolicyRecords is the input view of the decision policy.
@@ -231,31 +286,59 @@ func projectObligation(o ObligationRecords) ObligationProjection {
 	}
 
 	// A demonstrated nonconformance governs whenever one exists and is not
-	// stale: the weaker/negative result is preserved rather than being
-	// overwritten by a later favorable assessment.
+	// stale-or-unknown: the weaker/negative result is preserved rather than
+	// being overwritten by a later favorable assessment. A nonconformance
+	// under an unknown-compatibility context is preserved as history but does
+	// not become a current blocker, matching the symmetric treatment of a
+	// stale nonconformance — an assessment whose current relevance is not
+	// established cannot supply a current-decision outcome in either
+	// direction.
 	for _, a := range o.Assessments {
-		if a.Outcome == Nonconforms && !a.StaleDependency {
+		if a.Outcome == Nonconforms && compatibilityOf(a) == CompatibilityCompatible {
 			p.State = StateNonconforms
 			p.GoverningAssessmentID = a.ID
 			return p
 		}
 	}
 
-	// Otherwise the newest COMPATIBLE assessment governs. A stale assessment is
-	// not usable for a current decision, but it keeps its historical result.
+	// Otherwise the newest COMPATIBLE assessment governs. A stale or
+	// unknown-compatibility assessment is not usable for a current decision,
+	// but it keeps its historical result. The two non-compatible states are
+	// distinguished in the reasons so a reader can tell "we know the dep
+	// moved" from "the caller didn't say what the current dep is".
 	var governing *AssessmentRecord
+	hadStale := false
+	hadUnknown := false
 	for i := len(o.Assessments) - 1; i >= 0; i-- {
-		if !o.Assessments[i].StaleDependency {
+		switch compatibilityOf(o.Assessments[i]) {
+		case CompatibilityCompatible:
 			governing = &o.Assessments[i]
+		case CompatibilityStale:
+			hadStale = true
+		case CompatibilityUnknown:
+			hadUnknown = true
+		}
+		if governing != nil {
 			break
 		}
 	}
 	if governing == nil {
 		p.State = StateInconclusive
-		p.Reasons = append(p.Reasons, ReasonStaleDependency)
+		if hadStale {
+			p.Reasons = append(p.Reasons, ReasonStaleDependency)
+		}
+		if hadUnknown {
+			p.Reasons = append(p.Reasons, ReasonCompatibilityUnknown)
+		}
+		if !hadStale && !hadUnknown {
+			// Every assessment must have fallen into a state we don't
+			// enumerate — surface it as inconclusive rather than pretending
+			// the obligation was assessed and passed.
+			p.Reasons = append(p.Reasons, ReasonInconclusive)
+		}
 		for _, a := range o.Assessments {
-			if a.StaleReason != "" {
-				p.Notes = append(p.Notes, "stale: "+a.ID+": "+a.StaleReason)
+			if a.CompatibilityReason != "" {
+				p.Notes = append(p.Notes, string(compatibilityOf(a))+": "+a.ID+": "+a.CompatibilityReason)
 			}
 		}
 		return p
@@ -295,6 +378,18 @@ func projectObligation(o ObligationRecords) ObligationProjection {
 		p.Reasons = append(p.Reasons, ReasonInconclusive)
 	}
 	return p
+}
+
+// compatibilityOf reads the caller-supplied compatibility state, defaulting to
+// `compatible` when unset. The empty string is preserved for backward
+// compatibility with callers that do not know about the three-state model:
+// they see the projection they would have seen under the old boolean when the
+// bool was false.
+func compatibilityOf(a AssessmentRecord) Compatibility {
+	if a.Compatibility == "" {
+		return CompatibilityCompatible
+	}
+	return a.Compatibility
 }
 
 // applicability collapses the recorded decisions into one value, reporting

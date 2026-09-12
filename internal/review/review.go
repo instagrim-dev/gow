@@ -47,6 +47,12 @@ const (
 	ReasonInconclusive                = "inconclusive"
 	ReasonExecutionBlocked            = "execution_blocked"
 	ReasonStaleDependency             = "stale_dependency"
+	// ReasonCompatibilityUnknown: a declared current dependency was not
+	// supplied when the coverage was requested. The historical assessment is
+	// retained; current permission is undetermined because compatibility with
+	// the current context has not been established. Preserving historical
+	// validity does not grant current permission to advance.
+	ReasonCompatibilityUnknown = "compatibility_unknown"
 )
 
 // Applicability outcomes.
@@ -72,6 +78,32 @@ const (
 	ModeInspected = "inspected"
 )
 
+// Well-known dependency kinds.
+//
+// A kind is only meaningful because an assessment DECLARED it with a stated
+// reason; these constants exist so the CLI, the repository gates and the
+// projection agree on spelling rather than each inventing a near-synonym that
+// silently never matches the current value it was supposed to track.
+//
+// Declaring a kind is opt-in on purpose. `DepKindProjectRevision` in particular
+// must not be implied for every assessment: if any code change invalidated every
+// assessment, the relevant-versus-unrelated distinction would collapse into
+// "HEAD moved" and staleness would stop carrying information.
+const (
+	// DepKindProjectRevision is the checkout revision whose behavior was
+	// assessed. Declare it when the conclusion depends on code that could change.
+	DepKindProjectRevision = "project_revision"
+	// DepKindAssessmentPopulation is the evidence population the assessment
+	// examined.
+	DepKindAssessmentPopulation = "assessment_population"
+	// DepKindPolicyRevision is the decision policy revision whose acceptance
+	// criteria applied.
+	DepKindPolicyRevision = "policy_revision"
+	// DepKindCandidateContent is the exact subject content; different content is
+	// a different subject, not a stale assessment.
+	DepKindCandidateContent = "candidate_content"
+)
+
 // ExaminationState is the derived examination status of one obligation. It is
 // computed, never stored, so it cannot drift from the records.
 type ExaminationState string
@@ -95,4 +127,46 @@ const (
 	StateInconclusive ExaminationState = "inconclusive"
 	// StateBlocked: examination could not complete (an execution blocker).
 	StateBlocked ExaminationState = "blocked"
+)
+
+// Compatibility is the three-state judgment about whether one assessment's
+// declared dependencies match the current context supplied for a coverage
+// request. It replaces the earlier boolean staleness because "compatibility
+// unknown" is not the same as "compatible": an incompletely specified current
+// context must not be permitted to grant current eligibility on the strength
+// of an assessment whose current relevance was never established.
+//
+//   - `compatible`   — every declared dependency the assessment cited has a
+//     current ref that matches, or the assessment declared no
+//     dependencies at all.
+//   - `stale`        — a declared dependency's current ref differs from the
+//     value the assessment was made against. The historical
+//     assessment stands as history; it does not carry current
+//     authority.
+//   - `unknown`      — one or more declared dependencies have no supplied
+//     current ref. The historical assessment stands as
+//     history; current authority is undetermined until the
+//     caller supplies those current values.
+//
+// Compatibility is a CALLER-SUPPLIED judgment against the current request. The
+// projection reads it; it does not compute compatibility itself, because
+// deciding whether two refs describe the same thing requires knowledge of the
+// current repository/database state that a record reader does not have.
+type Compatibility string
+
+const (
+	// CompatibilityCompatible is the default when the caller did not supply a
+	// compatibility function: with no current context declared, an assessment
+	// is exported as-is for historical purposes and treated as compatible for
+	// the decision the caller has said they want to make against no current
+	// context. Callers seeking current-decision guarantees must supply a
+	// compatibility function that reports unknown for missing values.
+	CompatibilityCompatible Compatibility = "compatible"
+	// CompatibilityStale is a definite mismatch: a declared dependency's
+	// current ref differs from the value the assessment was made against.
+	CompatibilityStale Compatibility = "stale"
+	// CompatibilityUnknown is the missing state: the caller has not supplied
+	// a current ref for a declared dependency, so we cannot say whether the
+	// historical assessment applies to the current context.
+	CompatibilityUnknown Compatibility = "unknown"
 )

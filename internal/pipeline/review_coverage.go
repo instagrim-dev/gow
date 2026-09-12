@@ -88,9 +88,16 @@ func (a *App) RecordReviewAssessment(ctx context.Context, in ReviewAssessInput) 
 
 	now := a.now()
 	ts := now.Format(timeLayout)
+	// An omitted project revision is resolved from the checkout rather than left
+	// blank or frozen: the manifest's job is to say which code was assessed, and
+	// a caller that forgets is far more likely than one that means "unknown".
+	projectRevision := strings.TrimSpace(in.ProjectRevision)
+	if projectRevision == "" {
+		projectRevision = a.projectRevision()
+	}
 	manifest := store.ReviewDependencyManifestRow{
 		ID: domain.NewReviewDependencyManifestID(now), PolicyID: in.PolicyID, ObligationID: in.ObligationID,
-		ProjectRevision: in.ProjectRevision, ContractHash: in.ContractHash, RecipeHash: in.RecipeHash,
+		ProjectRevision: projectRevision, ContractHash: in.ContractHash, RecipeHash: in.RecipeHash,
 		EvidenceCutoff: in.EvidenceCutoff, CreatedAt: ts,
 	}
 	for i, d := range in.Dependencies {
@@ -123,8 +130,13 @@ type ReviewCoverageInput struct {
 	// CurrentDependencies maps a dependency KIND to its CURRENT ref value (for
 	// example `assessment_population` -> the current cluster run id). An
 	// assessment is stale when it declared that kind with a different ref.
-	// Kinds absent from this map are NOT treated as changed: an unmentioned
-	// dependency is unknown, and unknown must not manufacture staleness.
+	//
+	// Kinds an assessment declared but the caller left unmentioned (or blank)
+	// leave that assessment's compatibility UNKNOWN (2026-09-12 GOW-R2 fix): a
+	// historical assessment stays as history, but current permission cannot
+	// be granted on the strength of a context the caller has not fully
+	// specified. Kinds NOT declared by an assessment are ignored — an
+	// unrelated change is harmless.
 	CurrentDependencies map[string]string
 	// OutPath writes COVERAGE.md when set.
 	OutPath string
@@ -188,9 +200,9 @@ func (a *App) GenerateReviewCoverage(ctx context.Context, in ReviewCoverageInput
 	if err != nil {
 		return ReviewCoverageResponse{}, err
 	}
-	records := review.FromStore(cov, staleAgainstCurrent(in.CurrentDependencies))
+	records := review.FromStore(cov, compatibilityAgainstCurrent(in.CurrentDependencies))
 	projection := review.Project(records)
-	doc := review.RenderCoverage(projection)
+	doc := review.RenderCoverage(projection, a.now())
 
 	resp := ReviewCoverageResponse{
 		PolicyID: policyID, Decision: string(projection.Decision),
@@ -217,30 +229,47 @@ func (a *App) GenerateReviewCoverage(ctx context.Context, in ReviewCoverageInput
 	return resp, nil
 }
 
-// staleAgainstCurrent builds the staleness decision from current dependency
-// values, keyed by dependency KIND.
+// compatibilityAgainstCurrent builds the three-state compatibility decision
+// from current dependency values, keyed by dependency KIND.
 //
 // The rule is RELEVANCE, not difference-anywhere: only a kind the assessment
-// itself declared (with a stated reason) can make it stale, and only when the
-// current ref for that kind differs from the declared one. An artifact outside
-// the manifest changes nothing (C5); a declared dependency moving does (C4).
-func staleAgainstCurrent(current map[string]string) review.StaleFn {
-	if len(current) == 0 {
-		return nil
-	}
-	return func(_ store.ReviewAssessmentRow, manifest store.ReviewDependencyManifestRow) (bool, string) {
+// itself declared (with a stated reason) can drive its compatibility state.
+// An artifact outside the manifest changes nothing (C5); a declared
+// dependency moving does (C4); a declared dependency with no supplied current
+// ref is UNKNOWN, not compatible (H1 / GOW-R2 remediation, 2026-09-12) — the
+// historical assessment stands as history, but current permission is
+// undetermined until the caller supplies a current value.
+//
+// A nil compatibility function used to mean "no assessment stale". Under the
+// three-state model, "no compatibility judgment attempted" (the historical
+// case: no CURRENT values supplied at all) is preserved as CompatibilityUnknown
+// FOR ANY ASSESSMENT THAT DECLARED A CURRENT-DECISION-RELEVANT DEPENDENCY, so
+// an incomplete or absent current context cannot silently grant current
+// eligibility. Assessments that declared no such dependencies remain
+// compatible: they claimed no current-context dependence to begin with.
+func compatibilityAgainstCurrent(current map[string]string) review.CompatibilityFn {
+	return func(_ store.ReviewAssessmentRow, manifest store.ReviewDependencyManifestRow) (review.Compatibility, string) {
+		// First pass: any DECLARED, DIFFERING current ref makes the assessment
+		// definitely stale, and takes precedence over any unknown state.
 		for _, d := range manifest.Dependencies {
 			currentRef, known := current[d.DependencyKind]
-			if !known || currentRef == "" {
-				// Unknown current value: not evidence of change. Guessing here
-				// would let an incomplete caller invalidate valid assessments.
-				continue
-			}
-			if currentRef != d.DependencyRef {
-				return true, fmt.Sprintf("declared %s dependency %s is now %s: %s",
+			if known && currentRef != "" && currentRef != d.DependencyRef {
+				return review.CompatibilityStale, fmt.Sprintf("declared %s dependency %s is now %s: %s",
 					d.DependencyKind, d.DependencyRef, currentRef, d.WhyRelevant)
 			}
 		}
-		return false, ""
+		// Second pass: any DECLARED dependency with no supplied current ref
+		// leaves compatibility unknown. Report the first such kind so a
+		// reader knows which value the caller must supply to advance.
+		for _, d := range manifest.Dependencies {
+			currentRef, known := current[d.DependencyKind]
+			if !known || currentRef == "" {
+				return review.CompatibilityUnknown, fmt.Sprintf("no current value supplied for declared %s dependency (declared %s: %s)",
+					d.DependencyKind, d.DependencyRef, d.WhyRelevant)
+			}
+		}
+		// Every declared dependency has a matching current ref, or the
+		// assessment declared none: compatible.
+		return review.CompatibilityCompatible, ""
 	}
 }
