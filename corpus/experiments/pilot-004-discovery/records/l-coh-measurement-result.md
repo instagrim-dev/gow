@@ -96,6 +96,16 @@ Concrete corrections applied:
    scientifically useful invariants; nor does zero matches among
    five observed successes establish zero prevalence beyond the
    sample.
+
+   **UPGRADED 2026-09-12 to CMA-tier** by
+   `(l-coh-mechanism-test)`. A controlled fixture test at
+   `internal/invariant/success_preserving_discrim_test.go` shows
+   `VerifySuccessPreserving` returns `OutcomeCompletedNegative` on
+   a fully-resolved singleton fixture with sPrev = 0 and
+   `OutcomeConfirmed` on a fixture with sPrev = 0.3, holding
+   `fPrev - sPrev = 0.5` fixed. Both predeclared conditions plus
+   Delta/Evidence structure hold. See
+   `records/l-coh-mechanism-test-result.md`.
 8. **Attribution correction on the numerical minimum.** The
    earlier record attributed pvnp's `minSuccessPrev = 0.286` to
    `equals(uncertainty, probabilistic)`. That candidate fails
