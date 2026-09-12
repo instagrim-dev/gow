@@ -1,0 +1,16 @@
+=== RUN   TestReviewC1C8DisposableScenario
+    review_c1c8_disposable_test.go:42: PIN problem=prb_01M2AV83407GAT032Q7TPK22RS D0=clr_01M2AV83407GAT032Q9352HMAE candidate=inv_01M2AV83407GAT032Q9KTAWC4X
+    review_c1c8_disposable_test.go:84: C1 PASS campaign=run_01M2AV83407GAT032Q9R1A6K8M assessment=clr_01M2AV83407GAT032Q9352HMAE decision: inv_01M2AV83407GAT032Q9KTAWC4X targeted (generation fgr_01M2AV83407GAT032QA1VHRQXX, proposal fpr_01M2AV83407GAT032QABMHYN7G)
+    review_c1c8_disposable_test.go:105: C2 PASS withheld=evl_01M2AV83407GAT032QAK6AG6AZ auditable, population unchanged (2)
+    review_c1c8_disposable_test.go:122: C5 PASS unrelated episode write; inv_01M2AV83407GAT032Q9KTAWC4X still targeted
+    review_c1c8_disposable_test.go:152: C3 PASS admitted=msig_01M2AV83407GAT032QBR3WZ1F0 kind=domain-checked-failure hash=7ec6a30e97ef A1=clr_01M2AV83407GAT032QC0Z9PV0K (pop 3)
+    review_c1c8_disposable_test.go:170: C4 PASS stale exclusion reason=authority_assessed_obsolete_population assessed=clr_01M2AV83407GAT032Q9352HMAE current=clr_01M2AV83407GAT032QC0Z9PV0K
+    review_c1c8_disposable_test.go:187: C6 PASS reassessment campaign=run_01M2AV83407GAT032QCF1RB49E state="weaken" over A1=clr_01M2AV83407GAT032QC0Z9PV0K; A0 row durable
+    review_c1c8_disposable_test.go:193: C6 decision: state="weaken" targeted=false staleExcl=0
+    review_c1c8_disposable_test.go:209: C7 OBSERVE replay campaign=run_01M2AV83407GAT032QCS7RBW8F state="surviving"; post-replay: targeted=false staleExcl=[{InvariantID:inv_01M2AV83407GAT032Q9KTAWC4X State:surviving Reason:authority_assessed_obsolete_population AssessedClusterRunID:clr_01M2AV83407GAT032Q9352HMAE CurrentClusterRunID:clr_01M2AV83407GAT032QC0Z9PV0K AuthorityPopulation:discovery ReassessmentInstruction:re-run `newf challenge --invariant inv_01M2AV83407GAT032Q9KTAWC4X` under the current population to restore current target eligibility}]
+    review_c1c8_disposable_test.go:225: C7 rows durable: A0=run_01M2AV83407GAT032Q9R1A6K8M A1=run_01M2AV83407GAT032QCF1RB49E replay=run_01M2AV83407GAT032QCS7RBW8F
+    review_c1c8_disposable_test.go:250: C8 applicability: constraint failed: FOREIGN KEY constraint failed (787)
+--- FAIL: TestReviewC1C8DisposableScenario (0.20s)
+FAIL
+FAIL	github.com/instagrim-dev/newf/internal/pipeline	0.206s
+FAIL

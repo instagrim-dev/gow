@@ -1,0 +1,7 @@
+=== RUN   TestReviewC1C8DisposableScenario
+    review_c1c8_disposable_test.go:41: PIN problem=prb_01M2AV8340HTJBZXX4AF400F04 D0=clr_01M2AV8340HTJBZXX4BWPY7QX4 candidate=inv_01M2AV8340HTJBZXX4CBP2BE3V
+    review_c1c8_disposable_test.go:70: C1: expected a proposal
+--- FAIL: TestReviewC1C8DisposableScenario (0.11s)
+FAIL
+FAIL	github.com/instagrim-dev/newf/internal/pipeline	0.123s
+FAIL

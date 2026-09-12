@@ -1,159 +1,181 @@
 # Review-run: one-obligation integration (C1–C8), 2026-09-12
 
+> [!IMPORTANT]
+> **Revision 2 (2026-09-12, after external critique of revision 1 at `00c3c58`).**
+> Revision 1's closing decision `ELIGIBLE_TO_ADVANCE` is **retracted**: it
+> conflated the coverage projection of a supplied review record with candidate
+> eligibility, and rested on an unexamined C7 branch. Revision 1's text remains
+> in git history (`1c9b412`); this revision supersedes its decision layer,
+> retains its execution evidence, and adds a second, strengthened execution
+> (run 2) that **demonstrated the previously open C7 defect (F-2)**.
+
 Executed per `docs/reviews/prompts/README.md` →
 `docs/reviews/prompts/recipes/assessment-admission-decision.md` under
-`docs/reviews/prompts/review-contract.md`. This file is the single evidence
-bundle for the run. It records executed checks; it is not a claim of
-whole-project completeness or scientific success.
+`docs/reviews/prompts/review-contract.md`. This bundle records executed
+checks; it is not whole-project completeness or scientific success.
 
-## 1. Decision, policy, and scope
+## 1. Decisions (separated), policy, and scope
 
-- **Named decision:** may the selected candidate invariant guide the next
-  search action under policy P1 (recipe wording, unchanged).
-- **Policy P1 (revision 1):** owner `operator:jmh`; authority: the operator's
-  explicit instruction of 2026-09-12 to run the prompt-based review workflow.
-  One mandatory obligation: `current-assessment-authority`, semantic revision 1
-  (recipe text, unchanged). Evidence cutoff: execution time (2026-09-12,
-  frozen fixture clock `2026-09-12T13:00:00Z` inside the scenario store).
-  Budgets: 8 cases, ≤2 attempts per failed command after diagnosis, **zero
-  paid-provider calls, zero production DB/corpus writes** — both held.
-- **Pinned checkout:** worktree at commit `7e24160` **plus substantial
-  uncommitted concurrent changes** (a second writer was mid-flight adding the
-  typed review-record/coverage store during this run). The C8 result is
-  therefore pinned to worktree state, not to a commit — recorded as a
-  limitation, not disguised.
-- **Contract/recipe hashes (sha256):**
-  - `review-contract.md` `dcc6f4e16e449cdaf52019f9e5108655fd5a00b21d56acfd12c9808e25fc888d`
-  - `assessment-admission-decision.md` `acf5da5a8a78e89ea1851ba84e46f9f145ff0aa8edd84b33be0acf76ed066caf`
-- **Mode:** review-only + disposable test, per contract. The combined scenario
-  was implemented as a disposable Go test against the **real migrated store**
-  (`store.Open` + `Migrate` on a `t.TempDir()` SQLite file), executed, retained
-  as evidence, and **deleted from the source tree**. Procedure sha256
-  `f0437229d794e2697443c0b97b382578cdf98a915d425f139e0c0f7410da6cce`; full
-  source retained at `docs/reviews/evidence/2026-09-12-c1c8-procedure.go.txt`.
+The critique's central correction is adopted: three different questions get
+three different answers. None inherits another's verdict.
+
+| Decision | Answer this bundle supports |
+| --- | --- |
+| May the exercised candidate guide the next search action in the final tested state? | **No.** The selector excludes it after the historical replay (run 2, C7). |
+| Did the authority implementation preserve the tested safety boundaries? | **Partially.** Withholding, relevant-vs-unrelated discrimination, obsolete-restoration prevention, and membership-exact admission held. Preservation of valid current authority did **not** (F-2). |
+| Has the one-obligation recipe been validated sufficiently to proceed to preservation testing? | **WITHHOLD** (revised from revision 1's eligibility and below the critique's floor of `UNDETERMINED`): run 2 examined the missing branch and demonstrated a blocking nonconformance of the obligation. Preservation testing remains gated. |
+
+- **Policy provenance.** Run 1's policy was persisted *after* C1–C7 with an
+  authored `conforms` — a predeclaration failure, acknowledged. Run 2 persists
+  policy **P1r2** and the applicability decision **before any observation row**
+  on a strictly monotonic store clock, and its decision name states explicitly
+  that it governs the review record, *not* candidate targetability. The
+  assessment outcome in run 2 is **derived from observed case results at
+  runtime** (it recorded `nonconforms` because C7's positive branch failed),
+  not authored in advance.
+- **Pinned tree (run 2).** Base commit `7c54dcc` **plus** the retained
+  complete manifest: tracked patch
+  `evidence/2026-09-12-worktree-7c54dcc-tracked.patch`, untracked source
+  archive `…-untracked.tgz`, and its sha256 manifest `…-untracked.sha256`.
+  This identifies the bytes actually built. Run 1 (base `7e24160`) remains
+  identified only by base + disclosure — its results beyond what run 2
+  reconfirmed carry that limitation.
+- **Procedure hashes (sha256).** Run 1
+  `f0437229d794e2697443c0b97b382578cdf98a915d425f139e0c0f7410da6cce`; run 2
+  `7c37b47857c887f3afb37332ad0a1e0ae41c316e08b2d7857cbe0171629cec82`
+  (`evidence/2026-09-12-c1c8-v2-procedure.go.txt`). Contract/recipe hashes as
+  in revision 1. Mode both runs: review-only + disposable test on the real
+  migrated store (`t.TempDir()` SQLite), zero provider calls, zero production
+  writes; disposable sources deleted after retention.
 
 ## 2. Responsibility and critical path
 
-Path `assessment-admission-decision` (TAXONOMY): owners
-`assessment-identity` (07), `evidence-admission` (08), `decisions` (16);
-`verification` (12) exercised as peer through the exact-integer witness
-checker. One causal path, one session — the taxonomy was not executed wholesale.
+Unchanged: path `assessment-admission-decision`; owners `assessment-identity`
+(07), `evidence-admission` (08), `decisions` (16); `verification` (12) as peer.
 
-## 3. Cases executed and findings
+## 3. Findings and case results
 
-### Baseline component checks (recipe's executable block)
+### Run 2 case results (`evidence/2026-09-12-c1c8-v2-run-final.log`)
 
-Both named tests exist (`-list` guard passed) and passed verbatim:
-`TestIntegrationChallengeAssessmentPopulation` (0.24s),
-`TestIntegrationEvidenceAdmissionClosesReentry` (0.20s). Repository gates ran
-once on the combined tree: `go build ./...` clean, `go test ./...` 20/20
-packages ok, `gofmt -l .` empty.
-
-**Source-anchor correction (supporting observation):** the recipe's authoring
-anchor (`269de0d`) recorded a limitation that "the S1 test does not by itself
-assert the next current policy decision after replay." That is no longer true
-at the current checkout: the population test's section 5b asserts
-`ExcludedStaleAuthority` **and** that the post-replay generation request
-payload omits the obsolete-authority invariant. The stale finding was not
-repeated; current behavior was executed instead.
-
-### Combined scenario C1–C8 (all observables in `evidence/2026-09-12-c1c8-run-final.log`)
-
-| Case | Result | Key identities |
+| Case | Result | Strengthening applied vs run 1 |
 | --- | --- | --- |
-| C1 baseline | PASS | candidate `inv_…HNX4ED3J` assessed `surviving` over D0 `clr_…H5H71QKD` (campaign `run_…HQHWW4B2`); decision evidenced by the persisted generation request payload naming the invariant — no global artifact-result shortcut. |
-| C2 withheld control | PASS | model-judged failure `evl_…JGSDME8V` recorded, rule pass **withheld** it; population unchanged (2 signatures). |
-| C3 checked admission | PASS | deliberately invalid Erdős–Straus tuple `7,2,2,2` decided by the exact-integer checker (`witness-invalid`, reproducible strength); rule pass admitted it as `domain-checked-failure` with content hash; new population A1 `clr_…KWRBNA0M` = D0 + exactly the admitted signature. **No operator-attested model judgment was substituted.** |
-| C4 relevant change | PASS | assessment became stale for current selection: excluded with reason `authority_assessed_obsolete_population`, naming both A0 and A1; generation request payload no longer targets the invariant. |
-| C5 unrelated control | PASS | an episode preregistration (outside the declared dependency graph) did not stale the assessment; invariant still targeted. Executed **before** the relevant change. |
-| C6 reassessment | PASS | distinct campaign `run_…MCJ1HRXW` assessed against A1 → `weaken`; the A0 campaign's population row remained durable and reproducible. |
-| C7 historical replay | PASS (with a recorded vacuity — see OQ-1) | replay `run_…MX8R3QC4` assessed A0, re-earned `surviving` for its bounded claim; the **current** decision did not restore obsolete authority (stale exclusion; payload does not target). All three campaign population rows durable and distinct. |
-| C8 derived projection | PASS (against in-flight surface — see L-1) | policy/applicability/check/assessment recorded through the four-record store; coverage generated twice from identical records → byte-identical document, decision `ELIGIBLE_TO_ADVANCE`; regenerated after a relevant dependency change → `UNDETERMINED [stale_dependency]`, distinguishable from unexamined. |
+| C1 | PASS | Targets parsed from the typed `GenerationRequest.targets` JSON field, not substring search. |
+| C2 | PASS | Population compared as a **membership set**, not a count. |
+| C3 | PASS (narrowed claim, see below) | Tuple `7,5,5,5` **derived** from a declared bounded procedure (equal-denominator probe `x=y=z=round(3n/4)`, n=7) whose output *is* the checked tuple; A1 membership asserted **set-equal** to D0 ∪ {admitted signature}. |
+| C4 | PASS | Unchanged semantics; typed-target assertion. |
+| C5 | PASS | Unchanged semantics; typed-target assertion. |
+| C6 | PASS | Engineered to end `surviving` over A1 (locality-local admitted signature) and the positive next decision **asserted**: candidate targeted again. |
+| C7 negative | PASS | Replay reproduces its bounded A0 result; population rows durable and distinct. |
+| C7 positive | **FAIL → F-2** | Precondition enforced (`t.Fatal` if C6 ≠ surviving), branch executed, displacement demonstrated. |
+| C8 | PASS | Policy predeclared; assessment outcome **derived** (`nonconforms`); projection tracked it (`WITHHOLD`); determinism byte-checked; staleness produced by a **real pipeline change** (second admission → A2, dependency re-derived from live store) → `UNDETERMINED [stale_dependency]`. Coverage documents retained (`…-v2-coverage-1.md`, `…-v2-coverage-3-stale.md`). |
 
-### Findings (classified per contract)
+### F-2 — demonstrated defect (new in run 2), primary owner `decisions` (16) with `assessment-identity` (07)
 
-- **F-1 — demonstrated static path, reviewer-discovered, primary owner
-  `evidence-admission` (08).** `evaluated_failures` is keyed per proposal with
-  `INSERT OR IGNORE` (`internal/store/evaluation_store.go`, R6 marker write).
-  A proposal whose first failure was model-judged (withheld) keeps that first
-  marker forever: a **later witness-checked (reproducible-strength) failure of
-  the same proposal never reaches `AdmitEvidence`** — the rule pass sees only
-  the old evaluation and skips it as already decided. Stronger evidence is
-  silently shadowed by a weaker earlier marker. Demonstrated during scenario
-  construction (retained: `evidence/2026-09-12-c1c8-run-f3-shadowing.log`,
-  where the witness evaluation is absent from the admission response); the
-  scenario then used distinct proposals for C2/C3. Expected: a
-  stronger-verdict evaluation should become visible to admission (marker per
-  evaluation, or upgrade-on-stronger-verdict). Severity: moderate (blocks
-  epistemic upgrade of real observations); confidence: high (reproduced).
-  Discriminating regression check: witness-check a proposal that already has a
-  withheld model-judged failure; assert the rule pass admits the
-  domain-checked failure.
-- **OQ-1 — open question (untested hypothesis), owner `decisions` (16) with
-  `assessment-identity` (07).** C7's positive half — "the next current
-  decision still selects the **compatible current** context, not the last
-  execution" — was satisfied only vacuously here, because C6 ended `weaken`
-  (non-targetable), leaving nothing compatible to select. The current-state
-  authority join selects the campaign behind the **latest state transition**
-  (`invariantStateAuthorityJoin`), and every campaign writes transitions; so a
-  replay executed **after** a compatible current `surviving` assessment would
-  take latest-transition authority with an obsolete population and could
-  displace a live current authority into stale exclusion. Not asserted a
-  defect — not demonstrated. Discriminating check: variant scenario where C6
-  ends `surviving` over A1, then replay A0, then assert the invariant is
-  still targeted.
-- **L-1 — declared limitation.** C8 was exercised against the concurrent
-  writer's **uncommitted** four-record/coverage implementation
-  (`internal/store/review_store.go`, `review_coverage_store.go`,
-  `internal/pipeline/review.go`, `review_coverage.go`, `internal/review/`).
-  The behavior observed is exactly the contract's projection (three-valued
-  decision, six reason codes, deterministic export, `stale_dependency`
-  distinguishable), but the result is pinned to worktree state and must be
-  re-confirmed once that slice lands at a commit.
-- **P-1 — protections observed (supporting).** The withheld control (C2), the
-  narrow staleness gate (C4/C5 discriminate relevant from unrelated change),
-  durable per-campaign population identity (C6/C7), and the payload-level
-  decision boundary (targeting asserted on the persisted provider request, not
-  on a response label).
+A historical replay **displaces valid current authority**. Sequence: C6 earns
+`surviving` over the *current* population A1 (campaign `run_…WVKVBC5Q`);
+candidate is targeted. A discovery-population replay then re-earns its bounded
+`surviving` over A0; because current-state authority follows the **latest
+state transition's campaign** (`invariantStateAuthorityJoin`), the next
+generation excludes the candidate as `authority_assessed_obsolete_population`
+— naming A0 as assessed — even though a compatible current surviving
+assessment exists one transition earlier. The failure direction is
+conservative (loss of availability, not unsound targeting), but it violates
+the recipe's C7 requirement that the current decision "select the compatible
+current context, not the last execution." If deliberate, it needs an explicit
+contract decision; nothing in the code comments claims it is. Severity:
+moderate; confidence: high (reproduced, full identities in the run-2 log).
+Smallest coherent remedy: authority selection should prefer the latest
+*population-compatible* campaign rather than the latest campaign
+unconditionally. Discriminating regression check: exactly the run-2 C7
+positive branch.
 
-## 4. Checks, coverage, and resources
+### F-1 — reclassified per critique: **reproduced admission omission, supported by a static root-cause trace**
 
-- **Executed:** 2 component tests; 1 full gates run (`go build ./...`,
-  `go test ./...` 20/20 ok, `gofmt -l .` empty); 6 executions of the combined
-  scenario (4 failed runs retained: 2 concurrent-writer build breaks, 1
-  fixture-generator gap, 1 F-1 manifestation, 1 obligation-key error; final
-  run green). Zero paid-provider calls; zero production DB/corpus writes; all
-  scenario writes on a `t.TempDir()` store.
-- **Blockers encountered:** transient test-build break from the concurrent
-  writer's in-flight `problemStore.GetReviewPolicy` interface change; resolved
-  forward (their own fake stub landed; my temporary duplicate was removed).
-  Both attempts retained per budget.
-- **Coverage statement (scoped):** this run supports **review completion and
-  conformance for the one obligation only**. It is not taxonomic coverage, not
-  whole-project completeness, and not scientific success. The C8 coverage
-  export proves that one obligation's projection derivability.
-- **Decision projection (this run's named decision):** `ELIGIBLE_TO_ADVANCE`
-  under P1 as pinned — every mandatory obligation (one) has current
-  conformance support from the executed scenario, with F-1 recorded against a
-  peer obligation, OQ-1 as an open question on an undemonstrated branch, and
-  L-1 as a revision-pinning limitation. None is an unresolved demonstrated
-  blocking nonconformance for this decision.
+Retained from revision 1 (runtime evidence:
+`evidence/2026-09-12-c1c8-run-f3-shadowing.log`; static trace: per-proposal
+`INSERT OR IGNORE` in the R6 marker write). Repair principle revised per the
+critique: the acceptance requirement is **per-evaluation visibility under
+exact context** — every applicable evaluation remains independently visible to
+admission even when the proposal already carries an earlier marker or
+decision — *not* strength-ranked replacement. Companion constraint: finer
+marker granularity must not let repeated checks of the same underlying
+observation inflate the atlas. The run-1 same-proposal failure **remains part
+of the result**; the distinct-proposal layout in both final harnesses is a
+diagnostic restriction, is hereby made explicit, and narrows what C3 admission
+evidence covers (distinct-proposal path only).
+
+### C3 — narrowed claim (adopted verbatim in substance)
+
+What both runs establish: exact arithmetic checking, evaluation persistence,
+rule admission, and membership-exact population growth for a supplied invalid
+tuple. Run 2 adds procedure↔output agreement: the tuple is computed by the
+declared bounded probe, and its failure is recorded as refuting that bounded
+attempt only. What neither run establishes: that a proposal's *executed
+mechanism* produced the tuple — the proposal-to-attempt binding is still a
+declared fixture relationship, now stated rather than implicit. Full
+mechanism-to-output attribution remains future work at the adapter boundary.
+
+### Protections observed (retained)
+
+Withholding control; relevant-vs-unrelated change discrimination; obsolete-
+replay restoration prevention; durable per-campaign population identity;
+typed-payload decision boundary (run 2); derived-not-authored assessment
+outcome with `WITHHOLD` projection (run 2).
+
+## 4. Checks, attempts, and resources
+
+**Attempt ledger (corrected: revision 1 said "four failed runs" while
+enumerating five; five failures + one success = six executions is right for
+run 1).**
+
+| # | Procedure rev | Outcome | Classification |
+| --- | --- | --- | --- |
+| 1.1–1.2 | disposable-1 | build failure | environment (concurrent `problemStore.GetReviewPolicy` interface change; second attempt authorized as diagnosed harness error) |
+| 1.3 | disposable-1 | assertion failure | harness gap (deriving fixture generator emits no proposals for this corpus) — logs `…-c1c8-run1-attempt3.log` |
+| 1.4 | disposable-1a | assertion failure | **completed negative result — F-1 manifestation** (`…-run-f3-shadowing.log`); the distinct-proposal variant afterward is diagnostic follow-on, not a retry erasing this result |
+| 1.5 | disposable-1b | runtime error | harness error (obligation map key `key@revision`) |
+| 1.6 | disposable-1b | PASS | run-1 final (`…-c1c8-run-final.log`) |
+| 2.1 | disposable-2 | PASS (harness) with **C7-positive FAIL recorded as F-2** | run-2 final (`…-c1c8-v2-run-final.log`) |
+
+Attempt logs 1.1–1.5 now published beside the finals. Gates: run once on the
+run-1 tree (20/20 ok); on the run-2 tree, `go vet` + the scenario package ran
+clean and the disposable source was removed before any commit. Zero paid
+calls; zero production writes; both runs on disposable stores. The store
+clocks are synthetic (run 2: strictly monotonic from a fixed base) — they
+establish **in-store ordering** (predeclaration before observations), and are
+not claims about wall-clock time; wall-clock provenance is this bundle's git
+history.
+
+**Coverage statement (scoped):** run 2 supports review completion for the one
+obligation with a **demonstrated nonconformance**; the C8 projection exercised
+`ELIGIBLE_TO_ADVANCE`-vs-`WITHHOLD` tracking of a derived outcome plus
+`stale_dependency`; the remaining reason codes were not exercised and no such
+claim is made.
 
 ## 5. Remediation handoffs (≤3)
 
-1. **F-1 (`evidence-admission`):** make stronger-verdict evaluations of an
-   already-marked proposal visible to admission (marker per evaluation or
-   verdict upgrade). Invalidation: any change to `evaluated_failures` keying.
-   Acceptance: the discriminating regression check in F-1 passes.
-2. **OQ-1 (`decisions`):** add the surviving-C6-then-replay variant as a
-   committed integration case asserting the compatible current authority is
-   selected over the last-executed obsolete campaign. Acceptance: the variant
-   passes, or the demonstrated failure becomes a new finding with this bundle
-   as provenance.
-3. **L-1 (owner of the in-flight review slice):** land and pin the
-   four-record/coverage implementation, then re-run C8 (this bundle's
-   procedure, `evidence/2026-09-12-c1c8-procedure.go.txt`) against the pinned
-   commit. Acceptance: identical projection behavior at a named revision.
+1. **F-2 (`decisions`/`assessment-identity`):** make current-authority
+   selection population-compatibility-aware (or record an explicit contract
+   decision that replay intentionally parks all authority). Acceptance: run-2
+   C7 positive branch passes (or the documented decision states why it must
+   not), with the negative control still passing.
+2. **F-1 (`evidence-admission`):** per-evaluation admission visibility under
+   exact context (not strength ranking), with the no-inflation companion
+   constraint. Acceptance: the same-proposal witness-after-model-judged case
+   is rule-admissible exactly once.
+3. **Attribution slice (`verification`/`transformation`):** an adapter-level
+   binding from a proposal's executed bounded attempt to its emitted tuple, so
+   C3 can assert mechanism-to-output attribution instead of declaring it.
+   Acceptance: witness admission carries a checkable attempt→output link.
 
-Only after this slice's handoffs settle should the preservation pilot
-(`recipes/preservation-pilot.md`) proceed, per the recipe's gating.
+> The final disposable harness passed on a now-reconstructable snapshot (base
+> `7c54dcc` + retained patch and untracked archive). It provides positive
+> evidence for the exercised admission and authority-exclusion paths; an
+> earlier variant reproduced evaluation shadowing in admission (F-1); and the
+> re-executed positive current-authority-preservation branch **failed,
+> demonstrating F-2**. C3 demonstrates supplied-witness checking and
+> membership-exact admission without mechanism-to-output attribution. C8
+> demonstrates deterministic projection of derived review records, including
+> `WITHHOLD` on demonstrated nonconformance — not candidate eligibility. The
+> full one-obligation recipe is **not validated**; preservation testing
+> remains gated.

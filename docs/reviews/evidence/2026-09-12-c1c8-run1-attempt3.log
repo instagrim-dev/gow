@@ -1,0 +1,10 @@
+=== RUN   TestReviewC1C8DisposableScenario
+    review_c1c8_disposable_test.go:42: PIN problem=prb_01M2AV8340HRKBEKMKD3GFMW0T D0=clr_01M2AV8340HRKBEKMKE4G3WEM3 candidate=inv_01M2AV8340HRKBEKMKEMDPZ103
+    review_c1c8_disposable_test.go:80: C1 PASS campaign=run_01M2AV8340HRKBEKMKERG8Q2V0 assessment=clr_01M2AV8340HRKBEKMKE4G3WEM3 decision: inv_01M2AV8340HRKBEKMKEMDPZ103 targeted (generation fgr_01M2AV8340HRKBEKMKF083CWCB, proposal fpr_01M2AV8340HRKBEKMKF823QQD4)
+    review_c1c8_disposable_test.go:101: C2 PASS withheld=evl_01M2AV8340HRKBEKMKFCZF5E44 auditable, population unchanged (2)
+    review_c1c8_disposable_test.go:118: C5 PASS unrelated episode write; inv_01M2AV8340HRKBEKMKEMDPZ103 still targeted
+    review_c1c8_disposable_test.go:133: C3: rule pass must admit the checked failure: {OK:true Command:evidence admit Store:/Users/jmh/.cache/go-tmp/TestReviewC1C8DisposableScenario970904476/001/newf.db ProblemID:prb_01M2AV8340HRKBEKMKD3GFMW0T RunID:run_01M2AV8340HRKBEKMKGA6SZPAQ Admitted:[] Withheld:[] Skipped:[{ID:evad_01M2AV8340HRKBEKMKFKV8R4N2 ProposalID:fpr_01M2AV8340HRKBEKMKF823QQD4 EvaluationID:evl_01M2AV8340HRKBEKMKFCZF5E44 Decision:withheld ObservationKind:model-judged-failure AdmittedBy:rule Basis:model-judged failure (single-model-judgment): a model verdict is a judgment, not a verified domain observation; admission requires operator attestation and stays labeled model-judged ContentHash:61ae6eb8a4ca43f9739f5f73fb05abc1f56b38f9ea560f9daa736320c9b79e52 ApproachID: ApproachRevisionID: MechanismID: SignatureID: CreatedAt:2026-09-12T13:00:00Z}]} err=<nil>
+--- FAIL: TestReviewC1C8DisposableScenario (0.14s)
+FAIL
+FAIL	github.com/instagrim-dev/newf/internal/pipeline	0.147s
+FAIL

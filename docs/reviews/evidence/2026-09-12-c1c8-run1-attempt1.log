@@ -1,0 +1,7 @@
+# github.com/instagrim-dev/newf/internal/pipeline [github.com/instagrim-dev/newf/internal/pipeline.test]
+internal/pipeline/app_test.go:44:44: cannot use fake (variable of type *fakeProblemStore) as problemStore value in return statement: *fakeProblemStore does not implement problemStore (missing method GetReviewPolicy)
+internal/pipeline/app_test.go:87:44: cannot use fake (variable of type *fakeProblemStore) as problemStore value in return statement: *fakeProblemStore does not implement problemStore (missing method GetReviewPolicy)
+internal/pipeline/app_test.go:128:44: cannot use fake (variable of type *fakeProblemStore) as problemStore value in return statement: *fakeProblemStore does not implement problemStore (missing method GetReviewPolicy)
+internal/pipeline/review_ledger_test.go:118:9: undefined: ModeExecutedCheck
+FAIL	github.com/instagrim-dev/newf/internal/pipeline [build failed]
+FAIL

@@ -1,0 +1,62 @@
+# COVERAGE
+
+Generated from the normative review ledger. Do not edit by hand: this file is
+an export of records, not a status field. Change the records and regenerate.
+
+## Decision
+
+- **decision**: `UNDETERMINED`
+- **policy**: `review-c1c8-p1@2` (review-record decision: does the recorded assessment of obligation current-assessment-authority satisfy policy P1r2 (NOT: is any candidate targetable))
+- **policy id**: `rpol_01M2AWZ2WG5V0VBNRFR77JPF5E`
+- **owner**: operator:jmh
+- **authority**: operator instruction 2026-09-12: revise and re-execute the review run per external critique
+- **scope justification**: one mandatory obligation (current-assessment-authority rev 1); supersedes run-1 policy whose decision name conflated the review projection with candidate eligibility
+- **evidence cutoff**: 2026-09-12T13:30:00Z
+
+### Unresolved reasons
+
+- `stale_dependency`
+
+## Obligations
+
+| obligation | mandatory | state | governing assessment | reasons |
+| --- | --- | --- | --- | --- |
+| `current-assessment-authority@1` | yes | `inconclusive` | — | `stale_dependency` |
+
+## Records
+
+### `current-assessment-authority@1`
+
+- **obligation id**: `robl_01M2AWZ2WG5V0VBNRFRAMM14EV`
+- **requirement**: a current decision uses assessments compatible with its declared evidence population and policy; historical replay remains reproducible without restoring obsolete current authority AND without displacing valid current authority
+- **owner**: assessment-identity
+- **state**: `inconclusive`
+- **note**: stale: rasm_01M2AX1D3GSMAE3MNY7N1ZDY4C: declared assessment_population dependency clr_01M2AX0PMR10B61QFW0AKVHY5Q is now clr_01M2AX1PW01G0RQHJXH6EHRE6E: the conformance argument is about authority relative to this current population
+
+**Applicability**
+
+- `rapp_01M2AWZ4V0FY0A9GS7Q3Y308T4` subject `the candidate to be mined in this scenario (identity fixed at mining time)` decision `applies` by operator:jmh: the scenario constructs exactly the situation the obligation governs
+
+**Assessments**
+
+- `rasm_01M2AX1D3GSMAE3MNY7N1ZDY4C` outcome `nonconforms` subject `inv_01M2AWZNE8ASSQEVV51XSS62JW` context `population clr_01M2AX0PMR10B61QFW0AKVHY5Q` by operator:jmh
+  - argument: C1-C6 and C7's negative control conform, but the C7 positive branch demonstrated displacement of valid current authority by a historical replay (F-2): replay=run_01M2AX12BR25Z23NGF7ZA1EM04 state="surviving"; post-replay targeted=false staleExcl=[{InvariantID:inv_01M2AWZNE8ASSQEVV51XSS62JW State:surviving Reason:authority_assessed_obsolete_population AssessedClusterRunID:clr_01M2AWZFJRMFM1DHJ8A2EQSBE5 CurrentClusterRunID:clr_01M2AX0PMR10B61QFW0AKVHY5Q AuthorityPopulation:discovery ReassessmentInstruction:re-run `newf challenge --invariant inv_01M2AWZNE8ASSQEVV51XSS62JW` under the current population to restore current target eligibility}]
+  - manifest: `rdep_01M2AX1D3GSMAE3MNY7HYJMD2A`
+  - checks: `rchk_01M2AX1A5RCCRRHFJBSJ7KA6B6`
+  - stale: declared assessment_population dependency clr_01M2AX0PMR10B61QFW0AKVHY5Q is now clr_01M2AX1PW01G0RQHJXH6EHRE6E: the conformance argument is about authority relative to this current population (result retained; not usable for a current decision)
+
+**Check attempts**
+
+- `rchk_01M2AX1A5RCCRRHFJBSJ7KA6B6` case `C1-C7 combined scenario v2 (both C7 branches)` mode `executed` outcome `completed` procedure `docs/reviews/evidence/2026-09-12-c1c8-v2-procedure.go.txt` executor go test
+  - output: `docs/reviews/evidence/2026-09-12-c1c8-v2-run-final.log`
+  - resources: single go test invocation; zero provider calls
+
+## Reading this document
+
+- `unexamined` means no assessment exists. It is not a pass and not a failure.
+- `inconclusive` means an assessment was made and reached no conclusion.
+- `blocked` means a cited check could not execute. A blocker is retained, never
+  converted into support for conformance.
+- `not_applicable` requires an authorized applicability decision with a rationale.
+  Missing implementation never lands here.
+- A stale assessment keeps its historical outcome and loses current authority.

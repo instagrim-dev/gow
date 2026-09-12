@@ -1,0 +1,15 @@
+=== RUN   TestReviewC1C8DisposableScenario
+    review_c1c8_disposable_test.go:42: PIN problem=prb_01M2AV83400CTAY90X0ARKGZG7 D0=clr_01M2AV83400CTAY90X1G5D6GS0 candidate=inv_01M2AV83400CTAY90X23749PY4
+    review_c1c8_disposable_test.go:84: C1 PASS campaign=run_01M2AV83400CTAY90X27JQA5BP assessment=clr_01M2AV83400CTAY90X1G5D6GS0 decision: inv_01M2AV83400CTAY90X23749PY4 targeted (generation fgr_01M2AV83400CTAY90X2D3XFEBJ, proposal fpr_01M2AV83400CTAY90X2RM9HHGW)
+    review_c1c8_disposable_test.go:105: C2 PASS withheld=evl_01M2AV83400CTAY90X2YNYRSEX auditable, population unchanged (2)
+    review_c1c8_disposable_test.go:122: C5 PASS unrelated episode write; inv_01M2AV83400CTAY90X23749PY4 still targeted
+    review_c1c8_disposable_test.go:152: C3 PASS admitted=msig_01M2AV83400CTAY90X44SQVPTT kind=domain-checked-failure hash=61ae6eb8a4ca A1=clr_01M2AV83400CTAY90X4B8E6C0E (pop 3)
+    review_c1c8_disposable_test.go:170: C4 PASS stale exclusion reason=authority_assessed_obsolete_population assessed=clr_01M2AV83400CTAY90X1G5D6GS0 current=clr_01M2AV83400CTAY90X4B8E6C0E
+    review_c1c8_disposable_test.go:187: C6 PASS reassessment campaign=run_01M2AV83400CTAY90X4VK6TZBX state="weaken" over A1=clr_01M2AV83400CTAY90X4B8E6C0E; A0 row durable
+    review_c1c8_disposable_test.go:193: C6 decision: state="weaken" targeted=false staleExcl=0
+    review_c1c8_disposable_test.go:209: C7 OBSERVE replay campaign=run_01M2AV83400CTAY90X5B4NCFP7 state="surviving"; post-replay: targeted=false staleExcl=[{InvariantID:inv_01M2AV83400CTAY90X23749PY4 State:surviving Reason:authority_assessed_obsolete_population AssessedClusterRunID:clr_01M2AV83400CTAY90X1G5D6GS0 CurrentClusterRunID:clr_01M2AV83400CTAY90X4B8E6C0E AuthorityPopulation:discovery ReassessmentInstruction:re-run `newf challenge --invariant inv_01M2AV83400CTAY90X23749PY4` under the current population to restore current target eligibility}]
+    review_c1c8_disposable_test.go:225: C7 rows durable: A0=run_01M2AV83400CTAY90X27JQA5BP A1=run_01M2AV83400CTAY90X4VK6TZBX replay=run_01M2AV83400CTAY90X5B4NCFP7
+    review_c1c8_disposable_test.go:228: C8 GAP: no coverage generator exists in the repository (COVERAGE.md deliberately absent per README); recorded as an unexamined mapping gap, not a failure
+--- PASS: TestReviewC1C8DisposableScenario (0.18s)
+PASS
+ok  	github.com/instagrim-dev/newf/internal/pipeline	0.190s
