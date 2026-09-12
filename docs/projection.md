@@ -95,6 +95,50 @@ typed columns carry.
 > mutation consumes them yet. The typed columns exist so that consumption,
 > when built, needs no prose parsing — the edge itself is not shipped.
 
+## projection/v2: the semantic-preservation contract (issue #22, D3)
+
+A projection is a re-representation, and `docs/abstraction-safety.md`
+requires every non-trivial re-representation to state what it preserves,
+what it loses, and how it grounds back. `projection/v2` makes that contract
+part of the artifact (all six fields **required**; migration v42):
+
+```json
+{
+  "schema": "projection/v2",
+  "givens": ["..."], "steps": [ ... ], "target": ["..."],
+  "source_domain": "unit-fraction identities over Z",
+  "target_domain": "congruence covers of the moduli",
+  "preserves": ["solution existence per residue class"],
+  "loses": ["constructive witness values"],
+  "correspondence": "one-way-implication",
+  "grounding_plan": "each residue-class bound maps back to concrete n with a checkable witness obligation"
+}
+```
+
+- `correspondence` ∈ {`equivalence`, `one-way-implication`, `analogy`,
+  `unknown`} — closed vocabulary, **no default**: an unstated class is a
+  parse error, not "unknown".
+- `preserves` must be non-empty (an abstraction that cannot state what it
+  preserves is defective); `loses` must be *present* — an explicit `[]` is
+  the author's claim that nothing known is lost, a missing field is an
+  unexamined loss surface and is refused.
+- Strict parse both ways: a v2 artifact missing any field is refused, and a
+  v1 artifact carrying v2 fields is refused (semantic claims may not ride a
+  v1 declaration without the obligations they owe).
+- **v1 artifacts keep parsing** and read as correspondence-unrecorded; there
+  is no retroactive backfill.
+
+A composing v2 artifact owes a **third obligation** of kind
+`semantic-preservation` (checker `external`, ordinal 2), stating the claimed
+contract verbatim. It stays open until discharged and passes exactly the
+same gates as `domain-realization`: evaluation-backed only (manual discharge
+without evidence is refused), subject `domain-goal`, verdict–status
+coherence. Per the D2 seam (issue #23), a grounding-plan instrument is
+naturally a witness-backed evaluation.
+
+Composition checking is byte-for-byte v1-identical: v2 adds semantics, not a
+new checker.
+
 ## Inspection
 
 `newf projection list --problem prb_...` (or `--json`) shows every artifact

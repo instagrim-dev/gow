@@ -76,13 +76,17 @@ type ProjectionObligationView struct {
 
 // ProjectionView is one artifact revision with its obligations.
 type ProjectionView struct {
-	ID          string                     `json:"id"`
-	ProposalID  string                     `json:"proposal_id"`
-	Revision    int                        `json:"revision"`
-	AuthorKind  string                     `json:"author_kind"`
-	ContentHash string                     `json:"content_hash"`
-	CreatedAt   string                     `json:"created_at"`
-	Obligations []ProjectionObligationView `json:"obligations"`
+	ID         string `json:"id"`
+	ProposalID string `json:"proposal_id"`
+	Revision   int    `json:"revision"`
+	AuthorKind string `json:"author_kind"`
+	// SchemaVersion is the artifact's declared contract version
+	// (projection/v1 or projection/v2): a consumer must see whether the
+	// semantic-preservation contract binds this artifact.
+	SchemaVersion string                     `json:"schema_version"`
+	ContentHash   string                     `json:"content_hash"`
+	CreatedAt     string                     `json:"created_at"`
+	Obligations   []ProjectionObligationView `json:"obligations"`
 }
 
 // ProjectProposalResponse reports one projection pass.
@@ -136,12 +140,13 @@ func obligationView(ob store.ProjectionObligationRow) ProjectionObligationView {
 
 func projectionView(rec store.ProjectionRecord) ProjectionView {
 	v := ProjectionView{
-		ID:          rec.Artifact.ID,
-		ProposalID:  rec.Artifact.ProposalID,
-		Revision:    rec.Artifact.Revision,
-		AuthorKind:  rec.Artifact.AuthorKind,
-		ContentHash: rec.Artifact.ContentHash,
-		CreatedAt:   rec.Artifact.CreatedAt,
+		ID:            rec.Artifact.ID,
+		ProposalID:    rec.Artifact.ProposalID,
+		Revision:      rec.Artifact.Revision,
+		AuthorKind:    rec.Artifact.AuthorKind,
+		SchemaVersion: rec.Artifact.SchemaVersion,
+		ContentHash:   rec.Artifact.ContentHash,
+		CreatedAt:     rec.Artifact.CreatedAt,
 	}
 	for _, ob := range rec.Obligations {
 		v.Obligations = append(v.Obligations, obligationView(ob))
