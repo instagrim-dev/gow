@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 39
+const currentSchemaVersion = 40
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change

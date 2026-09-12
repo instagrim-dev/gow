@@ -56,7 +56,13 @@ type ProjectionObligationDecisionRow struct {
 	Basis        string
 	EvidenceKind string // code-check|evaluation ('' = none recorded)
 	EvidenceRef  string
-	CreatedAt    string
+	// EvaluationVerdict/EvaluationStrength are the typed verdict and
+	// verification strength of the backing evaluation, copied verbatim at
+	// decision time (v40, 2026-09-12 review F6). Empty for code decisions
+	// (no backing evaluation) and pre-v40 history.
+	EvaluationVerdict  string
+	EvaluationStrength string
+	CreatedAt          string
 }
 
 // ProjectionRecord bundles one artifact with its obligations for persistence
@@ -142,9 +148,9 @@ VALUES(?, ?, ?, ?, ?, ?, ?)
 			d := ob.Decision
 			d.ObligationID = ob.ID
 			if _, err := tx.ExecContext(ctx, `
-INSERT INTO projection_obligation_decisions(obligation_id, run_id, status, decided_by, basis, evidence_kind, evidence_ref, created_at)
-VALUES(?, ?, ?, ?, ?, ?, ?, ?)
-`, d.ObligationID, d.RunID, d.Status, d.DecidedBy, d.Basis, nullable(d.EvidenceKind), nullable(d.EvidenceRef), d.CreatedAt); err != nil {
+INSERT INTO projection_obligation_decisions(obligation_id, run_id, status, decided_by, basis, evidence_kind, evidence_ref, evaluation_verdict, evaluation_strength, created_at)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, d.ObligationID, d.RunID, d.Status, d.DecidedBy, d.Basis, nullable(d.EvidenceKind), nullable(d.EvidenceRef), nullable(d.EvaluationVerdict), nullable(d.EvaluationStrength), d.CreatedAt); err != nil {
 				return ProjectionRecord{}, fmt.Errorf("persist projection decision: %w", err)
 			}
 		}
@@ -162,9 +168,9 @@ func (s *Store) PersistObligationDecision(ctx context.Context, d ProjectionOblig
 		return err
 	}
 	_, err := s.db.ExecContext(ctx, `
-INSERT INTO projection_obligation_decisions(obligation_id, run_id, status, decided_by, basis, evidence_kind, evidence_ref, created_at)
-VALUES(?, ?, ?, ?, ?, ?, ?, ?)
-`, d.ObligationID, d.RunID, d.Status, d.DecidedBy, d.Basis, nullable(d.EvidenceKind), nullable(d.EvidenceRef), d.CreatedAt)
+INSERT INTO projection_obligation_decisions(obligation_id, run_id, status, decided_by, basis, evidence_kind, evidence_ref, evaluation_verdict, evaluation_strength, created_at)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, d.ObligationID, d.RunID, d.Status, d.DecidedBy, d.Basis, nullable(d.EvidenceKind), nullable(d.EvidenceRef), nullable(d.EvaluationVerdict), nullable(d.EvaluationStrength), d.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("persist obligation decision: %w", err)
 	}
@@ -265,11 +271,11 @@ FROM projection_obligations WHERE artifact_id = ? ORDER BY ordinal
 
 func (s *Store) loadObligationDecision(ctx context.Context, ob *ProjectionObligationRow) error {
 	row := s.db.QueryRowContext(ctx, `
-SELECT obligation_id, run_id, status, decided_by, basis, COALESCE(evidence_kind,''), COALESCE(evidence_ref,''), created_at
+SELECT obligation_id, run_id, status, decided_by, basis, COALESCE(evidence_kind,''), COALESCE(evidence_ref,''), COALESCE(evaluation_verdict,''), COALESCE(evaluation_strength,''), created_at
 FROM projection_obligation_decisions WHERE obligation_id = ?
 `, ob.ID)
 	var d ProjectionObligationDecisionRow
-	err := row.Scan(&d.ObligationID, &d.RunID, &d.Status, &d.DecidedBy, &d.Basis, &d.EvidenceKind, &d.EvidenceRef, &d.CreatedAt)
+	err := row.Scan(&d.ObligationID, &d.RunID, &d.Status, &d.DecidedBy, &d.Basis, &d.EvidenceKind, &d.EvidenceRef, &d.EvaluationVerdict, &d.EvaluationStrength, &d.CreatedAt)
 	switch {
 	case err == nil:
 		ob.Decision = &d

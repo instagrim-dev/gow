@@ -67,6 +67,10 @@ type ProjectionObligationView struct {
 	Basis        string `json:"basis,omitempty"`
 	EvidenceKind string `json:"evidence_kind,omitempty"`
 	EvidenceRef  string `json:"evidence_ref,omitempty"`
+	// EvaluationVerdict/EvaluationStrength surface the typed epistemic weight
+	// of the backing evaluation for operator decisions (v40, review F6).
+	EvaluationVerdict  string `json:"evaluation_verdict,omitempty"`
+	EvaluationStrength string `json:"evaluation_strength,omitempty"`
 }
 
 // ProjectionView is one artifact revision with its obligations.
@@ -123,6 +127,8 @@ func obligationView(ob store.ProjectionObligationRow) ProjectionObligationView {
 		v.Basis = ob.Decision.Basis
 		v.EvidenceKind = ob.Decision.EvidenceKind
 		v.EvidenceRef = ob.Decision.EvidenceRef
+		v.EvaluationVerdict = ob.Decision.EvaluationVerdict
+		v.EvaluationStrength = ob.Decision.EvaluationStrength
 	}
 	return v
 }
@@ -329,7 +335,13 @@ func (a *App) DischargeObligation(ctx context.Context, input DischargeObligation
 		Basis:        "operator: " + strings.TrimSpace(input.Note) + " (evaluation verdict " + ev.Verdict + ", " + ev.VerificationStrength + ")",
 		EvidenceKind: "evaluation",
 		EvidenceRef:  ev.ID,
-		CreatedAt:    now.Format(timeLayout),
+		// Typed copy of the backing observation's epistemic weight (F6): a
+		// policy consumer must not have to parse the prose basis to learn
+		// whether the discharge rests on a reproducible computation or a
+		// single model judgment.
+		EvaluationVerdict:  ev.Verdict,
+		EvaluationStrength: ev.VerificationStrength,
+		CreatedAt:          now.Format(timeLayout),
 	}
 	if err := repoStore.PersistObligationDecision(ctx, decision); err != nil {
 		a.failRun(ctx, repoStore, run.ID, err)
