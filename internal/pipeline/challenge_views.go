@@ -78,6 +78,21 @@ type ChallengeView struct {
 	Detail         string                  `json:"detail,omitempty"`
 	Evidence       []ChallengeEvidenceView `json:"evidence,omitempty"`
 	Transitions    []string                `json:"transitions,omitempty"`
+	// BoundaryDelta is the typed refinement a confirmed challenge derived
+	// (v36/S5); absent for unconfirmed/inert challenges and pre-v36 history.
+	BoundaryDelta *BoundaryDeltaView `json:"boundary_delta,omitempty"`
+}
+
+// BoundaryDeltaView is the machine-readable boundary refinement of one
+// confirmed challenge: the minimal separating condition observed, in canonical
+// (paraphrase-stable) predicate form.
+type BoundaryDeltaView struct {
+	Kind                 string   `json:"kind"`
+	PredicateFingerprint string   `json:"predicate_fingerprint"`
+	Condition            string   `json:"condition"`
+	MeasuredSupport      int      `json:"measured_support,omitempty"`
+	SupportThreshold     int      `json:"support_threshold,omitempty"`
+	ChildFingerprints    []string `json:"child_fingerprints,omitempty"`
 }
 
 // InvariantChallengeReport is the campaign result for one candidate. The
@@ -166,6 +181,16 @@ func challengeView(ch store.ChallengeRecord) ChallengeView {
 			Kind: ev.Kind, ClusterID: ev.ClusterID, SignatureID: ev.SignatureID,
 			SnapshotID: ev.SnapshotID, Detail: ev.Detail,
 		})
+	}
+	if ch.Delta != nil {
+		view.BoundaryDelta = &BoundaryDeltaView{
+			Kind:                 ch.Delta.Kind,
+			PredicateFingerprint: ch.Delta.PredicateFingerprint,
+			Condition:            ch.Delta.Condition,
+			MeasuredSupport:      ch.Delta.MeasuredSupport,
+			SupportThreshold:     ch.Delta.SupportThreshold,
+			ChildFingerprints:    ch.Delta.ChildFingerprints,
+		}
 	}
 	return view
 }

@@ -647,6 +647,18 @@ func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, sub ch
 	if result.Confirmed {
 		ch.ResultSummary = "confirmed"
 		ch.Evidence = append(ch.Evidence, mapEvidence(result.Evidence)...)
+		// v36/S5: persist the typed boundary refinement the verifier derived so
+		// subsequent policy consumes a typed object, not a transcript.
+		if result.Delta != nil {
+			ch.Delta = &store.BoundaryDeltaRow{
+				Kind:                 result.Delta.Kind,
+				PredicateFingerprint: result.Delta.PredicateFingerprint,
+				Condition:            result.Delta.Condition,
+				MeasuredSupport:      result.Delta.MeasuredSupport,
+				SupportThreshold:     result.Delta.SupportThreshold,
+				ChildFingerprints:    result.Delta.ChildFingerprints,
+			}
+		}
 	} else {
 		ch.ResultSummary = "unconfirmed"
 		// KTD-3: unconfirmed attacks drive no transition. A completed-negative or

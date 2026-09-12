@@ -176,6 +176,13 @@ func TestIntegrationChallengeAssessmentPopulation(t *testing.T) {
 	if !strings.Contains(r.Challenges[0].Detail, "outside the discovery population") {
 		t.Fatalf("challenge detail must record the scope classification, got %q", r.Challenges[0].Detail)
 	}
+	// v36/S5: the confirmed counterexample carries a TYPED boundary delta — the
+	// separating condition in canonical predicate form — end-to-end through the
+	// report view, not only in the transcript detail.
+	if d := r.Challenges[0].BoundaryDelta; d == nil || d.Kind != "counterexample-separation" ||
+		d.Condition == "" || d.PredicateFingerprint == "" {
+		t.Fatalf("confirmed counterexample must surface a typed boundary delta: %+v", r.Challenges[0].BoundaryDelta)
+	}
 
 	// The campaign's population identity is durable, not just reported.
 	repo := openTestStore(t, ctx, dbPath)

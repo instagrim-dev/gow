@@ -426,3 +426,58 @@ func TestAttestationCampaignHasNoPopulationRow(t *testing.T) {
 		t.Fatal("campaign without population identity must persist no row")
 	}
 }
+
+// v36/S5: a challenge's typed boundary delta round-trips (kind, fingerprint,
+// canonical condition, child fingerprints; recount measurements only for
+// support-recount) and is immutable once persisted. Challenges without a delta
+// read back nil.
+func TestChallengeBoundaryDeltaRoundTripAndImmutability(t *testing.T) {
+	st, problemID, runID, invID := persistSampleInvariant(t)
+	ctx := context.Background()
+
+	withDelta := challengeRow(t, "split", "confirmed", "challenged", "weaken")
+	withDelta.Delta = &BoundaryDeltaRow{
+		Kind:                 "split-partition",
+		PredicateFingerprint: "fp-parent",
+		Condition:            "contains(preserves,cf_x)",
+		ChildFingerprints:    []string{"fp-child-a", "fp-child-b"},
+	}
+	without := challengeRow(t, "bias-critique", "unconfirmed")
+	if err := st.PersistChallengeCampaign(ctx, sampleCampaign(problemID, runID, invID, withDelta, without)); err != nil {
+		t.Fatalf("persist campaign: %v", err)
+	}
+
+	history, err := st.ListChallengesForInvariant(ctx, invID)
+	if err != nil {
+		t.Fatalf("list challenges: %v", err)
+	}
+	if len(history) != 2 {
+		t.Fatalf("want 2 challenges, got %d", len(history))
+	}
+	byID := map[string]ChallengeRecord{}
+	for _, h := range history {
+		byID[h.ID] = h
+	}
+	got := byID[withDelta.ID].Delta
+	if got == nil || got.Kind != "split-partition" || got.PredicateFingerprint != "fp-parent" ||
+		got.Condition != "contains(preserves,cf_x)" || len(got.ChildFingerprints) != 2 ||
+		got.ChildFingerprints[0] != "fp-child-a" || got.ChildFingerprints[1] != "fp-child-b" {
+		t.Fatalf("delta round-trip lost data: %+v", got)
+	}
+	if got.MeasuredSupport != 0 || got.SupportThreshold != 0 {
+		t.Fatalf("non-recount delta must carry no measurements: %+v", got)
+	}
+	if byID[without.ID].Delta != nil {
+		t.Fatalf("unconfirmed challenge must carry no delta: %+v", byID[without.ID].Delta)
+	}
+
+	if _, err := st.db.ExecContext(ctx, `UPDATE challenge_boundary_deltas SET condition = 'rewritten' WHERE challenge_id = ?`, withDelta.ID); err == nil {
+		t.Fatal("boundary deltas must be immutable")
+	}
+	// Schema coherence: recount measurements are refused on non-recount kinds.
+	if _, err := st.db.ExecContext(ctx, `
+INSERT INTO challenge_boundary_deltas(challenge_id, kind, predicate_fingerprint, condition, measured_support, support_threshold, child_fingerprints, created_at)
+VALUES(?, 'contrast-collapse', 'fp', 'cond', 3, 2, '[]', '2026-09-12T00:00:00Z')`, without.ID); err == nil {
+		t.Fatal("measurements on a non-recount delta must violate the CHECK constraint")
+	}
+}

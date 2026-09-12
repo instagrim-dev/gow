@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -152,12 +153,32 @@ func writeChallengeReportsHuman(w io.Writer, reports []pipeline.InvariantChallen
 		fmt.Fprintln(tw, "  TYPE\tRESULT\tTRANSITIONS\tEVIDENCE\tDETAIL")
 		for _, ch := range r.Challenges {
 			fmt.Fprintf(tw, "  %s\t%s\t%v\t%d\t%s\n", ch.ChallengeType, ch.ResultSummary, ch.Transitions, len(ch.Evidence), ch.Detail)
+			if d := ch.BoundaryDelta; d != nil {
+				fmt.Fprintf(tw, "  \tdelta\t%s\t\t%s\n", d.Kind, boundaryDeltaSummary(d))
+			}
 		}
 		tw.Flush()
 	}
 	if len(reports) == 0 {
 		fmt.Fprintln(w, "no challengeable invariants")
 	}
+}
+
+// boundaryDeltaSummary renders one confirmed challenge's typed refinement for
+// human output: the separating condition plus kind-specific measurements.
+func boundaryDeltaSummary(d *pipeline.BoundaryDeltaView) string {
+	s := d.Condition
+	if d.Kind == "support-recount" {
+		s += fmt.Sprintf(" (measured support %d < threshold %d)", d.MeasuredSupport, d.SupportThreshold)
+	}
+	if len(d.ChildFingerprints) > 0 {
+		shorts := make([]string, 0, len(d.ChildFingerprints))
+		for _, fp := range d.ChildFingerprints {
+			shorts = append(shorts, short(fp))
+		}
+		s += " -> children " + strings.Join(shorts, ",")
+	}
+	return s
 }
 
 func writeInvariantStateHuman(w io.Writer, resp pipeline.InvariantStateResponse) {

@@ -187,6 +187,22 @@ Migration v34 adds `challenge_assessment_populations` (immutable; one row per
 population-assessed campaign) recording the discovery/assessment cluster-run
 ids and the requested policy inside the same transaction.
 
+Migration v36 (structural review S5, part A) adds `challenge_boundary_deltas`
+(immutable; one row per CONFIRMED challenge, written in the same campaign
+transaction): the **typed** boundary refinement the deterministic verifier
+derived, so subsequent policy consumes a typed object instead of
+reinterpreting a transcript. `kind` names what was observed —
+`counterexample-separation` (the claim predicate is the separating condition;
+the recorded counterexample members sit on its violating side),
+`contrast-collapse` (the predicate fails to discriminate outcome),
+`constructibility` (a supported synthetic violates it), `support-recount`
+(measured support + threshold), `split-partition` / `merge-union` (ordered
+derived-child predicate fingerprints) — and `condition` is the canonical,
+paraphrase-stable serialization of the predicate. Disposition stays on the
+challenge's persisted transitions; derived candidate ids stay on its
+derived-children rows. Unconfirmed/inert challenges derive no delta. The
+delta surfaces in `--json` as `challenges[].boundary_delta`.
+
 ## Provenance, determinism, offline CI
 
 Each campaign records one `provider_invocations` row (`role='challenge'`) with

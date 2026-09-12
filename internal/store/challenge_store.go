@@ -3,11 +3,24 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 
 	"github.com/instagrim-dev/newf/internal/domain"
 )
+
+// BoundaryDeltaRow is the persisted typed boundary refinement of one confirmed
+// challenge (v36/S5). Mirrors invariant.BoundaryDelta; ChildFingerprints
+// round-trips through a JSON array column.
+type BoundaryDeltaRow struct {
+	Kind                 string
+	PredicateFingerprint string
+	Condition            string
+	MeasuredSupport      int
+	SupportThreshold     int
+	ChildFingerprints    []string
+}
 
 // ChallengeEvidenceRow is one persisted evidence link backing a challenge.
 // Evidence points at REAL rows (clusters / signatures / snapshots); the
@@ -60,6 +73,9 @@ type ChallengeRecord struct {
 	Evidence       []ChallengeEvidenceRow
 	Synthetic      []SyntheticArtifactRow
 	Derived        *DerivedChildren
+	// Delta is the typed boundary refinement this challenge derived when
+	// confirmed (v36/S5); nil for unconfirmed/inert challenges.
+	Delta *BoundaryDeltaRow
 	// Transitions are the to_states this challenge drives, applied in order;
 	// from_state is read from the ledger at insert time and validated by the
 	// blueprint trigger.
@@ -183,6 +199,22 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
 INSERT INTO invariant_challenge_evidence(challenge_id, kind, cluster_id, signature_id, snapshot_id, detail, ordinal)
 VALUES(?, ?, ?, ?, ?, ?, ?)
 `, ch.ID, ev.Kind, nullable(ev.ClusterID), nullable(ev.SignatureID), nullable(ev.SnapshotID), ev.Detail, ev.Ordinal); err != nil {
+				return err
+			}
+		}
+		if ch.Delta != nil {
+			childFPs, merr := json.Marshal(ch.Delta.ChildFingerprints)
+			if merr != nil {
+				return merr
+			}
+			var measured, threshold any
+			if ch.Delta.Kind == "support-recount" {
+				measured, threshold = ch.Delta.MeasuredSupport, ch.Delta.SupportThreshold
+			}
+			if _, err := tx.ExecContext(ctx, `
+INSERT INTO challenge_boundary_deltas(challenge_id, kind, predicate_fingerprint, condition, measured_support, support_threshold, child_fingerprints, created_at)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+`, ch.ID, ch.Delta.Kind, ch.Delta.PredicateFingerprint, ch.Delta.Condition, measured, threshold, string(childFPs), ch.CreatedAt); err != nil {
 				return err
 			}
 		}
@@ -417,6 +449,27 @@ FROM invariant_challenges WHERE invariant_id = ? ORDER BY created_at, id
 		return nil, err
 	}
 	for i := range out {
+		var (
+			kind, fp, condition, childJSON string
+			measured, threshold            sql.NullInt64
+		)
+		derr := s.db.QueryRowContext(ctx, `
+SELECT kind, predicate_fingerprint, condition, measured_support, support_threshold, child_fingerprints
+FROM challenge_boundary_deltas WHERE challenge_id = ?
+`, out[i].ID).Scan(&kind, &fp, &condition, &measured, &threshold, &childJSON)
+		switch {
+		case derr == nil:
+			delta := &BoundaryDeltaRow{Kind: kind, PredicateFingerprint: fp, Condition: condition,
+				MeasuredSupport: int(measured.Int64), SupportThreshold: int(threshold.Int64)}
+			if err := json.Unmarshal([]byte(childJSON), &delta.ChildFingerprints); err != nil {
+				return nil, fmt.Errorf("challenge %s: corrupt child fingerprints: %w", out[i].ID, err)
+			}
+			out[i].Delta = delta
+		case errors.Is(derr, sql.ErrNoRows):
+			// unconfirmed/inert or pre-v36 challenge: no delta.
+		default:
+			return nil, derr
+		}
 		evRows, err := s.db.QueryContext(ctx, `
 SELECT kind, COALESCE(cluster_id,''), COALESCE(signature_id,''), COALESCE(snapshot_id,''), detail, ordinal
 FROM invariant_challenge_evidence WHERE challenge_id = ? ORDER BY ordinal

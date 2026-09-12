@@ -98,6 +98,13 @@ func TestVerifyKnownCounterexample(t *testing.T) {
 	if len(res.Evidence) != 1 || res.Evidence[0].ClusterID != "mcl_f3" || res.Evidence[0].SignatureID != "msig_f3" {
 		t.Fatalf("evidence must name the violating member: %+v", res.Evidence)
 	}
+	// v36/S5: a confirmed counterexample derives a typed boundary delta — the
+	// claim predicate is the separating condition, in canonical form.
+	if res.Delta == nil || res.Delta.Kind != DeltaCounterexampleSeparation ||
+		res.Delta.PredicateFingerprint != Fingerprint(chPredicate(chIDResidue)) ||
+		res.Delta.Condition != Condition(chPredicate(chIDResidue)) {
+		t.Fatalf("confirmed counterexample must carry a typed delta: %+v", res.Delta)
+	}
 	// A predicate every failure family satisfies has no known counterexample.
 	all := Predicate{Schema: PredicateSchemaV1, Root: Node{Op: OpAny, Children: []Node{
 		chPredicate(chIDResidue).Root, chPredicate(chIDSieve).Root,
@@ -422,5 +429,47 @@ func TestVerifyMergeRejectsCoverageGap(t *testing.T) {
 	res := VerifyMerge([]Predicate{chPredicate(chIDResidue), chPredicate(chIDBounds)}, chPredicate(chIDResidue), families, chVocab(t))
 	if res.Confirmed || !strings.Contains(res.Detail, "does not cover") {
 		t.Fatalf("expected coverage rejection, got %+v", res)
+	}
+}
+
+// TestBoundaryDeltasTyped pins v36/S5: every confirmed challenge derives a
+// typed BoundaryDelta with the fields its kind requires, and unconfirmed
+// results carry none. The delta is code-derived — subsequent policy consumes a
+// typed object, never a transcript.
+func TestBoundaryDeltasTyped(t *testing.T) {
+	families := chAtlas()
+
+	// support-recount: measured support + threshold are recorded.
+	recount := VerifyBiasCritique(chPredicate(chIDResidue), families, 5)
+	if !recount.Confirmed || recount.Delta == nil || recount.Delta.Kind != DeltaSupportRecount ||
+		recount.Delta.MeasuredSupport != 2 || recount.Delta.SupportThreshold != 5 {
+		t.Fatalf("recount delta must carry measured/threshold: %+v", recount.Delta)
+	}
+	// A negative recount (support holds) derives no delta.
+	if hold := VerifyBiasCritique(chPredicate(chIDResidue), families, 1); hold.Confirmed || hold.Delta != nil {
+		t.Fatalf("a completed-negative recount must carry no delta: %+v", hold)
+	}
+
+	// contrast-collapse: the success family preserving the predicate.
+	preserve := VerifySuccessPreserving(chPredicate(chIDResidue), families)
+	if !preserve.Confirmed || preserve.Delta == nil || preserve.Delta.Kind != DeltaContrastCollapse ||
+		preserve.Delta.Condition != Condition(chPredicate(chIDResidue)) {
+		t.Fatalf("success-preserving delta must carry the collapsed condition: %+v", preserve.Delta)
+	}
+
+	// split-partition: child fingerprints in proposal order.
+	parent := Predicate{Schema: PredicateSchemaV1, Root: Node{Op: OpAny, Children: []Node{
+		chPredicate(chIDResidue).Root, chPredicate(chIDSieve).Root,
+	}}}
+	children := []Predicate{chPredicate(chIDResidue), chPredicate(chIDSieve)}
+	split := VerifySplit(parent, children, families, chVocab(t))
+	if !split.Confirmed || split.Delta == nil || split.Delta.Kind != DeltaSplitPartition ||
+		len(split.Delta.ChildFingerprints) != 2 ||
+		split.Delta.ChildFingerprints[0] != Fingerprint(children[0]) ||
+		split.Delta.ChildFingerprints[1] != Fingerprint(children[1]) {
+		t.Fatalf("split delta must carry ordered child fingerprints: %+v", split.Delta)
+	}
+	if split.Delta.PredicateFingerprint != Fingerprint(parent) {
+		t.Fatalf("split delta must be measured against the parent claim: %+v", split.Delta)
 	}
 }

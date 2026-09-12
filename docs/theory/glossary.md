@@ -39,7 +39,7 @@ the code and database.
 | Geometry update | The change to shape-space caused by a landing point. | New `cluster build` after `evaluated_failures` re-entry; next `policy mutate`; next invariant revision |
 | `observed_regime` | The conditioning axis of a claim. | `failure_conditioned` / `success_conditioned` / `mixed` / `frontier_conditioned` |
 | `claim_role` | The interpretive standing of a shape claim, recorded separately from shape, regime, and status. | `regularity` (code-assigned only) / `obstruction` / `enabling_condition` / `boundary_hypothesis` |
-| `boundary_delta` | The minimal structural condition separating a counterexample (or split axis) from a claim's support population — a `Boundary` observed while challenging. | `ChallengeResult.boundary_delta` (+ `disposition ∈ survive\|weaken\|split\|falsify`, `derived_candidate_ids`) |
+| `boundary_delta` | The minimal structural condition separating a counterexample (or split axis) from a claim's support population — a `Boundary` observed while challenging. | `invariant.ChallengeResult.Delta` → persisted `challenge_boundary_deltas` row (v36): `kind ∈ counterexample-separation\|contrast-collapse\|constructibility\|support-recount\|split-partition\|merge-union` + canonical `condition`; disposition travels on the challenge's persisted transitions, derived candidate ids on its derived-children rows |
 | `Δ(F, S)` | The regime boundary hypothesis: the structural difference between a failure-conditioned shape and a success-conditioned shape. The most actionable derived object. | `claim_role = boundary_hypothesis`; the target a `StructuralDelta` aims to cross |
 
 ## Terms that are deliberately *not* synonyms

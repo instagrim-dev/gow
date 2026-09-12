@@ -95,12 +95,72 @@ const (
 
 // ChallengeResult is the deterministic verdict on one proposed challenge. Outcome
 // is the typed disposition (G2); Confirmed is retained as the boolean shorthand
-// for Outcome == OutcomeConfirmed.
+// for Outcome == OutcomeConfirmed. Delta is the typed boundary refinement a
+// CONFIRMED challenge derives where code-derivable; nil otherwise.
 type ChallengeResult struct {
 	Confirmed bool
 	Outcome   CheckOutcome
 	Evidence  []ChallengeEvidence
 	Detail    string
+	Delta     *BoundaryDelta
+}
+
+// Boundary-delta kinds: which structural refinement a confirmed challenge
+// observed. Each kind fixes which BoundaryDelta fields are meaningful.
+const (
+	// DeltaCounterexampleSeparation: the claim predicate itself is the
+	// separating condition; the recorded counterexample members sit on its
+	// violating side (known-counterexample confirmed).
+	DeltaCounterexampleSeparation = "counterexample-separation"
+	// DeltaContrastCollapse: the predicate fails to separate outcomes — one or
+	// more success-side families preserve it (success-preserving confirmed).
+	DeltaContrastCollapse = "contrast-collapse"
+	// DeltaConstructibility: a supported synthetic construction violates the
+	// predicate, so the regularity is not conserved by necessity.
+	DeltaConstructibility = "constructibility"
+	// DeltaSupportRecount: the deterministic recount moved the claim's measured
+	// support below its admission threshold (bias-critique confirmed).
+	DeltaSupportRecount = "support-recount"
+	// DeltaSplitPartition: the claim is >=2 invariants masquerading as one; the
+	// children partition its support (split confirmed).
+	DeltaSplitPartition = "split-partition"
+	// DeltaMergeUnion: several claims merge into one child covering the union
+	// of their support without discrimination loss (merge confirmed).
+	DeltaMergeUnion = "merge-union"
+)
+
+// BoundaryDelta is the typed structural refinement a confirmed challenge
+// derives: the minimal condition separating the observed refuter/refinement
+// from the claim's support population (glossary `boundary_delta`). It is
+// code-derived at confirmation time — never provider prose — so subsequent
+// policy can consume it without reinterpreting a transcript. The disposition
+// lives on the challenge's persisted transitions and any derived candidate ids
+// on its derived-children rows; the delta carries only the boundary itself.
+type BoundaryDelta struct {
+	// Kind is one of the Delta* constants.
+	Kind string
+	// PredicateFingerprint is the semantic identity of the claim predicate the
+	// delta is measured against.
+	PredicateFingerprint string
+	// Condition is the canonical serialization of the separating condition (the
+	// canonicalized predicate AST — deterministic, paraphrase-stable).
+	Condition string
+	// MeasuredSupport / SupportThreshold are meaningful only for
+	// support-recount deltas (both zero otherwise is impossible: a recount
+	// confirms only when measured < threshold and thresholds are >= 1).
+	MeasuredSupport  int
+	SupportThreshold int
+	// ChildFingerprints are the derived child predicates' fingerprints for
+	// split-partition (>=2) and merge-union (exactly 1) deltas, in proposal
+	// order.
+	ChildFingerprints []string
+}
+
+// Condition returns the canonical, paraphrase-stable serialization of the
+// predicate — the same rendering Fingerprint hashes. It is the typed textual
+// form a BoundaryDelta records as its separating condition.
+func Condition(p Predicate) string {
+	return serializeNode(Canonicalize(p).Root)
 }
 
 // unconfirmed builds an INCONCLUSIVE inert result (KTD-3): persisted for audit,
@@ -213,7 +273,12 @@ func VerifyKnownCounterexample(pred Predicate, families []Family, kind Associati
 		return r
 	}
 	return ChallengeResult{Confirmed: true, Outcome: OutcomeConfirmed, Evidence: ev,
-		Detail: fmt.Sprintf("%d known counterexample member(s) refute the universal claim", len(ev))}
+		Detail: fmt.Sprintf("%d known counterexample member(s) refute the universal claim", len(ev)),
+		Delta: &BoundaryDelta{
+			Kind:                 DeltaCounterexampleSeparation,
+			PredicateFingerprint: Fingerprint(pred),
+			Condition:            Condition(pred),
+		}}
 }
 
 // VerifySyntheticCounterexample evaluates a provider-authored CONSTRUCTED
@@ -242,7 +307,12 @@ func VerifySyntheticCounterexample(pred Predicate, synthetic canon.MechanismSign
 	if !hasSupportedClaim(synthetic) {
 		return unconfirmed("synthetic construction violates only via unsupported model-asserted structure; a proposal, not a demonstrated admissible failed approach (G3)")
 	}
-	return ChallengeResult{Confirmed: true, Outcome: OutcomeConfirmed, Detail: "synthetic construction violates the predicate via supported structure"}
+	return ChallengeResult{Confirmed: true, Outcome: OutcomeConfirmed, Detail: "synthetic construction violates the predicate via supported structure",
+		Delta: &BoundaryDelta{
+			Kind:                 DeltaConstructibility,
+			PredicateFingerprint: Fingerprint(pred),
+			Condition:            Condition(pred),
+		}}
 }
 
 // hasSupportedClaim reports whether any resolved set-field claim in the
@@ -319,7 +389,12 @@ func VerifySuccessPreserving(pred Predicate, families []Family) ChallengeResult 
 	}
 	sort.Slice(ev, func(i, j int) bool { return ev[i].ClusterID < ev[j].ClusterID })
 	return ChallengeResult{Confirmed: true, Outcome: OutcomeConfirmed, Evidence: ev,
-		Detail: fmt.Sprintf("%d success-preserving family(ies)", len(ev))}
+		Detail: fmt.Sprintf("%d success-preserving family(ies)", len(ev)),
+		Delta: &BoundaryDelta{
+			Kind:                 DeltaContrastCollapse,
+			PredicateFingerprint: Fingerprint(pred),
+			Condition:            Condition(pred),
+		}}
 }
 
 // VerifyBiasCritique recomputes the invariant's distinct-family support from
@@ -334,7 +409,14 @@ func VerifyBiasCritique(pred Predicate, families []Family, minSupport int) Chall
 		r := completedNegative("support holds under recomputation: "+detail, ev...)
 		return r
 	}
-	return ChallengeResult{Confirmed: true, Outcome: OutcomeConfirmed, Evidence: ev, Detail: detail}
+	return ChallengeResult{Confirmed: true, Outcome: OutcomeConfirmed, Evidence: ev, Detail: detail,
+		Delta: &BoundaryDelta{
+			Kind:                 DeltaSupportRecount,
+			PredicateFingerprint: Fingerprint(pred),
+			Condition:            Condition(pred),
+			MeasuredSupport:      len(support),
+			SupportThreshold:     minSupport,
+		}}
 }
 
 // VerifySplit confirms that the parent predicate is two-or-more invariants
@@ -400,8 +482,18 @@ func VerifySplit(parent Predicate, children []Predicate, families []Family, voca
 			})
 		}
 	}
+	childFPs := make([]string, 0, len(children))
+	for _, child := range children {
+		childFPs = append(childFPs, Fingerprint(child))
+	}
 	return ChallengeResult{Confirmed: true, Outcome: OutcomeConfirmed, Evidence: ev,
-		Detail: fmt.Sprintf("split grounds %d children to disjoint support", len(children))}
+		Detail: fmt.Sprintf("split grounds %d children to disjoint support", len(children)),
+		Delta: &BoundaryDelta{
+			Kind:                 DeltaSplitPartition,
+			PredicateFingerprint: parentFP,
+			Condition:            Condition(parent),
+			ChildFingerprints:    childFPs,
+		}}
 }
 
 // VerifyMerge confirms that several parent predicates merge into one child at
@@ -444,7 +536,16 @@ func VerifyMerge(parents []Predicate, child Predicate, families []Family, vocab 
 			Detail: "merged child grounds to family " + fam})
 	}
 	return ChallengeResult{Confirmed: true, Outcome: OutcomeConfirmed, Evidence: ev,
-		Detail: fmt.Sprintf("merge covers %d united support families without discrimination loss", len(union))}
+		Detail: fmt.Sprintf("merge covers %d united support families without discrimination loss", len(union)),
+		Delta: &BoundaryDelta{
+			// The delta is measured against the ACTING parent (parents[0] by the
+			// pipeline's contract); the merge partners' identities travel on the
+			// derived-children lineage rows.
+			Kind:                 DeltaMergeUnion,
+			PredicateFingerprint: Fingerprint(parents[0]),
+			Condition:            Condition(parents[0]),
+			ChildFingerprints:    []string{Fingerprint(child)},
+		}}
 }
 
 // supportingFamilies returns the DISTINCT failure-side families whose eligible

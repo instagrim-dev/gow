@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 35
+const currentSchemaVersion = 36
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -1072,6 +1072,20 @@ END;
 		// operator attestation (both rows persist, showing supersession), but
 		// never admitted twice.
 		apply: migrateV35EvidenceAdmissions,
+	},
+	{
+		version: 36,
+		// v36 (2026-09-12 structural review, finding S5): typed boundary
+		// deltas. The glossary mapped `boundary_delta` to a ChallengeResult
+		// field that did not exist — a refinement described in a transcript
+		// was not a typed object subsequent policy could consume. Each
+		// CONFIRMED challenge now derives, in code, the minimal separating
+		// condition it observed (counterexample separation, contrast
+		// collapse, constructibility, support recount, split partition,
+		// merge union) and persists it here, one row per challenge,
+		// immutable. Disposition stays on the challenge's transitions and
+		// derived candidate ids on its derived-children rows.
+		apply: migrateV36ChallengeBoundaryDeltas,
 	},
 }
 
@@ -3604,5 +3618,48 @@ END;
 
 func migrateV35EvidenceAdmissions(ctx context.Context, tx *sql.Tx) error {
 	_, err := tx.ExecContext(ctx, evidenceAdmissionsSQL)
+	return err
+}
+
+// challengeBoundaryDeltasSQL is the additive DDL for migration v36 (structural
+// review finding S5, part A): the typed boundary refinement a confirmed
+// challenge derived. One row per confirmed challenge with a code-derivable
+// delta; unconfirmed/inert challenges have none. `condition` is the canonical
+// (paraphrase-stable) serialization of the separating predicate;
+// `child_fingerprints` is a JSON array of derived child predicate fingerprints
+// (split: >=2, merge: exactly 1, else empty). measured_support /
+// support_threshold are set only for support-recount deltas. Rows are
+// immutable.
+const challengeBoundaryDeltasSQL = `
+CREATE TABLE IF NOT EXISTS challenge_boundary_deltas (
+  challenge_id TEXT PRIMARY KEY REFERENCES invariant_challenges(id),
+  kind TEXT NOT NULL CHECK (kind IN ('counterexample-separation','contrast-collapse','constructibility','support-recount','split-partition','merge-union')),
+  predicate_fingerprint TEXT NOT NULL CHECK (length(predicate_fingerprint) > 0),
+  condition TEXT NOT NULL CHECK (length(condition) > 0),
+  measured_support INTEGER,
+  support_threshold INTEGER,
+  child_fingerprints TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL,
+  CHECK (
+    (kind = 'support-recount' AND measured_support IS NOT NULL AND support_threshold IS NOT NULL)
+    OR (kind != 'support-recount' AND measured_support IS NULL AND support_threshold IS NULL)
+  )
+);
+
+CREATE TRIGGER IF NOT EXISTS challenge_boundary_deltas_immutable_update
+BEFORE UPDATE ON challenge_boundary_deltas
+BEGIN
+  SELECT RAISE(ABORT, 'challenge boundary deltas are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS challenge_boundary_deltas_immutable_delete
+BEFORE DELETE ON challenge_boundary_deltas
+BEGIN
+  SELECT RAISE(ABORT, 'challenge boundary deltas are immutable');
+END;
+`
+
+func migrateV36ChallengeBoundaryDeltas(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, challengeBoundaryDeltasSQL)
 	return err
 }
