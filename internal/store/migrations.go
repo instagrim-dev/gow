@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 33
+const currentSchemaVersion = 34
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -1039,6 +1039,19 @@ END;
 		// signature-build time — an interpretation can never carry or acquire
 		// explicit source-backed status.
 		apply: migrateV33InterpretationClaims,
+	},
+	{
+		version: 34,
+		// v34 (2026-09-12 structural review, finding S1): a challenge campaign
+		// must identify BOTH the discovery population its claim was mined over
+		// and the assessment population its evidence searches actually ran
+		// against. Before this, challengeOne froze every re-challenge to the
+		// original cluster run, so newly ingested and reclustered evidence
+		// never entered the known-counterexample check while frontier
+		// generation advanced on the latest map. The table records the two
+		// cluster-run identities plus the requested population policy per
+		// campaign (run_id, invariant_id); rows are immutable.
+		apply: migrateV34ChallengeAssessmentPopulations,
 	},
 }
 
@@ -3456,5 +3469,47 @@ END;
 
 func migrateV33InterpretationClaims(ctx context.Context, tx *sql.Tx) error {
 	_, err := tx.ExecContext(ctx, interpretationClaimsSQL)
+	return err
+}
+
+// challengeAssessmentPopulationsSQL is the additive DDL for migration v34.
+// One row per challenge campaign (run_id, invariant_id). The DISCOVERY run is
+// the cluster run the candidate's mining revision was derived over (claim
+// scope); the ASSESSMENT run is the population the campaign's evidence
+// searches (known-counterexample, success-preserving) actually ran against.
+// Claim-scope attacks (bias-critique recount, split, merge, synthetic
+// grounding) always run over the discovery population, so a support recount
+// never conflates two populations. population_policy records what the
+// operator requested; equal run ids mean no newer compatible population
+// existed (or replay was requested).
+const challengeAssessmentPopulationsSQL = `
+CREATE TABLE IF NOT EXISTS challenge_assessment_populations (
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  invariant_id TEXT NOT NULL REFERENCES candidate_invariants(id),
+  discovery_cluster_run_id TEXT NOT NULL REFERENCES cluster_runs(id),
+  assessment_cluster_run_id TEXT NOT NULL REFERENCES cluster_runs(id),
+  population_policy TEXT NOT NULL CHECK (population_policy IN ('discovery', 'latest')),
+  created_at TEXT NOT NULL,
+  PRIMARY KEY(run_id, invariant_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_challenge_assessment_populations_invariant
+  ON challenge_assessment_populations(invariant_id);
+
+CREATE TRIGGER IF NOT EXISTS challenge_assessment_populations_immutable_update
+BEFORE UPDATE ON challenge_assessment_populations
+BEGIN
+  SELECT RAISE(ABORT, 'challenge assessment populations are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS challenge_assessment_populations_immutable_delete
+BEFORE DELETE ON challenge_assessment_populations
+BEGIN
+  SELECT RAISE(ABORT, 'challenge assessment populations are immutable');
+END;
+`
+
+func migrateV34ChallengeAssessmentPopulations(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, challengeAssessmentPopulationsSQL)
 	return err
 }

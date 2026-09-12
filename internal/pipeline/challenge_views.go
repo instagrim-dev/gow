@@ -12,12 +12,22 @@ import (
 // --- inputs ---
 
 // ChallengeInput attacks one candidate invariant (or, with All, every
-// challengeable candidate for the problem).
+// challengeable candidate for the problem). Population selects the evidence
+// the campaign's searches run against (v34/S1):
+//   - "latest" (default): the newest cluster run compatible with the claim's
+//     schema/vocabulary — newly ingested, reclustered evidence enters the
+//     known-counterexample and success-preserving checks;
+//   - "discovery": historical replay against the population the claim was
+//     mined over.
+//
+// Claim-scope attacks (bias-critique recount, split, merge, synthetic
+// grounding) always run over the discovery population regardless of policy.
 type ChallengeInput struct {
 	DBPath      string
 	InvariantID string
 	ProblemID   string
 	All         bool
+	Population  string
 	JSONOutput  bool
 }
 
@@ -70,13 +80,19 @@ type ChallengeView struct {
 	Transitions    []string                `json:"transitions,omitempty"`
 }
 
-// InvariantChallengeReport is the campaign result for one candidate.
+// InvariantChallengeReport is the campaign result for one candidate. The
+// population fields (v34/S1) identify the claim's discovery population, the
+// assessment population the campaign's evidence searches ran against, and the
+// requested policy; they are empty only for pre-v34 history.
 type InvariantChallengeReport struct {
-	InvariantID string          `json:"invariant_id"`
-	StateBefore string          `json:"state_before"`
-	StateAfter  string          `json:"state_after"`
-	Challenges  []ChallengeView `json:"challenges"`
-	RunID       string          `json:"run_id"`
+	InvariantID            string          `json:"invariant_id"`
+	StateBefore            string          `json:"state_before"`
+	StateAfter             string          `json:"state_after"`
+	Challenges             []ChallengeView `json:"challenges"`
+	RunID                  string          `json:"run_id"`
+	PopulationPolicy       string          `json:"population_policy,omitempty"`
+	DiscoveryClusterRunID  string          `json:"discovery_cluster_run_id,omitempty"`
+	AssessmentClusterRunID string          `json:"assessment_cluster_run_id,omitempty"`
 }
 
 // ChallengeCommandResponse is returned by `newf challenge`.

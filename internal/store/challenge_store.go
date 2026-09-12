@@ -83,6 +83,26 @@ type ChallengeCampaignRecord struct {
 	Invocation  InvariantProviderInvocation
 	InvariantID string
 	Challenges  []ChallengeRecord
+	// Population identity (v34/S1): the discovery population the candidate's
+	// claim was mined over vs the assessment population this campaign's
+	// evidence searches ran against, plus the requested policy. All three are
+	// set together for population-assessed campaigns and all empty for
+	// attestation campaigns (`invariant establish`), which search no
+	// population.
+	DiscoveryClusterRunID  string
+	AssessmentClusterRunID string
+	PopulationPolicy       string // 'discovery'|'latest'
+}
+
+// ChallengeAssessmentPopulationRow is the persisted population identity of one
+// challenge campaign (v34/S1).
+type ChallengeAssessmentPopulationRow struct {
+	RunID                  string
+	InvariantID            string
+	DiscoveryClusterRunID  string
+	AssessmentClusterRunID string
+	PopulationPolicy       string
+	CreatedAt              string
 }
 
 // InvariantStateRow is one row of the invariant_current_state read surface.
@@ -121,6 +141,31 @@ INSERT INTO provider_invocations(id, run_id, role, provider_name, provider_versi
 VALUES(?, ?, 'challenge', ?, ?, ?, ?, ?, ?, ?, ?)
 `, inv.ID, inv.RunID, inv.ProviderName, inv.ProviderVersion, inv.ModelName, inv.SchemaVersion, inv.RequestHash, inv.RequestPayload, inv.ResponsePayload, inv.CreatedAt); err != nil {
 		return err
+	}
+
+	// v34/S1: record the campaign's population identity in the SAME
+	// transaction as its challenges. Either all three fields are set
+	// (population-assessed campaign) or none is (operator attestation); a
+	// partial tuple is a caller bug, refused rather than guessed at.
+	popFields := 0
+	for _, f := range []string{campaign.DiscoveryClusterRunID, campaign.AssessmentClusterRunID, campaign.PopulationPolicy} {
+		if f != "" {
+			popFields++
+		}
+	}
+	switch popFields {
+	case 0:
+		// attestation campaign: no population searched, no row.
+	case 3:
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO challenge_assessment_populations(run_id, invariant_id, discovery_cluster_run_id, assessment_cluster_run_id, population_policy, created_at)
+VALUES(?, ?, ?, ?, ?, ?)
+`, campaign.RunID, campaign.InvariantID, campaign.DiscoveryClusterRunID, campaign.AssessmentClusterRunID, campaign.PopulationPolicy, inv.CreatedAt); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("challenge campaign population identity is partial: discovery=%q assessment=%q policy=%q (set all three or none)",
+			campaign.DiscoveryClusterRunID, campaign.AssessmentClusterRunID, campaign.PopulationPolicy)
 	}
 
 	for _, ch := range campaign.Challenges {
@@ -263,6 +308,30 @@ func currentStateTx(ctx context.Context, tx *sql.Tx, invariantID string) (string
 		return "", fmt.Errorf("%w: candidate invariant %s", ErrNotFound, invariantID)
 	}
 	return state, err
+}
+
+// GetChallengeAssessmentPopulation loads the population identity of one
+// challenge campaign (v34/S1). Attestation campaigns have no row; found=false
+// distinguishes "no population searched" from an error.
+func (s *Store) GetChallengeAssessmentPopulation(ctx context.Context, runID, invariantID string) (ChallengeAssessmentPopulationRow, bool, error) {
+	if err := domain.ValidateRunID(runID); err != nil {
+		return ChallengeAssessmentPopulationRow{}, false, err
+	}
+	if err := domain.ValidateCandidateInvariantID(invariantID); err != nil {
+		return ChallengeAssessmentPopulationRow{}, false, err
+	}
+	row := s.db.QueryRowContext(ctx, `
+SELECT run_id, invariant_id, discovery_cluster_run_id, assessment_cluster_run_id, population_policy, created_at
+FROM challenge_assessment_populations WHERE run_id = ? AND invariant_id = ?
+`, runID, invariantID)
+	var out ChallengeAssessmentPopulationRow
+	if err := row.Scan(&out.RunID, &out.InvariantID, &out.DiscoveryClusterRunID, &out.AssessmentClusterRunID, &out.PopulationPolicy, &out.CreatedAt); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ChallengeAssessmentPopulationRow{}, false, nil
+		}
+		return ChallengeAssessmentPopulationRow{}, false, err
+	}
+	return out, true, nil
 }
 
 // GetInvariantState returns the current lifecycle state of one candidate.

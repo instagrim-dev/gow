@@ -73,6 +73,10 @@ type problemStore interface {
 	GetClusterRun(context.Context, string) (store.ClusterRunRecord, error)
 	ListClusterRuns(context.Context, string) ([]store.ClusterRunRecord, error)
 	LatestClusterRun(context.Context, string) (string, bool, error)
+	// LatestClusterRunForVersions selects the challenge assessment population
+	// (v34/S1): the newest cluster run whose signature schema and vocabulary
+	// match the claim's discovery run, so widened evidence stays comparable.
+	LatestClusterRunForVersions(context.Context, string, string, string) (string, bool, error)
 	PersistFailureSpace(context.Context, store.FailureSpaceRecord) (store.PersistFailureSpaceResult, error)
 	GetFailureSpace(context.Context, string) (store.FailureSpaceRecord, error)
 	LatestFailureSpace(context.Context, string) (store.FailureSpaceRecord, bool, error)

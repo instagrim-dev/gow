@@ -351,6 +351,10 @@ func (f *fakeProblemStore) LatestClusterRun(context.Context, string) (string, bo
 	return "", false, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) LatestClusterRunForVersions(context.Context, string, string, string) (string, bool, error) {
+	return "", false, errors.New("unexpected call")
+}
+
 func (f *fakeProblemStore) PersistFailureSpace(context.Context, store.FailureSpaceRecord) (store.PersistFailureSpaceResult, error) {
 	return store.PersistFailureSpaceResult{}, errors.New("unexpected call")
 }

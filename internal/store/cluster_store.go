@@ -346,3 +346,28 @@ SELECT id FROM cluster_runs WHERE problem_id = ? ORDER BY created_at DESC, id DE
 	}
 	return id, true, nil
 }
+
+// LatestClusterRunForVersions returns the most recent cluster run id for a
+// problem under an EXACT schema/vocabulary tuple. This is the assessment-
+// population selector for challenge campaigns (v34/S1): a re-challenge may
+// only widen its evidence to a population whose signatures are comparable with
+// the claim's predicate — same signature schema, same vocabulary. A newer run
+// under a different vocabulary is not silently substituted.
+func (s *Store) LatestClusterRunForVersions(ctx context.Context, problemID, schemaVersion, vocabularyVersion string) (string, bool, error) {
+	if err := domain.ValidateProblemID(problemID); err != nil {
+		return "", false, err
+	}
+	row := s.db.QueryRowContext(ctx, `
+SELECT id FROM cluster_runs
+WHERE problem_id = ? AND schema_version = ? AND vocabulary_version = ?
+ORDER BY created_at DESC, id DESC LIMIT 1
+`, problemID, schemaVersion, vocabularyVersion)
+	var id string
+	if err := row.Scan(&id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	return id, true, nil
+}

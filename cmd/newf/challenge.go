@@ -14,8 +14,9 @@ import (
 // newChallengeCommand hosts the attack verb: `newf challenge`.
 func newChallengeCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cobra.Command {
 	var (
-		problemID string
-		all       bool
+		problemID  string
+		all        bool
+		population string
 	)
 	cmd := &cobra.Command{
 		Use:   "challenge [invariant-id]",
@@ -27,7 +28,14 @@ func newChallengeCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions)
 			"weakens; a campaign with at least one completed applicable attack that does\n" +
 			"not land leaves the invariant surviving (an all-inconclusive campaign does\n" +
 			"not). Unconfirmed claims are recorded inert. `operator_attested` is not\n" +
-			"reachable here (see `invariant establish`).",
+			"reachable here (see `invariant establish`).\n\n" +
+			"--population selects the evidence the campaign's searches run against:\n" +
+			"`latest` (default) assesses under the newest schema/vocabulary-compatible\n" +
+			"cluster run, so newly ingested evidence enters the counterexample check;\n" +
+			"`discovery` replays the population the claim was mined over. A violator\n" +
+			"found only outside the discovery population WEAKENS (bounds the claim's\n" +
+			"generalization) rather than falsifying the historical claim. Support\n" +
+			"recounts, splits, and merges always run over the discovery population.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var id string
@@ -42,6 +50,7 @@ func newChallengeCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions)
 				InvariantID: id,
 				ProblemID:   problemID,
 				All:         all,
+				Population:  population,
 				JSONOutput:  opts.jsonOutput,
 			})
 			if err != nil {
@@ -56,6 +65,7 @@ func newChallengeCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions)
 	}
 	cmd.Flags().StringVar(&problemID, "problem", "", "Problem ID (with --all)")
 	cmd.Flags().BoolVar(&all, "all", false, "Challenge every challengeable candidate for the problem")
+	cmd.Flags().StringVar(&population, "population", pipeline.PopulationLatest, "Assessment population: latest (newest compatible cluster run) or discovery (historical replay)")
 	return cmd
 }
 
@@ -131,6 +141,13 @@ func newInvariantEstablishCommand(stdout io.Writer, app *pipeline.App, opts *roo
 func writeChallengeReportsHuman(w io.Writer, reports []pipeline.InvariantChallengeReport) {
 	for _, r := range reports {
 		fmt.Fprintf(w, "invariant %s: %s -> %s (run %s)\n", r.InvariantID, r.StateBefore, r.StateAfter, r.RunID)
+		if r.PopulationPolicy != "" {
+			if r.AssessmentClusterRunID == r.DiscoveryClusterRunID {
+				fmt.Fprintf(w, "  population: %s (assessed against discovery run %s)\n", r.PopulationPolicy, r.DiscoveryClusterRunID)
+			} else {
+				fmt.Fprintf(w, "  population: %s (discovery %s, assessed against %s)\n", r.PopulationPolicy, r.DiscoveryClusterRunID, r.AssessmentClusterRunID)
+			}
+		}
 		tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 		fmt.Fprintln(tw, "  TYPE\tRESULT\tTRANSITIONS\tEVIDENCE\tDETAIL")
 		for _, ch := range r.Challenges {

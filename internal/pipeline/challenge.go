@@ -32,11 +32,28 @@ var challengeableStates = map[string]bool{
 	"operator_attested": true,
 }
 
+// Challenge population policies (v34/S1). `latest` assesses the claim against
+// the newest schema/vocabulary-compatible cluster run; `discovery` replays the
+// population the claim was mined over.
+const (
+	PopulationLatest    = "latest"
+	PopulationDiscovery = "discovery"
+)
+
 // ChallengeInvariants runs a challenge campaign: one candidate (InvariantID)
 // or every challengeable candidate for the problem (All). Each candidate's
 // campaign is its own run (`running` -> `completed`/`failed`); challenge order
 // and candidate order are deterministic (KTD-4).
 func (a *App) ChallengeInvariants(ctx context.Context, input ChallengeInput) (ChallengeCommandResponse, error) {
+	population := input.Population
+	switch population {
+	case "":
+		population = PopulationLatest
+	case PopulationLatest, PopulationDiscovery:
+	default:
+		return ChallengeCommandResponse{}, fmt.Errorf("unknown population policy %q (want %q or %q)", input.Population, PopulationLatest, PopulationDiscovery)
+	}
+
 	dbPath, repoStore, err := a.openStoreFn(ctx, input.DBPath)
 	if err != nil {
 		return ChallengeCommandResponse{}, err
@@ -63,7 +80,7 @@ func (a *App) ChallengeInvariants(ctx context.Context, input ChallengeInput) (Ch
 
 	resp := ChallengeCommandResponse{OK: true, Command: "challenge", Store: dbPath}
 	for _, id := range targets {
-		report, cerr := a.challengeOne(ctx, repoStore, id)
+		report, cerr := a.challengeOne(ctx, repoStore, id, population)
 		if cerr != nil {
 			return ChallengeCommandResponse{}, cerr
 		}
@@ -72,11 +89,40 @@ func (a *App) ChallengeInvariants(ctx context.Context, input ChallengeInput) (Ch
 	return resp, nil
 }
 
+// challengeSubstrate is the rehydrated evidence a campaign runs over (v34/S1).
+// It carries TWO populations with distinct roles:
+//   - discovery: the cluster run the candidate's mining revision was derived
+//     over. Claim-scope attacks (bias-critique support recount, split, merge,
+//     synthetic grounding) run here, because they re-examine the claim's own
+//     sample — recounting support over a different population would conflate
+//     two claims.
+//   - assessment: the population the evidence searches (known-counterexample,
+//     success-preserving) run against. Under the `latest` policy this is the
+//     newest schema/vocabulary-compatible cluster run, so newly ingested and
+//     reclustered evidence actually enters the check; under `discovery` it is
+//     the discovery run (historical replay).
+//
+// discoverySignatures indexes the discovery population's member signature ids
+// so a confirmed counterexample can be classified in-scope (falsifies the
+// historical claim) vs out-of-scope (bounds its generalization; see
+// verifyProposal).
+type challengeSubstrate struct {
+	revision            store.InvariantRevisionRecord
+	pred                invariant.Predicate
+	discoveryFamilies   []invariant.Family
+	assessmentFamilies  []invariant.Family
+	discoverySignatures map[string]bool
+	vocab               *canon.Vocabulary
+	populationPolicy    string
+	discoveryRunID      string
+	assessmentRunID     string
+}
+
 // challengeOne runs one candidate's campaign: rehydrate the substrate, ask the
 // challenger for proposed attacks, verify each deterministically (code owns
 // confirmation; an unconfirmable claim is inert, KTD-3), decide the campaign
 // verdict, and persist everything atomically.
-func (a *App) challengeOne(ctx context.Context, repoStore problemStore, invariantID string) (InvariantChallengeReport, error) {
+func (a *App) challengeOne(ctx context.Context, repoStore problemStore, invariantID, population string) (InvariantChallengeReport, error) {
 	before, err := repoStore.GetInvariantState(ctx, invariantID)
 	if err != nil {
 		return InvariantChallengeReport{}, err
@@ -118,7 +164,7 @@ func (a *App) challengeOne(ctx context.Context, repoStore problemStore, invarian
 	if err != nil {
 		return InvariantChallengeReport{}, err
 	}
-	families, err := familiesForFailureSpace(ctx, repoStore, clusterRun)
+	discoveryFamilies, err := familiesForFailureSpace(ctx, repoStore, clusterRun)
 	if err != nil {
 		return InvariantChallengeReport{}, err
 	}
@@ -127,13 +173,59 @@ func (a *App) challengeOne(ctx context.Context, repoStore problemStore, invarian
 		return InvariantChallengeReport{}, err
 	}
 
+	// v34/S1: resolve the ASSESSMENT population. Under `latest`, the newest
+	// cluster run with the SAME schema/vocabulary as the discovery run — new
+	// evidence enters the check only when it is predicate-comparable. When no
+	// newer compatible run exists the assessment run IS the discovery run;
+	// the recorded policy stays `latest` and the equal run ids say so.
+	assessmentRun := clusterRun
+	if population == PopulationLatest {
+		latestID, found, lerr := repoStore.LatestClusterRunForVersions(ctx, revision.ProblemID, clusterRun.SchemaVersion, clusterRun.VocabularyVersion)
+		if lerr != nil {
+			return InvariantChallengeReport{}, lerr
+		}
+		if found && latestID != clusterRun.ID {
+			assessmentRun, err = repoStore.GetClusterRun(ctx, latestID)
+			if err != nil {
+				return InvariantChallengeReport{}, err
+			}
+		}
+	}
+	assessmentFamilies := discoveryFamilies
+	if assessmentRun.ID != clusterRun.ID {
+		assessmentFamilies, err = familiesForFailureSpace(ctx, repoStore, assessmentRun)
+		if err != nil {
+			return InvariantChallengeReport{}, err
+		}
+	}
+	discoverySignatures := map[string]bool{}
+	for _, fam := range discoveryFamilies {
+		for _, m := range fam.Members {
+			discoverySignatures[m.SignatureID] = true
+		}
+	}
+	sub := challengeSubstrate{
+		revision:            revision,
+		pred:                pred,
+		discoveryFamilies:   discoveryFamilies,
+		assessmentFamilies:  assessmentFamilies,
+		discoverySignatures: discoverySignatures,
+		vocab:               vocab,
+		populationPolicy:    population,
+		discoveryRunID:      clusterRun.ID,
+		assessmentRunID:     assessmentRun.ID,
+	}
+
+	// The challenger sees the ASSESSMENT population — the evidence currently
+	// in view. Verification routes each attack to the population its claim is
+	// about (see verifyProposal).
 	req := provider.ChallengeRequest{
 		ProblemID:            revision.ProblemID,
 		InvariantID:          invariantID,
 		PredicateJSON:        candidate.PredicateJSON,
 		PredicateFingerprint: candidate.PredicateFingerprint,
 		MinSupport:           revision.MinSupport,
-		Families:             miningRequestForFamilies(revision.ProblemID, fs.ID, revision.MinSupport, families).Families,
+		Families:             miningRequestForFamilies(revision.ProblemID, fs.ID, revision.MinSupport, assessmentFamilies).Families,
 		SiblingFingerprints:  siblings,
 	}
 
@@ -163,7 +255,7 @@ func (a *App) challengeOne(ctx context.Context, repoStore problemStore, invarian
 		return InvariantChallengeReport{}, err
 	}
 
-	campaign, err := a.buildCampaign(ctx, repoStore, revision, invariantID, run.ID, pred, families, vocab, provResp, now)
+	campaign, err := a.buildCampaign(ctx, repoStore, sub, invariantID, run.ID, provResp, now)
 	if err != nil {
 		a.failRun(ctx, repoStore, run.ID, err)
 		return InvariantChallengeReport{}, err
@@ -181,10 +273,13 @@ func (a *App) challengeOne(ctx context.Context, repoStore problemStore, invarian
 		return InvariantChallengeReport{}, err
 	}
 	report := InvariantChallengeReport{
-		InvariantID: invariantID,
-		StateBefore: before.State,
-		StateAfter:  after.State,
-		RunID:       run.ID,
+		InvariantID:            invariantID,
+		StateBefore:            before.State,
+		StateAfter:             after.State,
+		RunID:                  run.ID,
+		PopulationPolicy:       sub.populationPolicy,
+		DiscoveryClusterRunID:  sub.discoveryRunID,
+		AssessmentClusterRunID: sub.assessmentRunID,
 	}
 	for _, ch := range campaign.Challenges {
 		report.Challenges = append(report.Challenges, challengeView(ch))
@@ -203,11 +298,18 @@ func (a *App) challengeOne(ctx context.Context, repoStore problemStore, invarian
 // inadmissible/inconclusive attempts (e.g. a lone synthetic with no
 // construction) drives NO closing transition — the invariant stays in its prior
 // state, because no negative search actually completed.
-func (a *App) buildCampaign(ctx context.Context, repoStore problemStore, revision store.InvariantRevisionRecord, invariantID, runID string, pred invariant.Predicate, families []invariant.Family, vocab *canon.Vocabulary, provResp provider.ChallengeResponse, now time.Time) (store.ChallengeCampaignRecord, error) {
+func (a *App) buildCampaign(ctx context.Context, repoStore problemStore, sub challengeSubstrate, invariantID, runID string, provResp provider.ChallengeResponse, now time.Time) (store.ChallengeCampaignRecord, error) {
+	revision := sub.revision
 	campaign := store.ChallengeCampaignRecord{
 		ProblemID:   revision.ProblemID,
 		RunID:       runID,
 		InvariantID: invariantID,
+		// v34/S1: the campaign's population identity persists with it, so a
+		// later reader can tell WHICH evidence this campaign's searches ran
+		// against — never inferring it from the mining revision.
+		DiscoveryClusterRunID:  sub.discoveryRunID,
+		AssessmentClusterRunID: sub.assessmentRunID,
+		PopulationPolicy:       sub.populationPolicy,
 		Invocation: store.InvariantProviderInvocation{
 			ID:              domain.NewProviderInvocationID(now),
 			RunID:           runID,
@@ -225,7 +327,7 @@ func (a *App) buildCampaign(ctx context.Context, repoStore problemStore, revisio
 	falsifyAt, weakenAt := -1, -1
 	completedNegatives := 0
 	for i, proposal := range provResp.Proposals {
-		ch, verdictClass, outcome, err := a.verifyProposal(ctx, repoStore, revision, invariantID, runID, pred, families, vocab, proposal, now, i)
+		ch, verdictClass, outcome, err := a.verifyProposal(ctx, repoStore, sub, invariantID, runID, proposal, now, i)
 		if err != nil {
 			return store.ChallengeCampaignRecord{}, err
 		}
@@ -268,6 +370,23 @@ func (a *App) buildCampaign(ctx context.Context, repoStore problemStore, revisio
 		// but undecided) and can be resumed by a later campaign.
 	}
 	return campaign, nil
+}
+
+// counterexampleInDiscoveryScope reports whether ANY confirmed counterexample
+// member belongs to the discovery population the claim was mined over (v34/S1).
+// One in-scope violator falsifies the historical claim itself; violators found
+// only in the assessment expansion bound its generalization instead (weaken).
+// Membership is exact: the recorded signature ids of the discovery cluster
+// run's members. A revised interpretation of an in-discovery approach carries
+// a new signature id and therefore counts as new evidence — the claim was made
+// over the signatures actually recorded, not over logical approach identities.
+func counterexampleInDiscoveryScope(evidence []invariant.ChallengeEvidence, discoverySignatures map[string]bool) bool {
+	for _, ev := range evidence {
+		if ev.Kind == invariant.EvidenceCounterexampleMember && discoverySignatures[ev.SignatureID] {
+			return true
+		}
+	}
+	return false
 }
 
 // verdictClass classifies a confirmed challenge's lifecycle force.
@@ -392,7 +511,21 @@ func associationKindForCandidate(revision store.InvariantRevisionRecord, invaria
 // gates that reject an attack before it reaches a verifier (a provider
 // over-claiming operator-only verification, a synthetic with no construction, a
 // merge naming no partners or child) return OutcomeInadmissible here.
-func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revision store.InvariantRevisionRecord, invariantID, runID string, pred invariant.Predicate, families []invariant.Family, vocab *canon.Vocabulary, proposal provider.ChallengeProposal, now time.Time, ordinal int) (store.ChallengeRecord, verdictClass, invariant.CheckOutcome, error) {
+//
+// Population routing (v34/S1): evidence searches (known-counterexample,
+// success-preserving) run over the ASSESSMENT population; claim-scope attacks
+// (bias-critique recount, split, merge, synthetic grounding) run over the
+// DISCOVERY population the claim was mined over. A confirmed counterexample is
+// additionally scope-classified: a violator that is a member of the discovery
+// population falsifies the historical claim itself, while a violator found
+// ONLY in the assessment expansion does not rewrite the bounded historical
+// statement — it refutes the claim's generalization to current evidence and
+// weakens it (surviving/challenged -> weaken), removing frontier eligibility
+// without fabricating a retroactive falsification.
+func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, sub challengeSubstrate, invariantID, runID string, proposal provider.ChallengeProposal, now time.Time, ordinal int) (store.ChallengeRecord, verdictClass, invariant.CheckOutcome, error) {
+	revision := sub.revision
+	pred := sub.pred
+	vocab := sub.vocab
 	ch := store.ChallengeRecord{
 		ID:             domain.NewInvariantChallengeID(now),
 		InvariantID:    invariantID,
@@ -416,9 +549,20 @@ func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revisi
 	class := verdictInert
 	switch proposal.Type {
 	case invariant.ChallengeKnownCounterexample:
-		result = invariant.VerifyKnownCounterexample(pred, families, associationKindForCandidate(revision, invariantID))
+		result = invariant.VerifyKnownCounterexample(pred, sub.assessmentFamilies, associationKindForCandidate(revision, invariantID))
 		if result.Confirmed {
-			class = verdictFalsify
+			// Scope classification (v34/S1): only an IN-SCOPE violator — a
+			// member of the discovery population the universal claim was made
+			// over — falsifies the historical claim. Violators found only in
+			// the assessment expansion refute its GENERALIZATION: the bounded
+			// statement about the discovery population stands, search
+			// eligibility drops (weaken), and the detail records both scopes.
+			if counterexampleInDiscoveryScope(result.Evidence, sub.discoverySignatures) {
+				class = verdictFalsify
+			} else {
+				class = verdictWeaken
+				result.Detail += fmt.Sprintf("; every violator is outside the discovery population (%s): the historical claim over its mined scope stands, its generalization to the assessment population (%s) is refuted", sub.discoveryRunID, sub.assessmentRunID)
+			}
 		}
 	case invariant.ChallengeSyntheticCounterexample:
 		if proposal.Synthetic == nil {
@@ -440,20 +584,23 @@ func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revisi
 			}}
 		}
 	case invariant.ChallengeSuccessPreserving:
-		result = invariant.VerifySuccessPreserving(pred, families)
+		result = invariant.VerifySuccessPreserving(pred, sub.assessmentFamilies)
 		if result.Confirmed {
 			class = verdictWeaken
 		}
 	case invariant.ChallengeBiasCritique:
-		result = invariant.VerifyBiasCritique(pred, families, revision.MinSupport)
+		// Claim scope: the support recount re-examines the population the
+		// support numbers were measured over. Recounting over a different
+		// population would conflate two claims (v34/S1).
+		result = invariant.VerifyBiasCritique(pred, sub.discoveryFamilies, revision.MinSupport)
 		if result.Confirmed {
 			class = verdictWeaken
 		}
 	case invariant.ChallengeSplit:
-		result = invariant.VerifySplit(pred, proposal.Children, families, vocab)
+		result = invariant.VerifySplit(pred, proposal.Children, sub.discoveryFamilies, vocab)
 		if result.Confirmed {
 			class = verdictWeaken
-			derived, err := a.buildDerivedChildren(revision, invariantID, runID, invariant.ChallengeSplit, proposal.Children, families, now)
+			derived, err := a.buildDerivedChildren(revision, invariantID, runID, invariant.ChallengeSplit, proposal.Children, sub.discoveryFamilies, now)
 			if err != nil {
 				return store.ChallengeRecord{}, verdictInert, invariant.OutcomeInadmissible, err
 			}
@@ -471,14 +618,14 @@ func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, revisi
 			result = invariant.ChallengeResult{Outcome: invariant.OutcomeInadmissible, Detail: "no merged child predicate supplied"}
 			break
 		}
-		result = invariant.VerifyMerge(parents, *proposal.MergeChild, families, vocab)
+		result = invariant.VerifyMerge(parents, *proposal.MergeChild, sub.discoveryFamilies, vocab)
 		if result.Confirmed {
 			class = verdictWeaken
 			// extraParents = the matched merge partners only; the acting invariant
 			// (pred / invariantID) is contributed by buildDerivedChildren via its
 			// stored fingerprint, so passing `parents` (which prepends pred) would
 			// double-count it.
-			derived, err := a.buildDerivedChildren(revision, invariantID, runID, invariant.ChallengeMerge, []invariant.Predicate{*proposal.MergeChild}, families, now, matched...)
+			derived, err := a.buildDerivedChildren(revision, invariantID, runID, invariant.ChallengeMerge, []invariant.Predicate{*proposal.MergeChild}, sub.discoveryFamilies, now, matched...)
 			if err != nil {
 				return store.ChallengeRecord{}, verdictInert, invariant.OutcomeInadmissible, err
 			}
