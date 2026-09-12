@@ -40,7 +40,7 @@ func TestGuardMutationUseOriginBreakFlag(t *testing.T) {
 		Mode: "proposal", CreatedAt: formatTime(now),
 		Evaluations: []EvaluationRow{{
 			ID: domain.NewEvaluationID(now), ProposalID: proposalID, Verdict: "partial_success",
-			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment",
+			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment", VerificationSubject: "domain-goal",
 			ConfidenceOrdinal: "medium", ToolName: "m", ToolVersion: "v1",
 			// The assessed revision's break verdict is UNKNOWN.
 			TargetVerdicts: []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "unknown", Violated: false}},
@@ -120,7 +120,7 @@ func TestGuardMutationUseMaxRevisionCurrentView(t *testing.T) {
 		Mode: "proposal", CreatedAt: formatTime(now),
 		Evaluations: []EvaluationRow{{
 			ID: domain.NewEvaluationID(now), ProposalID: proposalID, Verdict: "partial_success",
-			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment",
+			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment", VerificationSubject: "domain-goal",
 			ConfidenceOrdinal: "medium", ToolName: "m", ToolVersion: "v1",
 			SignatureContentHash: hashA,
 			TargetVerdicts:       []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "violates", Violated: true}},

@@ -154,7 +154,33 @@ func TestIntegrationChallengeAssessmentPopulation(t *testing.T) {
 		t.Fatal("regression setup requires a NEW cluster run for A+B")
 	}
 
-	// 4. Re-challenge under `latest`: the violator from B is found, but it is
+	// 4a. v39 (#21): WITHOUT an authored claim form, code refuses to invent
+	// universality from measured full coverage. The violator from B is found
+	// and recorded, but an association claim is not refuted by an isolated
+	// counterexample: the attack is inconclusive and drives no transition.
+	unauthored, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID, Population: PopulationLatest})
+	if err != nil {
+		t.Fatalf("unauthored challenge: %v", err)
+	}
+	ur := unauthored.Reports[0]
+	if ur.StateAfter == "weaken" || ur.StateAfter == "falsified" {
+		t.Fatalf("without an authored universal quantifier a lone counterexample must not weaken/falsify; got %q", ur.StateAfter)
+	}
+	if len(ur.Challenges) != 1 || ur.Challenges[0].ResultSummary != "unconfirmed" {
+		t.Fatalf("unauthored counterexample search must be unconfirmed (violation recorded, claim not refuted): %+v", ur.Challenges)
+	}
+
+	// 4b. The operator AUTHORS the claim form: universal over the discovery
+	// population. This changes what refutes the claim — never its support.
+	if _, err := app.AuthorInvariantClaim(ctx, AuthorClaimInput{
+		DBPath: dbPath, InvariantID: invID, Quantifier: "universal", ClaimRole: "regularity",
+		Scope: "failure families of discovery cluster run " + discovery.ClusterRun.ID + "; no claim beyond the recorded corpus",
+		Note:  "regression: full failure coverage measured over A; authoring universal treatment explicitly (v39)",
+	}); err != nil {
+		t.Fatalf("author claim: %v", err)
+	}
+
+	// 4c. Re-challenge under `latest`: the violator from B is found, but it is
 	// outside the discovery scope — weaken, never a retroactive falsification.
 	second, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID, Population: PopulationLatest})
 	if err != nil {
@@ -182,6 +208,12 @@ func TestIntegrationChallengeAssessmentPopulation(t *testing.T) {
 	if d := r.Challenges[0].BoundaryDelta; d == nil || d.Kind != "counterexample-separation" ||
 		d.Condition == "" || d.PredicateFingerprint == "" {
 		t.Fatalf("confirmed counterexample must surface a typed boundary delta: %+v", r.Challenges[0].BoundaryDelta)
+	}
+	// v38 (#21): challenge evidence declares WHAT it is about — the verifier ran
+	// a predicate over persisted signatures, so its evidence certifies the
+	// annotation, not realizability or the domain goal.
+	if len(r.Challenges[0].Evidence) == 0 || r.Challenges[0].Evidence[0].VerificationSubject != "annotation" {
+		t.Fatalf("challenge evidence must carry subject=annotation: %+v", r.Challenges[0].Evidence)
 	}
 
 	// The campaign's population identity is durable, not just reported.

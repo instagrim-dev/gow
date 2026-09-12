@@ -41,6 +41,7 @@ const (
 	EvidenceAdmissionIDPrefix     = "evad_"
 	ProjectionArtifactIDPrefix    = "prj_"
 	ProjectionObligationIDPrefix  = "obl_"
+	InvariantClaimFormIDPrefix    = "icf_"
 	SuccessRevisionIDPrefix       = "svr_"
 	SuccessInvariantIDPrefix      = "sinv_"
 	HoldoutSetIDPrefix            = "hset_"
@@ -80,6 +81,7 @@ var (
 	ErrInvalidEvidenceAdmissionID     = errors.New("invalid evidence admission id")
 	ErrInvalidProjectionArtifactID    = errors.New("invalid projection artifact id")
 	ErrInvalidProjectionObligationID  = errors.New("invalid projection obligation id")
+	ErrInvalidInvariantClaimFormID    = errors.New("invalid invariant claim form id")
 	ErrInvalidSuccessRevisionID       = errors.New("invalid success revision id")
 	ErrInvalidSuccessInvariantID      = errors.New("invalid success invariant id")
 	ErrInvalidHoldoutSetID            = errors.New("invalid holdout set id")
@@ -290,6 +292,14 @@ func NewProjectionObligationID(now time.Time) string {
 
 func ValidateProjectionObligationID(id string) error {
 	return validateID(id, ProjectionObligationIDPrefix, ErrInvalidProjectionObligationID)
+}
+
+func NewInvariantClaimFormID(now time.Time) string {
+	return newID(InvariantClaimFormIDPrefix, now)
+}
+
+func ValidateInvariantClaimFormID(id string) error {
+	return validateID(id, InvariantClaimFormIDPrefix, ErrInvalidInvariantClaimFormID)
 }
 
 func NewSuccessRevisionID(now time.Time) string {

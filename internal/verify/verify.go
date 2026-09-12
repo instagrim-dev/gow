@@ -13,6 +13,8 @@ package verify
 
 import (
 	"context"
+	"errors"
+	"strings"
 
 	"github.com/instagrim-dev/newf/internal/invariant"
 )
@@ -69,6 +71,37 @@ func (k VerifierKind) Valid() bool {
 	switch k {
 	case KindDeterministicCheck, KindCounterexampleSearch, KindReproducibleComputation,
 		KindIndependentEvidence, KindIndependentCritic, KindModelJudgment:
+		return true
+	default:
+		return false
+	}
+}
+
+// VerificationSubject is WHAT OBJECT a verdict is about (2026-09-12 semantic
+// review): a deterministic check of a predicate over a normalized signature
+// establishes something about that signature — not that the signature
+// faithfully describes a realizable mechanism, nor that the mechanism
+// satisfies the domain goal. Without this axis, a truthful `deterministic`
+// strength label can be read as certifying the wrong object.
+type VerificationSubject string
+
+const (
+	// SubjectAnnotation: the verdict is about the persisted, normalized
+	// DESCRIPTION (signature/claims) — e.g. "this signature still satisfies a
+	// targeted predicate". It says nothing about realizability.
+	SubjectAnnotation VerificationSubject = "annotation"
+	// SubjectRealization: the verdict is about whether the described mechanism
+	// is constructible/realizable as described.
+	SubjectRealization VerificationSubject = "realization"
+	// SubjectDomainGoal: the verdict is about whether the (realized) mechanism
+	// achieves the original domain goal.
+	SubjectDomainGoal VerificationSubject = "domain-goal"
+)
+
+// Valid reports whether s is a defined subject.
+func (s VerificationSubject) Valid() bool {
+	switch s {
+	case SubjectAnnotation, SubjectRealization, SubjectDomainGoal:
 		return true
 	default:
 		return false
@@ -170,9 +203,13 @@ type VerificationContext struct {
 
 // Decision is a verifier's structured result.
 type Decision struct {
-	Verdict           Verdict
-	Kind              VerifierKind
-	Strength          VerificationStrength
+	Verdict  Verdict
+	Kind     VerifierKind
+	Strength VerificationStrength
+	// Subject is WHAT the verdict is about (annotation / realization /
+	// domain-goal). Route stamps it from the deciding verifier's registration,
+	// never from self-report.
+	Subject           VerificationSubject
 	ConfidenceOrdinal string
 	Notes             string
 }
@@ -180,12 +217,26 @@ type Decision struct {
 // Verifier is one tier in the hierarchy. Cost orders cheap-first routing (lower
 // runs earlier). A verifier returns a non-decisive verdict (unknown) when it
 // cannot decide, so routing falls through to the next tier. Transport failures
-// are errors.
+// are errors. Subject declares what object this verifier's verdicts are about;
+// it is part of the registration, not the per-call result, so a verifier
+// cannot relabel its subject per verdict.
 type Verifier interface {
 	Kind() VerifierKind
 	Cost() int
+	Subject() VerificationSubject
 	Verify(ctx context.Context, vc VerificationContext) (Decision, error)
 }
+
+// ErrVerifierUnavailable marks an OPERATIONAL failure to consult a verifier
+// (transport outage, timeout, missing binary) as opposed to a semantic error
+// in the verification request itself. A tier that cannot be reached has not
+// abstained and has not decided — routing records the outage and falls
+// through, and exhaustion lands as verification_blocked instead of aborting
+// the run (2026-09-12 review F7: an unavailable verifier is an honest
+// "could not verify", never a run-level failure that discards the other
+// tiers' work). Adapters wrap transport-class errors with this sentinel;
+// any other verifier error still aborts routing.
+var ErrVerifierUnavailable = errors.New("verifier unavailable")
 
 // Route runs verifiers strongest-first (by hierarchy band), breaking ties by
 // cheap-first cost, and returns the Decision of the strongest tier that returned
@@ -194,17 +245,31 @@ type Verifier interface {
 // deterministic check that is also able to decide, even if the model tier
 // declares a lower cost. Within a strength band, cheaper verifiers run first. If
 // no verifier decides, the result is verification_blocked stamped with the LAST
-// (weakest) tier tried — an honest "we could not verify", never a guess. Route
-// is pure and deterministic given a fixed verifier set.
+// (weakest) tier tried — an honest "we could not verify", never a guess. A tier
+// whose Verify wraps ErrVerifierUnavailable is recorded as unreachable and
+// skipped; any other verifier error aborts. Route is pure and deterministic
+// given a fixed verifier set.
 func Route(ctx context.Context, verifiers []Verifier, vc VerificationContext) (Decision, error) {
 	ordered := sortByStrengthThenCost(verifiers)
 	var lastKind VerifierKind = KindModelJudgment
+	var lastSubject VerificationSubject = SubjectDomainGoal
+	var unavailable []string
 	for _, v := range ordered {
 		d, err := v.Verify(ctx, vc)
 		if err != nil {
+			if errors.Is(err, ErrVerifierUnavailable) {
+				// Operational outage, not an abstention: the tier expressed no
+				// judgment. Record it so the blocked verdict names exactly
+				// which tiers were unreachable, then try the next tier.
+				unavailable = append(unavailable, string(v.Kind())+": "+err.Error())
+				lastKind = v.Kind()
+				lastSubject = v.Subject()
+				continue
+			}
 			return Decision{}, err
 		}
 		lastKind = v.Kind()
+		lastSubject = v.Subject()
 		if d.Verdict.Decisive() {
 			// Stamp kind from the deciding verifier and CLAMP strength to that
 			// verifier's registered tier. A verifier's self-reported strength is
@@ -213,7 +278,10 @@ func Route(ctx context.Context, verifiers []Verifier, vc VerificationContext) (D
 			// must still be recorded as single-model-judgment. We take the weaker
 			// of {reported, registered} so a verifier may under-report but never
 			// launder a stronger tier than the router registered it at (G5).
+			// The SUBJECT is likewise stamped from the registration: a verifier
+			// cannot per-verdict relabel what object it certifies.
 			d.Kind = v.Kind()
+			d.Subject = v.Subject()
 			ceiling := StrengthForKind(v.Kind())
 			if !d.Strength.Valid() || d.Strength.Rank() > ceiling.Rank() {
 				d.Strength = ceiling
@@ -221,11 +289,16 @@ func Route(ctx context.Context, verifiers []Verifier, vc VerificationContext) (D
 			return d, nil
 		}
 	}
+	notes := "no verifier returned a decisive verdict"
+	if len(unavailable) > 0 {
+		notes += "; unavailable tiers: " + strings.Join(unavailable, "; ")
+	}
 	return Decision{
 		Verdict:  VerdictVerificationBlocked,
 		Kind:     lastKind,
 		Strength: StrengthForKind(lastKind),
-		Notes:    "no verifier returned a decisive verdict",
+		Subject:  lastSubject,
+		Notes:    notes,
 	}, nil
 }
 

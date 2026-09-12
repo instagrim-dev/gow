@@ -173,6 +173,7 @@ func (a *App) buildPolicyEvidence(ctx context.Context, repoStore problemStore, p
 		if gerr != nil {
 			return policy.Evidence{}, resolvableEvidence{}, gerr
 		}
+		ev.UncoveredFamiliesClusterRunID = clusterRun.ID
 		for _, ax := range clusterRun.CoverageAxes {
 			if ax.UnderSampled {
 				ev.UncoveredFamilies = append(ev.UncoveredFamilies, ax.Axis)
@@ -318,6 +319,15 @@ func policyRevisionRecord(problemID, runID string, ev policy.Evidence, pol polic
 			Provenance: []store.PolicyProvenanceRow{
 				{EvidenceKind: string(d.TargetKind), EvidenceRef: d.TargetID},
 			},
+		}
+		// Coverage-derived expand directives record WHICH cluster run's
+		// coverage axes justified them: "under-sampled" is a claim about a
+		// specific population, not a timeless fact about the family.
+		if d.Kind == policy.KindExpand && d.TargetKind == policy.TargetMechanismFamily && ev.UncoveredFamiliesClusterRunID != "" {
+			row.Provenance = append(row.Provenance, store.PolicyProvenanceRow{
+				EvidenceKind: "cluster_run",
+				EvidenceRef:  ev.UncoveredFamiliesClusterRunID,
+			})
 		}
 		rec.Directives = append(rec.Directives, row)
 	}

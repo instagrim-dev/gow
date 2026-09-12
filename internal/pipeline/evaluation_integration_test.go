@@ -74,6 +74,24 @@ func TestIntegrationEvaluateEndToEnd(t *testing.T) {
 	if ev.VerifierKind == "model-judgment" && ev.VerificationStrength != "single-model-judgment" {
 		t.Fatalf("a model-tier decision must record single-model-judgment strength; got %q", ev.VerificationStrength)
 	}
+	// v38 (#21): the persisted evaluation carries its verification SUBJECT,
+	// stamped from the deciding tier's registration: deterministic tiers certify
+	// the annotation; the model tier judges the domain goal. A truthful strength
+	// label alone cannot be read as certifying the wrong object.
+	switch ev.VerifierKind {
+	case "deterministic-check", "counterexample-search":
+		if ev.VerificationSubject != "annotation" {
+			t.Fatalf("deterministic tier subject = %q, want annotation: %+v", ev.VerificationSubject, ev)
+		}
+	case "model-judgment":
+		if ev.VerificationSubject != "domain-goal" {
+			t.Fatalf("model tier subject = %q, want domain-goal: %+v", ev.VerificationSubject, ev)
+		}
+	default:
+		if ev.VerificationSubject == "" {
+			t.Fatalf("evaluation missing verification subject: %+v", ev)
+		}
+	}
 
 	// Run lifecycle reflects success.
 	run, err := app.ShowRun(ctx, LookupInput{DBPath: dbPath, ID: res.Run.RunID})

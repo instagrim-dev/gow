@@ -15,6 +15,7 @@ import (
 	"github.com/instagrim-dev/newf/internal/invariant"
 	"github.com/instagrim-dev/newf/internal/provider"
 	"github.com/instagrim-dev/newf/internal/store"
+	"github.com/instagrim-dev/newf/internal/verify"
 )
 
 // challengeableStates are the lifecycle states a new campaign may attack.
@@ -116,6 +117,11 @@ type challengeSubstrate struct {
 	populationPolicy    string
 	discoveryRunID      string
 	assessmentRunID     string
+	// claimForm is the latest operator-authored claim form (v39/#21), nil when
+	// none exists. It governs refutation semantics: universal-counterexample
+	// treatment is granted ONLY by an authored `universal` quantifier, never
+	// inferred from measured coverage.
+	claimForm *store.InvariantClaimFormRow
 }
 
 // challengeOne runs one candidate's campaign: rehydrate the substrate, ask the
@@ -214,6 +220,11 @@ func (a *App) challengeOne(ctx context.Context, repoStore problemStore, invarian
 		populationPolicy:    population,
 		discoveryRunID:      clusterRun.ID,
 		assessmentRunID:     assessmentRun.ID,
+	}
+	if form, found, err := repoStore.GetLatestInvariantClaimForm(ctx, invariantID); err != nil {
+		return InvariantChallengeReport{}, err
+	} else if found {
+		sub.claimForm = &form
 	}
 
 	// The challenger sees the ASSESSMENT population — the evidence currently
@@ -408,6 +419,10 @@ func mapEvidence(ev []invariant.ChallengeEvidence) []store.ChallengeEvidenceRow 
 			SignatureID: e.SignatureID,
 			Detail:      e.Detail,
 			Ordinal:     i,
+			// v38 (#21): the deterministic challenge verifiers run predicates
+			// over persisted normalized signatures — their evidence is about
+			// the ANNOTATION, never about realizability or the domain goal.
+			VerificationSubject: string(verify.SubjectAnnotation),
 		})
 	}
 	return out
@@ -460,33 +475,33 @@ func mustJSONString(v any) string {
 	return string(raw)
 }
 
-// associationKindForCandidate resolves the candidate's stored, code-MEASURED
-// association status into the invariant.AssociationKind that governs the
-// known-counterexample refutation condition (G3). A frequency label is NOT a
-// logical quantifier: `recurring` means only "the predicate holds across
-// >=minSupport distinct failure families", which does not assert "every failure
-// satisfies it". A single violating failure family therefore does not, by
-// itself, refute a recurrence claim.
+// associationKindForCandidate resolves the invariant.AssociationKind that
+// governs the known-counterexample refutation condition (G3). A frequency
+// label is NOT a logical quantifier: `recurring` means only "the predicate
+// holds across >=minSupport distinct failure families", which does not assert
+// "every failure satisfies it". A single violating failure family therefore
+// does not, by itself, refute a recurrence claim.
 //
-// The universal refutation (falsifiable-by-one-counterexample) is granted ONLY
-// when the corpus actually exhibits universality over the eligible failure
-// population: the candidate is `recurring` AND every eligible failure family
-// satisfies it (FailureCoverageNum == FailureCoverageDen, with a nonempty
-// denominator). Absent that, recurrence is treated as an association: a lone
-// counterexample is inconclusive, never a falsification. This keeps the
-// challenger from strengthening a claim (recurrence -> universality) before
-// refuting it. An explicitly authored claim_kind/quantifier is future work;
-// until the miner authors one, code refuses to invent universality.
-func associationKindForCandidate(revision store.InvariantRevisionRecord, invariantID string) invariant.AssociationKind {
+// v39 (#21): the universal refutation (falsifiable-by-one-counterexample) is
+// granted ONLY by an operator-AUTHORED claim form with quantifier `universal`.
+// Full coverage of a finite sample must not supply an unstated universal
+// domain: the earlier coverage-derived grant (FailureCoverageNum ==
+// FailureCoverageDen) let a measured property of the recorded population fix
+// the refutation semantics of an unauthored proposition. Absent an authored
+// universal claim, a recurring candidate is treated as an association: a lone
+// counterexample is inconclusive, never a falsification. Authoring `universal`
+// does not strengthen evidence — it makes the claim MORE falsifiable and
+// records who fixed its proposition shape (quantifier + scope + role + basis).
+func associationKindForCandidate(revision store.InvariantRevisionRecord, invariantID string, form *store.InvariantClaimFormRow) invariant.AssociationKind {
 	for _, c := range revision.Candidates {
 		if c.ID != invariantID {
 			continue
 		}
 		switch invariant.AssociationKind(c.AssociationStatus) {
 		case invariant.AssociationRecurring:
-			// Universal refutation only if the corpus is actually universal over
-			// the eligible failure families; otherwise recurrence is an association.
-			if c.FailureCoverageDen > 0 && c.FailureCoverageNum == c.FailureCoverageDen {
+			// Universal refutation requires BOTH the measured recurrence AND an
+			// authored universal quantifier. Code refuses to invent universality.
+			if form != nil && form.Quantifier == "universal" {
 				return invariant.AssociationRecurring
 			}
 			return invariant.AssociationContrastObserved
@@ -549,7 +564,7 @@ func (a *App) verifyProposal(ctx context.Context, repoStore problemStore, sub ch
 	class := verdictInert
 	switch proposal.Type {
 	case invariant.ChallengeKnownCounterexample:
-		result = invariant.VerifyKnownCounterexample(pred, sub.assessmentFamilies, associationKindForCandidate(revision, invariantID))
+		result = invariant.VerifyKnownCounterexample(pred, sub.assessmentFamilies, associationKindForCandidate(revision, invariantID, sub.claimForm))
 		if result.Confirmed {
 			// Scope classification (v34/S1): only an IN-SCOPE violator — a
 			// member of the discovery population the universal claim was made

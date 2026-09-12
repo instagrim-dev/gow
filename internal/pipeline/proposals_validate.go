@@ -58,7 +58,7 @@ func (a *App) ValidateProposals(ctx context.Context, input ProposalsValidateInpu
 		// decoder drift; this removes drift in the inputs supplied to it — a
 		// proposal targeting an operator_attested invariant must preflight
 		// exactly as generation would admit it.
-		targets, err := a.survivingInvariants(ctx, repoStore, input.ProblemID)
+		targets, _, err := a.survivingInvariants(ctx, repoStore, input.ProblemID)
 		if err != nil {
 			return ProposalsValidateResponse{}, err
 		}

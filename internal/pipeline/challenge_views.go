@@ -7,6 +7,7 @@ import (
 	"github.com/instagrim-dev/newf/internal/domain"
 	"github.com/instagrim-dev/newf/internal/invariant"
 	"github.com/instagrim-dev/newf/internal/store"
+	"github.com/instagrim-dev/newf/internal/verify"
 )
 
 // --- inputs ---
@@ -67,6 +68,9 @@ type ChallengeEvidenceView struct {
 	SignatureID string `json:"signature_id,omitempty"`
 	SnapshotID  string `json:"snapshot_id,omitempty"`
 	Detail      string `json:"detail,omitempty"`
+	// VerificationSubject (v38/#21): what OBJECT this evidence is about —
+	// annotation / realization / domain-goal. Empty only for pre-v38 history.
+	VerificationSubject string `json:"verification_subject,omitempty"`
 }
 
 // ChallengeView is one persisted attack + its verified outcome.
@@ -129,12 +133,16 @@ type InvariantStateView struct {
 	AssociationStatus    string `json:"association_status"`
 }
 
-// InvariantStateResponse is returned by `newf invariant state`.
+// InvariantStateResponse is returned by `newf invariant state`. Claim is the
+// governing authored claim form (v39/#21), nil when none has been authored —
+// in which case a recurring candidate keeps association-level refutation
+// semantics (no invented universality).
 type InvariantStateResponse struct {
 	OK         bool               `json:"ok"`
 	Command    string             `json:"command"`
 	Store      string             `json:"store"`
 	Invariant  InvariantStateView `json:"invariant"`
+	Claim      *ClaimFormView     `json:"claim,omitempty"`
 	Challenges []ChallengeView    `json:"challenges"`
 }
 
@@ -180,6 +188,7 @@ func challengeView(ch store.ChallengeRecord) ChallengeView {
 		view.Evidence = append(view.Evidence, ChallengeEvidenceView{
 			Kind: ev.Kind, ClusterID: ev.ClusterID, SignatureID: ev.SignatureID,
 			SnapshotID: ev.SnapshotID, Detail: ev.Detail,
+			VerificationSubject: ev.VerificationSubject,
 		})
 	}
 	if ch.Delta != nil {
@@ -212,6 +221,12 @@ func (a *App) ShowInvariantState(ctx context.Context, input InvariantStateInput)
 		return InvariantStateResponse{}, err
 	}
 	resp := InvariantStateResponse{OK: true, Command: "invariant state", Store: dbPath, Invariant: invariantStateView(state), Challenges: []ChallengeView{}}
+	if form, found, err := repoStore.GetLatestInvariantClaimForm(ctx, input.InvariantID); err != nil {
+		return InvariantStateResponse{}, err
+	} else if found {
+		v := claimFormView(form)
+		resp.Claim = &v
+	}
 	for _, ch := range history {
 		resp.Challenges = append(resp.Challenges, challengeView(ch))
 	}
@@ -350,6 +365,12 @@ func (a *App) EstablishInvariant(ctx context.Context, input EstablishInput) (Est
 				SnapshotID: snapshot.ID,
 				Detail:     input.Locator,
 				Ordinal:    0,
+				// v38 (#21): an independent source is consulted about the DOMAIN
+				// claim the invariant makes — not about our annotation formatting.
+				// The subject axis keeps that explicit; the strength stays
+				// operator-attested (this records an attestation, not a
+				// machine verification).
+				VerificationSubject: string(verify.SubjectDomainGoal),
 			}},
 			Transitions: []string{"operator_attested"},
 		}},

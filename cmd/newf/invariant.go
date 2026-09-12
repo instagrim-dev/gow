@@ -124,6 +124,7 @@ func newInvariantCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions)
 	cmd.AddCommand(listCmd)
 	cmd.AddCommand(newInvariantStateCommand(stdout, app, opts))
 	cmd.AddCommand(newInvariantEstablishCommand(stdout, app, opts))
+	cmd.AddCommand(newInvariantClaimCommand(stdout, app, opts))
 
 	var showProblem string
 	showCmd := &cobra.Command{
@@ -156,6 +157,65 @@ func newInvariantCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions)
 	}
 	showCmd.Flags().StringVar(&showProblem, "problem", "", "Problem ID (used when no id is given)")
 	cmd.AddCommand(showCmd)
+	return cmd
+}
+
+// newInvariantClaimCommand hosts `newf invariant claim` (v39/#21): author the
+// claim form fixing a candidate's proposition shape.
+func newInvariantClaimCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cobra.Command {
+	var (
+		invariantID string
+		quantifier  string
+		claimRole   string
+		scope       string
+		note        string
+	)
+	cmd := &cobra.Command{
+		Use:   "claim",
+		Short: "Author a candidate's claim form: quantifier + scope + claim role",
+		Long: "Record the operator-authored proposition shape of a candidate invariant.\n" +
+			"Sample recurrence, transformation invariance, and obstruction are distinct\n" +
+			"propositions; measured full coverage of a finite sample must not supply an\n" +
+			"unstated universal domain. Refutation semantics follow the AUTHORED\n" +
+			"quantifier:\n\n" +
+			"  universal    one in-scope known counterexample falsifies the claim\n" +
+			"  recurrent    the claim asserts recurrence across the authored scope;\n" +
+			"               isolated counterexamples are recorded, not falsifying\n" +
+			"  existential  the claim asserts at least one instance in scope\n\n" +
+			"Authoring `universal` does not strengthen evidence — it makes the claim\n" +
+			"MORE falsifiable and records who fixed its shape and why. Forms are\n" +
+			"append-only and immutable; the latest form governs.",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if invariantID == "" {
+				return wrapCommandError("invariant claim", errors.New("--invariant is required"))
+			}
+			result, err := app.AuthorInvariantClaim(cmd.Context(), pipeline.AuthorClaimInput{
+				DBPath:      opts.dbPath,
+				InvariantID: invariantID,
+				Quantifier:  quantifier,
+				ClaimRole:   claimRole,
+				Scope:       scope,
+				Note:        note,
+				JSONOutput:  opts.jsonOutput,
+			})
+			if err != nil {
+				return wrapCommandError("invariant claim", err)
+			}
+			if opts.jsonOutput {
+				return writeJSON(stdout, result)
+			}
+			c := result.Claim
+			fmt.Fprintf(stdout, "claim %s authored for %s\n  quantifier: %s\n  role:       %s\n  scope:      %s\n  basis:      %s\n",
+				c.ID, c.InvariantID, c.Quantifier, c.ClaimRole, c.Scope, c.Basis)
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&invariantID, "invariant", "", "Candidate invariant ID (inv_...)")
+	cmd.Flags().StringVar(&quantifier, "quantifier", "", "universal | recurrent | existential")
+	cmd.Flags().StringVar(&claimRole, "role", "", "regularity | obstruction | enabling_condition | boundary_hypothesis")
+	cmd.Flags().StringVar(&scope, "scope", "", "Authored statement of the population/domain claimed (required)")
+	cmd.Flags().StringVar(&note, "note", "", "Operator's basis (required, recorded verbatim)")
 	return cmd
 }
 

@@ -116,6 +116,11 @@ type Evidence struct {
 	Surviving []SurvivingEvidence
 	// UncoveredFamilies are under-sampled mechanism family ids to expand into.
 	UncoveredFamilies []string
+	// UncoveredFamiliesClusterRunID is the cluster run whose coverage axes
+	// produced UncoveredFamilies — provenance only (recorded on the expand
+	// directives so the population context of a coverage claim is inspectable).
+	// It does not participate in directive computation or cohort identity.
+	UncoveredFamiliesClusterRunID string
 	// RedundantAttacks are directed-attack keys seen repeatedly (penalize).
 	RedundantAttacks []string
 	// RepeatedFailures are mechanism fingerprints that re-entered the atlas

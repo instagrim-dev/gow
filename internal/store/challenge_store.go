@@ -32,6 +32,12 @@ type ChallengeEvidenceRow struct {
 	SnapshotID  string
 	Detail      string
 	Ordinal     int
+	// VerificationSubject records WHAT OBJECT this evidence is about (v38,
+	// issue #21): annotation / realization / domain-goal. The deterministic
+	// challenge verifiers run predicates over persisted signatures, so their
+	// evidence is about annotations; an operator-attested independent source
+	// states its own subject. Empty only for pre-v38 history.
+	VerificationSubject string
 }
 
 // SyntheticArtifactRow is one persisted constructed artifact.
@@ -196,9 +202,9 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
 		}
 		for _, ev := range ch.Evidence {
 			if _, err := tx.ExecContext(ctx, `
-INSERT INTO invariant_challenge_evidence(challenge_id, kind, cluster_id, signature_id, snapshot_id, detail, ordinal)
-VALUES(?, ?, ?, ?, ?, ?, ?)
-`, ch.ID, ev.Kind, nullable(ev.ClusterID), nullable(ev.SignatureID), nullable(ev.SnapshotID), ev.Detail, ev.Ordinal); err != nil {
+INSERT INTO invariant_challenge_evidence(challenge_id, kind, cluster_id, signature_id, snapshot_id, detail, ordinal, verification_subject)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+`, ch.ID, ev.Kind, nullable(ev.ClusterID), nullable(ev.SignatureID), nullable(ev.SnapshotID), ev.Detail, ev.Ordinal, nullable(ev.VerificationSubject)); err != nil {
 				return err
 			}
 		}
@@ -471,7 +477,7 @@ FROM challenge_boundary_deltas WHERE challenge_id = ?
 			return nil, derr
 		}
 		evRows, err := s.db.QueryContext(ctx, `
-SELECT kind, COALESCE(cluster_id,''), COALESCE(signature_id,''), COALESCE(snapshot_id,''), detail, ordinal
+SELECT kind, COALESCE(cluster_id,''), COALESCE(signature_id,''), COALESCE(snapshot_id,''), detail, ordinal, COALESCE(verification_subject,'')
 FROM invariant_challenge_evidence WHERE challenge_id = ? ORDER BY ordinal
 `, out[i].ID)
 		if err != nil {
@@ -479,7 +485,7 @@ FROM invariant_challenge_evidence WHERE challenge_id = ? ORDER BY ordinal
 		}
 		for evRows.Next() {
 			var ev ChallengeEvidenceRow
-			if err := evRows.Scan(&ev.Kind, &ev.ClusterID, &ev.SignatureID, &ev.SnapshotID, &ev.Detail, &ev.Ordinal); err != nil {
+			if err := evRows.Scan(&ev.Kind, &ev.ClusterID, &ev.SignatureID, &ev.SnapshotID, &ev.Detail, &ev.Ordinal, &ev.VerificationSubject); err != nil {
 				evRows.Close()
 				return nil, err
 			}

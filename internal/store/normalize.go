@@ -110,19 +110,8 @@ LIMIT 1
 // by construction, and it reuses an existing Approach identity (never
 // overwriting it) when one already exists for the problem.
 func (s *Store) PersistNormalization(ctx context.Context, input NormalizationInput) (NormalizationWriteResult, error) {
-	if err := input.Invocation.Validate(); err != nil {
+	if err := validateNormalizationInput(input); err != nil {
 		return NormalizationWriteResult{}, err
-	}
-	if err := input.Revision.Validate(); err != nil {
-		return NormalizationWriteResult{}, err
-	}
-	if input.Revision.ProviderInvocationID != input.Invocation.ID {
-		return NormalizationWriteResult{}, errors.New("revision provider_invocation_id must match invocation id")
-	}
-	for i := range input.Approaches {
-		if err := validateApproachInput(input.Approaches[i], input.Revision.ID); err != nil {
-			return NormalizationWriteResult{}, err
-		}
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -131,6 +120,40 @@ func (s *Store) PersistNormalization(ctx context.Context, input NormalizationInp
 	}
 	defer tx.Rollback()
 
+	result, err := persistNormalizationTx(ctx, tx, input)
+	if err != nil {
+		return NormalizationWriteResult{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return NormalizationWriteResult{}, err
+	}
+	return result, nil
+}
+
+// validateNormalizationInput rejects invalid provenance before any write, for
+// both the standalone and composite (single-transaction) normalization paths.
+func validateNormalizationInput(input NormalizationInput) error {
+	if err := input.Invocation.Validate(); err != nil {
+		return err
+	}
+	if err := input.Revision.Validate(); err != nil {
+		return err
+	}
+	if input.Revision.ProviderInvocationID != input.Invocation.ID {
+		return errors.New("revision provider_invocation_id must match invocation id")
+	}
+	for i := range input.Approaches {
+		if err := validateApproachInput(input.Approaches[i], input.Revision.ID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// persistNormalizationTx is the transaction-scoped normalization core. It
+// never commits; callers own the transaction (see createSourceSnapshotTx).
+// Inputs must already be validated via validateNormalizationInput.
+func persistNormalizationTx(ctx context.Context, tx *sql.Tx, input NormalizationInput) (NormalizationWriteResult, error) {
 	if _, err := tx.ExecContext(ctx, `
 INSERT INTO provider_invocations(id, run_id, role, provider_name, provider_version, model_name, schema_version, request_hash, request_payload, response_payload, created_at)
 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -154,9 +177,6 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		refs = append(refs, ref)
 	}
 
-	if err := tx.Commit(); err != nil {
-		return NormalizationWriteResult{}, err
-	}
 	return NormalizationWriteResult{RevisionID: input.Revision.ID, Approaches: refs}, nil
 }
 

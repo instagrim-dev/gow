@@ -71,6 +71,21 @@ func classifyEvaluatedFailure(ev store.EvaluationRow) (admissionClassification, 
 			Basis:           "deterministic-check failure: the description failed its own claimed break; it narrows the description space, not the observed-mechanism space, and is not an atlas observation",
 		}, nil
 	}
+	if verify.VerifierKind(ev.VerifierKind) == verify.KindCounterexampleSearch {
+		// A counterexample search over persisted artifacts sits in the
+		// reproducible band, but its decisive negative is a predicate bit
+		// ("a matching break was previously observed"), not a mechanism-level
+		// refutation carrying a checkable witness. Until an admission can
+		// reference the concrete witness it rests on, the strength band alone
+		// must not rule-admit it (2026-09-12 review F5: rule admission is
+		// witness-based, not band-based).
+		return admissionClassification{
+			ObservationKind: ObservationDomainCheckedFailure,
+			RuleAdmissible:  false,
+			Attestable:      true,
+			Basis:           "counterexample-search failure: reproducible-band predicate verdict without a persisted witness reference; admission requires operator attestation naming the witness",
+		}, nil
+	}
 	switch verify.VerificationStrength(ev.VerificationStrength) {
 	case verify.StrengthDeterministic, verify.StrengthReproducible:
 		return admissionClassification{
@@ -347,22 +362,21 @@ func (a *App) AdmitEvidence(ctx context.Context, input AdmitEvidenceInput) (Admi
 			continue
 		}
 
-		mat, merr := a.materializeAdmittedFailure(ctx, repoStore, input.ProblemID, run.ID, f, ev, content, now)
+		row.Decision = "admitted"
+		matInput, merr := admittedFailureInput(input.ProblemID, run.ID, f, ev, content, row, now)
 		if merr != nil {
 			a.failRun(ctx, repoStore, run.ID, merr)
 			return AdmitEvidenceResponse{}, merr
 		}
-		row.Decision = "admitted"
-		row.ApproachID = mat.ApproachID
-		row.ApproachRevisionID = mat.ApproachRevisionID
-		row.MechanismID = mat.MechanismID
-		row.SignatureID = mat.SignatureID
-		persisted, perr := repoStore.PersistEvidenceAdmission(ctx, row)
-		if perr != nil {
-			a.failRun(ctx, repoStore, run.ID, perr)
-			return AdmitEvidenceResponse{}, perr
+		// One transaction: snapshot + normalization + signature + admission
+		// decision commit together or not at all — a failure mid-materialization
+		// must not leave population rows without their justifying decision.
+		mat, merr := repoStore.PersistAdmittedFailure(ctx, matInput)
+		if merr != nil {
+			a.failRun(ctx, repoStore, run.ID, merr)
+			return AdmitEvidenceResponse{}, merr
 		}
-		resp.Admitted = append(resp.Admitted, admissionView(persisted))
+		resp.Admitted = append(resp.Admitted, admissionView(mat.Admission))
 	}
 
 	if err := a.finalizeRun(ctx, repoStore, run.ID, nil); err != nil {
@@ -371,17 +385,8 @@ func (a *App) AdmitEvidence(ctx context.Context, input AdmitEvidenceInput) (Admi
 	return resp, nil
 }
 
-// materializedFailure carries the four atlas identities an admission created.
-type materializedFailure struct {
-	SnapshotID         string
-	ApproachID         string
-	ApproachRevisionID string
-	MechanismID        string
-	SignatureID        string
-}
-
-// materializeAdmittedFailure carries one admitted evaluated failure into the
-// atlas population:
+// admittedFailureInput builds the single-transaction materialization input
+// carrying one admitted evaluated failure into the atlas population:
 //
 //  1. a source snapshot whose bytes ARE the assessed signature JSON (real
 //     content-addressed provenance, not a fabricated source);
@@ -393,22 +398,25 @@ type materializedFailure struct {
 //  3. the assessed canon.MechanismSignature persisted VERBATIM against the new
 //     mechanism (claims, resolution states, and claim statuses unchanged) —
 //     only the outcome is set from the evaluation verdict, with `inferred`
-//     provenance because it is tool-derived, not source-explicit.
+//     provenance because it is tool-derived, not source-explicit;
+//  4. the admission decision row itself.
 //
+// All four commit atomically in store.PersistAdmittedFailure (the store
+// resolves the snapshot id, mechanism id, and materialization ids mid-write).
 // The next BuildClustering then consumes the signature through the ordinary
 // current-heads population read; no clustering special case exists for
 // admitted evidence.
-func (a *App) materializeAdmittedFailure(ctx context.Context, repoStore problemStore, problemID, runID string, f store.EvaluatedFailureRow, ev store.EvaluationRow, content store.ProposalSignatureContentRow, nowTime time.Time) (materializedFailure, error) {
+func admittedFailureInput(problemID, runID string, f store.EvaluatedFailureRow, ev store.EvaluationRow, content store.ProposalSignatureContentRow, row store.EvidenceAdmissionRow, nowTime time.Time) (store.AdmittedFailureInput, error) {
 	var sig canon.MechanismSignature
 	if err := json.Unmarshal([]byte(content.SignatureJSON), &sig); err != nil {
-		return materializedFailure{}, fmt.Errorf("proposal %s: corrupt persisted signature content: %w", f.ProposalID, err)
+		return store.AdmittedFailureInput{}, fmt.Errorf("proposal %s: corrupt persisted signature content: %w", f.ProposalID, err)
 	}
 
 	// Snapshot: the assessed bytes, content-addressed.
 	raw := []byte(content.SignatureJSON)
 	sum := sha256.Sum256(raw)
 	digest := hex.EncodeToString(sum[:])
-	admission, err := repoStore.CreateSourceSnapshot(ctx, store.SnapshotAdmission{
+	snapshot := store.SnapshotAdmission{
 		ProblemID:   problemID,
 		Kind:        domain.SourceKindLocalPath,
 		LogicalName: "evidence-admission-" + ev.ID + ".json",
@@ -419,47 +427,34 @@ func (a *App) materializeAdmittedFailure(ctx context.Context, repoStore problemS
 		ObjectPath:  filepath.Join("sha256", digest[:2], digest),
 		IngestRunID: runID,
 		ObservedAt:  nowTime,
-	})
-	if err != nil {
-		return materializedFailure{}, fmt.Errorf("admit evidence snapshot: %w", err)
 	}
 
 	// Outcome from the evaluation verdict; the assessed signature proposed a
 	// mechanism whose outcome was unknown at generation time.
 	outcomeClass := domain.OutcomeClass(f.Verdict)
 
-	normInput, err := admissionNormalizationInput(problemID, runID, admission.Snapshot.ID, f, ev, sig, outcomeClass, nowTime)
+	// The snapshot id is resolved inside the transaction (dedup may return an
+	// existing snapshot); the store injects it into the revision before write.
+	normInput, err := admissionNormalizationInput(problemID, runID, "", f, ev, sig, outcomeClass, nowTime)
 	if err != nil {
-		return materializedFailure{}, err
+		return store.AdmittedFailureInput{}, err
 	}
-	result, err := repoStore.PersistNormalization(ctx, normInput)
-	if err != nil {
-		return materializedFailure{}, fmt.Errorf("admit evidence normalization: %w", err)
-	}
-	if len(result.Approaches) != 1 {
-		return materializedFailure{}, fmt.Errorf("admit evidence normalization wrote %d approaches, want 1", len(result.Approaches))
-	}
-	ref := result.Approaches[0]
 
-	// Persist the assessed signature verbatim against the new mechanism. The
-	// outcome fields are the only mutation, and their provenance is honest:
-	// tool-derived (`inferred`), never source-explicit.
-	sig.MechanismID = ref.MechanismID
+	// The assessed signature verbatim; the mechanism id is resolved inside the
+	// transaction from the normalization's approach ref. The outcome fields are
+	// the only mutation, and their provenance is honest: tool-derived
+	// (`inferred`), never source-explicit.
+	sig.MechanismID = ""
 	sig.SignatureID = ""
 	sig.OutcomeClass = outcomeClass
 	sig.OutcomeProvenance = domain.ClaimInferred
-	rec := signatureRecord(sig, ref.MechanismID, runID, nowTime)
-	persistedSig, err := repoStore.PersistSignature(ctx, rec)
-	if err != nil {
-		return materializedFailure{}, fmt.Errorf("admit evidence signature: %w", err)
-	}
+	rec := signatureRecord(sig, "", runID, nowTime)
 
-	return materializedFailure{
-		SnapshotID:         admission.Snapshot.ID,
-		ApproachID:         ref.ApproachID,
-		ApproachRevisionID: ref.ApproachRevisionID,
-		MechanismID:        ref.MechanismID,
-		SignatureID:        persistedSig.Record.ID,
+	return store.AdmittedFailureInput{
+		Snapshot:      snapshot,
+		Normalization: normInput,
+		Signature:     rec,
+		Admission:     row,
 	}, nil
 }
 

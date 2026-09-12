@@ -128,9 +128,10 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 	// none survive, there is nothing to generate against — a legitimate empty
 	// outcome, not an error. Baseline arms (opts.noTargets) attack nothing.
 	var survivors []frontier.SurvivingInvariant
+	var discoveryRuns map[string]bool
 	if !opts.noTargets {
 		var err error
-		survivors, err = a.survivingInvariants(ctx, repoStore, input.ProblemID)
+		survivors, discoveryRuns, err = a.survivingInvariants(ctx, repoStore, input.ProblemID)
 		if err != nil {
 			return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
 		}
@@ -148,6 +149,26 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 	clusterRun, err := repoStore.GetClusterRun(ctx, clusterRunID)
 	if err != nil {
 		return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
+	}
+	// Vocabulary pinning: a survivor's predicate was mined against a population
+	// canonicalized under its DISCOVERY cluster run's schema/vocabulary. Scoring
+	// proposals against families from a run canonicalized under a different
+	// vocabulary would silently change the meaning of every predicate verdict —
+	// refuse loudly instead (verification_blocked-style stop, not silent drift).
+	for runID := range discoveryRuns {
+		if runID == "" || runID == clusterRun.ID {
+			continue
+		}
+		discovery, derr := repoStore.GetClusterRun(ctx, runID)
+		if derr != nil {
+			return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, derr
+		}
+		if discovery.SchemaVersion != clusterRun.SchemaVersion || discovery.VocabularyVersion != clusterRun.VocabularyVersion {
+			return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, fmt.Errorf(
+				"cluster run %s (schema %s, vocabulary %s) does not match the schema/vocabulary of targeted invariants' discovery cluster run %s (schema %s, vocabulary %s); re-run `cluster build` and `invariant mine` under one vocabulary before generating",
+				clusterRun.ID, clusterRun.SchemaVersion, clusterRun.VocabularyVersion,
+				discovery.ID, discovery.SchemaVersion, discovery.VocabularyVersion)
+		}
 	}
 	engineFamilies, err := frontierFamilies(ctx, repoStore, clusterRun)
 	if err != nil {
@@ -360,24 +381,29 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 // originating revision) so the engine can verify violations against it. An
 // invariant whose predicate cannot be resolved/parsed is skipped with no
 // silent promotion.
-func (a *App) survivingInvariants(ctx context.Context, repoStore problemStore, problemID string) ([]frontier.SurvivingInvariant, error) {
+// survivingInvariants returns the targetable invariant set with parsed
+// predicates, plus the set of DISCOVERY cluster run ids their revisions were
+// mined against (for vocabulary pinning at generation time).
+func (a *App) survivingInvariants(ctx context.Context, repoStore problemStore, problemID string) ([]frontier.SurvivingInvariant, map[string]bool, error) {
 	var states []store.InvariantStateRow
 	for _, targetable := range targetableStates {
 		rows, err := repoStore.ListInvariantStates(ctx, problemID, targetable)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		states = append(states, rows...)
 	}
+	discoveryRuns := make(map[string]bool)
 	out := make([]frontier.SurvivingInvariant, 0, len(states))
 	for _, s := range states {
-		pred, ok, perr := predicateForCandidate(ctx, repoStore, s.InvariantRevisionID, s.InvariantID)
+		pred, clusterRunID, ok, perr := predicateForCandidate(ctx, repoStore, s.InvariantRevisionID, s.InvariantID)
 		if perr != nil {
-			return nil, perr
+			return nil, nil, perr
 		}
 		if !ok {
 			continue
 		}
+		discoveryRuns[clusterRunID] = true
 		out = append(out, frontier.SurvivingInvariant{
 			InvariantID:          s.InvariantID,
 			PredicateFingerprint: s.PredicateFingerprint,
@@ -386,15 +412,16 @@ func (a *App) survivingInvariants(ctx context.Context, repoStore problemStore, p
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].InvariantID < out[j].InvariantID })
-	return out, nil
+	return out, discoveryRuns, nil
 }
 
 // predicateForCandidate loads a candidate invariant's parsed predicate from its
-// originating revision.
-func predicateForCandidate(ctx context.Context, repoStore problemStore, revisionID, invariantID string) (invariant.Predicate, bool, error) {
+// originating revision, along with the revision's DISCOVERY cluster run id (the
+// population context the predicate was mined against).
+func predicateForCandidate(ctx context.Context, repoStore problemStore, revisionID, invariantID string) (invariant.Predicate, string, bool, error) {
 	rec, err := repoStore.GetInvariantRevision(ctx, revisionID)
 	if err != nil {
-		return invariant.Predicate{}, false, err
+		return invariant.Predicate{}, "", false, err
 	}
 	for _, c := range rec.Candidates {
 		if c.ID != invariantID {
@@ -402,11 +429,11 @@ func predicateForCandidate(ctx context.Context, repoStore problemStore, revision
 		}
 		pred, perr := invariant.ParsePredicate(c.PredicateJSON)
 		if perr != nil {
-			return invariant.Predicate{}, false, perr
+			return invariant.Predicate{}, "", false, perr
 		}
-		return pred, true, nil
+		return pred, rec.ClusterRunID, true, nil
 	}
-	return invariant.Predicate{}, false, nil
+	return invariant.Predicate{}, "", false, nil
 }
 
 // frontierFamilies rehydrates each cluster's representative signature (with full
@@ -505,11 +532,15 @@ func (a *App) ShowFrontier(ctx context.Context, input FrontierShowInput) (Fronti
 		}
 		id = latest
 	}
-	// A PROPOSAL id resolves to its containing generation, filtered to that
+	// A PROPOSAL id resolves to its LATEST OCCURRENCE context, filtered to that
 	// proposal (E3: proposals are the loop's atom — evaluate, experiments, and
-	// policy all trade in fpr_ ids, so the read surface must accept them).
+	// policy all trade in fpr_ ids, so the read surface must accept them). The
+	// latest occurrence generation — not the owning generation — is the context
+	// evaluate binds by default, so `frontier show <fpr>` reports the same
+	// context a default reassessment would target. Pre-occurrence history
+	// (v24-) falls back to the owning generation.
 	if domain.ValidateFrontierProposalID(id) == nil {
-		genID, found, gerr := repoStore.FindGenerationForProposal(ctx, id)
+		genID, found, gerr := repoStore.LatestProposalOccurrenceGeneration(ctx, input.ProblemID, id)
 		if gerr != nil {
 			return FrontierShowResponse{}, gerr
 		}
@@ -575,6 +606,9 @@ func frontierGenerationView(rec store.FrontierGenerationRecord) FrontierGenerati
 		}
 		if p.Result.Valid {
 			pv.Result = p.Result.String
+			pv.ResultEvaluationID = p.ResultEvaluationID
+			pv.ResultVerifierKind = p.ResultVerifierKind
+			pv.ResultVerificationStrength = p.ResultVerificationStrength
 		}
 		for _, t := range p.Targets {
 			pv.Targets = append(pv.Targets, FrontierTargetView{

@@ -466,9 +466,6 @@ func (f *fakeProblemStore) LatestFrontierGenerationWithOccurrences(context.Conte
 func (f *fakeProblemStore) ListOccurrenceProposalRows(context.Context, string) ([]store.FrontierProposalRow, error) {
 	return nil, errors.New("unexpected call")
 }
-func (f *fakeProblemStore) HasEvaluationForContent(context.Context, string, string) (bool, error) {
-	return false, errors.New("unexpected call")
-}
 func (f *fakeProblemStore) RecordFailedProviderInvocation(context.Context, store.FrontierProviderInvocation) error {
 	return errors.New("unexpected call")
 }
@@ -530,18 +527,6 @@ func (f *fakeProblemStore) GetLeakageCheck(context.Context, string) (store.Leaka
 	return store.LeakageCheckRecord{}, errors.New("unexpected call")
 }
 
-func (f *fakeProblemStore) ListProposalContents(context.Context, string) ([]store.ProposalContentRow, error) {
-	return nil, errors.New("unexpected call")
-}
-
-func (f *fakeProblemStore) ListProposalContentsForProblem(context.Context, string) ([]store.ProposalContentRow, error) {
-	return nil, errors.New("unexpected call")
-}
-
-func (f *fakeProblemStore) ListProposalContentsByIDs(context.Context, []string) ([]store.ProposalContentRow, error) {
-	return nil, errors.New("unexpected call")
-}
-
 func (f *fakeProblemStore) RecordExperimentExecutions(context.Context, []store.ExperimentExecutionRow) error {
 	return errors.New("unexpected call")
 }
@@ -554,10 +539,6 @@ func (f *fakeProblemStore) ListTargetSignaturesForHoldout(context.Context, strin
 
 func (f *fakeProblemStore) ListMechanismsForProblem(context.Context, string) ([]store.MechanismListItem, error) {
 	return nil, errors.New("unexpected call")
-}
-
-func (f *fakeProblemStore) FindGenerationForProposal(context.Context, string) (string, bool, error) {
-	return "", false, errors.New("unexpected call")
 }
 
 func (f *fakeProblemStore) ListGenerationOccurrenceContents(context.Context, string) (map[string]store.OccurrenceContent, error) {
@@ -600,7 +581,15 @@ func (f *fakeProblemStore) PersistEvidenceAdmission(context.Context, store.Evide
 	return store.EvidenceAdmissionRow{}, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) PersistAdmittedFailure(context.Context, store.AdmittedFailureInput) (store.AdmittedFailureResult, error) {
+	return store.AdmittedFailureResult{}, errors.New("unexpected call")
+}
+
 func (f *fakeProblemStore) ListEvidenceAdmissions(context.Context, string) ([]store.EvidenceAdmissionRow, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) AdmittedSignatureKinds(context.Context, string) (map[string]string, error) {
 	return nil, errors.New("unexpected call")
 }
 
@@ -626,4 +615,12 @@ func (f *fakeProblemStore) GetProjectionObligation(context.Context, string) (sto
 
 func (f *fakeProblemStore) ListProjectionsForProblem(context.Context, string) ([]store.ProjectionRecord, error) {
 	return nil, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistInvariantClaimForm(context.Context, store.InvariantClaimFormRow) error {
+	return errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetLatestInvariantClaimForm(context.Context, string) (store.InvariantClaimFormRow, bool, error) {
+	return store.InvariantClaimFormRow{}, false, errors.New("unexpected call")
 }

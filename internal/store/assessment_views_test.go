@@ -88,6 +88,7 @@ func recordAssessmentViewTest(t *testing.T, st *Store, gen FrontierGenerationRec
 			Verdict:              verdict,
 			VerifierKind:         "deterministic-check",
 			VerificationStrength: "deterministic",
+			VerificationSubject:  "annotation",
 			ToolName:             "assessment-read-test",
 			ToolVersion:          "v1",
 		}},
@@ -181,5 +182,57 @@ func TestLegacyResultNeedsMatchingAssessmentContext(t *testing.T) {
 	got, err := st.GetFrontierGeneration(ctx, gen.ID)
 	if err != nil || len(got.Proposals) != 1 || got.Proposals[0].Result.String != "success" {
 		t.Fatalf("legacy generation must still derive its scoped latest result: %+v / %v", got, err)
+	}
+}
+
+// R1 discipline: a surfaced occurrence verdict is never separated from its
+// provenance. Both owned reads (GetFrontierGeneration and
+// ListOccurrenceProposalRows) must carry the assessing evaluation's identity,
+// verifier kind and verification strength alongside the verdict — and leave
+// them empty when the occurrence was never assessed.
+func TestOccurrenceResultCarriesEvaluationProvenance(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+	gen := sampleFrontier(t, st)
+	gen.Proposals[0].SignatureJSON = `{"schema_version":"mechanism/v1"}`
+	gen.Proposals[0].CanonicalFingerprint = "assessment-fingerprint"
+	if _, err := st.PersistFrontierGeneration(ctx, gen); err != nil {
+		t.Fatal(err)
+	}
+	pid := gen.Proposals[0].ID
+
+	// Unassessed occurrence: no verdict, no provenance.
+	before, err := st.GetFrontierGeneration(ctx, gen.ID)
+	if err != nil || len(before.Proposals) != 1 {
+		t.Fatalf("load before assessment: %+v / %v", before, err)
+	}
+	if p := before.Proposals[0]; p.Result.Valid || p.ResultEvaluationID != "" || p.ResultVerifierKind != "" || p.ResultVerificationStrength != "" {
+		t.Fatalf("unassessed occurrence must carry no provenance: %+v", p)
+	}
+
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(gen.Proposals[0].SignatureJSON)))
+	recordAssessmentViewTest(t, st, gen, pid, hash, "failure")
+	var evalID string
+	if err := st.db.QueryRow(`SELECT id FROM evaluations WHERE proposal_id = ?`, pid).Scan(&evalID); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := st.GetFrontierGeneration(ctx, gen.ID)
+	if err != nil || len(got.Proposals) != 1 {
+		t.Fatalf("load after assessment: %+v / %v", got, err)
+	}
+	p := got.Proposals[0]
+	if p.Result.String != "failure" || p.ResultEvaluationID != evalID ||
+		p.ResultVerifierKind != "deterministic-check" || p.ResultVerificationStrength != "deterministic" {
+		t.Fatalf("owned read must carry the assessing evaluation's provenance with the verdict: %+v", p)
+	}
+	rows, err := st.ListOccurrenceProposalRows(ctx, gen.ID)
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("occurrence read: %+v / %v", rows, err)
+	}
+	o := rows[0]
+	if o.Result.String != "failure" || o.ResultEvaluationID != evalID ||
+		o.ResultVerifierKind != "deterministic-check" || o.ResultVerificationStrength != "deterministic" {
+		t.Fatalf("occurrence read must agree on provenance: %+v", o)
 	}
 }

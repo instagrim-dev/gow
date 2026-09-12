@@ -95,33 +95,6 @@ func TestPersistFrontierGenerationRoundTrip(t *testing.T) {
 	}
 }
 
-// F3 boundary: ListProposalContentsByIDs batches its IN-list so an id set larger
-// than SQLite's bound-parameter ceiling (historically 999) does not error. Only
-// the persisted proposal is returned; the >900 non-existent ids are ignored.
-func TestListProposalContentsByIDsBatchesPastParameterLimit(t *testing.T) {
-	st := openMigratedStore(t)
-	ctx := context.Background()
-	rec := sampleFrontier(t, st)
-	res, err := st.PersistFrontierGeneration(ctx, rec)
-	if err != nil {
-		t.Fatalf("persist: %v", err)
-	}
-	realID := res.Record.Proposals[0].ID
-	insertTestSignatureContent(t, st, realID, `{"schema_version":"mechanism/v1"}`, "cfp-batch")
-
-	ids := []string{realID}
-	for i := 0; i < 2500; i++ { // well past both the 900 batch size and the 999 ceiling
-		ids = append(ids, domain.NewFrontierProposalID(time.Now().UTC()))
-	}
-	rows, err := st.ListProposalContentsByIDs(ctx, ids)
-	if err != nil {
-		t.Fatalf("ListProposalContentsByIDs must batch past the parameter limit: %v", err)
-	}
-	if len(rows) != 1 || rows[0].ProposalID != realID || rows[0].SignatureJSON == "" {
-		t.Fatalf("want exactly the one persisted proposal with content, got %+v", rows)
-	}
-}
-
 func TestPersistFrontierGenerationDedupAcrossRuns(t *testing.T) {
 	st := openMigratedStore(t)
 	ctx := context.Background()
@@ -350,17 +323,16 @@ func TestDedupPreservesRevisedSignatureContent(t *testing.T) {
 	}
 
 	// Readers consume the LATEST revision (the revised interpretation).
-	rows, err := st.ListProposalContentsByIDs(ctx, []string{proposalID})
-	if err != nil {
-		t.Fatalf("read contents: %v", err)
+	var latestJSON, latestHash string
+	if err := st.db.QueryRowContext(ctx, `
+SELECT signature_json, content_hash FROM frontier_proposal_signature_revisions
+WHERE proposal_id = ? ORDER BY revision DESC LIMIT 1`, proposalID).Scan(&latestJSON, &latestHash); err != nil {
+		t.Fatalf("read latest revision: %v", err)
 	}
-	if len(rows) != 1 {
-		t.Fatalf("want 1 content row, got %d", len(rows))
+	if !strings.Contains(latestJSON, `"completeness":"complete"`) {
+		t.Fatalf("reader must see the REVISED interpretation, got %s", latestJSON)
 	}
-	if !strings.Contains(rows[0].SignatureJSON, `"completeness":"complete"`) {
-		t.Fatalf("reader must see the REVISED interpretation, got %s", rows[0].SignatureJSON)
-	}
-	if rows[0].ContentHash == "" {
+	if latestHash == "" {
 		t.Fatal("content hash must identify the revision consumed")
 	}
 

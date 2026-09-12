@@ -453,29 +453,8 @@ type SourceSummary struct {
 }
 
 func (s *Store) CreateSourceSnapshot(ctx context.Context, input SnapshotAdmission) (SnapshotAdmissionResult, error) {
-	if err := domain.ValidateProblemID(input.ProblemID); err != nil {
+	if err := validateSnapshotAdmission(input); err != nil {
 		return SnapshotAdmissionResult{}, err
-	}
-	if strings.TrimSpace(input.Origin) == "" {
-		return SnapshotAdmissionResult{}, errors.New("source origin is required")
-	}
-	if strings.TrimSpace(input.LogicalName) == "" {
-		return SnapshotAdmissionResult{}, errors.New("source logical_name is required")
-	}
-	if strings.TrimSpace(input.SHA256) == "" {
-		return SnapshotAdmissionResult{}, errors.New("source snapshot sha256 is required")
-	}
-	if strings.TrimSpace(input.MediaType) == "" {
-		return SnapshotAdmissionResult{}, errors.New("source snapshot media_type is required")
-	}
-	if strings.TrimSpace(input.ObjectPath) == "" {
-		return SnapshotAdmissionResult{}, errors.New("source snapshot object_path is required")
-	}
-	if err := domain.ValidateRunID(input.IngestRunID); err != nil {
-		return SnapshotAdmissionResult{}, err
-	}
-	if input.ObservedAt.IsZero() {
-		return SnapshotAdmissionResult{}, errors.New("source snapshot observed_at is required")
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -484,6 +463,49 @@ func (s *Store) CreateSourceSnapshot(ctx context.Context, input SnapshotAdmissio
 	}
 	defer tx.Rollback()
 
+	result, err := createSourceSnapshotTx(ctx, tx, input)
+	if err != nil {
+		return SnapshotAdmissionResult{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return SnapshotAdmissionResult{}, err
+	}
+	return result, nil
+}
+
+func validateSnapshotAdmission(input SnapshotAdmission) error {
+	if err := domain.ValidateProblemID(input.ProblemID); err != nil {
+		return err
+	}
+	if strings.TrimSpace(input.Origin) == "" {
+		return errors.New("source origin is required")
+	}
+	if strings.TrimSpace(input.LogicalName) == "" {
+		return errors.New("source logical_name is required")
+	}
+	if strings.TrimSpace(input.SHA256) == "" {
+		return errors.New("source snapshot sha256 is required")
+	}
+	if strings.TrimSpace(input.MediaType) == "" {
+		return errors.New("source snapshot media_type is required")
+	}
+	if strings.TrimSpace(input.ObjectPath) == "" {
+		return errors.New("source snapshot object_path is required")
+	}
+	if err := domain.ValidateRunID(input.IngestRunID); err != nil {
+		return err
+	}
+	if input.ObservedAt.IsZero() {
+		return errors.New("source snapshot observed_at is required")
+	}
+	return nil
+}
+
+// createSourceSnapshotTx is the transaction-scoped snapshot-admission core.
+// It never commits: the caller owns the transaction, so the same core serves
+// both the standalone CreateSourceSnapshot write and composite writes (e.g.
+// evidence-admission materialization) that must be atomic with other rows.
+func createSourceSnapshotTx(ctx context.Context, tx *sql.Tx, input SnapshotAdmission) (SnapshotAdmissionResult, error) {
 	source, createdSource, err := getOrCreateSourceTx(ctx, tx, input)
 	if err != nil {
 		return SnapshotAdmissionResult{}, err
@@ -494,9 +516,6 @@ func (s *Store) CreateSourceSnapshot(ctx context.Context, input SnapshotAdmissio
 		return SnapshotAdmissionResult{}, err
 	}
 	if found {
-		if err := tx.Commit(); err != nil {
-			return SnapshotAdmissionResult{}, err
-		}
 		return SnapshotAdmissionResult{
 			Source:        source,
 			Snapshot:      existing,
@@ -542,9 +561,6 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
 				return SnapshotAdmissionResult{}, findErr
 			}
 			if found {
-				if err := tx.Commit(); err != nil {
-					return SnapshotAdmissionResult{}, err
-				}
 				return SnapshotAdmissionResult{
 					Source:        source,
 					Snapshot:      existing,
@@ -566,9 +582,6 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ObservedAt:           newSnapshot.ObservedAt.UTC(),
 		IngestRunID:          newSnapshot.IngestRunID,
 		SupersedesSnapshotID: newSnapshot.SupersedesSnapshotID,
-	}
-	if err := tx.Commit(); err != nil {
-		return SnapshotAdmissionResult{}, err
 	}
 	return SnapshotAdmissionResult{
 		Source:        source,

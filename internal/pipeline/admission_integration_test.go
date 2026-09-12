@@ -168,15 +168,29 @@ func TestIntegrationEvidenceAdmissionClosesReentry(t *testing.T) {
 		t.Fatalf("admitted failure must grow the population by 1: %d -> %d", basePopulation, after.ClusterRun.SignatureCount)
 	}
 	member := false
+	memberKind := ""
+	otherKindLabeled := false
 	for _, c := range after.ClusterRun.Clusters {
 		for _, m := range c.Members {
 			if m.SignatureID == adm.SignatureID {
 				member = true
+				memberKind = m.AdmittedObservationKind
+			} else if m.AdmittedObservationKind != "" {
+				otherKindLabeled = true
 			}
 		}
 	}
 	if !member {
 		t.Fatalf("admitted signature %s must be a member of the new cluster run", adm.SignatureID)
+	}
+	// F4: the admitted member carries its ledger observation kind into the
+	// population view — an attested model-judged failure stays visibly
+	// model-judged; ordinary normalized members carry no admission label.
+	if memberKind != ObservationModelJudgedFailure {
+		t.Fatalf("admitted member observation kind = %q, want %q", memberKind, ObservationModelJudgedFailure)
+	}
+	if otherKindLabeled {
+		t.Fatal("non-admitted population members must not carry an admission observation kind")
 	}
 
 	// 6) Admission is settled: another batch pass changes nothing.
@@ -202,7 +216,7 @@ func TestClassifyEvaluatedFailure(t *testing.T) {
 	}{
 		{"deterministic check is a structural claim failure", "deterministic-check", "deterministic", ObservationStructuralClaimFailure, false, false},
 		{"reproducible computation is domain-checked", "reproducible-computation", "reproducible", ObservationDomainCheckedFailure, true, true},
-		{"counterexample search is domain-checked", "counterexample-search", "reproducible", ObservationDomainCheckedFailure, true, true},
+		{"counterexample search is domain-checked but witness-gated (F5)", "counterexample-search", "reproducible", ObservationDomainCheckedFailure, false, true},
 		{"independent evidence needs attestation", "independent-evidence", "independent-evidence", ObservationDomainCheckedFailure, false, true},
 		{"independent critic is model-judged", "independent-critic", "independent-critic", ObservationModelJudgedFailure, false, true},
 		{"model judgment is model-judged", "model-judgment", "single-model-judgment", ObservationModelJudgedFailure, false, true},

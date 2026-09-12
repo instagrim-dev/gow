@@ -118,6 +118,105 @@ func NewUntrustedProposer(transport ProposalTransport, meta Metadata) *Untrusted
 // wire violation before any parsing work.
 const MaxProposalResponseBytes = 4 << 20
 
+// strictWireKeys is the CLOSED proposal-wire/v1 key vocabulary: the union of
+// every json tag on WireResponse, WireProposal, and WireMechanism. The strict
+// pre-pass rejects any object key outside this exact (case-sensitive) set,
+// wherever it appears in the document. Keep this map in lockstep with the
+// wire structs above.
+var strictWireKeys = map[string]bool{
+	// WireResponse
+	"schema_version": true,
+	"proposals":      true,
+	// WireProposal
+	"mechanism":                   true,
+	"target_invariant_ids":        true,
+	"structural_violation_claim":  true,
+	"novelty_argument":            true,
+	"cheapest_falsification_path": true,
+	"expected_information_gain":   true,
+	"evaluation_cost":             true,
+	// WireMechanism
+	"representations":   true,
+	"assumptions":       true,
+	"operators":         true,
+	"preserves":         true,
+	"breaks":            true,
+	"auxiliary_objects": true,
+	"locality":          true,
+	"construction_mode": true,
+	"uncertainty_mode":  true,
+}
+
+// strictWireKeyPass is a deterministic token-level pre-pass over the raw
+// payload, run BEFORE the struct decode. It exists because encoding/json
+// semantics leave two holes that DisallowUnknownFields does not close:
+//
+//  1. duplicate keys in one object are silently last-wins, so a payload can
+//     carry two "structural_violation_claim" values and only the second is
+//     ever seen;
+//  2. struct-tag matching is case-INsensitive, so "SCHEMA_VERSION" decodes
+//     into the schema_version field without tripping DisallowUnknownFields.
+//
+// The pre-pass walks the token stream tracking object nesting and rejects
+// (a) any key repeated within the same object and (b) any key that is not an
+// exact, case-sensitive member of the closed wire vocabulary — making the
+// wire contract byte-exact. Malformed JSON is NOT judged here: the pass
+// returns nil and lets the existing decode produce the single authoritative
+// syntax error, so nothing the old path rejected becomes acceptable.
+func strictWireKeyPass(raw string) error {
+	type frame struct {
+		object    bool
+		keys      map[string]bool
+		expectKey bool
+	}
+	var stack []frame
+	// A completed value inside an object means the next token is a key again.
+	valueDone := func() {
+		if len(stack) > 0 && stack[len(stack)-1].object {
+			stack[len(stack)-1].expectKey = true
+		}
+	}
+	dec := json.NewDecoder(strings.NewReader(raw))
+	for {
+		tok, err := dec.Token()
+		if err != nil {
+			// io.EOF: clean end. Anything else: syntax error — defer to the
+			// main decode's error path (see doc comment).
+			return nil
+		}
+		if len(stack) > 0 && stack[len(stack)-1].object && stack[len(stack)-1].expectKey {
+			top := &stack[len(stack)-1]
+			if key, ok := tok.(string); ok {
+				if top.keys[key] {
+					return fmt.Errorf("%w: duplicate key %q within one object", ErrProposalWireViolation, key)
+				}
+				if !strictWireKeys[key] {
+					return fmt.Errorf("%w: key %q is not in the wire vocabulary (unknown or case-variant; keys are case-sensitive)", ErrProposalWireViolation, key)
+				}
+				top.keys[key] = true
+				top.expectKey = false
+				continue
+			}
+			if d, ok := tok.(json.Delim); ok && d == '}' {
+				stack = stack[:len(stack)-1]
+				valueDone()
+			}
+			continue
+		}
+		switch d, ok := tok.(json.Delim); {
+		case ok && d == '{':
+			stack = append(stack, frame{object: true, keys: map[string]bool{}, expectKey: true})
+		case ok && d == '[':
+			stack = append(stack, frame{})
+		case ok: // '}' or ']' closing an array element position
+			stack = stack[:len(stack)-1]
+			valueDone()
+		default: // scalar value
+			valueDone()
+		}
+	}
+}
+
 // Generate fetches, strictly parses, and adapts the wire payload.
 func (p *UntrustedProposer) Generate(ctx context.Context, req GenerationRequest) (GenerationResponse, error) {
 	reqRaw, _ := json.Marshal(req)
@@ -154,6 +253,13 @@ func (p *UntrustedProposer) Generate(ctx context.Context, req GenerationRequest)
 func ParseWireProposals(raw string, allowedTargetIDs []string) ([]FrontierProposal, error) {
 	if len(raw) > MaxProposalResponseBytes {
 		return nil, fmt.Errorf("%w: response is %d bytes (limit %d)", ErrProposalWireViolation, len(raw), MaxProposalResponseBytes)
+	}
+	// Byte-exact key discipline BEFORE the struct decode: duplicate keys and
+	// case-variant keys are accepted by encoding/json (last-wins /
+	// case-insensitive tag matching) even under DisallowUnknownFields, so a
+	// token-level pre-pass closes the wire vocabulary exactly.
+	if err := strictWireKeyPass(raw); err != nil {
+		return nil, err
 	}
 
 	dec := json.NewDecoder(bytes.NewReader([]byte(raw)))

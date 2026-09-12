@@ -44,7 +44,7 @@ strengthened nor weakened by a claim code cannot confirm.
 
 | Type | Confirmed when (code-verified) | Lifecycle force |
 |---|---|---|
-| `known-counterexample` | a failure-side member in the atlas evaluates to `violates` (ambiguity is not a counterexample) **and** the candidate is a verified-universal claim; recurrence is a *frequency label*, not a quantifier, so `recurring` grants the universal (falsifiable-by-one-counterexample) reading **only** when the corpus is actually universal over the eligible failure population (full failure coverage). A `recurring` candidate that is not fully covering, a `contrast_observed` (association) claim, or an `unknown`-kind claim is **not** refuted by an isolated counterexample (G3) | **falsified** (verified-universal only) |
+| `known-counterexample` | a failure-side member in the atlas evaluates to `violates` (ambiguity is not a counterexample) **and** the candidate carries an **operator-authored** `universal` claim form (v39, issue #21); recurrence is a *frequency label*, not a quantifier, and — since v39 — measured full coverage of a finite sample no longer supplies an unstated universal domain. Absent an authored `universal` quantifier (`newf invariant claim`), a `recurring` candidate, a `contrast_observed` (association) claim, or an `unknown`-kind claim is **not** refuted by an isolated counterexample (G3): the violation is recorded, the claim is not refuted | **falsified** (authored-universal only) |
 | `synthetic-counterexample` | a provider-constructed approach evaluates to `violates` **via admissibly supported structure**. The construction is a PROPOSAL: its set fields are `unobserved`, so an omitted/empty description reads as `unknown` (inert), and a violation resting on an **unsupported** present claim is likewise only a proposal — presence in a generated description is not stronger evidence of realizability than absence from it (G3) | **weaken** — constructibility (from supported structure) shows the invariant is not conserved by necessity; only an observed, in-atlas counterexample falsifies the empirical regularity |
 | `success-preserving` | a success/partial-success family's eligible members all satisfy the predicate (it does not discriminate outcome) | **weaken** |
 | `bias-critique` | the deterministically **recomputed** distinct-family support falls below the mining threshold; the recount is the evidence (KTD-6) and is retained for audit even when unconfirmed | **weaken** |
@@ -345,3 +345,46 @@ The child hypothesis discipline prevents unbounded branching:
 - `internal/pipeline/challenge*.go` — campaign orchestration, verdict policy,
   the `operator_attested` gate, run lifecycle.
 - `cmd/newf/challenge.go` — thin CLI wiring.
+
+## Authored claim forms (v39, issue #21)
+
+Sample recurrence, transformation invariance, and obstruction are distinct
+propositions. Before v39, `associationKindForCandidate` granted the universal
+(falsifiable-by-one-counterexample) reading from *measured* full coverage over
+the discovery population — a property of a finite recorded sample silently
+fixing the refutation semantics of an unauthored proposition.
+
+Since v39 the proposition shape is **authored**, never inferred:
+
+```text
+newf invariant claim --invariant inv_... \
+  --quantifier universal|recurrent|existential \
+  --role regularity|obstruction|enabling_condition|boundary_hypothesis \
+  --scope "failure families of cluster run mcr_...; no claim beyond the corpus" \
+  --note "basis for authoring"
+```
+
+- Forms live in `invariant_claim_forms` (append-only, immutable, latest form
+  governs deterministically by `created_at, id`).
+- The full spec is `predicate` (mined) + `quantifier` + `scope` + `claim_role`
+  (authored) + assessment context (v34 discovery/assessment populations).
+- **Universal treatment comes only from an authored `universal` quantifier.**
+  Absent one, a `recurring` candidate keeps association semantics: a lone
+  counterexample is recorded but inconclusive, and drives no transition.
+- Authoring `universal` does not strengthen evidence — it makes the claim
+  *more falsifiable* and records who fixed its shape and why. Truth (the
+  recorded observation), discrimination (whether the property separates
+  failures from successes — attacked by `success-preserving`), and search
+  eligibility (lifecycle state) remain separate axes.
+- `newf invariant state` shows the governing form, or states explicitly that
+  none is authored.
+
+Challenge evidence rows also carry `verification_subject` (v38): the
+deterministic challenge verifiers run predicates over persisted normalized
+signatures, so their evidence certifies the **annotation** — never
+realizability or the domain goal. Operator-attested independent sources
+(`newf invariant establish`) record `domain-goal` as their subject.
+
+Regression: `TestIntegrationChallengeAssessmentPopulation` demonstrates the
+gate end-to-end — the same in-scope violator is inconclusive before authoring
+and weakens the invariant only after the operator authors the universal claim.

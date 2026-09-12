@@ -65,8 +65,24 @@ type FrontierProposalRow struct {
 	ViolatesAnyTarget         bool
 	Rank                      int
 	Result                    sql.NullString
-	Targets                   []FrontierTargetRow
-	NearestClusters           []FrontierNearestRow
+	// Result provenance (ledger-derived alongside Result): the identity,
+	// verifier kind and verification strength of the evaluation whose verdict
+	// Result carries. Empty when Result is not valid.
+	ResultEvaluationID         string
+	ResultVerifierKind         string
+	ResultVerificationStrength string
+	Targets                    []FrontierTargetRow
+	NearestClusters            []FrontierNearestRow
+}
+
+// applyOccurrenceResult projects a ledger-derived occurrence assessment onto a
+// proposal row, replacing the legacy initial-verdict column value and carrying
+// the assessing evaluation's provenance with the verdict.
+func applyOccurrenceResult(p *FrontierProposalRow, r OccurrenceResult) {
+	p.Result = sql.NullString{String: r.Verdict, Valid: r.Valid}
+	p.ResultEvaluationID = r.EvaluationID
+	p.ResultVerifierKind = r.VerifierKind
+	p.ResultVerificationStrength = r.VerificationStrength
 }
 
 // FrontierGenerationRecord is the full persisted generation pass.
@@ -308,7 +324,7 @@ FROM frontier_proposals WHERE frontier_generation_run_id = ? ORDER BY rank_ordin
 		if err != nil {
 			return FrontierGenerationRecord{}, err
 		}
-		rec.Proposals[i].Result = result
+		applyOccurrenceResult(&rec.Proposals[i], result)
 		if err := s.loadFrontierProposalDetail(ctx, &rec.Proposals[i]); err != nil {
 			return FrontierGenerationRecord{}, err
 		}
@@ -486,23 +502,6 @@ FROM t GROUP BY key HAVING n >= ? ORDER BY key
 	return keys, rows.Err()
 }
 
-// FindGenerationForProposal resolves a proposal id to its containing
-// generation run (E3: the proposal-level read surface).
-func (s *Store) FindGenerationForProposal(ctx context.Context, proposalID string) (string, bool, error) {
-	if err := domain.ValidateFrontierProposalID(proposalID); err != nil {
-		return "", false, err
-	}
-	var genID string
-	err := s.db.QueryRowContext(ctx, `SELECT frontier_generation_run_id FROM frontier_proposals WHERE id = ?`, proposalID).Scan(&genID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return "", false, nil
-	}
-	if err != nil {
-		return "", false, err
-	}
-	return genID, true, nil
-}
-
 // insertSignatureRevision appends an immutable content revision for a
 // proposal's signature JSON, keyed on sha256 of the persisted bytes, and
 // returns that content hash. Identical content is a revision no-op (dedup);
@@ -628,7 +627,7 @@ ORDER BY p.id
 		if err != nil {
 			return nil, err
 		}
-		out[i].Result = result
+		applyOccurrenceResult(&out[i], result)
 		if err := s.loadFrontierProposalDetail(ctx, &out[i]); err != nil {
 			return nil, err
 		}

@@ -67,7 +67,6 @@ type problemStore interface {
 	PersistComparison(context.Context, store.ComparisonRecord) error
 	ListSignaturesForProblem(context.Context, string, string, string) ([]string, error)
 	ListMechanismsForProblem(context.Context, string) ([]store.MechanismListItem, error)
-	FindGenerationForProposal(context.Context, string) (string, bool, error)
 	ListGenerationOccurrenceContents(context.Context, string) (map[string]store.OccurrenceContent, error)
 	PersistClusterRun(context.Context, store.ClusterRunRecord) (store.PersistClusterRunResult, error)
 	GetClusterRun(context.Context, string) (store.ClusterRunRecord, error)
@@ -116,9 +115,6 @@ type problemStore interface {
 	// ListOccurrenceProposalRows returns the full proposal rows for a
 	// generation's occurrence membership (what it emitted, owned or deduped).
 	ListOccurrenceProposalRows(context.Context, string) ([]store.FrontierProposalRow, error)
-	// HasEvaluationForContent reports whether any evaluation assessed exactly
-	// this content revision — content-scoped batch eligibility (a47dd24 f3).
-	HasEvaluationForContent(context.Context, string, string) (bool, error)
 	// RecordFailedProviderInvocation retains a REJECTED provider attempt's
 	// payload envelope on the failed run (512bc54 f3).
 	RecordFailedProviderInvocation(context.Context, store.FrontierProviderInvocation) error
@@ -145,9 +141,6 @@ type problemStore interface {
 	CountHoldoutSourceDating(context.Context, string) (int, int, error)
 	RunLeakageCheck(context.Context, string, string, string, string) (store.LeakageCheckRecord, error)
 	GetLeakageCheck(context.Context, string) (store.LeakageCheckRecord, error)
-	ListProposalContents(context.Context, string) ([]store.ProposalContentRow, error)
-	ListProposalContentsForProblem(context.Context, string) ([]store.ProposalContentRow, error)
-	ListProposalContentsByIDs(context.Context, []string) ([]store.ProposalContentRow, error)
 	ListTargetSignaturesForHoldout(context.Context, string) ([]store.TargetSignatureRow, error)
 	// RecordExperimentExecutions / ListExperimentExecutions: v32 execution
 	// attribution — which capture each execution assessed, even under
@@ -176,7 +169,15 @@ type problemStore interface {
 	// evaluated failures into the atlas population, plus the content-addressed
 	// read of the exact assessed proposal-signature bytes.
 	PersistEvidenceAdmission(context.Context, store.EvidenceAdmissionRow) (store.EvidenceAdmissionRow, error)
+	// PersistAdmittedFailure materializes one admitted evaluated failure
+	// (snapshot + normalization + signature + admission decision) in a single
+	// transaction — partial materializations must be impossible.
+	PersistAdmittedFailure(context.Context, store.AdmittedFailureInput) (store.AdmittedFailureResult, error)
 	ListEvidenceAdmissions(context.Context, string) ([]store.EvidenceAdmissionRow, error)
+	// AdmittedSignatureKinds maps admitted signature ids to their ledger
+	// observation kind so population views can label admitted members with
+	// their epistemic provenance (2026-09-12 review F4).
+	AdmittedSignatureKinds(context.Context, string) (map[string]string, error)
 	GetProposalSignatureContentByHash(context.Context, string, string) (store.ProposalSignatureContentRow, bool, error)
 	// Projection chain (v37/S5): concrete plan -> obligations -> decisions.
 	GetProposalProblem(context.Context, string) (string, error)
@@ -184,6 +185,9 @@ type problemStore interface {
 	PersistObligationDecision(context.Context, store.ProjectionObligationDecisionRow) error
 	GetProjectionObligation(context.Context, string) (store.ProjectionObligationRow, store.ProjectionArtifactRow, error)
 	ListProjectionsForProblem(context.Context, string) ([]store.ProjectionRecord, error)
+	// Authored claim forms (v39/#21): quantifier + scope + role.
+	PersistInvariantClaimForm(context.Context, store.InvariantClaimFormRow) error
+	GetLatestInvariantClaimForm(context.Context, string) (store.InvariantClaimFormRow, bool, error)
 }
 
 type InitProblemInput struct {

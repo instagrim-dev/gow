@@ -69,6 +69,11 @@ func NewFixtureModelVerifier(verdict verify.Verdict, confidence string) *Fixture
 // Kind identifies the model-judgment tier.
 func (*FixtureModelVerifier) Kind() verify.VerifierKind { return verify.KindModelJudgment }
 
+// Subject: the model tier is asked whether the proposal's claimed structural
+// move would hold up as a domain outcome — its verdict is about the DOMAIN
+// GOAL, at single-model-judgment strength (never a verification of it).
+func (*FixtureModelVerifier) Subject() verify.VerificationSubject { return verify.SubjectDomainGoal }
+
 // Cost places the model tier last.
 func (*FixtureModelVerifier) Cost() int { return modelVerifierCost }
 

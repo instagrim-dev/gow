@@ -22,10 +22,23 @@ the verdict:
 - `verification_strength` — *its position in the hierarchy*: `deterministic` >
   `reproducible` > `independent-evidence` > `independent-critic` >
   `single-model-judgment`.
+- `verification_subject` (v38, issue #21) — *what object the verdict is
+  about*: `annotation` (the persisted normalized signature/claims),
+  `realization` (the described mechanism is constructible as described), or
+  `domain-goal` (the mechanism achieves the original goal). A deterministic
+  check of a predicate over a signature establishes something about that
+  signature — not that it faithfully describes a realizable mechanism, nor
+  that the mechanism satisfies the domain goal; without this axis a truthful
+  `deterministic` label can be read as certifying the wrong object. The
+  subject is part of a verifier's *registration* (`Verifier.Subject()`), and
+  `Route` stamps it from the deciding tier — a verifier cannot relabel its
+  subject per verdict. The in-tree deterministic tiers certify the
+  **annotation**; the model tier judges the **domain goal**. `NULL` only for
+  pre-v38 history (never backfilled retroactively); new writes require it.
 
 A `success` from a deterministic check and a `success` from a single model share
 a verdict string but **can never share a strength**. Storing an evaluation
-without a strength is rejected by CHECK.
+without a strength is rejected by CHECK, and without a subject by the writer.
 
 ### The verifier hierarchy (`internal/verify`, pure)
 

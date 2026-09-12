@@ -37,8 +37,11 @@ ORDER BY sig.id
 // match only another empty-hash assessment in the explicitly selected generation.
 // rowid breaks equal-clock ties by ledger insertion order rather than random IDs.
 // This is a read projection; no evaluation or initial-result row is rewritten.
+// The projection carries the assessing evaluation's identity, verifier kind and
+// verification strength so a surfaced verdict is never separated from its
+// provenance (R1 discipline: no outcome without its epistemic strength).
 const occurrenceResultSQL = `
-SELECT e.verdict
+SELECT e.verdict, e.id, e.verifier_kind, e.verification_strength
 FROM evaluations e
 JOIN evaluation_runs er ON er.id = e.evaluation_run_id
 JOIN frontier_generation_runs g ON g.id = er.frontier_generation_run_id
@@ -53,11 +56,27 @@ WHERE g.id = ? AND p.id = ? AND er.problem_id = g.problem_id
 ORDER BY e.created_at DESC, e.rowid DESC LIMIT 1
 `
 
-func (s *Store) latestOccurrenceResult(ctx context.Context, generationID, proposalID string) (sql.NullString, error) {
-	var result sql.NullString
-	err := s.db.QueryRowContext(ctx, occurrenceResultSQL, generationID, proposalID).Scan(&result)
+// OccurrenceResult is the ledger-derived assessment of one proposal occurrence:
+// the verdict plus the identity and strength of the evaluation that produced
+// it. Zero-valued (Valid=false) when the occurrence was never assessed.
+type OccurrenceResult struct {
+	Valid                bool
+	Verdict              string
+	EvaluationID         string
+	VerifierKind         string
+	VerificationStrength string
+}
+
+func (s *Store) latestOccurrenceResult(ctx context.Context, generationID, proposalID string) (OccurrenceResult, error) {
+	var r OccurrenceResult
+	err := s.db.QueryRowContext(ctx, occurrenceResultSQL, generationID, proposalID).
+		Scan(&r.Verdict, &r.EvaluationID, &r.VerifierKind, &r.VerificationStrength)
 	if errors.Is(err, sql.ErrNoRows) {
-		return sql.NullString{}, nil
+		return OccurrenceResult{}, nil
 	}
-	return result, err
+	if err != nil {
+		return OccurrenceResult{}, err
+	}
+	r.Valid = true
+	return r, nil
 }

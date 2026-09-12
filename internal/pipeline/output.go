@@ -437,6 +437,12 @@ type ClusterMemberView struct {
 	SignatureID string `json:"signature_id"`
 	MechanismID string `json:"mechanism_id"`
 	Redundant   bool   `json:"redundant"`
+	// AdmittedObservationKind labels a member that entered the population via
+	// the evidence-admission ledger with its epistemic kind (e.g.
+	// model-judged-failure for an attested model verdict). Empty for members
+	// that entered through ordinary source normalization (2026-09-12 review
+	// F4: an admitted observation must not shed its kind inside the atlas).
+	AdmittedObservationKind string `json:"admitted_observation_kind,omitempty"`
 }
 
 // ClusterView is one mechanism family.
@@ -697,19 +703,24 @@ type FrontierNearestView struct {
 // nearest families, and the ordinal scores. Result is empty until M5.2
 // evaluation populates it.
 type FrontierProposalView struct {
-	ID                        string                `json:"id"`
-	ProposalHash              string                `json:"proposal_hash"`
-	StructuralViolationClaim  string                `json:"structural_violation_claim"`
-	NoveltyArgument           string                `json:"novelty_argument"`
-	CheapestFalsificationPath string                `json:"cheapest_falsification_path"`
-	MechanisticDistance       string                `json:"mechanistic_distance_ordinal"`
-	ExpectedInformationGain   string                `json:"expected_information_gain_ordinal"`
-	EvaluationCost            string                `json:"evaluation_cost_ordinal"`
-	ViolatesAnyTarget         bool                  `json:"violates_any_target"`
-	Rank                      int                   `json:"rank"`
-	Result                    string                `json:"result,omitempty"`
-	Targets                   []FrontierTargetView  `json:"targets"`
-	NearestClusters           []FrontierNearestView `json:"nearest_clusters"`
+	ID                        string `json:"id"`
+	ProposalHash              string `json:"proposal_hash"`
+	StructuralViolationClaim  string `json:"structural_violation_claim"`
+	NoveltyArgument           string `json:"novelty_argument"`
+	CheapestFalsificationPath string `json:"cheapest_falsification_path"`
+	MechanisticDistance       string `json:"mechanistic_distance_ordinal"`
+	ExpectedInformationGain   string `json:"expected_information_gain_ordinal"`
+	EvaluationCost            string `json:"evaluation_cost_ordinal"`
+	ViolatesAnyTarget         bool   `json:"violates_any_target"`
+	Rank                      int    `json:"rank"`
+	Result                    string `json:"result,omitempty"`
+	// Result provenance: the ledger evaluation whose verdict Result carries.
+	// A reader never sees an occurrence outcome without its epistemic strength.
+	ResultEvaluationID         string                `json:"result_evaluation_id,omitempty"`
+	ResultVerifierKind         string                `json:"result_verifier_kind,omitempty"`
+	ResultVerificationStrength string                `json:"result_verification_strength,omitempty"`
+	Targets                    []FrontierTargetView  `json:"targets"`
+	NearestClusters            []FrontierNearestView `json:"nearest_clusters"`
 }
 
 // FrontierGenerationView is a full generation pass.
@@ -777,21 +788,35 @@ type EvaluationMetricView struct {
 	Value string `json:"value,omitempty"`
 }
 
+// EvaluationTargetVerdictView is one per-target break verdict computed by an
+// assessment against its assessed content revision, with the provenance regime
+// that produced it ('recomputed' vs 'unverified_legacy').
+type EvaluationTargetVerdictView struct {
+	InvariantID string `json:"invariant_id"`
+	Verdict     string `json:"verdict"`
+	Violated    bool   `json:"violated"`
+	Provenance  string `json:"provenance"`
+}
+
 // EvaluationView is one persisted evaluation. It ALWAYS carries the verifier
 // kind and verification strength alongside the verdict, so a reader can never
 // see an outcome without its epistemic strength (R1).
 type EvaluationView struct {
-	ID                   string                 `json:"id"`
-	ProposalID           string                 `json:"proposal_id"`
-	Verdict              string                 `json:"verdict"`
-	VerifierKind         string                 `json:"verifier_kind"`
-	VerificationStrength string                 `json:"verification_strength"`
-	ConfidenceOrdinal    string                 `json:"confidence_ordinal,omitempty"`
-	ToolName             string                 `json:"tool_name,omitempty"`
-	ToolVersion          string                 `json:"tool_version,omitempty"`
-	ProviderInvocationID string                 `json:"provider_invocation_id,omitempty"`
-	Notes                string                 `json:"notes,omitempty"`
-	Metrics              []EvaluationMetricView `json:"metrics,omitempty"`
+	ID                   string `json:"id"`
+	ProposalID           string `json:"proposal_id"`
+	Verdict              string `json:"verdict"`
+	VerifierKind         string `json:"verifier_kind"`
+	VerificationStrength string `json:"verification_strength"`
+	// VerificationSubject (v38/#21): what OBJECT the verdict is about —
+	// annotation / realization / domain-goal. Empty only for pre-v38 history.
+	VerificationSubject  string                        `json:"verification_subject,omitempty"`
+	ConfidenceOrdinal    string                        `json:"confidence_ordinal,omitempty"`
+	ToolName             string                        `json:"tool_name,omitempty"`
+	ToolVersion          string                        `json:"tool_version,omitempty"`
+	ProviderInvocationID string                        `json:"provider_invocation_id,omitempty"`
+	Notes                string                        `json:"notes,omitempty"`
+	Metrics              []EvaluationMetricView        `json:"metrics,omitempty"`
+	TargetVerdicts       []EvaluationTargetVerdictView `json:"target_verdicts,omitempty"`
 }
 
 // EvaluationRunView is one evaluation pass with its evaluations.
@@ -808,12 +833,24 @@ type EvaluationRunView struct {
 	Evaluations             []EvaluationView `json:"evaluations"`
 }
 
+// SkippedProposalView is one occurrence a batch evaluation deliberately did
+// NOT assess, with the reason — a silent skip would hide the difference
+// between "assessed and failing" and "never assessed in this context".
+type SkippedProposalView struct {
+	ProposalID string `json:"proposal_id"`
+	Reason     string `json:"reason"`
+}
+
 // EvaluateResponse is returned by `newf evaluate`.
 type EvaluateResponse struct {
 	OK      bool              `json:"ok"`
 	Command string            `json:"command"`
 	Store   string            `json:"store"`
 	Run     EvaluationRunView `json:"run"`
+	// Skipped lists batch-mode occurrences excluded from this run because the
+	// exact occurrence context already carries a ledger-recorded assessment.
+	// Explicit by-id evaluation remains available for every entry.
+	Skipped []SkippedProposalView `json:"skipped,omitempty"`
 }
 
 // EvaluationListResponse is returned by `newf evaluation list`.

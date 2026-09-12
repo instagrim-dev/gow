@@ -185,6 +185,11 @@ func writeInvariantStateHuman(w io.Writer, resp pipeline.InvariantStateResponse)
 	inv := resp.Invariant
 	fmt.Fprintf(w, "invariant %s\n  state:        %s (as of %s)\n  association:  %s\n  fingerprint:  %s\n  statement:    %s\n",
 		inv.InvariantID, inv.State, inv.AsOf, inv.AssociationStatus, short(inv.PredicateFingerprint), inv.Statement)
+	if c := resp.Claim; c != nil {
+		fmt.Fprintf(w, "  claim:        %s %s over %q (authored: %s)\n", c.Quantifier, c.ClaimRole, c.Scope, c.Basis)
+	} else {
+		fmt.Fprintln(w, "  claim:        (none authored — recurrence treated as association; no invented universality)")
+	}
 	if len(resp.Challenges) == 0 {
 		fmt.Fprintln(w, "  (never challenged)")
 		return

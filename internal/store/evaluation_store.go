@@ -60,6 +60,11 @@ type EvaluationTargetVerdictRow struct {
 	InvariantID string
 	Verdict     string // 'satisfies'|'violates'|'unknown'
 	Violated    bool
+	// Provenance distinguishes verdicts recomputed against the assessed
+	// content revision ('recomputed') from pre-v26 rows copied off origin-time
+	// flags ('unverified_legacy'). Loaded so no consumer can read a break
+	// verdict without knowing which regime produced it.
+	Provenance string
 }
 
 // EvaluationRow is one persisted evaluation: the verdict PLUS its verifier kind
@@ -71,6 +76,10 @@ type EvaluationRow struct {
 	Verdict              string
 	VerifierKind         string
 	VerificationStrength string
+	// VerificationSubject records WHAT OBJECT the verdict is about (v38, issue
+	// #21): annotation / realization / domain-goal. Empty only for pre-v38
+	// history whose subject was never recorded.
+	VerificationSubject  string
 	ConfidenceOrdinal    string
 	ToolName             string
 	ToolVersion          string
@@ -157,16 +166,26 @@ VALUES(?, ?, 'evaluate', ?, ?, ?, ?, ?, ?, ?, ?)
 			}
 			providerInvocationID = sql.NullString{String: inv.ID, Valid: true}
 		}
+		if e.VerificationSubject == "" {
+			return EvaluationRunRecord{}, fmt.Errorf("evaluation %s: verification_subject is required (annotation|realization|domain-goal): a verdict must say what object it is about", e.ID)
+		}
 		if _, err := tx.ExecContext(ctx, `
-INSERT INTO evaluations(id, evaluation_run_id, proposal_id, verdict, verifier_kind, verification_strength, confidence_ordinal, tool_name, tool_version, provider_invocation_id, notes, created_at, signature_content_hash)
-VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`, e.ID, record.ID, nullIfEmpty(e.ProposalID), e.Verdict, e.VerifierKind, e.VerificationStrength, nullIfEmpty(e.ConfidenceOrdinal), nullIfEmpty(e.ToolName), nullIfEmpty(e.ToolVersion), providerInvocationID, nullIfEmpty(e.Notes), record.CreatedAt, e.SignatureContentHash); err != nil {
+INSERT INTO evaluations(id, evaluation_run_id, proposal_id, verdict, verifier_kind, verification_strength, verification_subject, confidence_ordinal, tool_name, tool_version, provider_invocation_id, notes, created_at, signature_content_hash)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, e.ID, record.ID, nullIfEmpty(e.ProposalID), e.Verdict, e.VerifierKind, e.VerificationStrength, e.VerificationSubject, nullIfEmpty(e.ConfidenceOrdinal), nullIfEmpty(e.ToolName), nullIfEmpty(e.ToolVersion), providerInvocationID, nullIfEmpty(e.Notes), record.CreatedAt, e.SignatureContentHash); err != nil {
 			return EvaluationRunRecord{}, err
 		}
 		// v26: the per-target break verdicts computed against the assessed
 		// content revision — the assessment-context tuple cohort admission
 		// consumes.
-		for _, tv := range e.TargetVerdicts {
+		for ti, tv := range e.TargetVerdicts {
+			// A verdict written through this path is always freshly recomputed
+			// against the assessed content; mirror the schema default on the
+			// returned record so readers of the write result see the same
+			// provenance a reload would report.
+			if tv.Provenance == "" {
+				e.TargetVerdicts[ti].Provenance = "recomputed"
+			}
 			if _, err := tx.ExecContext(ctx, `
 INSERT INTO evaluation_target_verdicts(evaluation_id, invariant_id, verdict, violated)
 VALUES(?, ?, ?, ?)
@@ -218,21 +237,6 @@ func (s *Store) GetEvaluationRun(ctx context.Context, id string) (EvaluationRunR
 	return s.loadEvaluationRun(ctx, id)
 }
 
-// HasEvaluationForContent reports whether ANY evaluation assessed exactly this
-// signature content revision of the proposal. Batch evaluation eligibility is
-// content-scoped (a47dd24 finding 3): an artifact-level result from an earlier
-// interpretation must not hide a newly emitted, never-assessed occurrence.
-func (s *Store) HasEvaluationForContent(ctx context.Context, proposalID, contentHash string) (bool, error) {
-	row := s.db.QueryRowContext(ctx, `
-SELECT EXISTS(SELECT 1 FROM evaluations WHERE proposal_id = ? AND COALESCE(signature_content_hash, '') = ?)
-`, proposalID, contentHash)
-	var found int
-	if err := row.Scan(&found); err != nil {
-		return false, err
-	}
-	return found != 0, nil
-}
-
 func (s *Store) loadEvaluationRun(ctx context.Context, id string) (EvaluationRunRecord, error) {
 	row := s.db.QueryRowContext(ctx, `
 SELECT id, problem_id, run_id, COALESCE(frontier_generation_run_id,''), COALESCE(invariant_revision_id,''), COALESCE(cluster_run_id,''), COALESCE(normalization_revision_id,''), mode, routing_policy, evaluation_count, created_at
@@ -246,7 +250,7 @@ FROM evaluation_runs WHERE id = ?
 		return EvaluationRunRecord{}, err
 	}
 	evalRows, err := s.db.QueryContext(ctx, `
-SELECT id, COALESCE(proposal_id,''), verdict, verifier_kind, verification_strength, COALESCE(confidence_ordinal,''), COALESCE(tool_name,''), COALESCE(tool_version,''), COALESCE(provider_invocation_id,''), COALESCE(notes,''), COALESCE(signature_content_hash,'')
+SELECT id, COALESCE(proposal_id,''), verdict, verifier_kind, verification_strength, COALESCE(verification_subject,''), COALESCE(confidence_ordinal,''), COALESCE(tool_name,''), COALESCE(tool_version,''), COALESCE(provider_invocation_id,''), COALESCE(notes,''), COALESCE(signature_content_hash,'')
 FROM evaluations WHERE evaluation_run_id = ? ORDER BY id
 `, id)
 	if err != nil {
@@ -255,7 +259,7 @@ FROM evaluations WHERE evaluation_run_id = ? ORDER BY id
 	defer evalRows.Close()
 	for evalRows.Next() {
 		var e EvaluationRow
-		if err := evalRows.Scan(&e.ID, &e.ProposalID, &e.Verdict, &e.VerifierKind, &e.VerificationStrength, &e.ConfidenceOrdinal, &e.ToolName, &e.ToolVersion, &e.ProviderInvocationID, &e.Notes, &e.SignatureContentHash); err != nil {
+		if err := evalRows.Scan(&e.ID, &e.ProposalID, &e.Verdict, &e.VerifierKind, &e.VerificationStrength, &e.VerificationSubject, &e.ConfidenceOrdinal, &e.ToolName, &e.ToolVersion, &e.ProviderInvocationID, &e.Notes, &e.SignatureContentHash); err != nil {
 			return EvaluationRunRecord{}, err
 		}
 		rec.Evaluations = append(rec.Evaluations, e)
@@ -279,7 +283,7 @@ FROM evaluations WHERE evaluation_run_id = ? ORDER BY id
 // evaluation computed.
 func (s *Store) loadEvaluationTargetVerdicts(ctx context.Context, e *EvaluationRow) error {
 	rows, err := s.db.QueryContext(ctx, `
-SELECT invariant_id, verdict, violated
+SELECT invariant_id, verdict, violated, COALESCE(provenance, 'recomputed')
 FROM evaluation_target_verdicts WHERE evaluation_id = ? ORDER BY invariant_id
 `, e.ID)
 	if err != nil {
@@ -289,7 +293,7 @@ FROM evaluation_target_verdicts WHERE evaluation_id = ? ORDER BY invariant_id
 	for rows.Next() {
 		var tv EvaluationTargetVerdictRow
 		var violated int
-		if err := rows.Scan(&tv.InvariantID, &tv.Verdict, &violated); err != nil {
+		if err := rows.Scan(&tv.InvariantID, &tv.Verdict, &violated, &tv.Provenance); err != nil {
 			return err
 		}
 		tv.Violated = violated != 0
@@ -359,11 +363,11 @@ func (s *Store) GetEvaluation(ctx context.Context, id string) (EvaluationRow, er
 		return EvaluationRow{}, err
 	}
 	row := s.db.QueryRowContext(ctx, `
-SELECT id, COALESCE(proposal_id,''), verdict, verifier_kind, verification_strength, COALESCE(confidence_ordinal,''), COALESCE(tool_name,''), COALESCE(tool_version,''), COALESCE(provider_invocation_id,''), COALESCE(notes,''), COALESCE(signature_content_hash,'')
+SELECT id, COALESCE(proposal_id,''), verdict, verifier_kind, verification_strength, COALESCE(verification_subject,''), COALESCE(confidence_ordinal,''), COALESCE(tool_name,''), COALESCE(tool_version,''), COALESCE(provider_invocation_id,''), COALESCE(notes,''), COALESCE(signature_content_hash,'')
 FROM evaluations WHERE id = ?
 `, id)
 	var e EvaluationRow
-	if err := row.Scan(&e.ID, &e.ProposalID, &e.Verdict, &e.VerifierKind, &e.VerificationStrength, &e.ConfidenceOrdinal, &e.ToolName, &e.ToolVersion, &e.ProviderInvocationID, &e.Notes, &e.SignatureContentHash); err != nil {
+	if err := row.Scan(&e.ID, &e.ProposalID, &e.Verdict, &e.VerifierKind, &e.VerificationStrength, &e.VerificationSubject, &e.ConfidenceOrdinal, &e.ToolName, &e.ToolVersion, &e.ProviderInvocationID, &e.Notes, &e.SignatureContentHash); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return EvaluationRow{}, fmt.Errorf("%w: evaluation %s", ErrNotFound, id)
 		}

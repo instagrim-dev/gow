@@ -166,3 +166,154 @@ func TestGetProposalSignatureContentByHash(t *testing.T) {
 		t.Fatalf("empty hash must report absence, got found=%v err=%v", found, err)
 	}
 }
+
+// admittedFailureFixture builds one complete, valid materialization input for
+// PersistAdmittedFailure. Every id is fresh; sha keys the content-addressed
+// snapshot so two fixtures never dedup onto each other.
+func admittedFailureFixture(t *testing.T, problemID, runID, proposalID, evaluationID, sha string, now time.Time) AdmittedFailureInput {
+	t.Helper()
+	invocationID := domain.NewProviderInvocationID(now)
+	revisionID := domain.NewNormalizationRevisionID(now)
+	approachRevisionID := domain.NewApproachRevisionID(now)
+	return AdmittedFailureInput{
+		Snapshot: SnapshotAdmission{
+			ProblemID:   problemID,
+			Kind:        domain.SourceKindLocalPath,
+			LogicalName: "admitted-" + sha + ".json",
+			Origin:      "evaluation:" + evaluationID,
+			SHA256:      sha,
+			ByteLength:  42,
+			MediaType:   "application/json",
+			ObjectPath:  "sha256/" + sha,
+			IngestRunID: runID,
+			ObservedAt:  now,
+		},
+		Normalization: NormalizationInput{
+			Invocation: domain.ProviderInvocation{
+				ID: invocationID, RunID: runID, Role: domain.RoleNormalize,
+				ProviderName: "fixture", SchemaVersion: "normalize/v1",
+				RequestHash: "rh-" + sha, CreatedAt: now,
+			},
+			Revision: domain.NormalizationRevision{
+				ID: revisionID, ProblemID: problemID, RunID: runID,
+				ProviderInvocationID: invocationID, SchemaVersion: "normalize/v1",
+				ConfigHash: "ch", Status: domain.NormalizationStatusSucceeded, CreatedAt: now,
+			},
+			Approaches: []ApproachInput{{
+				LogicalIdentity: "admitted-failure/" + sha,
+				Revision: domain.ApproachRevision{
+					ID: approachRevisionID, ApproachID: domain.NewApproachID(now),
+					NormalizationRevisionID: revisionID, Label: "admitted " + sha, CreatedAt: now,
+				},
+				Mechanism: domain.Mechanism{
+					ID: domain.NewMechanismID(now), ApproachRevisionID: approachRevisionID,
+					Locality: domain.LocalityLocal, ConstructionMode: domain.ConstructionConstructive,
+					UncertaintyMode: domain.UncertaintyDeterministic,
+				},
+				Outcome: domain.Outcome{
+					ID: domain.NewOutcomeID(now), ApproachRevisionID: approachRevisionID,
+					Class: domain.OutcomeFailure, BoundaryStatement: "assessed failure",
+				},
+			}},
+		},
+		Signature: SignatureRecord{
+			ID: domain.NewMechanismSignatureID(now), SchemaVersion: "mechanism/v1",
+			VocabularyVersion: "vocab/v1", Fingerprint: "fp-" + sha,
+			RunID: runID, CreatedAt: formatTime(now), OutcomeClass: "failure",
+		},
+		Admission: EvidenceAdmissionRow{
+			ID: domain.NewEvidenceAdmissionID(now), ProblemID: problemID, RunID: runID,
+			ProposalID: proposalID, EvaluationID: evaluationID,
+			Decision: "admitted", ObservationKind: "domain-checked-failure",
+			AdmittedBy: "rule", Basis: "deterministic failure admissible",
+			ContentHash: sha, CreatedAt: formatTime(now),
+		},
+	}
+}
+
+func countRows(t *testing.T, st *Store, table string) int {
+	t.Helper()
+	var n int
+	if err := st.db.QueryRow(`SELECT COUNT(*) FROM ` + table).Scan(&n); err != nil {
+		t.Fatalf("count %s: %v", table, err)
+	}
+	return n
+}
+
+// ensureTestVocabulary registers the canonical vocabulary version the fixture
+// signature declares (mechanism_signatures.vocabulary_version FK).
+func ensureTestVocabulary(t *testing.T, st *Store) {
+	t.Helper()
+	if _, err := st.db.Exec(`INSERT OR IGNORE INTO canonical_vocabulary(version, notes, created_at) VALUES('vocab/v1','',?)`, formatTime(time.Now().UTC())); err != nil {
+		t.Fatalf("seed vocabulary: %v", err)
+	}
+}
+
+// One admitted failure materializes in a SINGLE transaction: the committed
+// state carries the snapshot, normalization revision, signature, and the
+// admission row pointing at all four resolved materialization ids.
+func TestPersistAdmittedFailureCommitsAllRows(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+	problemID, runID, proposalID, evaluationID := seedEvaluatedFailureForAdmission(t, st)
+	ensureTestVocabulary(t, st)
+	now := time.Now().UTC()
+
+	res, err := st.PersistAdmittedFailure(ctx, admittedFailureFixture(t, problemID, runID, proposalID, evaluationID, "aaaa1111", now))
+	if err != nil {
+		t.Fatalf("persist admitted failure: %v", err)
+	}
+	if res.SnapshotID == "" || res.ApproachID == "" || res.ApproachRevisionID == "" || res.MechanismID == "" || res.SignatureID == "" {
+		t.Fatalf("materialization ids must all be resolved: %+v", res)
+	}
+
+	got, err := st.ListEvidenceAdmissions(ctx, problemID)
+	if err != nil || len(got) != 1 {
+		t.Fatalf("want 1 admission, got %d (%v)", len(got), err)
+	}
+	r := got[0]
+	if r.Decision != "admitted" || r.ApproachID != res.ApproachID || r.ApproachRevisionID != res.ApproachRevisionID ||
+		r.MechanismID != res.MechanismID || r.SignatureID != res.SignatureID {
+		t.Fatalf("admission row must carry the SAME resolved ids as the write: %+v vs %+v", r, res)
+	}
+	var sigCount int
+	if err := st.db.QueryRow(`SELECT COUNT(*) FROM mechanism_signatures WHERE id = ?`, res.SignatureID).Scan(&sigCount); err != nil || sigCount != 1 {
+		t.Fatalf("signature must be committed: count=%d err=%v", sigCount, err)
+	}
+}
+
+// C1 atomicity: a failure at the FINAL insert (the admission decision row)
+// must roll back every atlas-population row written earlier in the sequence.
+// Population rows without the admission decision that justifies them would be
+// unauditable atlas contamination.
+func TestPersistAdmittedFailureRollsBackAtomically(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+	problemID, runID, proposalID, evaluationID := seedEvaluatedFailureForAdmission(t, st)
+	ensureTestVocabulary(t, st)
+	now := time.Now().UTC()
+
+	// First admission succeeds and occupies UNIQUE(evaluation_id, 'admitted').
+	if _, err := st.PersistAdmittedFailure(ctx, admittedFailureFixture(t, problemID, runID, proposalID, evaluationID, "bbbb2222", now)); err != nil {
+		t.Fatalf("first admission: %v", err)
+	}
+
+	tables := []string{"source_snapshots", "normalization_revisions", "approaches", "approach_revisions", "mechanisms", "mechanism_signatures", "evidence_admissions"}
+	before := make(map[string]int, len(tables))
+	for _, tb := range tables {
+		before[tb] = countRows(t, st, tb)
+	}
+
+	// Second admission for the SAME evaluation: snapshot, normalization, and
+	// signature inserts all succeed, then the admission insert violates
+	// UNIQUE(evaluation_id, decision). The whole transaction must vanish.
+	_, err := st.PersistAdmittedFailure(ctx, admittedFailureFixture(t, problemID, runID, proposalID, evaluationID, "cccc3333", now.Add(time.Second)))
+	if err == nil {
+		t.Fatal("duplicate admitted decision must fail")
+	}
+	for _, tb := range tables {
+		if after := countRows(t, st, tb); after != before[tb] {
+			t.Errorf("%s: mid-sequence failure leaked rows: before=%d after=%d", tb, before[tb], after)
+		}
+	}
+}

@@ -52,39 +52,160 @@ type EvidenceAdmissionRow struct {
 // decision/materialization coherence (admitted rows carry all four ids,
 // withheld rows none) and at most one row per (evaluation, decision).
 func (s *Store) PersistEvidenceAdmission(ctx context.Context, row EvidenceAdmissionRow) (EvidenceAdmissionRow, error) {
-	if err := domain.ValidateEvidenceAdmissionID(row.ID); err != nil {
+	if err := validateEvidenceAdmissionRow(row); err != nil {
 		return EvidenceAdmissionRow{}, err
+	}
+	if err := insertEvidenceAdmission(ctx, s.db, row); err != nil {
+		return EvidenceAdmissionRow{}, err
+	}
+	return row, nil
+}
+
+func validateEvidenceAdmissionRow(row EvidenceAdmissionRow) error {
+	if err := domain.ValidateEvidenceAdmissionID(row.ID); err != nil {
+		return err
 	}
 	if err := domain.ValidateProblemID(row.ProblemID); err != nil {
-		return EvidenceAdmissionRow{}, err
+		return err
 	}
 	if err := domain.ValidateEvaluationID(row.EvaluationID); err != nil {
-		return EvidenceAdmissionRow{}, err
+		return err
 	}
 	if err := domain.ValidateFrontierProposalID(row.ProposalID); err != nil {
-		return EvidenceAdmissionRow{}, err
+		return err
 	}
 	switch row.Decision {
 	case "admitted":
 		if row.ApproachID == "" || row.ApproachRevisionID == "" || row.MechanismID == "" || row.SignatureID == "" {
-			return EvidenceAdmissionRow{}, fmt.Errorf("admitted evidence requires all four materialization ids (approach, approach revision, mechanism, signature)")
+			return fmt.Errorf("admitted evidence requires all four materialization ids (approach, approach revision, mechanism, signature)")
 		}
 	case "withheld":
 		if row.ApproachID != "" || row.ApproachRevisionID != "" || row.MechanismID != "" || row.SignatureID != "" {
-			return EvidenceAdmissionRow{}, fmt.Errorf("withheld evidence must not carry materialization ids")
+			return fmt.Errorf("withheld evidence must not carry materialization ids")
 		}
 	default:
-		return EvidenceAdmissionRow{}, fmt.Errorf("invalid admission decision %q", row.Decision)
+		return fmt.Errorf("invalid admission decision %q", row.Decision)
 	}
-	_, err := s.db.ExecContext(ctx, `
+	return nil
+}
+
+// admissionExecer is the write surface shared by *sql.DB and *sql.Tx, so the
+// admission insert runs standalone or inside a composite transaction.
+type admissionExecer interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
+func insertEvidenceAdmission(ctx context.Context, db admissionExecer, row EvidenceAdmissionRow) error {
+	_, err := db.ExecContext(ctx, `
 INSERT INTO evidence_admissions(id, problem_id, run_id, proposal_id, evaluation_id, decision, observation_kind, admitted_by, basis, content_hash, approach_id, approach_revision_id, mechanism_id, signature_id, created_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `, row.ID, row.ProblemID, row.RunID, row.ProposalID, row.EvaluationID, row.Decision, row.ObservationKind, row.AdmittedBy, row.Basis, row.ContentHash,
 		nullIfEmpty(row.ApproachID), nullIfEmpty(row.ApproachRevisionID), nullIfEmpty(row.MechanismID), nullIfEmpty(row.SignatureID), row.CreatedAt)
 	if err != nil {
-		return EvidenceAdmissionRow{}, fmt.Errorf("persist evidence admission: %w", err)
+		return fmt.Errorf("persist evidence admission: %w", err)
 	}
-	return row, nil
+	return nil
+}
+
+// AdmittedFailureInput is one evaluated failure's full atlas materialization:
+// the content-addressed snapshot of the assessed bytes, the normalization
+// revision deriving one approach from them, the assessed signature persisted
+// verbatim against the new mechanism, and the admission decision row. The
+// Normalization's snapshot id, the Signature's mechanism id, and the
+// Admission's four materialization ids are resolved DURING the write (snapshot
+// dedup and approach-identity reuse make them unknowable beforehand), so the
+// caller leaves them empty.
+type AdmittedFailureInput struct {
+	Snapshot      SnapshotAdmission
+	Normalization NormalizationInput
+	Signature     SignatureRecord
+	Admission     EvidenceAdmissionRow
+}
+
+// AdmittedFailureResult reports the resolved materialization identities and
+// the persisted admission row.
+type AdmittedFailureResult struct {
+	SnapshotID         string
+	ApproachID         string
+	ApproachRevisionID string
+	MechanismID        string
+	SignatureID        string
+	Admission          EvidenceAdmissionRow
+}
+
+// PersistAdmittedFailure materializes one admitted evaluated failure into the
+// atlas population in a SINGLE transaction: snapshot, normalization revision,
+// signature, and admission decision row commit together or not at all. A crash
+// or failure mid-sequence must never leave atlas population rows without the
+// admission decision that justifies them (or vice versa).
+func (s *Store) PersistAdmittedFailure(ctx context.Context, input AdmittedFailureInput) (AdmittedFailureResult, error) {
+	if err := validateSnapshotAdmission(input.Snapshot); err != nil {
+		return AdmittedFailureResult{}, err
+	}
+	if input.Admission.Decision != "admitted" {
+		return AdmittedFailureResult{}, fmt.Errorf("PersistAdmittedFailure requires decision 'admitted', got %q", input.Admission.Decision)
+	}
+	if err := domain.ValidateMechanismSignatureID(input.Signature.ID); err != nil {
+		return AdmittedFailureResult{}, err
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return AdmittedFailureResult{}, err
+	}
+	defer tx.Rollback()
+
+	snapshot, err := createSourceSnapshotTx(ctx, tx, input.Snapshot)
+	if err != nil {
+		return AdmittedFailureResult{}, fmt.Errorf("admit evidence snapshot: %w", err)
+	}
+
+	norm := input.Normalization
+	norm.Revision.SnapshotID = snapshot.Snapshot.ID
+	if err := validateNormalizationInput(norm); err != nil {
+		return AdmittedFailureResult{}, err
+	}
+	normResult, err := persistNormalizationTx(ctx, tx, norm)
+	if err != nil {
+		return AdmittedFailureResult{}, fmt.Errorf("admit evidence normalization: %w", err)
+	}
+	if len(normResult.Approaches) != 1 {
+		return AdmittedFailureResult{}, fmt.Errorf("admit evidence normalization wrote %d approaches, want 1", len(normResult.Approaches))
+	}
+	ref := normResult.Approaches[0]
+
+	sig := input.Signature
+	sig.MechanismID = ref.MechanismID
+	if err := domain.ValidateMechanismID(sig.MechanismID); err != nil {
+		return AdmittedFailureResult{}, err
+	}
+	if err := insertSignatureTx(ctx, tx, sig); err != nil {
+		return AdmittedFailureResult{}, fmt.Errorf("admit evidence signature: %w", err)
+	}
+
+	row := input.Admission
+	row.ApproachID = ref.ApproachID
+	row.ApproachRevisionID = ref.ApproachRevisionID
+	row.MechanismID = ref.MechanismID
+	row.SignatureID = sig.ID
+	if err := validateEvidenceAdmissionRow(row); err != nil {
+		return AdmittedFailureResult{}, err
+	}
+	if err := insertEvidenceAdmission(ctx, tx, row); err != nil {
+		return AdmittedFailureResult{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return AdmittedFailureResult{}, err
+	}
+	return AdmittedFailureResult{
+		SnapshotID:         snapshot.Snapshot.ID,
+		ApproachID:         ref.ApproachID,
+		ApproachRevisionID: ref.ApproachRevisionID,
+		MechanismID:        ref.MechanismID,
+		SignatureID:        sig.ID,
+		Admission:          row,
+	}, nil
 }
 
 // ListEvidenceAdmissions returns every admission decision for a problem in

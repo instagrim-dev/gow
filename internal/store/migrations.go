@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 37
+const currentSchemaVersion = 39
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -1102,6 +1102,49 @@ END;
 		// A plan whose steps cannot compose is refuted deterministically at
 		// projection time, before any domain work. All rows immutable.
 		apply: migrateV37ProjectionChain,
+	},
+	{
+		version: 38,
+		// v38 (2026-09-12 semantic review, issue #21): the verification
+		// SUBJECT axis. A deterministic check of a predicate over a
+		// normalized signature establishes something about that signature —
+		// not that it faithfully describes a realizable mechanism, nor that
+		// the mechanism satisfies the domain goal. Evaluations and challenge
+		// evidence now record WHAT OBJECT the verdict is about (annotation /
+		// realization / domain-goal) alongside checker kind and strength, so
+		// a truthful `deterministic` label cannot be read as certifying the
+		// wrong object. Nullable: NULL/'' = pre-v38 history whose subject was
+		// never recorded (the reader reports it as unrecorded rather than the
+		// migration fabricating one retroactively).
+		apply: migrateV38VerificationSubject,
+	},
+	{
+		version: 39,
+		// v39 (2026-09-12 semantic review, issue #21): the AUTHORED claim
+		// form. Sample recurrence, transformation invariance, and obstruction
+		// are distinct propositions; full coverage of a finite sample must
+		// not supply an unstated universal domain. A candidate's universal-
+		// counterexample treatment (falsifiable-by-one) is now granted ONLY
+		// by an operator-authored claim form (quantifier + scope + role +
+		// basis), never inferred from measured coverage. Authoring a
+		// universal quantifier does not strengthen evidence — it makes the
+		// claim MORE falsifiable and records who fixed its refutation
+		// semantics. Append-only; latest form wins deterministically.
+		apply: migrateV39InvariantClaimForms,
+	},
+	{
+		version: 40,
+		// v40 (2026-09-12 review F6): typed epistemic strength on projection
+		// obligation discharge decisions. An operator discharge is backed by
+		// a domain observation (an evaluation), but the observation's verdict
+		// and verification strength were previously embedded only in the
+		// prose basis — a policy consumer could not distinguish a discharge
+		// backed by a reproducible computation from one backed by a single
+		// model judgment without parsing prose. The verdict/strength pair is
+		// now a typed column pair, copied verbatim from the backing
+		// evaluation at decision time. Nullable: NULL/'' = code decisions
+		// (steps-compose has no backing evaluation) and pre-v40 history.
+		apply: migrateV40ObligationDecisionStrength,
 	},
 }
 
@@ -3778,4 +3821,69 @@ END;
 func migrateV37ProjectionChain(ctx context.Context, tx *sql.Tx) error {
 	_, err := tx.ExecContext(ctx, projectionChainSQL)
 	return err
+}
+
+func migrateV38VerificationSubject(ctx context.Context, tx *sql.Tx) error {
+	for _, stmt := range []string{
+		`ALTER TABLE evaluations ADD COLUMN verification_subject TEXT CHECK (verification_subject IS NULL OR verification_subject IN ('annotation','realization','domain-goal'))`,
+		`ALTER TABLE invariant_challenge_evidence ADD COLUMN verification_subject TEXT CHECK (verification_subject IS NULL OR verification_subject IN ('annotation','realization','domain-goal'))`,
+	} {
+		if _, err := tx.ExecContext(ctx, stmt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// invariantClaimFormsSQL is the additive DDL for migration v39 (issue #21):
+// the operator-authored claim form fixing a candidate's proposition shape —
+// predicate (existing) + quantifier + scope + claim role + assessment context
+// (v34 populations). One row per authoring act, append-only and immutable; the
+// latest form (created_at, id order) governs. `universal` is the only
+// quantifier that grants falsifiable-by-one-counterexample treatment at
+// challenge time; `recurrent` asserts recurrence across the recorded scope;
+// `existential` asserts at least one instance. claim_role records the
+// interpretive standing (docs/theory/glossary.md).
+const invariantClaimFormsSQL = `
+CREATE TABLE IF NOT EXISTS invariant_claim_forms (
+  id TEXT PRIMARY KEY,
+  invariant_id TEXT NOT NULL REFERENCES candidate_invariants(id),
+  quantifier TEXT NOT NULL CHECK (quantifier IN ('universal','recurrent','existential')),
+  claim_role TEXT NOT NULL CHECK (claim_role IN ('regularity','obstruction','enabling_condition','boundary_hypothesis')),
+  scope TEXT NOT NULL CHECK (length(scope) > 0),
+  authored_by TEXT NOT NULL CHECK (authored_by = 'operator'),
+  basis TEXT NOT NULL CHECK (length(basis) > 0),
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_invariant_claim_forms_invariant ON invariant_claim_forms(invariant_id);
+
+CREATE TRIGGER IF NOT EXISTS invariant_claim_forms_immutable_update
+BEFORE UPDATE ON invariant_claim_forms
+BEGIN
+  SELECT RAISE(ABORT, 'invariant claim forms are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS invariant_claim_forms_immutable_delete
+BEFORE DELETE ON invariant_claim_forms
+BEGIN
+  SELECT RAISE(ABORT, 'invariant claim forms are immutable');
+END;
+`
+
+func migrateV39InvariantClaimForms(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, invariantClaimFormsSQL)
+	return err
+}
+
+func migrateV40ObligationDecisionStrength(ctx context.Context, tx *sql.Tx) error {
+	for _, stmt := range []string{
+		`ALTER TABLE projection_obligation_decisions ADD COLUMN evaluation_verdict TEXT`,
+		`ALTER TABLE projection_obligation_decisions ADD COLUMN evaluation_strength TEXT`,
+	} {
+		if _, err := tx.ExecContext(ctx, stmt); err != nil {
+			return err
+		}
+	}
+	return nil
 }

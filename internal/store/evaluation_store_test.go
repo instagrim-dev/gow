@@ -31,6 +31,7 @@ func sampleEvaluationRun(t *testing.T, st *Store, verdict, kind, strength string
 		Verdict:              verdict,
 		VerifierKind:         kind,
 		VerificationStrength: strength,
+		VerificationSubject:  subjectForTestKind(kind),
 		ConfidenceOrdinal:    "medium",
 	}
 	if withProvider {
@@ -189,5 +190,17 @@ func TestV15ProviderRoleAllowsEvaluate(t *testing.T) {
 	}
 	if !allows {
 		t.Fatal("v15 must widen provider_invocations.role to permit 'evaluate'")
+	}
+}
+
+// subjectForTestKind supplies the v38 verification subject the production
+// verifiers of each kind actually declare (deterministic tiers certify
+// annotations; the model tier judges the domain goal).
+func subjectForTestKind(kind string) string {
+	switch kind {
+	case "deterministic-check", "counterexample-search", "reproducible-computation":
+		return "annotation"
+	default:
+		return "domain-goal"
 	}
 }

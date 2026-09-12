@@ -133,12 +133,17 @@ func (a *App) BuildClustering(ctx context.Context, input ClusterBuildInput) (Clu
 		return ClusterBuildResponse{}, err
 	}
 
+	admittedKinds, err := repoStore.AdmittedSignatureKinds(ctx, input.ProblemID)
+	if err != nil {
+		return ClusterBuildResponse{}, err
+	}
+
 	return ClusterBuildResponse{
 		OK:         true,
 		Command:    "cluster build",
 		Store:      dbPath,
 		Created:    result.Created,
-		ClusterRun: clusterRunView(result.Record),
+		ClusterRun: clusterRunView(result.Record, admittedKinds),
 	}, nil
 }
 
@@ -165,11 +170,15 @@ func (a *App) ShowClustering(ctx context.Context, input ClusterShowInput) (Clust
 	if err != nil {
 		return ClusterShowResponse{}, err
 	}
+	admittedKinds, err := repoStore.AdmittedSignatureKinds(ctx, rec.ProblemID)
+	if err != nil {
+		return ClusterShowResponse{}, err
+	}
 	return ClusterShowResponse{
 		OK:         true,
 		Command:    "cluster show",
 		Store:      dbPath,
-		ClusterRun: clusterRunView(rec),
+		ClusterRun: clusterRunView(rec, admittedKinds),
 	}, nil
 }
 
@@ -282,7 +291,7 @@ func intraVariationString(v cluster.IntraVariation) string {
 		v.Identical, v.MechanismNear, v.SurfaceDistinctNear, v.IncomparablePairs, v.MechanismDistinct)
 }
 
-func clusterRunView(rec store.ClusterRunRecord) ClusterRunView {
+func clusterRunView(rec store.ClusterRunRecord, admittedKinds map[string]string) ClusterRunView {
 	view := ClusterRunView{
 		ID:                 rec.ID,
 		ProblemID:          rec.ProblemID,
@@ -310,9 +319,10 @@ func clusterRunView(rec store.ClusterRunRecord) ClusterRunView {
 		}
 		for _, m := range c.Members {
 			cv.Members = append(cv.Members, ClusterMemberView{
-				SignatureID: m.SignatureID,
-				MechanismID: m.MechanismID,
-				Redundant:   m.Redundant,
+				SignatureID:             m.SignatureID,
+				MechanismID:             m.MechanismID,
+				Redundant:               m.Redundant,
+				AdmittedObservationKind: admittedKinds[m.SignatureID],
 			})
 		}
 		view.Clusters = append(view.Clusters, cv)

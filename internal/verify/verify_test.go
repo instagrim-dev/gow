@@ -13,8 +13,9 @@ type alwaysVerifier struct {
 	cost    int
 }
 
-func (alwaysVerifier) Kind() VerifierKind { return KindModelJudgment }
-func (a alwaysVerifier) Cost() int        { return a.cost }
+func (alwaysVerifier) Kind() VerifierKind           { return KindModelJudgment }
+func (alwaysVerifier) Subject() VerificationSubject { return SubjectDomainGoal }
+func (a alwaysVerifier) Cost() int                  { return a.cost }
 func (a alwaysVerifier) Verify(_ context.Context, _ VerificationContext) (Decision, error) {
 	return Decision{Verdict: a.verdict, Kind: KindModelJudgment, Strength: StrengthSingleModelJudgment, ConfidenceOrdinal: "medium"}, nil
 }
@@ -121,6 +122,11 @@ func TestRouteDeterministicFailureOverridesModelSuccess(t *testing.T) {
 	if d.Verdict != VerdictFailure || d.Kind != KindDeterministicCheck || d.Strength != StrengthDeterministic {
 		t.Fatalf("got %q/%q/%q; a deterministic failure must override a model success", d.Verdict, d.Kind, d.Strength)
 	}
+	// v38 (#21): the deciding tier's SUBJECT is stamped from its registration —
+	// a deterministic verdict here certifies the ANNOTATION, not the domain goal.
+	if d.Subject != SubjectAnnotation {
+		t.Fatalf("subject = %q, want annotation (a deterministic check certifies the signature, not the domain outcome)", d.Subject)
+	}
 }
 
 func TestRouteFallsThroughNonDecisiveCounterexampleToModelTier(t *testing.T) {
@@ -137,14 +143,18 @@ func TestRouteFallsThroughNonDecisiveCounterexampleToModelTier(t *testing.T) {
 	if d.Verdict != VerdictSuccess || d.Kind != KindModelJudgment {
 		t.Fatalf("got %q/%q, want success/model-judgment (counterexample search must not decide a shared-break failure)", d.Verdict, d.Kind)
 	}
+	if d.Subject != SubjectDomainGoal {
+		t.Fatalf("subject = %q, want domain-goal (the model tier judges the domain outcome)", d.Subject)
+	}
 }
 
 // overreportingVerifier is a model tier that returns a VALID but too-strong
 // strength, to exercise the router's ceiling clamp (G5).
 type overreportingVerifier struct{ verdict Verdict }
 
-func (overreportingVerifier) Kind() VerifierKind { return KindModelJudgment }
-func (overreportingVerifier) Cost() int          { return 1 }
+func (overreportingVerifier) Kind() VerifierKind           { return KindModelJudgment }
+func (overreportingVerifier) Subject() VerificationSubject { return SubjectDomainGoal }
+func (overreportingVerifier) Cost() int                    { return 1 }
 func (o overreportingVerifier) Verify(_ context.Context, _ VerificationContext) (Decision, error) {
 	// A model-judgment verifier claiming deterministic strength: the router must
 	// clamp it to the verifier's registered tier, never store the laundered value.

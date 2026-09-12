@@ -24,6 +24,11 @@ type DeterministicCheck struct{}
 // Kind identifies the deterministic-check tier.
 func (DeterministicCheck) Kind() VerifierKind { return KindDeterministicCheck }
 
+// Subject: this tier decides over PERSISTED per-target predicate verdicts —
+// its verdicts are about the normalized signature (the annotation), never
+// about realizability or the domain goal (2026-09-12 semantic review).
+func (DeterministicCheck) Subject() VerificationSubject { return SubjectAnnotation }
+
 // Cost is lowest: a read of already-computed verdicts.
 func (DeterministicCheck) Cost() int { return 10 }
 
@@ -77,6 +82,11 @@ type CounterexampleSearch struct{}
 
 // Kind identifies the counterexample-search tier.
 func (CounterexampleSearch) Kind() VerifierKind { return KindCounterexampleSearch }
+
+// Subject: the search runs over persisted signature verdicts — its evidence is
+// about the annotations of known families vs the proposal's description, not
+// about realizability or the domain goal.
+func (CounterexampleSearch) Subject() VerificationSubject { return SubjectAnnotation }
 
 // Cost is above the direct check (it scans families).
 func (CounterexampleSearch) Cost() int { return 20 }

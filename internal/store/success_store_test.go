@@ -157,7 +157,7 @@ func TestListBreakCohortRowsSelectsOneEvaluationRecord(t *testing.T) {
 		RunID:     res.Record.RunID,
 		Mode:      "proposal",
 		CreatedAt: formatTime(now.Add(-time.Hour)), // earlier
-		Evaluations: []EvaluationRow{{ID: e1ID, ProposalID: proposalID, Verdict: "partial_success", VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment", ConfidenceOrdinal: "medium", ToolName: "m", ToolVersion: "v1",
+		Evaluations: []EvaluationRow{{ID: e1ID, ProposalID: proposalID, Verdict: "partial_success", VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment", VerificationSubject: "domain-goal", ConfidenceOrdinal: "medium", ToolName: "m", ToolVersion: "v1",
 			TargetVerdicts: []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "violates", Violated: true}}}},
 	}
 	if _, err := st.PersistEvaluationRun(ctx, run); err != nil {
@@ -230,7 +230,7 @@ func TestListBreakCohortRowsLatestWinsAtEqualStrength(t *testing.T) {
 		RunID:     res.Record.RunID,
 		Mode:      "proposal",
 		CreatedAt: formatTime(now.Add(-time.Hour)),
-		Evaluations: []EvaluationRow{{ID: blockedID, ProposalID: proposalID, Verdict: "verification_blocked", VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment", ConfidenceOrdinal: "low", ToolName: "m", ToolVersion: "v1",
+		Evaluations: []EvaluationRow{{ID: blockedID, ProposalID: proposalID, Verdict: "verification_blocked", VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment", VerificationSubject: "domain-goal", ConfidenceOrdinal: "low", ToolName: "m", ToolVersion: "v1",
 			TargetVerdicts: []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "violates", Violated: true}}}},
 	}
 	if _, err := st.PersistEvaluationRun(ctx, run); err != nil {
@@ -290,7 +290,7 @@ func TestListBreakCohortRowsBindsAssessedRevision(t *testing.T) {
 		CreatedAt: formatTime(now),
 		Evaluations: []EvaluationRow{{
 			ID: e1ID, ProposalID: proposalID, Verdict: "partial_success",
-			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment",
+			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment", VerificationSubject: "domain-goal",
 			ConfidenceOrdinal: "medium", ToolName: "m", ToolVersion: "v1",
 			SignatureContentHash: r1Hash,
 			TargetVerdicts:       []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "violates", Violated: true}},
@@ -355,7 +355,7 @@ func TestListBreakCohortRowsDecisiveBeatsBlocked(t *testing.T) {
 		CreatedAt: formatTime(now.Add(-time.Hour)),
 		Evaluations: []EvaluationRow{{
 			ID: blockedID, ProposalID: proposalID, Verdict: "verification_blocked",
-			VerifierKind: "deterministic-check", VerificationStrength: "deterministic",
+			VerifierKind: "deterministic-check", VerificationStrength: "deterministic", VerificationSubject: "annotation",
 			ConfidenceOrdinal: "high", ToolName: "d", ToolVersion: "v1",
 			TargetVerdicts: []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "violates", Violated: true}},
 		}},
@@ -413,7 +413,7 @@ func TestListBreakCohortRowsExcludesWhenAssessedBreakDegraded(t *testing.T) {
 		CreatedAt: formatTime(now),
 		Evaluations: []EvaluationRow{{
 			ID: domain.NewEvaluationID(now), ProposalID: proposalID, Verdict: "partial_success",
-			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment",
+			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment", VerificationSubject: "domain-goal",
 			ConfidenceOrdinal: "medium", ToolName: "m", ToolVersion: "v1",
 			TargetVerdicts: []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "unknown", Violated: false}},
 		}},
@@ -461,7 +461,7 @@ func TestListBreakCohortRowsAdmitsWhenAssessedBreakVerified(t *testing.T) {
 		CreatedAt: formatTime(now),
 		Evaluations: []EvaluationRow{{
 			ID: evalID, ProposalID: proposalID, Verdict: "partial_success",
-			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment",
+			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment", VerificationSubject: "domain-goal",
 			ConfidenceOrdinal: "medium", ToolName: "m", ToolVersion: "v1",
 			TargetVerdicts: []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "violates", Violated: true}},
 		}},
@@ -522,7 +522,7 @@ func TestListBreakCohortRowsCurrentContentOutranksStrongerStale(t *testing.T) {
 				// below via direct insert would not help it — compatibility is
 				// ranked first.
 				ID: staleID, ProposalID: proposalID, Verdict: "failure",
-				VerifierKind: "deterministic-check", VerificationStrength: "deterministic",
+				VerifierKind: "deterministic-check", VerificationStrength: "deterministic", VerificationSubject: "annotation",
 				ConfidenceOrdinal: "high", ToolName: "d", ToolVersion: "v1",
 				SignatureContentHash: hashA,
 				TargetVerdicts:       []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "violates", Violated: true}},
@@ -530,7 +530,7 @@ func TestListBreakCohortRowsCurrentContentOutranksStrongerStale(t *testing.T) {
 			{
 				// CURRENT content, decisive, weaker (model) tier.
 				ID: currentID, ProposalID: proposalID, Verdict: "partial_success",
-				VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment",
+				VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment", VerificationSubject: "domain-goal",
 				ConfidenceOrdinal: "medium", ToolName: "m", ToolVersion: "v1",
 				SignatureContentHash: hashB,
 				TargetVerdicts:       []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "violates", Violated: true}},
@@ -581,7 +581,7 @@ func TestListBreakCohortRowsCurrentContentOutranksStrongerStale(t *testing.T) {
 		CreatedAt: formatTime(now),
 		Evaluations: []EvaluationRow{{
 			ID: staleOnly, ProposalID: p2, Verdict: "failure",
-			VerifierKind: "deterministic-check", VerificationStrength: "deterministic",
+			VerifierKind: "deterministic-check", VerificationStrength: "deterministic", VerificationSubject: "annotation",
 			ConfidenceOrdinal: "high", ToolName: "d", ToolVersion: "v1",
 			SignatureContentHash: hashA,
 			TargetVerdicts:       []EvaluationTargetVerdictRow{{InvariantID: inv2, Verdict: "violates", Violated: true}},
@@ -638,14 +638,14 @@ func TestListBreakCohortRowsLegacyUnknownBindingCannotBecomeCurrent(t *testing.T
 			{
 				// Legacy: decisive historical success, NO content binding.
 				ID: legacyID, ProposalID: proposalID, Verdict: "partial_success",
-				VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment",
+				VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment", VerificationSubject: "domain-goal",
 				ConfidenceOrdinal: "medium", ToolName: "m", ToolVersion: "v1",
 				TargetVerdicts: []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "violates", Violated: true}},
 			},
 			{
 				// Known-current: assessed B, verification_blocked, break UNKNOWN.
 				ID: currentID, ProposalID: proposalID, Verdict: "verification_blocked",
-				VerifierKind: "deterministic-check", VerificationStrength: "deterministic",
+				VerifierKind: "deterministic-check", VerificationStrength: "deterministic", VerificationSubject: "annotation",
 				ConfidenceOrdinal: "low", ToolName: "d", ToolVersion: "v1",
 				SignatureContentHash: hashB,
 				TargetVerdicts:       []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "unknown", Violated: false}},
@@ -700,7 +700,7 @@ func TestListBreakCohortRowsLegacyOnlyIsFlaggedNotFilled(t *testing.T) {
 		CreatedAt: formatTime(now),
 		Evaluations: []EvaluationRow{{
 			ID: legacyID, ProposalID: proposalID, Verdict: "partial_success",
-			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment",
+			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment", VerificationSubject: "domain-goal",
 			ConfidenceOrdinal: "medium", ToolName: "m", ToolVersion: "v1",
 			TargetVerdicts: []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "violates", Violated: true}},
 		}},
@@ -756,7 +756,7 @@ func TestMigrateV27ReclassifiesUnestablishableBackfills(t *testing.T) {
 		Mode: "proposal", CreatedAt: formatTime(now),
 		Evaluations: []EvaluationRow{{
 			ID: multiEval, ProposalID: multiID, Verdict: "partial_success",
-			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment",
+			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment", VerificationSubject: "domain-goal",
 			ConfidenceOrdinal: "medium", ToolName: "m", ToolVersion: "v1",
 			TargetVerdicts: []EvaluationTargetVerdictRow{{InvariantID: multiInv, Verdict: "violates", Violated: true}},
 		}},
@@ -810,7 +810,7 @@ func TestMigrateV27ReclassifiesUnestablishableBackfills(t *testing.T) {
 		Mode: "proposal", CreatedAt: formatTime(now),
 		Evaluations: []EvaluationRow{{
 			ID: singleEval, ProposalID: singleID, Verdict: "partial_success",
-			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment",
+			VerifierKind: "model-judgment", VerificationStrength: "single-model-judgment", VerificationSubject: "domain-goal",
 			ConfidenceOrdinal: "medium", ToolName: "m", ToolVersion: "v1",
 			TargetVerdicts: []EvaluationTargetVerdictRow{{InvariantID: singleInv, Verdict: "violates", Violated: true}},
 		}},
@@ -833,5 +833,160 @@ func TestMigrateV27ReclassifiesUnestablishableBackfills(t *testing.T) {
 	}
 	if prov != "recomputed" {
 		t.Fatalf("establishable single-revision binding must stay recomputed, got %q", prov)
+	}
+}
+
+// Break cohorts are ATLAS-population claims: only mode='proposal' assessments
+// may support them. A holdout-mode evaluation exists to score the historical
+// experiment, not to admit atlas support — even when its verdict is a
+// deterministic failure with a violated break, the cohort read must not
+// select it.
+func TestListBreakCohortRowsExcludesHoldoutModeEvaluations(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+
+	rec := sampleFrontier(t, st)
+	res, err := st.PersistFrontierGeneration(ctx, rec)
+	if err != nil {
+		t.Fatalf("persist frontier: %v", err)
+	}
+	problemID := res.Record.ProblemID
+	proposalID := res.Record.Proposals[0].ID
+	targetInvID := res.Record.Proposals[0].Targets[0].InvariantID
+	insertTestSignatureContent(t, st, proposalID, `{"schema_version":"mechanism/v1"}`, "cfp-holdout")
+
+	// Holdout fixture: a distinct target problem, a holdout set, and a passing
+	// leakage check so the mode='holdout' run clears its schema gate — the run
+	// is fully legal, and exclusion is purely the cohort read's mode binding.
+	now := time.Now().UTC()
+	created := formatTime(now)
+	tx, err := st.db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("seed tx: %v", err)
+	}
+	exec := func(q string, args ...any) {
+		if _, err := tx.ExecContext(ctx, q, args...); err != nil {
+			tx.Rollback()
+			t.Fatalf("seed %q: %v", q, err)
+		}
+	}
+	exec(`INSERT INTO problems(id, slug, statement, status, created_at, created_by_run_id) VALUES('prb_holdout_target','holdout-target','s','open',?, 'run_holdout_seed')`, created)
+	exec(`INSERT INTO runs(id, problem_id, operation, status, input_ref, tool_name, tool_version, started_at, completed_at) VALUES('run_holdout_seed','prb_holdout_target','op','succeeded','','t','v',?,?)`, created, created)
+	exec(`INSERT INTO holdout_sets(id, problem_id, target_problem_id, name, mode, cutoff_time, created_at) VALUES('hs_1',?, 'prb_holdout_target','hs','historical',?,?)`, problemID, created, created)
+	exec(`INSERT INTO leakage_checks(id, holdout_set_id, run_id, checker_version, snapshot_leaks, normalization_leaks, signature_leaks, passed, created_at) VALUES('lc_1','hs_1',?, 'v1',0,0,0,1,?)`, res.Record.RunID, created)
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("seed commit: %v", err)
+	}
+
+	holdoutRunID := domain.NewEvaluationRunID(now)
+	if _, err := st.db.ExecContext(ctx, `
+INSERT INTO evaluation_runs(id, problem_id, run_id, mode, holdout_set_id, holdout_leakage_check_id, evaluation_count, created_at)
+VALUES(?, ?, ?, 'holdout', 'hs_1', 'lc_1', 1, ?)`, holdoutRunID, problemID, res.Record.RunID, created); err != nil {
+		t.Fatalf("insert holdout run: %v", err)
+	}
+	holdoutEval := domain.NewEvaluationID(now)
+	if _, err := st.db.ExecContext(ctx, `
+INSERT INTO evaluations(id, evaluation_run_id, proposal_id, verdict, verifier_kind, verification_strength, confidence_ordinal, tool_name, tool_version, created_at)
+VALUES(?, ?, ?, 'failure', 'deterministic-check', 'deterministic', 'high', 'd', 'v1', ?)`, holdoutEval, holdoutRunID, proposalID, created); err != nil {
+		t.Fatalf("insert holdout evaluation: %v", err)
+	}
+	insertEvalTargetVerdict(t, st, holdoutEval, targetInvID, "violates", true)
+
+	rows, err := st.ListBreakCohortRows(ctx, problemID)
+	if err != nil {
+		t.Fatalf("list cohort rows: %v", err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("a holdout-mode assessment must never admit break-cohort support, got %+v", rows)
+	}
+}
+
+// The proposal's CURRENT VIEW is its latest occurrence in ITS OWN problem's
+// generations. A generation-content binding under ANOTHER problem (corrupted
+// or cross-linked occurrence row) must never displace the owning problem's
+// current revision — otherwise a foreign occurrence would silently redefine
+// which interpretation this problem's cohort treats as current.
+func TestListBreakCohortRowsIgnoresCrossProblemOccurrenceBindings(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+
+	// Problem A: the owning generation binds proposal P to content c1.
+	recA := sampleFrontier(t, st)
+	recA.Proposals[0].SignatureJSON = `{"schema_version":"mechanism/v1","note":"c1"}`
+	recA.Proposals[0].CanonicalFingerprint = "cfp-cross-c1"
+	resA, err := st.PersistFrontierGeneration(ctx, recA)
+	if err != nil {
+		t.Fatalf("persist frontier A: %v", err)
+	}
+	problemID := resA.Record.ProblemID
+	proposalID := resA.Record.Proposals[0].ID
+	targetInvID := resA.Record.Proposals[0].Targets[0].InvariantID
+	c1sum := sha256.Sum256([]byte(recA.Proposals[0].SignatureJSON))
+	c1 := hex.EncodeToString(c1sum[:])
+
+	// Problem B: a second problem with its own LATER generation run, seeded
+	// directly (the sample fixtures pin unique slugs, and only the generation
+	// run row matters for the occurrence window).
+	nowSeed := formatTime(time.Now().UTC())
+	genBID := domain.NewFrontierGenerationRunID(time.Now().UTC().Add(time.Hour)) // sorts after A's id
+	for _, q := range []struct {
+		sql  string
+		args []any
+	}{
+		{`INSERT INTO problems(id, slug, statement, status, created_at, created_by_run_id) VALUES('prb_cross_b','cross-b','s','open',?,?)`, []any{nowSeed, resA.Record.RunID}},
+		{`INSERT INTO frontier_generation_runs(id, problem_id, cluster_run_id, run_id, provider_invocation_id, generator_version, requested_count, proposal_count, revision, created_at)
+VALUES(?, 'prb_cross_b', ?, ?, ?, 'frontier/v1', 1, 0, 1, ?)`, []any{genBID, resA.Record.ClusterRunID, resA.Record.RunID, resA.Record.Invocation.ID, nowSeed}},
+	} {
+		if _, err := st.db.ExecContext(ctx, q.sql, q.args...); err != nil {
+			t.Fatalf("seed problem B: %v", err)
+		}
+	}
+
+	// Retain a second revision c2 of P, then bind (B's generation, P, c2)
+	// directly — a cross-problem occurrence row that the window would rank
+	// above A's binding (later generation id) if the join were problem-blind.
+	c2json := `{"schema_version":"mechanism/v1","note":"c2"}`
+	insertTestSignatureContent(t, st, proposalID, c2json, "cfp-cross-c2")
+	c2sum := sha256.Sum256([]byte(c2json))
+	c2 := hex.EncodeToString(c2sum[:])
+	if _, err := st.db.ExecContext(ctx, `
+INSERT INTO frontier_generation_contents(generation_run_id, proposal_id, content_hash, created_at)
+VALUES(?, ?, ?, ?)`, genBID, proposalID, c2, formatTime(time.Now().UTC())); err != nil {
+		t.Fatalf("insert cross-problem occurrence: %v", err)
+	}
+
+	// One assessment of P against c1 with a violated break.
+	now := time.Now().UTC()
+	evalID := domain.NewEvaluationID(now)
+	run := EvaluationRunRecord{
+		ID: domain.NewEvaluationRunID(now), ProblemID: problemID, RunID: resA.Record.RunID,
+		Mode: "proposal", CreatedAt: formatTime(now),
+		Evaluations: []EvaluationRow{{
+			ID: evalID, ProposalID: proposalID, Verdict: "failure",
+			SignatureContentHash: c1,
+			VerifierKind:         "deterministic-check", VerificationStrength: "deterministic", VerificationSubject: "annotation",
+			ConfidenceOrdinal: "high", ToolName: "d", ToolVersion: "v1",
+			TargetVerdicts: []EvaluationTargetVerdictRow{{InvariantID: targetInvID, Verdict: "violates", Violated: true}},
+		}},
+	}
+	if _, err := st.PersistEvaluationRun(ctx, run); err != nil {
+		t.Fatalf("persist evaluation: %v", err)
+	}
+
+	rows, err := st.ListBreakCohortRows(ctx, problemID)
+	if err != nil {
+		t.Fatalf("list cohort rows: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("want 1 cohort row, got %d", len(rows))
+	}
+	r := rows[0]
+	// Current view must be A's own occurrence (c1), so the assessment of c1 is
+	// content-compatible — not pending against a foreign problem's c2 binding.
+	if r.LatestContentHash != c1 {
+		t.Fatalf("current view must come from the owning problem's occurrence: got %q, want %q (foreign binding %q must not win)", r.LatestContentHash, c1, c2)
+	}
+	if r.ContentHash != c1 || r.EvaluationID != evalID {
+		t.Fatalf("selected assessment lost its content binding: %+v", r)
 	}
 }

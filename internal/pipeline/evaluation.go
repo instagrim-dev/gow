@@ -139,6 +139,7 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 	// cannot suppress assessment under a new context. Explicit by-id evaluation
 	// always remains available, including for already-assessed occurrences.
 	selected := make([]store.FrontierProposalRow, 0, len(membership))
+	var skipped []SkippedProposalView
 	for _, p := range membership {
 		if input.ProposalID != "" {
 			if p.ID == input.ProposalID {
@@ -147,6 +148,13 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 			continue
 		}
 		if p.Result.Valid {
+			// Not silent: the skip and its reason are surfaced on the response,
+			// so a batch reader can distinguish "assessed in this exact
+			// occurrence context" from "never assessed".
+			skipped = append(skipped, SkippedProposalView{
+				ProposalID: p.ID,
+				Reason:     "occurrence_already_assessed",
+			})
 			continue
 		}
 		selected = append(selected, p)
@@ -233,6 +241,7 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 				Verdict:  verify.VerdictVerificationBlocked,
 				Kind:     verify.KindDeterministicCheck,
 				Strength: verify.StrengthForKind(verify.KindDeterministicCheck),
+				Subject:  verify.SubjectAnnotation,
 				Notes:    "a targeted invariant is no longer targetable (weaken/falsified); evaluation requires reassessment against a fresh context (H5)",
 			}
 		} else {
@@ -249,6 +258,7 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 			Verdict:              string(decision.Verdict),
 			VerifierKind:         string(decision.Kind),
 			VerificationStrength: string(decision.Strength),
+			VerificationSubject:  string(decision.Subject),
 			ConfidenceOrdinal:    decision.ConfidenceOrdinal,
 			Notes:                decision.Notes,
 			SignatureContentHash: contentHash,
@@ -295,6 +305,7 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 		Command: "evaluate",
 		Store:   dbPath,
 		Run:     evaluationRunView(persisted),
+		Skipped: skipped,
 	}, nil
 }
 
@@ -346,7 +357,7 @@ func (a *App) evaluationInvocation(model provider.ModelVerifier, runID string, n
 // targetPredicates loads the parsed predicate for every surviving invariant of
 // the problem, keyed by invariant id, for counterexample re-checks.
 func (a *App) targetPredicates(ctx context.Context, repoStore problemStore, problemID string) (map[string]invariant.Predicate, error) {
-	survivors, err := a.survivingInvariants(ctx, repoStore, problemID)
+	survivors, _, err := a.survivingInvariants(ctx, repoStore, problemID)
 	if err != nil {
 		return nil, err
 	}
@@ -520,11 +531,20 @@ func evaluationRunView(rec store.EvaluationRunRecord) EvaluationRunView {
 			Verdict:              e.Verdict,
 			VerifierKind:         e.VerifierKind,
 			VerificationStrength: e.VerificationStrength,
+			VerificationSubject:  e.VerificationSubject,
 			ConfidenceOrdinal:    e.ConfidenceOrdinal,
 			ToolName:             e.ToolName,
 			ToolVersion:          e.ToolVersion,
 			ProviderInvocationID: e.ProviderInvocationID,
 			Notes:                e.Notes,
+		}
+		for _, tv := range e.TargetVerdicts {
+			ev.TargetVerdicts = append(ev.TargetVerdicts, EvaluationTargetVerdictView{
+				InvariantID: tv.InvariantID,
+				Verdict:     tv.Verdict,
+				Violated:    tv.Violated,
+				Provenance:  tv.Provenance,
+			})
 		}
 		for _, m := range e.Metrics {
 			mv := EvaluationMetricView{Name: m.MetricName, Scale: m.MetricScale}

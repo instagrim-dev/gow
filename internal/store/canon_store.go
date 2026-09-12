@@ -282,6 +282,61 @@ type PersistSignatureResult struct {
 	Created bool
 }
 
+// insertSignatureTx writes one signature and its claim/posture/boundary/outcome
+// rows inside the caller's transaction. It never commits, so the same core
+// serves PersistSignature and composite single-transaction writes (evidence
+// admission materialization).
+func insertSignatureTx(ctx context.Context, tx *sql.Tx, record SignatureRecord) error {
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO mechanism_signatures(id, mechanism_id, schema_version, vocabulary_version, fingerprint, run_id, created_at)
+VALUES(?, ?, ?, ?, ?, ?, ?)
+`, record.ID, record.MechanismID, record.SchemaVersion, record.VocabularyVersion, record.Fingerprint, record.RunID, record.CreatedAt); err != nil {
+		return err
+	}
+
+	for _, c := range record.FieldClaims {
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO signature_field_claims(signature_id, field_kind, surface_label, resolution_state, canonical_id, claim_status, support_snapshot_id, support_locator, confidence, classifier_contract, ordinal)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, record.ID, c.FieldKind, c.SurfaceLabel, c.ResolutionState, c.CanonicalID, c.ClaimStatus, c.SupportSnapshotID, c.SupportLocator, c.Confidence, c.ClassifierContract, c.Ordinal); err != nil {
+			return err
+		}
+	}
+	for axis, value := range record.Posture {
+		status := record.PostureStatus[axis]
+		if status == "" {
+			status = "unknown"
+		}
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO signature_postures(signature_id, axis, value, claim_status) VALUES(?, ?, ?, ?)
+`, record.ID, axis, value, status); err != nil {
+			return err
+		}
+	}
+	for _, b := range record.Boundaries {
+		status := b.ClaimStatus
+		if status == "" {
+			status = "unknown"
+		}
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO signature_boundaries(signature_id, surface_label, resolution_state, canonical_id, relation, claim_status, support_snapshot_id, support_locator, ordinal)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, record.ID, b.SurfaceLabel, b.ResolutionState, b.CanonicalID, b.Relation, status, b.SupportSnapshotID, b.SupportLocator, b.Ordinal); err != nil {
+			return err
+		}
+	}
+	outcomeStatus := record.OutcomeStatus
+	if outcomeStatus == "" {
+		outcomeStatus = "unknown"
+	}
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO signature_outcomes(signature_id, class, claim_status) VALUES(?, ?, ?)
+`, record.ID, record.OutcomeClass, outcomeStatus); err != nil {
+		return err
+	}
+	return nil
+}
+
 // PersistSignature writes a mechanism signature transactionally. If a signature
 // already exists for (mechanism_id, schema_version, vocabulary_version) it is
 // returned unchanged with Created=false (idempotent), never rewritten.
@@ -311,51 +366,7 @@ func (s *Store) PersistSignature(ctx context.Context, record SignatureRecord) (P
 	}
 	defer tx.Rollback()
 
-	if _, err := tx.ExecContext(ctx, `
-INSERT INTO mechanism_signatures(id, mechanism_id, schema_version, vocabulary_version, fingerprint, run_id, created_at)
-VALUES(?, ?, ?, ?, ?, ?, ?)
-`, record.ID, record.MechanismID, record.SchemaVersion, record.VocabularyVersion, record.Fingerprint, record.RunID, record.CreatedAt); err != nil {
-		return PersistSignatureResult{}, err
-	}
-
-	for _, c := range record.FieldClaims {
-		if _, err := tx.ExecContext(ctx, `
-INSERT INTO signature_field_claims(signature_id, field_kind, surface_label, resolution_state, canonical_id, claim_status, support_snapshot_id, support_locator, confidence, classifier_contract, ordinal)
-VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`, record.ID, c.FieldKind, c.SurfaceLabel, c.ResolutionState, c.CanonicalID, c.ClaimStatus, c.SupportSnapshotID, c.SupportLocator, c.Confidence, c.ClassifierContract, c.Ordinal); err != nil {
-			return PersistSignatureResult{}, err
-		}
-	}
-	for axis, value := range record.Posture {
-		status := record.PostureStatus[axis]
-		if status == "" {
-			status = "unknown"
-		}
-		if _, err := tx.ExecContext(ctx, `
-INSERT INTO signature_postures(signature_id, axis, value, claim_status) VALUES(?, ?, ?, ?)
-`, record.ID, axis, value, status); err != nil {
-			return PersistSignatureResult{}, err
-		}
-	}
-	for _, b := range record.Boundaries {
-		status := b.ClaimStatus
-		if status == "" {
-			status = "unknown"
-		}
-		if _, err := tx.ExecContext(ctx, `
-INSERT INTO signature_boundaries(signature_id, surface_label, resolution_state, canonical_id, relation, claim_status, support_snapshot_id, support_locator, ordinal)
-VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
-`, record.ID, b.SurfaceLabel, b.ResolutionState, b.CanonicalID, b.Relation, status, b.SupportSnapshotID, b.SupportLocator, b.Ordinal); err != nil {
-			return PersistSignatureResult{}, err
-		}
-	}
-	outcomeStatus := record.OutcomeStatus
-	if outcomeStatus == "" {
-		outcomeStatus = "unknown"
-	}
-	if _, err := tx.ExecContext(ctx, `
-INSERT INTO signature_outcomes(signature_id, class, claim_status) VALUES(?, ?, ?)
-`, record.ID, record.OutcomeClass, outcomeStatus); err != nil {
+	if err := insertSignatureTx(ctx, tx, record); err != nil {
 		return PersistSignatureResult{}, err
 	}
 

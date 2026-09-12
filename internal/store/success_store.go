@@ -96,6 +96,7 @@ WITH latest_occ AS (
            ) AS rn
     FROM frontier_generation_contents gc
     JOIN frontier_generation_runs g ON g.id = gc.generation_run_id
+    JOIN frontier_proposals op ON op.id = gc.proposal_id AND op.problem_id = g.problem_id
   ) WHERE rn = 1
 ),
 rev_stats AS (
@@ -132,6 +133,7 @@ selected_eval AS (
                     e.created_at DESC, e.id DESC
          ) AS rn
   FROM evaluations e
+  JOIN evaluation_runs er ON er.id = e.evaluation_run_id AND er.mode = 'proposal'
   LEFT JOIN current_rev cr ON cr.proposal_id = e.proposal_id
 )
 SELECT t.invariant_id, p.id, fe.evaluation_id, fe.verdict, COALESCE(fe.verification_strength, ''),
