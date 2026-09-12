@@ -172,6 +172,19 @@
 \newtheorem{claim}{Claim}[section]
 \newtheorem{remark}{Remark}[section]
 
+% Plain (upright body) style for the conditional results.
+\newtheoremstyle{gowplain}%
+  {1.1em}{1.1em}%
+  {\normalfont}%          upright body (these are formal statements to read closely)
+  {0pt}%
+  {\scshape\color{gowaccent}}%
+  {.}%
+  {0.5em}%
+  {\thmname{#1}\thmnumber{ #2}\thmnote{ \normalfont\upshape(#3)}}%
+\theoremstyle{gowplain}
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{corollary}{Corollary}[section]
+
 % ── Draft annotations ────────────────────────────────────────────────
 % Draft mode is opt-in. To surface red \todo{...} / blue \claimnote{...} /
 % teal \evidence{...} markers during revision, uncomment \gowdrafttrue.
@@ -1382,7 +1395,280 @@ mathematical steps were not independently verified; the claim is only that the
 framework can subject such a hypothesis to explicit, recorded evidentiary
 challenge.
 
-% ── 9. Discussion ────────────────────────────────────────────────────
+% ── 9. Conditional Superiority ───────────────────────────────────────
+\section{Conditional Superiority: When Shape-Guided Concentration Wins}
+\label{sec:superiority}
+
+The experiments above are exploratory and establish no statistical effect
+(\cref{sec:limitations}). This section is a separate, \emph{theoretical}
+contribution: it states precisely when a shape-guided method \emph{can}
+outperform a conventional comparator under a fixed resource budget, and it
+specifies the finite-sample test that would establish such an advantage from
+real runs. Nothing here is a result about the reported pilots; every numerical
+value is an illustrative calculation from the stated model, not measured data.
+The purpose is to convert ``solving by shape'' from an attractive explanation
+into a falsifiable, resource-bounded claim.
+
+\subsection{What ``outperforms'' means}
+\label{sec:superiority-def}
+Let $G$ be a fixed GoW implementation and $C$ a fixed comparator. For a randomly
+selected task and starting history, and a total resource budget $B$, let
+\[
+  Y_\pi(B) =
+  \begin{cases}
+    1, & \text{method } \pi \text{ achieves the verified objective within } B,\\
+    0, & \text{otherwise,}
+  \end{cases}
+\]
+and define the budgeted advantage
+\[
+  \Delta(B) = \mathbb{E}\!\left[Y_G(B) - Y_C(B)\right].
+\]
+The confirmatory claim is $\Delta(B) > \delta$ for a declared practical margin
+$\delta \ge 0$ over a \emph{declared task population}, with implementation
+versions, resource accounting, objective, and margin all fixed before testing.
+Two caveats bound the claim. First, ``conventional search'' must be a specified
+implementation, not a category: no-free-lunch results
+\citep{wolpert1997nofreelunch} preclude unrestricted superiority under
+all-objective averaging but say nothing against advantages on \emph{structured}
+populations; the useful question is which structure $G$ exploits and whether the
+tested population contains it. Second, the advantage must be
+\emph{resource-bounded}: if $G$ only reorganizes evidence the baseline already
+receives, an unbounded baseline could reproduce it. The claim therefore lives in
+metareasoning \citep{russell1991right,horvitz1988reasoning}, where computation
+earns its value through better external decisions per unit cost.
+
+\subsection{A conditional enrichment theorem}
+\label{sec:superiority-thm}
+This is a deliberately simplified model of \emph{one} GoW mechanism --- using a
+learned shape to concentrate search --- not a theorem about every GoW
+implementation. Suppose the comparator draws candidates i.i.d.\ from a
+distribution $Q$ (not necessarily uniform). Let $S$ be the set of candidates
+satisfying a fixed, independently checkable goal, and let $p = Q(S)$ be the
+baseline per-proposal success probability. GoW identifies a preferred region
+$A$ and (in this model) samples from $Q(\cdot \mid A)$. Define the
+\emph{proposal-mass retention} $r = Q(A)$ and the \emph{success retention}
+$\rho = Q(A \mid S)$.
+
+\begin{proposition}[Success enrichment]
+\label{prop:enrichment}
+If GoW samples from $Q(\cdot \mid A)$, its per-proposal success probability is
+$p_G = Q(S \mid A) = p\rho/r$, so the enrichment is
+\[
+  \frac{p_G}{p} = \frac{\rho}{r}.
+\]
+Useful geometry retains disproportionately more successful than unsuccessful
+mass ($\rho > r$); a smaller region alone ($\rho \le r$) confers no advantage.
+\end{proposition}
+
+Now charge the cost of building and using the map. Let $h$ be the additional
+map-building and challenge cost, $c_G$ and $c_C$ the per-candidate
+generate-and-check costs, and $B$ the shared budget. Under i.i.d.\ draws with
+fixed costs, the methods take $n_C = \lfloor B/c_C \rfloor$ and
+$n_G = \lfloor (B-h)/c_G \rfloor$ draws, with at-least-one-success
+probabilities $P_C = 1 - (1-p)^{n_C}$ and $P_G = 1 - (1 - p\rho/r)^{n_G}$.
+
+\begin{proposition}[Exact budgeted-superiority criterion]
+\label{prop:exact}
+For nondegenerate probabilities,
+\[
+  \boxed{\;P_G > P_C \iff n_G \log\!\left(1 - \frac{p\rho}{r}\right) < n_C \log(1-p)\;}
+\]
+When per-draw success is small, $\log(1-x) \approx -x$ gives the interpretable
+approximation
+\[
+  \boxed{\;\frac{\rho}{r} > \frac{c_G/c_C}{1 - h/B}\;}
+\]
+i.e.\ GoW wins when its enrichment (left) exceeds its cost penalty (right).
+\end{proposition}
+
+\begin{table}[t]
+\centering
+\caption{\emph{Hypothetical} calculations from
+\cref{prop:exact}, not pilot results. Baseline $p=0.01$, $B=100$, $c_C=1$;
+GoW overhead $h=20$. The comparator's success probability is
+$1-0.99^{100}\approx 63.4\%$.}
+\label{tab:superiority-worked}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Hypothetical GoW behavior & $r$ & $\rho$ & $c_G$ & Success within $B$ \\
+\midrule
+Accurate concentration            & 0.20 & 0.90 & 1 & \textbf{97.5\%} \\
+Excludes too many successes        & 0.20 & 0.10 & 1 & 33.0\% \\
+Accurate region, costly projection & 0.20 & 0.90 & 4 & 60.2\% \\
+Conventional comparator            & ---  & ---  & 1 & 63.4\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\Cref{tab:superiority-worked} separates three distinct failure modes: the map
+does not concentrate success ($\rho$ low); the map excludes useful routes; and
+the map is accurate but projecting candidates from it is too expensive ($c_G$
+high). The last row is the one that matters most for GoW's thesis: ``search in
+shape-space'' has no economic advantage if projecting back into domain-space
+consumes what it saved.
+
+\paragraph{No hidden free sampler.}
+If GoW cannot sample $A$ directly but instead generates ordinary candidates and
+screens out those outside $A$, the filtering does not avoid the cost of
+generating the rejected candidates. With raw generation cost $g$, shape-screen
+cost $s$, and full verification cost $v$, the expected cost to first verified
+success is $\mathbb{E}[T_C] = (g+v)/p$ and $\mathbb{E}[T_G] = h + (g+s+rv)/(p\rho)$.
+
+\begin{corollary}[Filter-model cost condition]
+\label{cor:filter}
+Under the screening model, GoW is cheaper iff
+\[
+  \boxed{\;p h + g + s + r v < \rho\,(g + v)\;}
+\]
+With perfect retention $\rho = 1$ this is $(1-r)\,v > s + p h$: the verification
+work \emph{avoided} must pay for screening and map construction.
+\end{corollary}
+
+\Cref{prop:exact,cor:filter} state the conditions under which GoW \emph{loses},
+which is what makes them useful rather than promotional. They prove a
+relationship among enrichment, retention, overhead, and performance; they do
+\emph{not} prove that GoW can learn the right region, and conditioning is not
+unique to GoW (learned proposal distributions and ordinary heuristics can
+exploit the same advantage). GoW's contribution must be demonstrated in how it
+\emph{obtains and uses} the concentration. For genuinely novel generation
+outside the baseline's support, $Q(\cdot\mid A)$ is no longer an adequate model
+and $p_G$ must be measured directly; the test below does not assume GoW behaves
+as a filter.
+
+\subsection{A finite-sample superiority certificate}
+\label{sec:superiority-cert}
+The theorem explains a possible advantage; establishing it requires paired runs
+under a frozen design. Sample $n$ independent task-and-history episodes from the
+declared population and run both methods on each with the same starting evidence
+and resource cap. Let $D_i = Y_{G,i} - Y_{C,i} \in \{-1,0,1\}$ and
+$\widehat{\Delta} = \tfrac1n\sum_i D_i$. Methods may adapt arbitrarily
+\emph{within} an episode; the argument requires only that episode \emph{pairs}
+be independent under the frozen design.
+
+\begin{proposition}[One-sided lower confidence bound]
+\label{prop:hoeffding}
+Since $D_i$ lies in an interval of width $2$, Hoeffding's inequality
+\citep{hoeffding1963probability} gives
+$\Pr(\widehat{\Delta} - \Delta \ge \varepsilon) \le \exp(-n\varepsilon^2/2)$, so
+at a \emph{fixed, prespecified} $n$,
+\[
+  \boxed{\;L_\alpha = \widehat{\Delta} - \sqrt{\tfrac{2\log(1/\alpha)}{n}}\;}
+  \qquad \Pr(L_\alpha \le \Delta) \ge 1-\alpha.
+\]
+A practical margin $\delta$ is established when $L_\alpha > \delta$. This bounds
+the procedure's probability of overstating the advantage at $\alpha$; it is not
+a posterior probability that GoW is better.
+\end{proposition}
+
+As an \emph{illustrative} instance (not measured): a paired table of $300$
+episodes with $105$ both-succeed, $90$ GoW-only, $30$ comparator-only, and $75$
+neither gives $\widehat{\Delta} = (90-30)/300 = 0.20$ and, at $\alpha=0.05$,
+$L_{0.05} = 0.20 - \sqrt{2\log 20 / 300} \approx 0.0587$ --- a conservative
+bound still exceeding a five-point margin. A more efficient test of the
+no-advantage null uses only the discordant pairs: conditional on $120$
+discordant episodes, the count favoring GoW is $\mathrm{Binomial}(120,\tfrac12)$
+under equal success probabilities, the exact paired form associated with
+McNemar's test \citep{mcnemar1947note}; for this table
+$\Pr\{\mathrm{Binomial}(120,\tfrac12) \ge 90\} \approx 1.89\times 10^{-8}$. The
+small $p$-value addresses equality, not the five-point margin --- which is why an
+effect estimate and confidence bound belong beside it.
+
+\begin{table}[t]
+\centering
+\caption{\emph{Planning} calculations: exact one-sided paired-discordance power
+at $\alpha=0.05$ under stipulated i.i.d.\ effects. These test superiority over
+zero, not a five-point margin, and are not forecasts of GoW's performance.}
+\label{tab:superiority-power}
+\small
+\begin{tabular}{rrrr}
+\toprule
+$\Pr$(GoW-only) & $\Pr$(baseline-only) & True advantage & Smallest $n$ at 80\% power \\
+\midrule
+30.0\% & 10.0\% & 20 pp & \textbf{67} \\
+20.0\% & 10.0\% & 10 pp & \textbf{199} \\
+17.5\% & 12.5\% & \phantom{0}5 pp & \textbf{776} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\Cref{tab:superiority-power} shows why ``three captures and a favorable-judgment
+majority'' cannot substitute for a comparative experiment. Two cautions apply.
+First, $776$ stochastic reruns of \emph{one} task are not $776$ independent task
+families; clustered designs must treat the task or family as the higher-level
+unit and must not count correlated proposals as independent trials
+\citep{demsar2006statistical}. Second, if the sample size is chosen by repeatedly
+inspecting the result and stopping at a favorable moment, the fixed-$n$ bound is
+invalid; continuous monitoring requires a prespecified confidence sequence or
+another anytime-valid method \citep{howard2021timeuniform}.
+
+\subsection{An experiment that tests GoW, not extra assistance}
+\label{sec:superiority-exp}
+The confirmatory design (detailed as a preregistration in the project
+repository, \path{corpus/experiments/superiority-preregistration/}) makes one
+primary comparison and one diagnostic ablation:
+\begin{itemize}[nosep]
+  \item \textbf{Conventional adaptive search:} same model, raw history, tools,
+    checker, and total budget; ordinary generation, feedback, reflection, and
+    revision (not prohibited from noticing interactions or reasoning about
+    failures).
+  \item \textbf{GoW-guided search:} explicit representation selection, shape
+    hypotheses, challenge, structural-intervention selection, projection, and
+    feedback.
+  \item \textbf{Curation-only ablation:} comparable organization/retrieval
+    assistance \emph{without} the explicit shape-to-action policy, isolating
+    whether any gain comes from search control rather than convenient history.
+\end{itemize}
+The primary endpoint uses a bounded domain with executable assessment (e.g.\
+program-repair or small synthesis tasks with an exact checker over a declared
+finite specification); Erd\H{o}s--Straus remains a motivating case, but
+``resembles a research direction'' is not interchangeable with checked task
+completion. Held-out \emph{task structures} (not merely renamed identifiers)
+must include both transferable-structure and structure-absent cases. The
+resource account charges GoW's normalization, mapping, hypothesis generation,
+challenge, projection, unsuccessful attempts, and checking; human intervention
+is equalized, prohibited during evaluation, or explicitly counted as part of the
+method; cold-start and amortized costs are reported separately. The primary
+outcome $Y=0$ means ``no verified objective within budget'' --- not ``false'' or
+``impossible'' --- with invalid output, incomplete verification, timeout, and
+ordinary unsuccessful search preserved as secondary dispositions and never
+dropped from the denominator. A budget-capped efficiency measure
+$\mathbb{E}[\min(T_\pi, B)]$ (with $T_\pi = \infty$ on failure) avoids comparing
+speed only among solved tasks.
+
+\subsection{What would make the evidence specifically about GoW}
+\label{sec:superiority-attribution}
+A significant result establishes a difference between implementations, not the
+\emph{explanation} of that difference. The GoW account is supported to the
+extent these line up: \textbf{action relevance} (changing or removing the
+inferred shape changes the next attempted work); \textbf{prospective enrichment}
+(shape-guided proposals succeed more often on outcomes not used to choose the
+shape); \textbf{preservation} (the gain is not obtained by quietly changing the
+goal or dropping hard cases); \textbf{net efficiency} (the gain survives charging
+map and projection costs); and \textbf{adaptive value} (revised maps improve
+\emph{later} decisions, not merely fit earlier failures). On a bounded domain,
+$r$, $\rho$, and the cost of using $A$ can be estimated directly and compared
+against \cref{prop:exact}'s prediction, yielding an interpretable result even
+when GoW loses (e.g.\ ``the map concentrated success, but projection overhead
+erased the benefit''). A win that vanishes against the curation-only ablation
+would locate the contribution in evidence organization rather than the search
+policy. The provenance required for this attribution --- provider/configuration
+metadata and raw request/response records --- is already produced by
+\texttt{newf} (\cref{sec:system}).
+
+\begin{remark}[Status of this section]
+\label{rem:superiority-status}
+\Cref{prop:enrichment,prop:exact,cor:filter,prop:hoeffding} are mathematical
+statements under their stated assumptions. The empirical premise --- that a fixed
+GoW implementation achieves sufficient enrichment net of overhead on a declared
+population --- is \emph{not} established by this paper and is not claimed. The
+central proposition is conditional: GoW outperforms when its learned organization
+of work increases verified success per unit total effort enough to offset the
+cost of building and using that organization.
+\end{remark}
+
+% ── 10. Discussion ───────────────────────────────────────────────────
 \section{Discussion}
 \label{sec:discussion}
 
@@ -1788,7 +2074,10 @@ the corpus and therefore the geometry.
 One pilot does not establish a statistical effect. Pilot-003's B3 recovery
 and Pilot-004's reference-absent shape generation are single-pilot observations.
 The predeclared aggregate criterion in Pilot-004 was not met; the individual
-capability findings are not a substitute for aggregate power.
+capability findings are not a substitute for aggregate power. The conditional
+theorem and finite-sample certificate in \cref{sec:superiority} are theoretical:
+they state when superiority \emph{would} hold and how it \emph{would} be
+measured, but they are not evidence that the present implementation attains it.
 
 \paragraph{Projection bottleneck.}
 In every experiment, domain projection was model-assisted and produced candidates
@@ -1812,11 +2101,16 @@ important step toward generality. Candidate domains include open combinatorics
 conjectures, program synthesis benchmarks, and scientific hypothesis refinement.
 
 \paragraph{Statistical evaluation.}
-A controlled comparison of invariant-guided generation vs.\ undirected
-generation over a held-out benchmark, with enough trials for statistical power,
-is the next empirical target. The present experiments are pilot-scale; a
-multi-sample evaluation would convert directional observations into measurable
-effect estimates.
+\Cref{sec:superiority} states the conditional advantage and the finite-sample
+certificate that would establish superiority; the missing piece is the data. The
+next empirical target is the preregistered paired experiment specified there and
+in \path{corpus/experiments/superiority-preregistration/}: a matched
+adaptive-search baseline, a GoW-guided arm, and a curation-only ablation over a
+bounded domain with executable verification, with a frozen budget, comparator,
+and analysis. This would convert the present directional, pilot-scale
+observations into a measurable effect estimate with a one-sided lower confidence
+bound (\cref{prop:hoeffding}), and would let the observed advantage be checked
+against the enrichment/overhead prediction of \cref{prop:exact}.
 
 \paragraph{Formal convergence analysis.}
 Does the challenge-refine loop converge to a fixed point? Under what conditions

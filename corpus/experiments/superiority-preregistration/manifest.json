@@ -1,0 +1,113 @@
+{
+  "schema": "newf-superiority-preregistration/v1",
+  "experiment_id": "superiority-preregistration",
+  "status": "configured_not_executed",
+  "registration_kind": "predeclared_design_not_execution_evidence",
+  "configuration_request_at_utc": "2026-09-12T00:00:00Z",
+  "repository": "instagrim-dev/gow",
+  "basis_commit": "50b23eceb436adacb54be4bad9670eb3477cbc4b",
+  "claim_scope": "resource-bounded verified-success superiority of a fixed GoW implementation over a matched adaptive-search comparator, on a declared task population with executable verification",
+  "chronological_claim": false,
+  "statistical_significance_claim": false,
+  "note": "This is a PREREGISTRATION. No runs have been executed. It fixes the design so that a later confirmatory run cannot silently change endpoints, budgets, comparator, or analysis. It is the empirical premise for the conditional theorem in paper section 9 (Conditional Superiority); it does not itself establish any advantage.",
+  "primary_claim": {
+    "estimand": "Delta(B) = E[Y_G(B) - Y_C(B)]",
+    "outcome": "Y_pi(B) = 1 iff method pi achieves the verified objective within total budget B, else 0",
+    "confirmatory_test": "Delta(B) > delta for a declared practical margin delta",
+    "declared_margin_delta": 0.05,
+    "alpha": 0.05,
+    "primary_statistic": "paired difference D_i = Y_{G,i} - Y_{C,i} in {-1,0,1}; Delta_hat = mean(D_i)",
+    "primary_certificate": "one-sided Hoeffding lower bound L_alpha = Delta_hat - sqrt(2 log(1/alpha) / n); success iff L_alpha > delta",
+    "secondary_null_test": "exact paired-discordance (McNemar) test on discordant pairs against equal-success null",
+    "secondary_efficiency_measure": "E[min(T_pi, B)] with T_pi = infinity on failure (budget-capped time/cost to verified success)"
+  },
+  "arms": [
+    {
+      "id": "conventional_adaptive",
+      "role": "primary comparator",
+      "description": "Same model, raw history, tools, checker, and total budget. Ordinary candidate generation, feedback, reflection, and revision. NOT prohibited from noticing interactions, drawing analogies, or reasoning about failures."
+    },
+    {
+      "id": "gow_guided",
+      "role": "primary treatment",
+      "description": "Explicit representation selection, shape hypotheses, adversarial challenge, structural-intervention selection, projection into domain candidates, and feedback-driven update."
+    },
+    {
+      "id": "curation_only",
+      "role": "diagnostic ablation",
+      "description": "Comparable organization/retrieval assistance WITHOUT the explicit shape-to-action policy. Isolates whether any gain comes from search control rather than convenient history presentation."
+    }
+  ],
+  "population": {
+    "domain": "bounded domain with executable assessment (e.g. program-repair or small synthesis tasks with an exact checker over a declared finite specification)",
+    "episode": "one task plus a prior-work history with varied outcomes",
+    "holdout": "hold out task STRUCTURES / generation regimes, not merely renamed identifiers; include transferable-structure cases AND structure-absent cases where mapping should not help",
+    "independence_unit": "task/family is the higher-level unit; stochastic reruns of one task are averaged/modeled within-task and are NOT counted as independent episodes"
+  },
+  "budget_accounting": {
+    "charged_to_gow": [
+      "normalization",
+      "mapping",
+      "hypothesis generation",
+      "adversarial challenge",
+      "projection",
+      "unsuccessful attempts",
+      "verification/checking"
+    ],
+    "human_intervention": "equalized across arms, prohibited during evaluation, or explicitly counted and described as part of the method",
+    "amortization": "cold-start and amortized costs reported separately under a declared deployment scenario; shared preprocessing not treated as free for GoW"
+  },
+  "outcome_dispositions": {
+    "primary_Y0_means": "no verified objective achieved within budget (NOT 'mathematically false' or 'impossible')",
+    "secondary_dispositions_kept_separate": [
+      "invalid_output",
+      "incomplete_verification",
+      "timeout",
+      "unresolved_evidence",
+      "ordinary_unsuccessful_search"
+    ],
+    "denominator_rule": "secondary dispositions are never silently dropped from the denominator",
+    "verifier_scope": "the endpoint measures verified achievement UNDER THE DECLARED EVALUATOR, not an omniscient success rate"
+  },
+  "adaptive_loop_test": {
+    "requirement": "each episode preserves the sequence: history -> chosen representation + shape hypothesis -> predicted consequence of a selected intervention -> actual domain candidate -> checked result -> updated next action",
+    "frozen_update_policy": true,
+    "separates": [
+      "better_starting_guidance (initial map improves first proposals)",
+      "better_adaptation (feedback yields better SUBSEQUENT attempts than comparator)"
+    ],
+    "note": "only better_adaptation directly substantiates the recursive-cartography thesis"
+  },
+  "attribution_checks": [
+    "action_relevance: changing/removing the inferred shape changes the next attempted work",
+    "prospective_enrichment: shape-guided proposals succeed more on outcomes NOT used to choose the shape",
+    "preservation: gain is not obtained by changing the goal or dropping hard cases",
+    "net_efficiency: gain survives charging map + projection cost",
+    "adaptive_value: revised maps improve LATER decisions, not merely fit earlier failures",
+    "mechanism_measurement: estimate r, rho, and cost-of-using-A directly; compare observed advantage to the paper's Proposition 9.2 prediction"
+  ],
+  "analysis_discipline": {
+    "fixed_sample": "sample size fixed before confirmatory runs; fixed-n Hoeffding bound assumes n was NOT chosen by repeated inspection",
+    "sequential_option": "if continuous monitoring is used, a prespecified confidence sequence / anytime-valid method replaces the fixed-n bound",
+    "selection_vs_confirmation": "development runs used for selection; FRESH confirmatory episodes used for the claim",
+    "multiple_comparison": "comparing multiple baselines requires an explicit multiple-comparison plan or simultaneous bounds",
+    "frozen_before_confirmation": ["task population", "objective", "implementation versions", "resource accounting", "primary budget B", "comparator", "margin delta", "analysis"]
+  },
+  "planning_power_calculations": {
+    "note": "stipulated-effect planning only; not forecasts of GoW performance; test superiority over zero, not the 5-point margin",
+    "alpha": 0.05,
+    "target_power": 0.80,
+    "rows": [
+      {"p_gow_only": 0.30, "p_baseline_only": 0.10, "true_advantage_pp": 20, "smallest_n": 67},
+      {"p_gow_only": 0.20, "p_baseline_only": 0.10, "true_advantage_pp": 10, "smallest_n": 199},
+      {"p_gow_only": 0.175, "p_baseline_only": 0.125, "true_advantage_pp": 5, "smallest_n": 776}
+    ]
+  },
+  "explicitly_not_claimed": [
+    "superiority over all search methods",
+    "superiority on arbitrary future domains",
+    "that model-endorsement-rate differences equal a verified-search advantage",
+    "that the existing pilots (pilot-003, pilot-004) can be retrofitted into these paired tables",
+    "any result prior to execution of this design"
+  ]
+}

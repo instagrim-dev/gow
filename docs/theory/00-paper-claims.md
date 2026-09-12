@@ -103,7 +103,9 @@ That the system is production-ready or feature-complete.
 
 **What it does not claim:**
 Mathematical validity of any generated structure. That GoW outperforms
-conventional search statistically. That the results generalize to other
+conventional search statistically — the manuscript's §9 gives only a
+*conditional* theorem and the (unrun) preregistered test for such a claim; no
+empirical superiority is asserted. That the results generalize to other
 domains. That LLM-generated shapes are "discoveries" in the mathematical
 sense. That quorum agreement constitutes independent verification.
 
@@ -170,6 +172,23 @@ explicitly labeled hypotheses or future directions — not as claims:
   [08](08-earning-operational-authority.md) plus the challenge discipline
   (`ModelJudgment ≠ Verification`). Until the prospective loop is run against a
   comparator, the extension is admissible only as a labeled hypothesis.
+- **Conditional resource-bounded superiority (H-SUP).** For a declared task
+  population with executable verification, a fixed GoW implementation achieves a
+  higher probability of a verified result within the same total budget than a
+  fixed conventional-search comparator. The **conditional theorem is
+  established** (theory): manuscript §9 proves the enrichment/overhead criteria
+  — `p_G/p = ρ/r` (Prop. 9.1), the exact and approximate budgeted-superiority
+  criteria (Prop. 9.2), and the filter-model cost condition (Cor. 9.1) — and the
+  finite-sample certificate (Hoeffding lower bound, Prop. 9.3; McNemar exact
+  test). These are `theory` claims under stated assumptions and make **no**
+  empirical claim. The **empirical premise is a labeled hypothesis**: that a
+  fixed GoW implementation attains sufficient enrichment net of overhead on a
+  real population. It is *not* established here and is *not* claimed. The
+  confirmatory design is preregistered at
+  `corpus/experiments/superiority-preregistration/`
+  (`status: configured_not_executed`). All numeric examples in §9 are
+  explicitly hypothetical calculations, not results. This maps onto
+  falsification condition 2 ("shape-space search is dominated").
 - GoW applies to domains beyond number theory.
 - The failure-invariant instrument is the most productive reading of the geometry.
 - Shape-guided search converges faster than undirected search.
