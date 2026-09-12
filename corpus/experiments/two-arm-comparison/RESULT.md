@@ -45,6 +45,19 @@ Arm M ≥ hits (20 vs 3) with strictly fewer submissions (20 vs 57).
 4. No claim about the Erdős–Straus conjecture follows; all 20 instances are
    small and each witness is independently checkable by one multiplication.
 
+> **Correction (2026-09-12, attributed; original text above preserved):**
+> point 3's closing sentence — "The 5.3% local hit rate is the
+> budget-independent number" — is too strong and is withdrawn. The 3/57
+> rate is conditioned on this run's frozen procedure: the L1→L2→L3
+> submission ordering, the budget B = 3, and stop-on-hit truncation (a hit
+> suppresses the instance's remaining local submissions — e.g., p = 1001713
+> hit at L2, so L3 was never attempted there). The defensible statement:
+> the local-family hit rate is *less budget-sensitive* than the
+> cost-per-hit contrast, but it is a property of this ordering and stopping
+> rule, not of the class alone. Raised by the 2026-09-12 external
+> publication review (P1); the manuscript's Experiment E section was
+> corrected the same day.
+
 ## Relation to the review
 
 This closes the "prospective comparison" half of the 2026-09-12 review's

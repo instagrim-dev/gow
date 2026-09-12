@@ -10,12 +10,12 @@
   "No API keys, tokens, or credentials were found in the selection during a first-pass grep sweep for common secret patterns and email addresses; this is not an exhaustive security review."
  ],
  "open_blockers": [
-  "Public deposit host not yet chosen (candidates: Zenodo, OSF, a read-only GitHub mirror) -- an author decision, not a mechanical step.",
+  "Canonical-archive deposit (Zenodo/OSF, DOI-minting) not yet chosen -- an author decision; the public repository at github.com/instagrim-dev/gow is the live repository-based deposit, so this is a strengthening step, not an availability gap.",
   "No redaction pass has been requested or performed; if one is, redacted copies must use a distinguishable filename/suffix and never edit an original file in place.",
   "pre-capture.db is a binary SQLite file; its contents were not individually reviewed row-by-row for release sensitivity beyond the automated grep sweep above."
  ],
  "file_count": 71,
- "total_bytes": 1997038,
+ "total_bytes": 2003207,
  "files": [
   {
    "path": "corpus/experiments/m7-blinded-run/RESULT.md",
@@ -329,8 +329,8 @@
   },
   {
    "path": "corpus/experiments/pilot-004-discovery/records/CLOSURE-SCORECARD.md",
-   "sha256": "e4396c8542b7adef792cad044aa9ebc681f030911867a03148b2e1c218c7cc7b",
-   "bytes": 44812
+   "sha256": "31671b162cb97526b255d3bb84ffa74ce4e3df3a2fb35629ab52a0c6c26ece03",
+   "bytes": 50169
   },
   {
    "path": "corpus/experiments/pilot-004-discovery/records/CURRENT-CLAIMS.md",
@@ -364,8 +364,8 @@
   },
   {
    "path": "corpus/experiments/two-arm-comparison/RESULT.md",
-   "sha256": "bbbe1b2f0d05d992c77bbc4b2fa16b9b7b236e3f44b9c82be84f51836dd99e4e",
-   "bytes": 2814
+   "sha256": "af623d990da7b9558681ff23d7a1e0ea9a1867fa7c9d6e8bdf50a6fad85bf919",
+   "bytes": 3626
   },
   {
    "path": "corpus/experiments/two-arm-comparison/main.go",
@@ -397,6 +397,15 @@
     "corpus/experiments/two-arm-comparison/RESULT.md",
     "corpus/experiments/two-arm-comparison/main.go"
    ]
+  },
+  {
+   "date": "2026-09-12",
+   "reason": "External publication review (P1: hash validation failure; P1: budget-independent overclaim). (1) CLOSURE-SCORECARD.md drifted after its last amendment hash: further attributed pilot-004 appends landed (aa3c4a3 record correction, f6e4333 witness-scope SGO) without a manifest amendment; rehashed to the current attributed state. NOTE: this file is append-active; any future append requires a same-commit manifest amendment or the package fails hash validation. (2) RESULT.md received an additive, attributed correction withdrawing the \"budget-independent\" characterization of the 5.3% local hit rate (conditioned on frozen ordering, budget, and stop-on-hit truncation); original text preserved above the correction; rehashed.",
+   "rehashed": [
+    "corpus/experiments/pilot-004-discovery/records/CLOSURE-SCORECARD.md",
+    "corpus/experiments/two-arm-comparison/RESULT.md"
+   ],
+   "added": []
   }
  ]
 }

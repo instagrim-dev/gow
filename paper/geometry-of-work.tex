@@ -1491,8 +1491,11 @@ arm consulting the surviving \texttt{locality} invariant once per class to
 order the global move first. The undirected arm produced $3/20$ verified
 witnesses at $57$ submissions (cost per hit $19.0$); the map-guided arm
 produced $20/20$ at $20$ submissions (cost per hit $1.0$). Under the frozen
-decision rule the map earned its cost. The local-move hit rate in this class
---- $3/57 \approx 5.3\%$ --- is the budget-independent measurement; the
+decision rule the map earned its cost. Across the $57$ local submissions
+this ordering and stopping rule produced, the local family hit $3$ times
+($\approx 5.3\%$); that rate is conditioned on the frozen move ordering,
+the budget, and stop-on-hit truncation --- less budget-sensitive than the
+cost-per-hit contrast, but not budget-independent --- and it shows the
 local family is not a strawman (it genuinely hits at three instances).
 
 \paragraph{What E does and does not establish.}
@@ -2533,9 +2536,13 @@ The empirical claims in this paper reference frozen artifacts under
 \path{corpus/experiments/} in the project repository. The repository is
 publicly hosted at
 \url{https://github.com/instagrim-dev/gow} under the Apache License 2.0, and
-every cited record is accessible in its exact byte-form at that repository's
-tree at the manuscript's freeze commit; the relative paths cited throughout
-this paper resolve directly at that commit-anchored URL.
+every cited record is accessible in its exact byte-form at the release tag
+\texttt{paper-v1}, created at the manuscript's freeze commit; the relative
+paths cited throughout this paper resolve directly at that tag-anchored URL.
+The evidence-supplement manifest
+(\path{corpus/evidence-supplement/manifest.json}) pins the SHA-256 hash of
+every cited record; a canonical-archive deposit (Zenodo/OSF DOI) is a
+compatible later strengthening step, not a precondition of this statement.
 
 To let a reader identify \emph{which} records back which claims without
 having to read the whole corpus, we have selected, hashed, and frozen the

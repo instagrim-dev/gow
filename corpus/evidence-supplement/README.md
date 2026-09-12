@@ -1,10 +1,15 @@
 # Evidence Supplement — Reading Guide
 
-**Status: selected and hashed, not yet publicly deposited.** This directory
-freezes *which* frozen records back the empirical claims in
-`paper/geometry-of-work.tex`, and their exact byte content (`manifest.json`),
-so that a later public deposit (Zenodo / OSF / a read-only mirror repository)
-has a fixed, auditable selection to publish rather than an ad hoc export.
+**Status: selected, hashed, and publicly accessible via the repository
+deposit.** This directory freezes *which* frozen records back the empirical
+claims in `paper/geometry-of-work.tex`, and their exact byte content
+(`manifest.json`). The repository is publicly hosted at
+`github.com/instagrim-dev/gow` (Apache License 2.0), so every listed file is
+publicly readable at its stated path — the deposit contract is
+**repository-based**: the public repo at the manuscript's release tag *is*
+the deposit. A canonical-archive deposit (Zenodo / OSF, DOI-minting) remains
+an open, compatible strengthening step — see `manifest.json`'s
+`open_blockers` — but public availability no longer depends on it.
 
 This is not a copy of the files — it is a manifest (paths + SHA-256 hashes)
 pointing at the existing locations inside `corpus/experiments/`. Publishing
@@ -28,23 +33,32 @@ follow the redaction/frozen-artifact discipline below.
   secret patterns (`api_key`, `Bearer `, `sk-ant-`, `sk-proj-`, etc.) and email
   addresses found nothing across the selection, but this is not an exhaustive
   security review. See `manifest.json`'s `open_blockers`.
-- **Not yet public.** No deposit host has been chosen. That is an author
-  decision (hosting cost, DOI-minting, licensing terms) this pass does not
-  make — see `manifest.json`'s `open_blockers`.
+- **Not a canonical archive.** The repository-based deposit is live (public
+  repo, tag-anchored paths), but no DOI-minting archive (Zenodo/OSF) has been
+  chosen. That is an author decision (hosting cost, DOI, licensing terms)
+  this pass does not make — see `manifest.json`'s `open_blockers`.
 
 ## How to verify the selection is unmodified
 
 ```bash
 cd <repo root>
 python3 - <<'PY'
-import hashlib, json
+import hashlib, json, os
 m = json.load(open("corpus/evidence-supplement/manifest.json"))
-bad = []
+missing, mismatched = [], []
 for e in m["files"]:
+    if not os.path.exists(e["path"]):
+        missing.append(e["path"])
+        continue
     h = hashlib.sha256(open(e["path"], "rb").read()).hexdigest()
     if h != e["sha256"]:
-        bad.append(e["path"])
-print("OK" if not bad else f"MISMATCH: {bad}")
+        mismatched.append(e["path"])
+if missing:
+    print(f"MISSING ({len(missing)}): {missing}")
+if mismatched:
+    print(f"MISMATCH ({len(mismatched)}): {mismatched}")
+if not missing and not mismatched:
+    print("OK")
 PY
 ```
 
