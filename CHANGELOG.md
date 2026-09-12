@@ -142,4 +142,4 @@ against an Erdős–Straus conjecture corpus used as the running case study.
   that would lift the `mode=historical` gate — deferred; no dated corpus
   exists yet to motivate writing the bar precisely.
 
-[1.0.0]: https://github.com/instagrim-dev/newf/releases/tag/v1.0.0
+[1.0.0]: https://github.com/instagrim-dev/gow/releases/tag/v1.0.0
