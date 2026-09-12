@@ -320,3 +320,7 @@ claim is made.
 > degraded to `UNDETERMINED`/`stale_dependency` by a real pipeline change.
 > The one-obligation recipe is **validated on the exercised paths**, scoped
 > as stated in §0; preservation testing is no longer gated by this bundle.
+> The preservation pilot's **frozen preparation package** (six validated case
+> bundles, both arms, rubric, blinding, seeded dispatch order) is at
+> `docs/reviews/preservation-pilot/PREPARATION.md`; per protocol it
+> authorizes **preparation only** until an owner declares resource ceilings.

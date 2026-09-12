@@ -2,7 +2,8 @@
 id: review-preservation
 revision: 1
 kind: qualitative_comparison_protocol
-status: gated_not_executed
+status: gate_satisfied_preparation_frozen_awaiting_ceilings
+preparation: ../../preservation-pilot/PREPARATION.md
 covers: [study-design, comparative-validation, decisions, reporting]
 contract: ../review-contract.md
 prerequisite: assessment-admission-decision
