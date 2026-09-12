@@ -245,6 +245,32 @@ type ProposalSignatureContentRow struct {
 	SignatureJSON        string
 }
 
+// LatestProposalSignatureContent loads the newest persisted signature
+// revision of a proposal. A NEW assessment (e.g. `newf witness check`) binds
+// to this revision at assessment time and records its hash as the assessed
+// content — the same revision-pinning rule the evaluation stage follows.
+// It is NOT a substitute for GetProposalSignatureContentByHash when reading
+// back what a PAST verdict assessed.
+func (s *Store) LatestProposalSignatureContent(ctx context.Context, proposalID string) (ProposalSignatureContentRow, bool, error) {
+	if err := domain.ValidateFrontierProposalID(proposalID); err != nil {
+		return ProposalSignatureContentRow{}, false, err
+	}
+	row := s.db.QueryRowContext(ctx, `
+SELECT proposal_id, revision, content_hash, canonical_fingerprint, signature_json
+FROM frontier_proposal_signature_revisions
+WHERE proposal_id = ?
+ORDER BY revision DESC LIMIT 1
+`, proposalID)
+	var r ProposalSignatureContentRow
+	if err := row.Scan(&r.ProposalID, &r.Revision, &r.ContentHash, &r.CanonicalFingerprint, &r.SignatureJSON); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ProposalSignatureContentRow{}, false, nil
+		}
+		return ProposalSignatureContentRow{}, false, err
+	}
+	return r, true, nil
+}
+
 // GetProposalSignatureContentByHash loads the persisted signature revision of
 // a proposal whose content hash matches the hash an evaluation recorded as
 // assessed. This is the ONLY content evidence admission may materialize: the

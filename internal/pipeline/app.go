@@ -179,6 +179,9 @@ type problemStore interface {
 	// their epistemic provenance (2026-09-12 review F4).
 	AdmittedSignatureKinds(context.Context, string) (map[string]string, error)
 	GetProposalSignatureContentByHash(context.Context, string, string) (store.ProposalSignatureContentRow, bool, error)
+	// Witness-backed evaluations (issue #23 slice 2, D2-C): a new assessment
+	// binds to the proposal's newest signature revision at assessment time.
+	LatestProposalSignatureContent(context.Context, string) (store.ProposalSignatureContentRow, bool, error)
 	// Projection chain (v37/S5): concrete plan -> obligations -> decisions.
 	GetProposalProblem(context.Context, string) (string, error)
 	PersistProjection(context.Context, store.ProjectionRecord) (store.ProjectionRecord, error)

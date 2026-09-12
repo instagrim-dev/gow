@@ -187,6 +187,31 @@ All commands emit stable `--json`. Human output leads with verdict AND strength,
 e.g. `partial_success  [counterexample-search / reproducible]`, so a reader never
 sees an outcome without its epistemic strength.
 
+### Witness-backed evaluations (`newf witness check`, issue #23)
+
+Routed evaluation is not the only entry into the evaluation record. A domain
+witness — a concrete produced outcome tuple checked exactly by
+`internal/witness` — enters through `newf witness check --proposal <id>
+--tuple n,x,y,z --note <provenance>`:
+
+- the tuple is checked **before any write**; a malformed tuple is an input
+  error, never a domain verdict;
+- the verdict persists as a **reproducible-computation** evaluation with
+  subject `domain-goal` and strength `reproducible`, attributed to the checker
+  (`erdos-straus-witness/v1`) with the canonical claim in its notes;
+- `witness-valid` records `success`; `witness-invalid` records `failure` and
+  re-enters as an `evaluated_failures` marker in the same transaction;
+- a witness-invalid evaluation **rule-admits** as a `domain-checked-failure`
+  (no attestation), and the admission basis names the checker and canonical
+  witness claim it rests on;
+- the assessed content binds to the proposal's newest persisted signature
+  revision at assessment time — the same revision-pinning rule routed
+  evaluation follows.
+
+The proposal wire is deliberately **not** extended for witnesses: they are
+operator/tool-authored checkable claims and must not enter via the untrusted
+provider channel (decision D2 on issue #23).
+
 ### Deliberately out of scope here
 
 Compressing partial successes into success invariants (M6.1), mutating search

@@ -88,11 +88,25 @@ func classifyEvaluatedFailure(ev store.EvaluationRow) (admissionClassification, 
 	}
 	switch verify.VerificationStrength(ev.VerificationStrength) {
 	case verify.StrengthDeterministic, verify.StrengthReproducible:
+		basis := "rule: " + ev.VerificationStrength + "-strength failure of the assessed content admits as a domain-checked failed attempt"
+		// D2-C (issue #23): a tool-attributed verdict names its instrument and
+		// recorded claim in the admission basis, so a witness-backed rule
+		// admission is auditable to the canonical witness it rests on.
+		if ev.ToolName != "" {
+			basis += " (" + ev.ToolName
+			if ev.ToolVersion != "" {
+				basis += "/" + ev.ToolVersion
+			}
+			if ev.Notes != "" {
+				basis += ": " + ev.Notes
+			}
+			basis += ")"
+		}
 		return admissionClassification{
 			ObservationKind: ObservationDomainCheckedFailure,
 			RuleAdmissible:  true,
 			Attestable:      true,
-			Basis:           "rule: " + ev.VerificationStrength + "-strength failure of the assessed content admits as a domain-checked failed attempt",
+			Basis:           basis,
 		}, nil
 	case verify.StrengthIndependentEvidence:
 		return admissionClassification{

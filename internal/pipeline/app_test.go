@@ -601,6 +601,10 @@ func (f *fakeProblemStore) GetProposalProblem(context.Context, string) (string, 
 	return "", errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) LatestProposalSignatureContent(context.Context, string) (store.ProposalSignatureContentRow, bool, error) {
+	return store.ProposalSignatureContentRow{}, false, errors.New("unexpected call")
+}
+
 func (f *fakeProblemStore) PersistProjection(context.Context, store.ProjectionRecord) (store.ProjectionRecord, error) {
 	return store.ProjectionRecord{}, errors.New("unexpected call")
 }
