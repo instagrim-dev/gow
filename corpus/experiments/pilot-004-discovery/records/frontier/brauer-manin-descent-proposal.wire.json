@@ -1,0 +1,50 @@
+{
+  "schema_version": "proposal-wire/v1",
+  "proposals": [
+    {
+      "mechanism": {
+        "representations": [
+          "projective algebraic surface",
+          "rational points",
+          "brauer group"
+        ],
+        "assumptions": [
+          "surface regularity outside degenerate n",
+          "brauer group computable for small n",
+          "descent effective for S_n"
+        ],
+        "operators": [
+          "brauer group computation",
+          "local invariant map",
+          "brauer manin obstruction check",
+          "two descent"
+        ],
+        "preserves": [
+          "rational point existence"
+        ],
+        "breaks": [
+          "identity carried solvability",
+          "class union construction"
+        ],
+        "auxiliary_objects": [
+          "projective es surface S_n",
+          "brauer group of S_n",
+          "local invariant maps",
+          "selmer group of S_n"
+        ],
+        "locality": "global",
+        "construction_mode": "constructive",
+        "uncertainty_mode": "deterministic"
+      },
+      "target_invariant_ids": [
+        "inv_01M2B8ZNKFASFT9RARSDT5TY3R",
+        "inv_01M2B8ZNKFASFT9RARSG8X978R"
+      ],
+      "structural_violation_claim": "The proposed mechanism constructs ES representations via Brauer-Manin obstruction analysis and 2-descent on the projective ES surface S_n: 4xyz = n(xy+yz+zx), a variety-theoretic construction that does not route through a polynomial identity (attacks L4: identity_carried_solvability) and does not proceed by discrete class-union covering (attacks L3: class_union_construction). Solvability, when it can be established, is established by the vanishing of the Brauer-Manin obstruction and the effective production of a rational point via 2-descent - a cohomological + descent construction, not an identity or a congruence union. The mechanism is absent from the atlas (es-09's variety lift unifies parameterizations rather than constructing points; es-06's surface work bounds exceptional sets rather than constructing representations) and from the atlas's near-neighbours; the specific operators brauer_group_computation, local_invariant_map, brauer_manin_obstruction_check, and two_descent applied to S_n are new to the ES family.",
+      "novelty_argument": "The mechanism introduces two operators and one auxiliary object that no atlas member and no near-neighbour uses for representation construction. Operators: brauer_group_computation and two_descent applied to S_n. Auxiliary object: the Brauer group of S_n treated as a computable arithmetic invariant. External literature anchors (Colliot-Thelene, Sansuc, Swinnerton-Dyer for the Brauer-Manin framework on cubic surfaces; Cassels-Guy for 2-descent methods on cubic surfaces; Elsholtz-Tao 2013 for use of S_n itself, but for exceptional-set bounds, not existence construction) establish the framework as mature outside the ES atlas while confirming its absence from ES representation-construction specifically. Es-09 (higher-dimensional variety lift, partial_success) is the closest atlas member and its operator vocabulary (algebraic lift, re-representation, unification) does not overlap with obstruction analysis or descent on a fixed surface; that is mechanistic distinctness, not surface novelty. No atlas member uses the Brauer group at all. The specific step of computing the Brauer-Manin obstruction on S_n and applying 2-descent to produce a rational point is the frontier move.",
+      "cheapest_falsification_path": "Four steps ordered by cost, each a specific negative that falsifies or weakens the proposal at a distinct level. (1) Brauer group of S_n is trivial or trivially non-trivial for QR-class n (literature check plus explicit computation for one small n, hours). If Br(S_n)/Br(Q) = 0 uniformly, the mechanism's discriminating content collapses to no obstruction to identify; if it is large and uncomputable, the operator brauer_group_computation is not effective as stated. (2) Brauer-Manin obstruction on S_n for small QR-class n in {1, 25, 49, 121} (explicit local invariant map computation via SageMath-level algebra, days). If obstruction is trivial for all these n and Elsholtz-Tao's known results are recovered, no new content; if obstruction is non-trivial, the claim is directly tested. (3) 2-descent effectiveness on S_n for a specific target n where step 2 obstructs nothing (compute Sel_2 and produce a rational point via explicit descent, weeks). If descent fails despite no Brauer obstruction, the proposal weakens: either an obstruction outside the Brauer group exists, or the descent apparatus is not effective for S_n. (4) Recovery of Mordell's known cases via descent (small-case verification against known representations for n in Mordell-covered classes, days). If not recovered, the mechanism is not competitive on the easy cases. Negative at step 1 falsifies; steps 2-4 progressively weaken; only step 3 positive earns a full evaluation.",
+      "expected_information_gain": "high",
+      "evaluation_cost": "medium"
+    }
+  ]
+}
