@@ -1,0 +1,41 @@
+{
+  "schema_version": "proposal-wire/v1",
+  "proposals": [
+    {
+      "mechanism": {
+        "representations": [
+          "averaged_representation_count",
+          "quadratic_form_lattice"
+        ],
+        "assumptions": [
+          "bombieri_vinogradov_admissible",
+          "composition_genus_nonempty_over_qr_survivors"
+        ],
+        "operators": [
+          "delta_method_counting",
+          "composition_genus_covering",
+          "joint_indexing"
+        ],
+        "preserves": [
+          "solution_count_lower_bound"
+        ],
+        "breaks": [
+          "rate_subthreshold",
+          "qr_confinement"
+        ],
+        "auxiliary_objects": [
+          "ternary_divisor_variant",
+          "binary_quadratic_form_Q_uv"
+        ],
+        "locality": "mixed",
+        "construction_mode": "constructive",
+        "uncertainty_mode": "deterministic"
+      },
+      "structural_violation_claim": "The proposed mechanism composes a delta-method counting identity for the ES equation (yielding a polynomial main term N^{1/2+e} for the averaged representation count under Bombieri-Vinogradov admissible moduli) with a composition-genus covering of the binary quadratic form Q(u,v) = uv + \u03bbn(u+v) (whose composition genus indexes classes by reciprocity symbols and covers the QR-survivor congruence classes natively). By choosing the delta-method modulus parameter within the composition genus over the operative small primes, the counting identity is directed into the QR-survivor classes, producing witnesses that simultaneously (a) achieve polynomial main-term growth (attacking the rate-subthreshold sub-obstruction of N2a's density_averaging_ceiling) and (b) cover the QR-survivor classes (attacking the qr-confinement sub-obstruction). Both sub-obstructions identified in N2a's C4 boundary_delta are targeted by the same mechanism.",
+      "novelty_argument": "The mechanism combines two operators absent from every atlas member and every near-neighbour in the surveyed literature. Bombieri-Vinogradov averaging (es-05) has no polynomial main term because it uses smooth sieve error bounds; a delta-method counting identity for the ES linear form is not present in the atlas and is not present in Duke-Friedlander-Iwaniec's ternary-divisor result (which applies the delta-method to a different linear form). Vaughan congruence covering (es-10) uses additive residue classes and cannot inject reciprocity; a composition-genus covering indexes classes by quadratic-reciprocity symbols and is not present in the atlas. Divisor-structure representation (es-06, partial success) has QR-degrading lower bounds precisely because its covering is additive, not reciprocity-carried. Elsholtz-Tao exceptional-set bounds do not construct representations over QR-survivor classes. Additive-combinatorial approaches on the ES family have not injected reciprocity. The proposal's joint-indexing operator - choosing the delta-method modulus parameter to lie in the composition genus's classes over the operative primes - is the specific composition step no atlas member and no near-neighbour has attempted. This is mechanistic distinctness, not surface-level rewording: two operators and one auxiliary object are genuinely new to the family, and the joint composition is the specific construction that N2a-child-1's C2 probe recorded as absent.",
+      "cheapest_falsification_path": "Four steps ordered by cost, each a specific negative that falsifies or weakens the proposal. (1) Verify Bombieri-Vinogradov admissibility of the operative modulus range: if the composition genus of Q's operative small primes forces q > N^{1/2}, Bombieri-Vinogradov yields no useful average and Component A's rate-crossing claim fails. Literature check, hours. (2) Verify composition-genus non-emptiness over QR-survivors: if the composition genus of Q(u,v) = uv + \u03bbn(u+v) is empty over n \u2261 QR (mod p) for one of the operative small primes, Component B's covering claim fails. Explicit computation for small n, hours. (3) Verify the joint-indexing precondition: character-sum computation to check whether Component A's delta-method main term stays uniform when the modulus parameter is restricted to a composition-genus class. Days. (4) Small-case verification: for n \u2264 10^4 in the QR-survivor classes for the operative small primes, check whether the proposed apparatus produces representations. Zero representations, or only representations already covered by Mordell/Vaughan, falsifies the joint-crossing claim. Days. A negative at any of steps 1-3 falsifies; a negative at step 4 forces weakening. All positives together earn a full evaluation, not acceptance.",
+      "expected_information_gain": "high",
+      "evaluation_cost": "medium"
+    }
+  ]
+}

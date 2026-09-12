@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "command": "experiment validate-proposals",
+  "file": "corpus/experiments/pilot-004-discovery/records/frontier/joint-crossing-proposal.wire.json",
+  "valid": true,
+  "proposals": 1,
+  "permitted_targets": null
+}
