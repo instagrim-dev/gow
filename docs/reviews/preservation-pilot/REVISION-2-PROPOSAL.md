@@ -26,17 +26,28 @@ number against its artifact yet neither discharged the already-present
 conditioning-check obligation.
 
 **Change (applied to BOTH arms, symmetrically):** make the existing
-obligation operationally hard to skip — for every verified quantity the
-report must emit a visible row:
+obligation operationally hard to skip by requiring an inspectable bridge
+from **claimed property to checking procedure**. For every quantity whose
+prose attaches a property label, the report must emit a visible row:
 
-> **quantity → producing conditions → claimed property → discriminating
-> check**
+> **extracted claim → mathematical obligation → cheap discriminating
+> check → result**
 
-where "claimed property" is the label the prose attaches to the quantity
-(unconditional vs conditioned, budget-independent vs budget-sensitive,
-general vs demonstration-scale, tier-N vs tier-M) and the discriminating
-check states what would falsify that label. A missing row for a quantity
-that appears in the manuscript is itself a reportable omission.
+keyed by claim *form* per the shared reference
+[`claim-form-obligations.md`](../prompts/references/claim-form-obligations.md)
+(e.g., "budget-independent" ⇒ invariance over the specified budget range ⇒
+hold all else fixed, change the budget, compare). A missing row for a
+labeled quantity is itself a reportable omission. For the revision-1 miss,
+the required row was four lines: claim (budget-independent), dependency
+(budget changes which submissions enter the denominator), check (recompute
+at budgets two and three), result (3/40 ≠ 3/57 — unrestricted invariance
+false). That format makes it hard to discharge a label by reproducing the
+value it decorates.
+
+The reference indexes claim forms and their proof obligations rather than
+reminders about individual past mistakes; its templates are proposals whose
+scope must be bound per subject, and this enforcement mechanism remains a
+proposal to test, not a demonstrated cure.
 
 Revision 2 must also fix a **procedural defect**: mechanical blinding must
 strip or rewrite report title lines and verify the packet with a
