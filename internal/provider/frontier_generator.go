@@ -47,6 +47,28 @@ type GenerationRequest struct {
 	Count     int                `json:"count"`
 	Targets   []GenerationTarget `json:"targets"`
 	Families  []GenerationFamily `json:"families"`
+	// Expansions are the persisted search policy's expand directives, applied
+	// at the GENERATION-REQUEST boundary (docs/search-policy.md): the
+	// generator is explicitly asked to draw from under-sampled families and
+	// proven-violable boundaries. Code cannot force a model to comply — the
+	// request is persisted verbatim so compliance is auditable, and the
+	// downstream violation gate and rerank are unchanged. Absent when no
+	// policy exists or the no-policy arm is running (back-compat bytes).
+	Expansions []GenerationExpansion `json:"expansions,omitempty"`
+}
+
+// GenerationExpansion is one expand directive projected into the generation
+// request: where the persisted policy asks the generator to sample.
+type GenerationExpansion struct {
+	// TargetKind is mechanism_family (under-sampled coverage axis) or
+	// refuted_boundary (a predicate fingerprint a confirmed challenge proved
+	// violable).
+	TargetKind string `json:"target_kind"`
+	TargetID   string `json:"target_id"`
+	Weight     string `json:"weight"`
+	// Source is the directive's epistemic source (e.g. the boundary-delta
+	// kind that justified a refuted_boundary expansion).
+	Source string `json:"source,omitempty"`
 }
 
 // Fingerprint is a stable content hash of the request (targets/families sorted)
@@ -56,7 +78,14 @@ func (r GenerationRequest) Fingerprint() string {
 	sort.Slice(targets, func(i, j int) bool { return targets[i].InvariantID < targets[j].InvariantID })
 	families := append([]GenerationFamily(nil), r.Families...)
 	sort.Slice(families, func(i, j int) bool { return families[i].ClusterID < families[j].ClusterID })
-	payload := GenerationRequest{ProblemID: r.ProblemID, Count: r.Count, Targets: targets, Families: families}
+	expansions := append([]GenerationExpansion(nil), r.Expansions...)
+	sort.Slice(expansions, func(i, j int) bool {
+		if expansions[i].TargetKind != expansions[j].TargetKind {
+			return expansions[i].TargetKind < expansions[j].TargetKind
+		}
+		return expansions[i].TargetID < expansions[j].TargetID
+	})
+	payload := GenerationRequest{ProblemID: r.ProblemID, Count: r.Count, Targets: targets, Families: families, Expansions: expansions}
 	raw, _ := json.Marshal(payload)
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:])

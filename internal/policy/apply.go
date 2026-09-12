@@ -76,10 +76,11 @@ func Apply(pol SearchPolicy, candidates []frontier.Candidate, satisfiedPrefer ma
 		}
 		// KindExpand and KindPenalize/TargetRepeatedFailure are GENERATION-path
 		// levers (which families / mechanisms to draw from), not post-hoc ranking
-		// of an already-generated set. The generation-request path does not yet
-		// consume policy, so these are DEFERRED: carried in the persisted policy
-		// for provenance/inspection but not yet applied. See docs/search-policy.md
-		// "Deferred". They intentionally do not fire in this rerank.
+		// of an already-generated set — they intentionally do not fire in this
+		// rerank. KindExpand IS consumed at the generation-request boundary
+		// (GenerationRequest.Expansions; docs/search-policy.md "Applied vs.
+		// deferred levers"). KindPenalize/TargetRepeatedFailure stays deferred
+		// until a mechanism-level key exists.
 	}
 
 	floor := computeFalsifiabilityFloor(candidates)

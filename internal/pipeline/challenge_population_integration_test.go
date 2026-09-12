@@ -279,6 +279,42 @@ func TestIntegrationChallengeAssessmentPopulation(t *testing.T) {
 	if !foundBoundary {
 		t.Fatalf("expected an expand/refuted_boundary directive derived from the boundary delta, got %+v", mut.Revision.Directives)
 	}
+
+	// 7. Generation-path consumption: a subsequent generation carries the
+	// policy's expand directives at the REQUEST boundary — the persisted
+	// invocation envelope shows the generator was ASKED to draw from the
+	// refuted boundary. A --no-policy generation carries none.
+	gen, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("frontier generate: %v", err)
+	}
+	genRec, err := repo.GetFrontierGeneration(ctx, gen.Generation.ID)
+	if err != nil {
+		t.Fatalf("get generation: %v", err)
+	}
+	invocs, err := repo.ListProviderInvocationsForRun(ctx, genRec.RunID)
+	if err != nil || len(invocs) == 0 {
+		t.Fatalf("expected a persisted generation invocation: %v", err)
+	}
+	if !strings.Contains(invocs[0].RequestPayload, `"target_kind":"refuted_boundary"`) ||
+		!strings.Contains(invocs[0].RequestPayload, deltas[0].PredicateFingerprint) {
+		t.Fatalf("generation request payload must carry the refuted-boundary expansion:\n%s", invocs[0].RequestPayload)
+	}
+	genNoPolicy, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID, NoPolicy: true})
+	if err != nil {
+		t.Fatalf("no-policy generate: %v", err)
+	}
+	npRec, err := repo.GetFrontierGeneration(ctx, genNoPolicy.Generation.ID)
+	if err != nil {
+		t.Fatalf("get no-policy generation: %v", err)
+	}
+	npInvocs, err := repo.ListProviderInvocationsForRun(ctx, npRec.RunID)
+	if err != nil || len(npInvocs) == 0 {
+		t.Fatalf("expected a persisted no-policy invocation: %v", err)
+	}
+	if strings.Contains(npInvocs[0].RequestPayload, "expansions") {
+		t.Fatalf("the no-policy arm's request must stay policy-free:\n%s", npInvocs[0].RequestPayload)
+	}
 }
 
 // TestIntegrationMixedPopulationAssociationNotFalsified pins the association

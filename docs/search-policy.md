@@ -54,8 +54,8 @@ Directives are typed over typed targets:
 |---|---|---|
 | `prefer` | `success_invariant` | favor proposals whose signature satisfies a supported success condition |
 | `avoid` | `surviving_invariant` | steer away from re-preserving conserved failure structure |
-| `expand` | `mechanism_family` | sample under-covered mechanism families *(derived + persisted; generation-path application deferred — see below)* |
-| `expand` | `refuted_boundary` | expand where a confirmed challenge PROVED believed failure structure violable (v43, D5) *(same generation-path deferral as `mechanism_family`)* |
+| `expand` | `mechanism_family` | sample under-covered mechanism families *(applied at the generation-request boundary — see below)* |
+| `expand` | `refuted_boundary` | expand where a confirmed challenge PROVED believed failure structure violable (v43, D5) *(applied at the generation-request boundary — see below)* |
 | `penalize` | `redundant_attack` | dampen directed attacks seen on ≥2 distinct proposals (down-rank in the applied rerank) |
 | `penalize` | `repeated_failure` | dampen repeatedly-failing mechanisms *(generation-path lever; deferred — see below)* |
 
@@ -88,24 +88,29 @@ The applied levers — those that change the *current* rerank — are `prefer`
 (redundant_attack). These fire in `policy.Apply` over the ranked candidate set,
 and their per-proposal effect is recorded in the applied-bias log.
 
-Two lever kinds are **derived and persisted for provenance/inspection but not
-yet applied**, because they are *generation-path* levers (they change which
-families/mechanisms are drawn *before* ranking) and the generation-request path
-does not yet consume the persisted policy:
+`expand` directives (`mechanism_family`, `refuted_boundary`) are applied at
+the **generation-request boundary**: `GenerationRequest.Expansions` carries
+the latest policy revision's expand directives, so the generator is explicitly
+asked to draw from under-sampled families and proven-violable boundaries.
+Honestly stated limits:
 
-- `expand` (`mechanism_family`) — would broaden sampling into under-covered
-  families;
-- `expand` (`refuted_boundary`) — would direct generation toward predicates a
-  confirmed challenge proved violable;
-- `penalize` (`repeated_failure`) — would dampen repeatedly-failing mechanisms.
+- code cannot force a model generator to comply — the request payload is
+  persisted verbatim on the generation's provider invocation, so compliance
+  is *auditable*, not assumed;
+- the deterministic fixture generator derives from targets/families and
+  ignores expansions by design (its purpose is reproducibility, not
+  sampling);
+- the `--no-policy` arm's request carries no expansions (its request bytes
+  are identical to the pre-expansion contract), preserving the M7 baseline;
+- the downstream violation gate, falsifiability floor, and rerank are
+  unchanged — expansions change what is *asked*, never what is *admitted*.
 
-They are carried in the revision so an operator can see the accumulated
-intent, and `policy.Apply` intentionally does not fire them (a comment in
-`internal/policy/apply.go` marks the deferral). Wiring the generation request to
-consume policy is deferred to a follow-up so this slice stays a bounded,
-testable rerank rather than a change to generation semantics. Until then,
-`expand`/`repeated_failure` directives do not alter search behavior, and this is
-stated rather than implied.
+One lever kind remains **derived-only**:
+
+- `penalize` (`repeated_failure`) — would dampen repeatedly-failing
+  mechanisms, but keying it on single evaluated-failure proposals would emit
+  unbounded single-use directives; it stays deferred until a mechanism-level
+  key exists (stated in `buildPolicyEvidence`).
 
 ## Next-decision edges: which persisted feedback feeds `Derive` (decision D5, v43)
 

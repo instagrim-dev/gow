@@ -176,6 +176,18 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 	}
 
 	req := generationRequestForSurvivors(input.ProblemID, count, survivors, engineFamilies)
+	// M6.2 generation-path lever: the persisted policy's expand directives are
+	// applied at the REQUEST boundary — the generator is explicitly asked to
+	// draw from under-sampled families and proven-violable boundaries. The
+	// no-policy arm carries none (its request must stay policy-free), and the
+	// persisted request payload makes the ask auditable.
+	if !opts.noPolicy {
+		expansions, xerr := a.policyExpansions(ctx, repoStore, input.ProblemID)
+		if xerr != nil {
+			return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, xerr
+		}
+		req.Expansions = expansions
+	}
 
 	generator := opts.generator
 	if generator == nil {
@@ -483,6 +495,36 @@ func generationRequestForSurvivors(problemID string, count int, survivors []fron
 		})
 	}
 	return req
+}
+
+// policyExpansions projects the latest persisted policy revision's expand
+// directives into generation-request expansions, in the revision's stored
+// directive order (deterministic). No policy ⇒ nil (identity, KTD-6).
+func (a *App) policyExpansions(ctx context.Context, repoStore problemStore, problemID string) ([]provider.GenerationExpansion, error) {
+	latest, found, err := repoStore.LatestSelectedPolicyRevision(ctx, problemID)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, nil
+	}
+	rec, err := repoStore.GetPolicyRevision(ctx, latest)
+	if err != nil {
+		return nil, err
+	}
+	var out []provider.GenerationExpansion
+	for _, d := range rec.Directives {
+		if d.Kind != string(policy.KindExpand) {
+			continue
+		}
+		out = append(out, provider.GenerationExpansion{
+			TargetKind: d.TargetKind,
+			TargetID:   d.TargetID,
+			Weight:     d.Weight,
+			Source:     d.EpistemicSource,
+		})
+	}
+	return out, nil
 }
 
 // ListFrontier lists frontier-generation headers for a problem.
