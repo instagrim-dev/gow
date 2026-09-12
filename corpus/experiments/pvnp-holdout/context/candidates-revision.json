@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "command": "invariant list",
+  "store": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/records/pvnp.db",
+  "revisions": [
+    {
+      "id": "ivr_01M2BV02J8ZP9BM6EEH2B0YER3",
+      "failure_space_id": "fsp_01M2BV02HTMDXNMQ28WPE49KDC",
+      "miner_version": "invariant/v1+712e5351092a6ecd",
+      "min_support": 2,
+      "revision": 1,
+      "candidate_count": 6,
+      "created_at": "2026-09-12T22:14:51.720309Z"
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "ok": true,
+  "command": "failure-space show",
+  "store": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/records/pvnp.db",
+  "failure_space": {
+    "id": "fsp_01M2BV02HTMDXNMQ28WPE49KDC",
+    "problem_id": "prb_01M2BTYMX6ZK2MME5X48GMEWZ1",
+    "cluster_run_id": "clr_01M2BV02HCSWX6G1TNCBCBG6FB",
+    "revision": 1,
+    "distinct_family_count": 12,
+    "redundant_member_count": 0,
+    "outcomes": [
+      {
+        "outcome_class": "failure",
+        "family_count": 5
+      },
+      {
+        "outcome_class": "partial_success",
+        "family_count": 7
+      }
+    ],
+    "axes": [
+      {
+        "axis_kind": "assumption",
+        "distinct_value_count": 18,
+        "under_sampled": false
+      },
+      {
+        "axis_kind": "auxiliary_object",
+        "distinct_value_count": 23,
+        "under_sampled": false
+      },
+      {
+        "axis_kind": "breaks",
+        "distinct_value_count": 3,
+        "under_sampled": false
+      },
+      {
+        "axis_kind": "operator",
+        "distinct_value_count": 33,
+        "under_sampled": false
+      },
+      {
+        "axis_kind": "outcome",
+        "distinct_value_count": 2,
+        "under_sampled": false
+      },
+      {
+        "axis_kind": "posture.construction",
+        "distinct_value_count": 2,
+        "under_sampled": false
+      },
+      {
+        "axis_kind": "posture.locality",
+        "distinct_value_count": 2,
+        "under_sampled": false
+      },
+      {
+        "axis_kind": "posture.uncertainty",
+        "distinct_value_count": 2,
+        "under_sampled": false
+      },
+      {
+        "axis_kind": "preserves",
+        "distinct_value_count": 3,
+        "under_sampled": false
+      },
+      {
+        "axis_kind": "representation",
+        "distinct_value_count": 31,
+        "under_sampled": false
+      }
+    ]
+  }
+}

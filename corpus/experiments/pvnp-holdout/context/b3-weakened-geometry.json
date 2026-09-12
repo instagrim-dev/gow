@@ -1,0 +1,125 @@
+{
+  "note": "B3 permitted context: weakened candidate invariants of the pvnp train atlas (zero survivors; terminal weaken via confirmed success-preservation). Statements are hypotheses about conserved failure structure, not established laws.",
+  "candidates": [
+    {
+      "statement": "failed approaches share preserves(domain.complexity_theory.property.large_constructive_distinguishing_property)",
+      "predicate": {
+        "schema": "invariant-predicate/v1",
+        "root": {
+          "op": "contains",
+          "field": "preserves",
+          "canonical_id": "domain.complexity_theory.property.large_constructive_distinguishing_property"
+        }
+      },
+      "state": "weakened (success-preserving confirmed)",
+      "boundary_deltas": [
+        {
+          "kind": "contrast-collapse",
+          "predicate_fingerprint": "224c765e91c03a89105a61eff439a3e0c0ee71d992249c10c579a94d706cfbe4",
+          "condition": "contains(preserves,domain.complexity_theory.property.large_constructive_distinguishing_property)"
+        }
+      ]
+    },
+    {
+      "statement": "failed approaches share construction=existential",
+      "predicate": {
+        "schema": "invariant-predicate/v1",
+        "root": {
+          "op": "equals",
+          "field": "construction",
+          "values": [
+            "existential"
+          ]
+        }
+      },
+      "state": "weakened (success-preserving confirmed)",
+      "boundary_deltas": [
+        {
+          "kind": "contrast-collapse",
+          "predicate_fingerprint": "71c913ddd4988368d997be32c80db46c05b1a1478bc52ec2e4eb23c47a54bd2c",
+          "condition": "equals(construction,existential)"
+        }
+      ]
+    },
+    {
+      "statement": "failed approaches share uncertainty=deterministic",
+      "predicate": {
+        "schema": "invariant-predicate/v1",
+        "root": {
+          "op": "equals",
+          "field": "uncertainty",
+          "values": [
+            "deterministic"
+          ]
+        }
+      },
+      "state": "weakened (success-preserving confirmed)",
+      "boundary_deltas": [
+        {
+          "kind": "contrast-collapse",
+          "predicate_fingerprint": "b4c19517fceec4bf81a7246bc0da3fbd4dc8c82e5f873d29830b33d04ff3bdd0",
+          "condition": "equals(uncertainty,deterministic)"
+        }
+      ]
+    },
+    {
+      "statement": "failed approaches share preserves(domain.complexity_theory.property.black_box_relativizing_simulation)",
+      "predicate": {
+        "schema": "invariant-predicate/v1",
+        "root": {
+          "op": "contains",
+          "field": "preserves",
+          "canonical_id": "domain.complexity_theory.property.black_box_relativizing_simulation"
+        }
+      },
+      "state": "weakened (success-preserving confirmed)",
+      "boundary_deltas": [
+        {
+          "kind": "contrast-collapse",
+          "predicate_fingerprint": "c586ab84ab392af3434b7e5003a2240c9dcebf774c3e31fec4c0cc1a271a1518",
+          "condition": "contains(preserves,domain.complexity_theory.property.black_box_relativizing_simulation)"
+        }
+      ]
+    },
+    {
+      "statement": "failed approaches share preserves(domain.complexity_theory.property.model_analysis_first_direction)",
+      "predicate": {
+        "schema": "invariant-predicate/v1",
+        "root": {
+          "op": "contains",
+          "field": "preserves",
+          "canonical_id": "domain.complexity_theory.property.model_analysis_first_direction"
+        }
+      },
+      "state": "weakened (success-preserving confirmed)",
+      "boundary_deltas": [
+        {
+          "kind": "contrast-collapse",
+          "predicate_fingerprint": "e75f9cf18a99b0ee2517c7801f814a5c9714cbcb25a208ecd036adf6e05336e0",
+          "condition": "contains(preserves,domain.complexity_theory.property.model_analysis_first_direction)"
+        }
+      ]
+    },
+    {
+      "statement": "failed approaches share locality=global",
+      "predicate": {
+        "schema": "invariant-predicate/v1",
+        "root": {
+          "op": "equals",
+          "field": "locality",
+          "values": [
+            "global"
+          ]
+        }
+      },
+      "state": "weakened (success-preserving confirmed)",
+      "boundary_deltas": [
+        {
+          "kind": "contrast-collapse",
+          "predicate_fingerprint": "fc2b18c008678ea7c3c63f2c251ff060ea6aeea842bc8a91f05d666dda61e852",
+          "condition": "equals(locality,global)"
+        }
+      ]
+    }
+  ]
+}

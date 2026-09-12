@@ -131,7 +131,27 @@ mirroring `corpus/experiments/two-arm-comparison/` (protocol frozen at
 
 ## What remains before freeze (operator work)
 
-- [ ] Audit every claimed date/DOI above against primary records
+- [x] Audit every claimed date/DOI above against primary records — **done
+      2026-09-12, blind chronology audit against publisher pages, ECCC/DIMACS
+      records, and independent bibliographies. All 14 rows verify; no date
+      errors; cutoff coherence holds** (every train anchor strictly pre-2005
+      — latest: KI03 STOC 2003-06-09 and its 2004 journal version; both
+      targets strictly post-2005). Algebrization confirmed absent from both
+      tables (honesty constraint 2). Two dating-gate findings, adopted:
+      (1) target 1 (STOC 2010, DOI 10.1145/1806689.1806723) has **no
+      ECCC/arXiv preprint** (a suggested "ECCC TR09-124" was checked against
+      ECCC and is false); earliest establishable public full text is the
+      author's 2010-05-04 draft (cs.cmu.edu/~ryanw/improved-algs-lbs2.pdf) —
+      the gate records that earlier date. (2) target 2 (CCC 2011, DOI
+      10.1109/CCC.2011.36) was publicly released as a draft on **2010-11-08**
+      (Gödel's Lost Letter announcement, rjlipton.com/2010/11/08/, preprint
+      internally dated 2010-11-23) — ~7 months before the CCC date; the gate
+      records 2010-11-08. Recording the EARLIEST establishable public date is
+      the conservative direction (nearest the cutoff). Audit-integrity note:
+      four train DOI digit-strings (rows 1, 6-translation, 12-CCC'97) came
+      from citation records rather than direct resolution; train rows are not
+      `date-source` evidence, so this is recorded as a residual, not a gate
+      blocker.
 - [x] Author the 12 train files + 2 target files (mechanism payloads) —
       drafted 2026-09-12 (`train/pnp-01..12`, `target/pnp-target-01..02`);
       smoke-validated: all 14 ingest and normalize cleanly, historical
@@ -163,5 +183,75 @@ mirroring `corpus/experiments/two-arm-comparison/` (protocol frozen at
       constraint #1 already prices it — a proposal that merely re-lands
       the KI03 bridge is mechanism-near to TRAIN, not the target, so the
       unique profile cannot be cashed in for recovery credit by itself.
-- [ ] Fix budgets and arms; record the freeze commit
+- [x] Fix budgets and arms; record the freeze commit — **preregistration
+      pinned 2026-09-12** (see "Preregistration (pinned)" below); the freeze
+      commit is the commit introducing that section
 - [ ] Only then: `date-source` with audited locators, and run
+
+## Preregistration (pinned 2026-09-12, before any capture)
+
+**Fixed identity, per M7 + D6:**
+
+- **Vocabulary:** `mechanism/v6` — verbatim per-(field,label) canonicalization
+  of the corpus's stated labels, no cross-label aliasing; pinned at commit
+  `aaca121` with regression tests asserting the v5-superset discipline, the
+  no-merge discipline, and that KI03's `algorithm-to-hardness implication`
+  and the target's `algorithm-to-hardness conversion` resolve to distinct
+  canonical IDs (honesty constraint 1, machine-enforced).
+- **Comparison profile:** `classify/v3`
+  (profile-sha256 `34b4bf219dcacebd7c58b1917723d525f19491918e705357c5c6fd63c6ec91b2`);
+  **recovery rule:** `recovery-rule/v1`.
+- **Budgets:** proposal budget 8, evaluation budget 8, per arm (pilot-003
+  precedent).
+- **Arms:** `b0_undirected` + `b3_invariant_guided`, both via captured
+  external proposals (`--b0-proposals-file` / `--b3-proposals-file`), same
+  proposer model/configuration for both arms, prompts and captures retained.
+- **Completeness:** all 14 corpus payloads carry `declared_payload`-scoped
+  `field_completeness` attestations (m7-blinded-run stage-2 playbook; holds
+  by construction for embedded payloads). Readiness at pin time:
+  `decisive_axis_resolution` ready (103/103 train claims resolved),
+  `withheld_target` ready (21/21), `recovery_reachability` ready (both
+  targets self-compare into the recovery set).
+
+**Measured pre-capture structure (recorded, not tuned away):** mining under
+`mechanism/v6` produced 6 candidates (3 substantive conserved properties +
+3 posture axes). The challenge campaign weakened ALL SIX via confirmed
+success-preservation: the train atlas's partial successes genuinely preserve
+the conserved directions (and its two direction-breaking families are
+partial successes, so contrast collapses). **Zero surviving invariants is
+the corpus's honest measured geometry** — historically true of the era —
+and per the terminal-weaken doctrine (pilot-004) it is not repairable by
+re-mining or claim forms within this atlas.
+
+**Predeclared consequences:**
+
+1. **B3 guidance shape.** The harness's B3 arm targets surviving invariants;
+   with zero survivors its recorded generation request will carry no
+   invariant targets (a recorded outcome, not an error), and contrast-collapse
+   boundary deltas are doctrine-excluded from policy `expand` directives.
+   B3's guidance — the six weakened candidate invariants (statements +
+   boundary deltas) and the failure-space family structure — is therefore
+   supplied via the OPERATOR-composed prompt, retained verbatim alongside
+   the run. B0's prompt carries the same train-derived family material MINUS
+   the invariant statements and deltas. This is the pilot-003
+   minimum-genuine-comparison adapted to a zero-survivor atlas.
+2. **Mechanical conclusion expectation.** Under `classify/v3`, externally
+   captured proposals cannot earn automatic decisive verdicts: completeness
+   admission strips at the untrusted boundary, so every proposal–target
+   assessment is expected `unknown` and the code-owned conclusion is
+   expected **`inconclusive`** (never a coerced negative or granted
+   recovery). This is the pinned contract
+   (`frontier_admission_integration_test.go`), not a defect of this run.
+3. **Primary and secondary endpoints.** Primary: the code-owned conclusion
+   through the historical vocabulary gate
+   (`predicts_later_advance` / `fails_to_predict` / `inconclusive`).
+   Secondary (judgment-level, predeclared): a blinded independent
+   structural-recovery adjudication of both arms' captured proposals against
+   the frozen target manifest under the package-4 rubric (pilot-003
+   pattern: independent review + second adjudication), recorded as
+   ModelJudgment, never promoted to the mechanical vocabulary.
+4. **Grading (honesty constraint 1).** A proposal that re-lands KI03's
+   identity-testing bridge is mechanism-near TRAIN, not the target; recovery
+   credit requires the target's distinct content (supplied-algorithm →
+   nondeterministic-time-hierarchy → class-lower-bound coupling), which the
+   v6 vocabulary keeps separable by construction.
