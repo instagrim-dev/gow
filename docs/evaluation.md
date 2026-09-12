@@ -157,6 +157,11 @@ newf evidence list --problem <id>                 # the admission ledger
 - Model-tier evaluations record a `provider_invocations` row (role `'evaluate'`)
   with retained request/response payloads; deterministic tiers record
   `tool_name`/`tool_version` and no provider row.
+- A verifier tier that is **operationally unreachable** (wraps
+  `verify.ErrVerifierUnavailable`) is recorded and skipped, not treated as an
+  abstention or a run failure; if no reachable tier decides, the evaluation
+  lands as `verification_blocked` with the unreachable tiers named in its
+  notes. Any other verifier error still aborts the run.
 - Runs use `running → completed/failed`; re-evaluation is a new append-only
   `evaluation_run`; all evaluation rows are immutable by trigger.
 - `mode='holdout'` is refused at the service boundary AND by a gate trigger

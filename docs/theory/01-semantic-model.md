@@ -187,7 +187,11 @@ whose epistemic weight is inseparable from its verdict.
 
 A failure/partial-failure landing point re-enters the atlas as a new observed
 shape, expanding the geometry. This closes the loop from search back to
-description.
+description. Re-entry is **gated, not automatic**: the evidence-admission
+ledger decides, under a versioned policy, whether an observation enters the
+population (rule-admitted for domain-checked strengths, operator-attested for
+model-judged ones) — a landing point that is withheld stays recorded but does
+not expand the atlas.
 
 ## Relationship map (conceptual)
 

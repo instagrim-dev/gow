@@ -64,9 +64,17 @@ the open obligation records exactly what remains unverified.
 --evaluation evl_... --note ...` records the operator's verdict backed by a
 domain observation — an evaluation of the **same proposal** the artifact
 projects (enforced). The decision stores the evaluation id as
-`evidence_ref` and carries the observation's verification-strength label in
-its basis; a model-judged observation stays labeled as such
+`evidence_ref`, and (v40) copies the backing evaluation's **verdict and
+verification strength verbatim into typed columns**
+(`evaluation_verdict`/`evaluation_strength`, surfaced in `--json`), so a
+policy consumer can weigh a discharge without parsing the prose basis; a
+model-judged observation stays labeled as such
 (ModelJudgment != Verification).
+
+> **Current limitation (recorded, 2026-09-12 review F10):** obligations and
+> their decisions are persisted and inspectable, but no search-policy
+> mutation consumes them yet. The typed columns exist so that consumption,
+> when built, needs no prose parsing — the edge itself is not shipped.
 
 ## Inspection
 

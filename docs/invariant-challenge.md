@@ -203,6 +203,13 @@ challenge's persisted transitions; derived candidate ids stay on its
 derived-children rows. Unconfirmed/inert challenges derive no delta. The
 delta surfaces in `--json` as `challenges[].boundary_delta`.
 
+> **Current limitation (recorded, 2026-09-12 review F10):** boundary deltas
+> are persisted and surfaced but **no search-policy mutation consumes them
+> yet** — "subsequent policy consumes a typed object" states the design
+> intent, not shipped behavior. Until a policy revision reads
+> `challenge_boundary_deltas`, the next-decision edge exists only as durable
+> state.
+
 ## Provenance, determinism, offline CI
 
 Each campaign records one `provider_invocations` row (`role='challenge'`) with

@@ -187,7 +187,13 @@ func newExperimentCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions
 			"consumes — against a captured proposal-wire/v1 file. With --problem, the\n" +
 			"problem's surviving invariants are the permitted targets (B3 semantics);\n" +
 			"without it, no targets are permitted (B0 semantics). Read-only: no run rows,\n" +
-			"no writes. A capture must pass this before being declared importable.",
+			"no writes. A capture must pass this before being declared importable.\n" +
+			"\n" +
+			"Scope (honest): this preflights the wire DECODE only. It does NOT run\n" +
+			"vocabulary admission (canon.AdmitProposalSignature), does NOT apply the\n" +
+			"import-time proposal-count truncation, and does NOT check provider/version\n" +
+			"compatibility — a file that passes here can still be corrected or truncated\n" +
+			"at import.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if validateFile == "" {

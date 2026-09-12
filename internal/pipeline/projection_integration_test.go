@@ -137,6 +137,12 @@ func TestIntegrationProjectionChainFourRecords(t *testing.T) {
 	if !strings.Contains(ob.Basis, "single-model-judgment") {
 		t.Fatalf("basis must carry the observation's strength label: %q", ob.Basis)
 	}
+	// F6 (v40): the backing observation's verdict and strength are TYPED on
+	// the decision, not only embedded in prose — a policy consumer can weigh
+	// the discharge without parsing the basis.
+	if ob.EvaluationVerdict == "" || ob.EvaluationStrength != "single-model-judgment" {
+		t.Fatalf("decision must carry typed evaluation verdict/strength: %+v", ob)
+	}
 
 	// Append-once: the decided obligation refuses a second verdict.
 	if _, err := app.DischargeObligation(ctx, DischargeObligationInput{
