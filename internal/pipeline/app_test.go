@@ -607,3 +607,23 @@ func (f *fakeProblemStore) ListEvidenceAdmissions(context.Context, string) ([]st
 func (f *fakeProblemStore) GetProposalSignatureContentByHash(context.Context, string, string) (store.ProposalSignatureContentRow, bool, error) {
 	return store.ProposalSignatureContentRow{}, false, errors.New("unexpected call")
 }
+
+func (f *fakeProblemStore) GetProposalProblem(context.Context, string) (string, error) {
+	return "", errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistProjection(context.Context, store.ProjectionRecord) (store.ProjectionRecord, error) {
+	return store.ProjectionRecord{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistObligationDecision(context.Context, store.ProjectionObligationDecisionRow) error {
+	return errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetProjectionObligation(context.Context, string) (store.ProjectionObligationRow, store.ProjectionArtifactRow, error) {
+	return store.ProjectionObligationRow{}, store.ProjectionArtifactRow{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListProjectionsForProblem(context.Context, string) ([]store.ProjectionRecord, error) {
+	return nil, errors.New("unexpected call")
+}

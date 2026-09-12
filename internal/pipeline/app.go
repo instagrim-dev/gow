@@ -178,6 +178,12 @@ type problemStore interface {
 	PersistEvidenceAdmission(context.Context, store.EvidenceAdmissionRow) (store.EvidenceAdmissionRow, error)
 	ListEvidenceAdmissions(context.Context, string) ([]store.EvidenceAdmissionRow, error)
 	GetProposalSignatureContentByHash(context.Context, string, string) (store.ProposalSignatureContentRow, bool, error)
+	// Projection chain (v37/S5): concrete plan -> obligations -> decisions.
+	GetProposalProblem(context.Context, string) (string, error)
+	PersistProjection(context.Context, store.ProjectionRecord) (store.ProjectionRecord, error)
+	PersistObligationDecision(context.Context, store.ProjectionObligationDecisionRow) error
+	GetProjectionObligation(context.Context, string) (store.ProjectionObligationRow, store.ProjectionArtifactRow, error)
+	ListProjectionsForProblem(context.Context, string) ([]store.ProjectionRecord, error)
 }
 
 type InitProblemInput struct {

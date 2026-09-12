@@ -39,6 +39,8 @@ const (
 	EvaluationIDPrefix            = "evl_"
 	EvaluationMetricIDPrefix      = "evm_"
 	EvidenceAdmissionIDPrefix     = "evad_"
+	ProjectionArtifactIDPrefix    = "prj_"
+	ProjectionObligationIDPrefix  = "obl_"
 	SuccessRevisionIDPrefix       = "svr_"
 	SuccessInvariantIDPrefix      = "sinv_"
 	HoldoutSetIDPrefix            = "hset_"
@@ -76,6 +78,8 @@ var (
 	ErrInvalidEvaluationID            = errors.New("invalid evaluation id")
 	ErrInvalidEvaluationMetricID      = errors.New("invalid evaluation metric id")
 	ErrInvalidEvidenceAdmissionID     = errors.New("invalid evidence admission id")
+	ErrInvalidProjectionArtifactID    = errors.New("invalid projection artifact id")
+	ErrInvalidProjectionObligationID  = errors.New("invalid projection obligation id")
 	ErrInvalidSuccessRevisionID       = errors.New("invalid success revision id")
 	ErrInvalidSuccessInvariantID      = errors.New("invalid success invariant id")
 	ErrInvalidHoldoutSetID            = errors.New("invalid holdout set id")
@@ -270,6 +274,22 @@ func NewEvidenceAdmissionID(now time.Time) string {
 
 func ValidateEvidenceAdmissionID(id string) error {
 	return validateID(id, EvidenceAdmissionIDPrefix, ErrInvalidEvidenceAdmissionID)
+}
+
+func NewProjectionArtifactID(now time.Time) string {
+	return newID(ProjectionArtifactIDPrefix, now)
+}
+
+func ValidateProjectionArtifactID(id string) error {
+	return validateID(id, ProjectionArtifactIDPrefix, ErrInvalidProjectionArtifactID)
+}
+
+func NewProjectionObligationID(now time.Time) string {
+	return newID(ProjectionObligationIDPrefix, now)
+}
+
+func ValidateProjectionObligationID(id string) error {
+	return validateID(id, ProjectionObligationIDPrefix, ErrInvalidProjectionObligationID)
 }
 
 func NewSuccessRevisionID(now time.Time) string {

@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 36
+const currentSchemaVersion = 37
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -1086,6 +1086,22 @@ END;
 		// immutable. Disposition stays on the challenge's transitions and
 		// derived candidate ids on its derived-children rows.
 		apply: migrateV36ChallengeBoundaryDeltas,
+	},
+	{
+		version: 37,
+		// v37 (2026-09-12 structural review, finding S5 part B): the typed
+		// projection chain. A structural description plus prose is not a
+		// concrete construction; the four records are now separate:
+		// frontier_proposals (proposed structural change, existing) ->
+		// projection_artifacts (the authored concrete plan: typed steps with
+		// requires/provides tokens) -> projection_obligations (what must be
+		// verified: a code-decided steps-compose check; an open
+		// domain-realization obligation for an external checker) ->
+		// projection_obligation_decisions (append-once verdicts whose
+		// evidence_ref points at the domain observation, e.g. an evaluation).
+		// A plan whose steps cannot compose is refuted deterministically at
+		// projection time, before any domain work. All rows immutable.
+		apply: migrateV37ProjectionChain,
 	},
 }
 
@@ -3661,5 +3677,105 @@ END;
 
 func migrateV36ChallengeBoundaryDeltas(ctx context.Context, tx *sql.Tx) error {
 	_, err := tx.ExecContext(ctx, challengeBoundaryDeltasSQL)
+	return err
+}
+
+// projectionChainSQL is the additive DDL for migration v37 (S5 part B): the
+// typed projection chain separating a proposed structural change from its
+// concrete plan, its verification obligations, and the domain observations
+// that decide them.
+//
+//   - projection_artifacts: one authored concrete plan revision per proposal
+//     (append-only revisions; identical content refused per proposal). The
+//     typed steps live in content_json (projection.Artifact, schema-versioned).
+//   - projection_obligations: what must be verified for this artifact.
+//     `steps-compose` is decided by code at projection time; a
+//     `domain-realization` obligation is created ONLY for composing plans and
+//     stays open until an external observation decides it. Recording the open
+//     obligation is the honest form of "the domain checker is missing".
+//   - projection_obligation_decisions: append-once (PK = obligation) verdicts.
+//     evidence_kind/evidence_ref point at the DOMAIN OBSERVATION backing an
+//     operator decision (an evaluation row) or record 'code-check' for the
+//     deterministic composition verdict; both set or neither.
+const projectionChainSQL = `
+CREATE TABLE IF NOT EXISTS projection_artifacts (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  proposal_id TEXT NOT NULL REFERENCES frontier_proposals(id),
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  revision INTEGER NOT NULL CHECK (revision >= 1),
+  author_kind TEXT NOT NULL CHECK (author_kind IN ('operator','tool')),
+  schema_version TEXT NOT NULL,
+  content_json TEXT NOT NULL,
+  content_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(proposal_id, revision),
+  UNIQUE(proposal_id, content_hash)
+);
+
+CREATE INDEX IF NOT EXISTS idx_projection_artifacts_problem ON projection_artifacts(problem_id);
+
+CREATE TABLE IF NOT EXISTS projection_obligations (
+  id TEXT PRIMARY KEY,
+  artifact_id TEXT NOT NULL REFERENCES projection_artifacts(id),
+  ordinal INTEGER NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('steps-compose','domain-realization')),
+  statement TEXT NOT NULL CHECK (length(statement) > 0),
+  checker_kind TEXT NOT NULL CHECK (checker_kind IN ('deterministic-check','external')),
+  created_at TEXT NOT NULL,
+  UNIQUE(artifact_id, ordinal)
+);
+
+CREATE TABLE IF NOT EXISTS projection_obligation_decisions (
+  obligation_id TEXT PRIMARY KEY REFERENCES projection_obligations(id),
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  status TEXT NOT NULL CHECK (status IN ('discharged','failed')),
+  decided_by TEXT NOT NULL CHECK (decided_by IN ('code','operator')),
+  basis TEXT NOT NULL CHECK (length(basis) > 0),
+  evidence_kind TEXT CHECK (evidence_kind IN ('code-check','evaluation')),
+  evidence_ref TEXT,
+  created_at TEXT NOT NULL,
+  CHECK ((evidence_kind IS NULL) = (evidence_ref IS NULL))
+);
+
+CREATE TRIGGER IF NOT EXISTS projection_artifacts_immutable_update
+BEFORE UPDATE ON projection_artifacts
+BEGIN
+  SELECT RAISE(ABORT, 'projection artifacts are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS projection_artifacts_immutable_delete
+BEFORE DELETE ON projection_artifacts
+BEGIN
+  SELECT RAISE(ABORT, 'projection artifacts are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS projection_obligations_immutable_update
+BEFORE UPDATE ON projection_obligations
+BEGIN
+  SELECT RAISE(ABORT, 'projection obligations are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS projection_obligations_immutable_delete
+BEFORE DELETE ON projection_obligations
+BEGIN
+  SELECT RAISE(ABORT, 'projection obligations are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS projection_obligation_decisions_immutable_update
+BEFORE UPDATE ON projection_obligation_decisions
+BEGIN
+  SELECT RAISE(ABORT, 'projection obligation decisions are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS projection_obligation_decisions_immutable_delete
+BEFORE DELETE ON projection_obligation_decisions
+BEGIN
+  SELECT RAISE(ABORT, 'projection obligation decisions are immutable');
+END;
+`
+
+func migrateV37ProjectionChain(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, projectionChainSQL)
 	return err
 }
