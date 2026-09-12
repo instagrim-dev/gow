@@ -1,0 +1,60 @@
+# Relativization barrier — contrary oracles (pnp-02)
+
+**Era:** 1975. Pre-cutoff. Anchor: Baker–Gill–Solovay, *Relativizations of the
+P =? NP question*, SIAM J. Comput. 4(4), 1975.
+
+This entry records the **wall itself** as a first-class failure structure.
+Baker, Gill, and Solovay constructed an oracle `A` with `P^A = NP^A` and an
+oracle `B` with `P^B ≠ NP^B`. Any proof technique that **relativizes** — that
+remains valid when every machine in the argument is given the same oracle —
+therefore cannot resolve P vs NP in either direction.
+
+The barrier is a statement about a *conserved mechanism property*, not about
+any single attempt: diagonalization, simulation, padding, and translation
+arguments all treat computation as **black-box query behavior**, and black-box
+query behavior is exactly what an oracle re-defines. The wall condemns the
+property, and with it every method that preserves the property.
+
+What the barrier does **not** say: it does not forbid separation proofs; it
+forbids separation proofs that never open the box. Techniques that exploit the
+internal, non-black-box structure of computation — completeness under local
+reductions, the structure of specific circuit classes — are outside its scope.
+That negative space is the barrier's own map of where a productive method must
+live.
+
+<!-- newf-normalize
+{
+  "schema_version": "normalize/v1",
+  "approaches": [
+    {
+      "logical_identity": "pvnp/relativization-barrier",
+      "label": "Relativization barrier (contrary oracles)",
+      "description": "Contrary oracles show that no relativizing argument settles P vs NP; the black-box simulation property itself is condemned.",
+      "mechanism": {
+        "representations": ["oracle machines", "contrary oracle constructions"],
+        "assumptions": ["technique validity is preserved under a shared oracle"],
+        "operators": ["oracle construction", "stage-wise diagonalization against query behavior"],
+        "preserves": ["black-box relativizing simulation", "model-analysis-first direction"],
+        "breaks": [],
+        "auxiliary_objects": ["oracle A with P^A = NP^A", "oracle B with P^B != NP^B"],
+        "locality": "global",
+        "construction_mode": "constructive",
+        "uncertainty_mode": "deterministic",
+        "notes": "A meta-result: classifies which mechanism property makes an attempt hopeless."
+      },
+      "outcome": {
+        "class": "failure",
+        "boundary_statement": "no relativizing argument can resolve P vs NP",
+        "boundary_conditions": ["argument must survive substitution of any shared oracle", "both equality and separation oracles exist"],
+        "notes": "The wall condemns black-box query behavior; non-black-box structure is explicitly outside its scope."
+      },
+      "support": [
+        {"field_path": "mechanism.auxiliary_objects", "support_kind": "explicit", "locator": "para:1"},
+        {"field_path": "mechanism.preserves", "support_kind": "explicit", "locator": "para:2"},
+        {"field_path": "outcome.boundary_statement", "support_kind": "explicit", "locator": "para:1"},
+        {"field_path": "outcome.notes", "support_kind": "explicit", "locator": "para:3"}
+      ]
+    }
+  ]
+}
+newf-normalize -->

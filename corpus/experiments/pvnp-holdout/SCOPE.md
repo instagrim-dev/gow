@@ -132,7 +132,12 @@ mirroring `corpus/experiments/two-arm-comparison/` (protocol frozen at
 ## What remains before freeze (operator work)
 
 - [ ] Audit every claimed date/DOI above against primary records
-- [ ] Author the 12 train files + 2 target files (mechanism payloads)
+- [x] Author the 12 train files + 2 target files (mechanism payloads) —
+      drafted 2026-09-12 (`train/pnp-01..12`, `target/pnp-target-01..02`);
+      smoke-validated: all 14 ingest and normalize cleanly, historical
+      define + dating gate lifecycle verified on this corpus with
+      PLACEHOLDER evidence locators (smoke DB destroyed; no experiment
+      was run — execution stays behind freeze + audit)
 - [ ] Adversarial pass: search train prose for post-cutoff contamination
 - [ ] Fix budgets and arms; record the freeze commit
 - [ ] Only then: `date-source` with audited locators, and run

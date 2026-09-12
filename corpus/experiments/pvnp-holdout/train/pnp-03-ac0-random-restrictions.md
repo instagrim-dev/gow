@@ -1,0 +1,62 @@
+# AC⁰ lower bounds — parity via random restrictions (pnp-03)
+
+**Era:** 1981–1986. Pre-cutoff. Anchors: Ajtai 1983; Furst–Saxe–Sipser 1984;
+Håstad 1986 (switching lemma).
+
+The first escape from the relativization wall: **open the box**. Instead of
+simulating machines, analyze the internal structure of a concrete
+computational model — constant-depth, polynomial-size circuits (AC⁰) — and
+prove that parity is not computable there.
+
+The mechanism is the **random restriction**: fix a random subset of inputs to
+random constants. Håstad's switching lemma shows a restricted small-width DNF
+collapses to a small-depth decision tree with high probability; applying
+restrictions level by level collapses a constant-depth circuit entirely, while
+parity survives every restriction as parity of the live variables. The
+contradiction gives exponential AC⁰ lower bounds.
+
+This is a genuine partial success and its structure matters: the argument is
+**non-relativizing** (it depends on circuit anatomy, not query behavior), it
+proceeds by **model analysis first** — pick a weak circuit class, find a
+distinguishing property, show a hard function lacks it — and its central
+property (simplification under random restriction) holds for *most* functions
+and is *efficiently certifiable*. The program's next decades try to push the
+same posture up the circuit hierarchy; pnp-08 records where that posture
+itself becomes the obstacle.
+
+<!-- newf-normalize
+{
+  "schema_version": "normalize/v1",
+  "approaches": [
+    {
+      "logical_identity": "pvnp/ac0-random-restrictions",
+      "label": "AC0 lower bounds via random restrictions",
+      "description": "Prove parity is outside AC0 by collapsing constant-depth circuits with random restrictions (switching lemma) while parity survives restriction.",
+      "mechanism": {
+        "representations": ["constant-depth circuits", "random restrictions", "decision trees"],
+        "assumptions": ["weak-class internal structure is analyzable", "hard function survives restriction"],
+        "operators": ["random restriction", "switching lemma", "depth reduction"],
+        "preserves": ["model-analysis-first direction", "large constructive distinguishing property"],
+        "breaks": ["black-box relativizing simulation"],
+        "auxiliary_objects": ["restriction distribution", "collapsed decision tree"],
+        "locality": "local",
+        "construction_mode": "constructive",
+        "uncertainty_mode": "probabilistic",
+        "notes": "The distinguishing property (collapse under restriction) holds for most functions and is efficiently certifiable."
+      },
+      "outcome": {
+        "class": "partial_success",
+        "boundary_statement": "exponential lower bounds for AC0, but the method stalls below classes with parity gates or full depth",
+        "boundary_conditions": ["restriction argument requires depth to be constant", "property is large and constructive (see pnp-08)"],
+        "notes": "First non-relativizing beachhead; posture inherited by the whole circuit program."
+      },
+      "support": [
+        {"field_path": "mechanism.operators", "support_kind": "explicit", "locator": "para:2"},
+        {"field_path": "mechanism.breaks", "support_kind": "explicit", "locator": "para:3"},
+        {"field_path": "outcome.class", "support_kind": "explicit", "locator": "para:3"},
+        {"field_path": "outcome.boundary_statement", "support_kind": "inferred", "locator": "para:3"}
+      ]
+    }
+  ]
+}
+newf-normalize -->
