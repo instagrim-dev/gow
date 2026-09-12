@@ -188,6 +188,13 @@ type problemStore interface {
 	// Authored claim forms (v39/#21): quantifier + scope + role.
 	PersistInvariantClaimForm(context.Context, store.InvariantClaimFormRow) error
 	GetLatestInvariantClaimForm(context.Context, string) (store.InvariantClaimFormRow, bool, error)
+	// Prospective two-observation episodes (v41/#23 consumer).
+	PersistEpisode(context.Context, store.EpisodeRow, store.EpisodeCommitmentRow) error
+	PersistEpisodeStepTwo(context.Context, store.EpisodeCommitmentRow) error
+	PersistEpisodeObservation(context.Context, store.EpisodeObservationRow, string) error
+	PersistEpisodeRevision(context.Context, store.EpisodeRevisionRow) error
+	GetEpisode(context.Context, string) (store.EpisodeRecord, error)
+	ListEpisodesForProblem(context.Context, string) ([]store.EpisodeRow, error)
 }
 
 type InitProblemInput struct {

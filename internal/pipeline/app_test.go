@@ -624,3 +624,27 @@ func (f *fakeProblemStore) PersistInvariantClaimForm(context.Context, store.Inva
 func (f *fakeProblemStore) GetLatestInvariantClaimForm(context.Context, string) (store.InvariantClaimFormRow, bool, error) {
 	return store.InvariantClaimFormRow{}, false, errors.New("unexpected call")
 }
+
+func (f *fakeProblemStore) PersistEpisode(context.Context, store.EpisodeRow, store.EpisodeCommitmentRow) error {
+	return errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistEpisodeStepTwo(context.Context, store.EpisodeCommitmentRow) error {
+	return errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistEpisodeObservation(context.Context, store.EpisodeObservationRow, string) error {
+	return errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistEpisodeRevision(context.Context, store.EpisodeRevisionRow) error {
+	return errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetEpisode(context.Context, string) (store.EpisodeRecord, error) {
+	return store.EpisodeRecord{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListEpisodesForProblem(context.Context, string) ([]store.EpisodeRow, error) {
+	return nil, errors.New("unexpected call")
+}

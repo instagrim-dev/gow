@@ -26,9 +26,10 @@ func newInvariantsCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions
 // `invariants mine` are the same verb).
 func newInvariantMineCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cobra.Command {
 	var (
-		mineProblem      string
-		mineFailureSpace string
-		mineMinSupport   int
+		mineProblem         string
+		mineFailureSpace    string
+		mineMinSupport      int
+		mineEmitPostureAxes bool
 	)
 	mineCmd := &cobra.Command{
 		Use:   "mine",
@@ -44,11 +45,12 @@ func newInvariantMineCommand(stdout io.Writer, app *pipeline.App, opts *rootOpti
 				return wrapCommandError("invariants mine", errors.New("--problem is required"))
 			}
 			result, err := app.MineInvariants(cmd.Context(), pipeline.InvariantMineInput{
-				DBPath:         opts.dbPath,
-				ProblemID:      mineProblem,
-				FailureSpaceID: mineFailureSpace,
-				MinSupport:     mineMinSupport,
-				JSONOutput:     opts.jsonOutput,
+				DBPath:          opts.dbPath,
+				ProblemID:       mineProblem,
+				FailureSpaceID:  mineFailureSpace,
+				MinSupport:      mineMinSupport,
+				EmitPostureAxes: mineEmitPostureAxes,
+				JSONOutput:      opts.jsonOutput,
 			})
 			if err != nil {
 				return wrapCommandError("invariants mine", err)
@@ -63,6 +65,7 @@ func newInvariantMineCommand(stdout io.Writer, app *pipeline.App, opts *rootOpti
 	mineCmd.Flags().StringVar(&mineProblem, "problem", "", "Problem ID")
 	mineCmd.Flags().StringVar(&mineFailureSpace, "failure-space", "", "Failure space ID (default: latest for the problem)")
 	mineCmd.Flags().IntVar(&mineMinSupport, "min-support", 0, "Distinct-family support threshold for `recurring` (default 2)")
+	mineCmd.Flags().BoolVar(&mineEmitPostureAxes, "emit-posture-axes", false, "Opt-in: also emit equals(<posture axis>, <value>) proposals when the axis-value has ≥ 2 failure-side families AND failure-side prevalence strictly exceeds success-side prevalence. Bumps miner ModelName so the revision differs from a non-posture mining pass.")
 	return mineCmd
 }
 

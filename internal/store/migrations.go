@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 40
+const currentSchemaVersion = 41
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -1145,6 +1145,23 @@ END;
 		// evaluation at decision time. Nullable: NULL/'' = code decisions
 		// (steps-compose has no backing evaluation) and pre-v40 history.
 		apply: migrateV40ObligationDecisionStrength,
+	},
+	{
+		version: 41,
+		// v41 (2026-09-12 review, epistemic finding; issue #23 consumer): the
+		// prospective two-observation episode protocol. The reviewer's
+		// minimum persuasive demonstration is a closed loop — freeze map,
+		// action, prediction, and scoring rule; obtain an EXTERNALLY CHECKED
+		// outcome; revise the map; commit to a DIFFERENT next action; obtain
+		// and score the next outcome. The first miss remains a miss; the
+		// revision earns credit only on later evidence. Four records enforce
+		// that order by construction: episodes (frozen preregistration),
+		// episode_commitments (append-only, one per step, committed BEFORE
+		// outcomes), episode_observations (append-once per commitment,
+		// domain-goal subject, reproducible strength, code-scored hit/miss),
+		// episode_revisions (the map change between steps, recorded before
+		// step 2 may be committed).
+		apply: migrateV41Episodes,
 	},
 }
 
@@ -3886,4 +3903,118 @@ func migrateV40ObligationDecisionStrength(ctx context.Context, tx *sql.Tx) error
 		}
 	}
 	return nil
+}
+
+// episodesSQL is the additive DDL for migration v41: the prospective
+// two-observation episode protocol (2026-09-12 review, epistemic finding).
+// Preregistration fields are frozen by trigger (only status/completed_at may
+// change); commitments, observations, and revisions are append-only and
+// immutable. Observations pin the v38 axes: subject is always the DOMAIN GOAL
+// and strength is `reproducible` (an in-repo exact checker is a reproducible
+// computation, not a formal proof of the surrounding claim). hit/miss is
+// code-derived from predicted vs observed verdict — never operator-scored.
+const episodesSQL = `
+CREATE TABLE IF NOT EXISTS episodes (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  title TEXT NOT NULL CHECK (length(title) > 0),
+  map_ref TEXT NOT NULL CHECK (length(map_ref) > 0),
+  scoring_rule TEXT NOT NULL CHECK (length(scoring_rule) > 0),
+  status TEXT NOT NULL CHECK (status IN ('open','completed','abandoned')),
+  created_at TEXT NOT NULL,
+  completed_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_episodes_problem ON episodes(problem_id);
+
+CREATE TRIGGER IF NOT EXISTS episodes_frozen_preregistration
+BEFORE UPDATE ON episodes
+WHEN NEW.id != OLD.id OR NEW.problem_id != OLD.problem_id
+  OR NEW.title != OLD.title OR NEW.map_ref != OLD.map_ref
+  OR NEW.scoring_rule != OLD.scoring_rule OR NEW.created_at != OLD.created_at
+BEGIN
+  SELECT RAISE(ABORT, 'episode preregistration fields are frozen');
+END;
+
+CREATE TRIGGER IF NOT EXISTS episodes_immutable_delete
+BEFORE DELETE ON episodes
+BEGIN
+  SELECT RAISE(ABORT, 'episodes are immutable');
+END;
+
+CREATE TABLE IF NOT EXISTS episode_commitments (
+  id TEXT PRIMARY KEY,
+  episode_id TEXT NOT NULL REFERENCES episodes(id),
+  step INTEGER NOT NULL CHECK (step IN (1,2)),
+  action TEXT NOT NULL CHECK (length(action) > 0),
+  prediction TEXT NOT NULL CHECK (length(prediction) > 0),
+  predicted_verdict TEXT NOT NULL CHECK (predicted_verdict IN ('witness-valid','witness-invalid')),
+  map_ref TEXT NOT NULL CHECK (length(map_ref) > 0),
+  basis TEXT NOT NULL CHECK (length(basis) > 0),
+  created_at TEXT NOT NULL,
+  UNIQUE(episode_id, step)
+);
+
+CREATE TRIGGER IF NOT EXISTS episode_commitments_immutable_update
+BEFORE UPDATE ON episode_commitments
+BEGIN
+  SELECT RAISE(ABORT, 'episode commitments are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS episode_commitments_immutable_delete
+BEFORE DELETE ON episode_commitments
+BEGIN
+  SELECT RAISE(ABORT, 'episode commitments are immutable');
+END;
+
+CREATE TABLE IF NOT EXISTS episode_observations (
+  id TEXT PRIMARY KEY,
+  commitment_id TEXT NOT NULL UNIQUE REFERENCES episode_commitments(id),
+  checker TEXT NOT NULL CHECK (length(checker) > 0),
+  payload TEXT NOT NULL CHECK (length(payload) > 0),
+  verdict TEXT NOT NULL CHECK (verdict IN ('witness-valid','witness-invalid')),
+  score TEXT NOT NULL CHECK (score IN ('hit','miss')),
+  verification_subject TEXT NOT NULL CHECK (verification_subject = 'domain-goal'),
+  verification_strength TEXT NOT NULL CHECK (verification_strength = 'reproducible'),
+  detail TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TRIGGER IF NOT EXISTS episode_observations_immutable_update
+BEFORE UPDATE ON episode_observations
+BEGIN
+  SELECT RAISE(ABORT, 'episode observations are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS episode_observations_immutable_delete
+BEFORE DELETE ON episode_observations
+BEGIN
+  SELECT RAISE(ABORT, 'episode observations are immutable');
+END;
+
+CREATE TABLE IF NOT EXISTS episode_revisions (
+  id TEXT PRIMARY KEY,
+  episode_id TEXT NOT NULL REFERENCES episodes(id),
+  after_step INTEGER NOT NULL CHECK (after_step = 1),
+  map_ref_before TEXT NOT NULL CHECK (length(map_ref_before) > 0),
+  map_ref_after TEXT NOT NULL CHECK (length(map_ref_after) > 0),
+  what_changed TEXT NOT NULL CHECK (length(what_changed) > 0),
+  basis TEXT NOT NULL CHECK (length(basis) > 0),
+  created_at TEXT NOT NULL,
+  UNIQUE(episode_id, after_step)
+);
+
+CREATE TRIGGER IF NOT EXISTS episode_revisions_immutable_update
+BEFORE UPDATE ON episode_revisions
+BEGIN
+  SELECT RAISE(ABORT, 'episode revisions are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS episode_revisions_immutable_delete
+BEFORE DELETE ON episode_revisions
+BEGIN
+  SELECT RAISE(ABORT, 'episode revisions are immutable');
+END;
+`
+
+func migrateV41Episodes(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, episodesSQL)
+	return err
 }

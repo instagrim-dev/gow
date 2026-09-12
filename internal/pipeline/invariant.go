@@ -153,7 +153,14 @@ type InvariantMineInput struct {
 	ProblemID      string
 	FailureSpaceID string
 	MinSupport     int
-	JSONOutput     bool
+	// EmitPostureAxes opts into the deriving miner's posture-axis extension
+	// (branch (a‴-B) of the enum-axis survey). Effective only when the app
+	// has no injected miner (a.invariantMinerFn == nil); tests that inject a
+	// specific miner supply their own predicate-shape policy. The reuse key
+	// differs (ModelName differs), so enabling and disabling this on the same
+	// problem/failure-space produces DISTINCT revisions.
+	EmitPostureAxes bool
+	JSONOutput      bool
 }
 
 // InvariantListInput lists invariant revisions for a problem.
@@ -218,7 +225,11 @@ func (a *App) MineInvariants(ctx context.Context, input InvariantMineInput) (Inv
 
 	miner := a.invariantMinerFn
 	if miner == nil {
-		miner = provider.NewDerivingFixtureInvariantMiner()
+		if input.EmitPostureAxes {
+			miner = provider.NewDerivingFixtureInvariantMinerWithPostureAxes()
+		} else {
+			miner = provider.NewDerivingFixtureInvariantMiner()
+		}
 	}
 	// The reuse key folds the COMPLETE miner identity (provider/model/config) into
 	// miner_version, and we check it BEFORE invoking the provider (F5). This means

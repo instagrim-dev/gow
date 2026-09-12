@@ -42,6 +42,10 @@ const (
 	ProjectionArtifactIDPrefix    = "prj_"
 	ProjectionObligationIDPrefix  = "obl_"
 	InvariantClaimFormIDPrefix    = "icf_"
+	EpisodeIDPrefix               = "epi_"
+	EpisodeCommitmentIDPrefix     = "epc_"
+	EpisodeObservationIDPrefix    = "epo_"
+	EpisodeRevisionIDPrefix       = "epr_"
 	SuccessRevisionIDPrefix       = "svr_"
 	SuccessInvariantIDPrefix      = "sinv_"
 	HoldoutSetIDPrefix            = "hset_"
@@ -82,6 +86,10 @@ var (
 	ErrInvalidProjectionArtifactID    = errors.New("invalid projection artifact id")
 	ErrInvalidProjectionObligationID  = errors.New("invalid projection obligation id")
 	ErrInvalidInvariantClaimFormID    = errors.New("invalid invariant claim form id")
+	ErrInvalidEpisodeID               = errors.New("invalid episode id")
+	ErrInvalidEpisodeCommitmentID     = errors.New("invalid episode commitment id")
+	ErrInvalidEpisodeObservationID    = errors.New("invalid episode observation id")
+	ErrInvalidEpisodeRevisionID       = errors.New("invalid episode revision id")
 	ErrInvalidSuccessRevisionID       = errors.New("invalid success revision id")
 	ErrInvalidSuccessInvariantID      = errors.New("invalid success invariant id")
 	ErrInvalidHoldoutSetID            = errors.New("invalid holdout set id")
@@ -300,6 +308,30 @@ func NewInvariantClaimFormID(now time.Time) string {
 
 func ValidateInvariantClaimFormID(id string) error {
 	return validateID(id, InvariantClaimFormIDPrefix, ErrInvalidInvariantClaimFormID)
+}
+
+func NewEpisodeID(now time.Time) string { return newID(EpisodeIDPrefix, now) }
+
+func ValidateEpisodeID(id string) error {
+	return validateID(id, EpisodeIDPrefix, ErrInvalidEpisodeID)
+}
+
+func NewEpisodeCommitmentID(now time.Time) string { return newID(EpisodeCommitmentIDPrefix, now) }
+
+func ValidateEpisodeCommitmentID(id string) error {
+	return validateID(id, EpisodeCommitmentIDPrefix, ErrInvalidEpisodeCommitmentID)
+}
+
+func NewEpisodeObservationID(now time.Time) string { return newID(EpisodeObservationIDPrefix, now) }
+
+func ValidateEpisodeObservationID(id string) error {
+	return validateID(id, EpisodeObservationIDPrefix, ErrInvalidEpisodeObservationID)
+}
+
+func NewEpisodeRevisionID(now time.Time) string { return newID(EpisodeRevisionIDPrefix, now) }
+
+func ValidateEpisodeRevisionID(id string) error {
+	return validateID(id, EpisodeRevisionIDPrefix, ErrInvalidEpisodeRevisionID)
 }
 
 func NewSuccessRevisionID(now time.Time) string {
