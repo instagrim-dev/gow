@@ -1,0 +1,79 @@
+{
+  "ok": true,
+  "command": "episode show",
+  "store": "/Users/jmh/dev/gh/newf/.newf/m7/newf.db",
+  "episode": {
+    "id": "epi_01M2BED4J0GN24NV0P1GJTZRXQ",
+    "problem_id": "prb_01M2B8ZMHRCJN4YVH4CP6SNXTD",
+    "title": "greedy-3 local truncation vs map-guided global search, first prime \u003e= 10^6 in the 1 (mod 24) class",
+    "map_ref": "ivr_01M2BCJZBSVP2XSCFNTBHWCJKH",
+    "scoring_rule": "hit iff erdos-straus-witness/v1 verdict equals the commitment's predicted verdict; scores are code-derived, never authored",
+    "status": "completed",
+    "created_at": "2026-09-12T18:34:48.256625Z",
+    "completed_at": "2026-09-12T18:36:25.633305Z",
+    "commitments": [
+      {
+        "id": "epc_01M2BED4J0GN24NV0P1JHZDRK0",
+        "step": 1,
+        "action": "Instance rule (frozen before any computation): p = smallest prime \u003e= 1000000 with p = 1 (mod 24). Action A1: Fibonacci-Sylvester greedy expansion of 4/p truncated at exactly 3 unit fractions (x = ceil(p/4); y = ceil of the reciprocal of the remainder; z = ceil of the reciprocal of the second remainder), submitted as witness tuple (p,x,y,z). This is a local, constructive, identity-carried move - the exact failure-side posture flagged by all four surviving invariants in the frozen map revision.",
+        "prediction": "The greedy 3-term truncation is exact at p: 4xyz = p(yz+xz+xy). Falsified if the checker reports any residue.",
+        "predicted_verdict": "witness-valid",
+        "map_ref": "ivr_01M2BCJZBSVP2XSCFNTBHWCJKH",
+        "basis": "Operator episode per the 2026-09-12 review's minimum persuasive demonstration. At preregistration time the operator has NOT computed p, the expansion, or any feasibility check for this instance class; the instance rule is deterministic so the commitment cannot be steered after the fact. Cost accounting: t0 recorded at preregistration; per-step wall-clock and commands recorded in observation/revision notes.",
+        "created_at": "2026-09-12T18:34:48.256625Z"
+      },
+      {
+        "id": "epc_01M2BEF1YEWZFBM3KD8G3RCWTB",
+        "step": 2,
+        "action": "A2 (global divisor-structure search, frozen before computation): for p=1000033, iterate x from ceil(p/4)=250009 upward to at most 260009. For each x let a=4x-p, b=px, r=a/b (reduce to lowest terms a',b'). Enumerate divisors d of b'^2 with d = -b' (mod a') and d \u003c= b'; set y=(b'+d)/a', z=(b'+b'^2/d)/a'; accept the first (x,y,z) with y,z positive integers. Submit (p,x,y,z). This violates locality=local: it consults the divisor lattice of b'^2 (global multiplicative structure), not a covering identity on p's residue class.",
+        "prediction": "The bounded global search yields an exact witness: 4xyz = p(yz+xz+xy) with zero residue. Falsified if the checker reports any residue or the bounded search is exhausted.",
+        "predicted_verdict": "witness-valid",
+        "map_ref": "ivr_01M2BCJZBSVP2XSCFNTBHWCJKH+epo_01M2BEE0DR8R8MXAXQN703TE2W",
+        "basis": "Committed after revision, before any computation of A2. The action differs from step 1 structurally (global divisor-lattice vs local greedy truncation), which is what the revised map demands. Cost accounting continues in the observation note.",
+        "created_at": "2026-09-12T18:35:51.118562Z"
+      }
+    ],
+    "observations": [
+      {
+        "id": "epo_01M2BEE0DR8R8MXAXQN703TE2W",
+        "commitment_id": "epc_01M2BED4J0GN24NV0P1JHZDRK0",
+        "checker": "erdos-straus-witness/v1",
+        "payload": "{\"checker\":\"erdos-straus-witness/v1\",\"n\":\"1000033\",\"x\":\"250009\",\"y\":\"83339083433\",\"z\":\"10418104241095463514801\"}",
+        "verdict": "witness-invalid",
+        "score": "miss",
+        "verification_subject": "domain-goal",
+        "verification_strength": "reproducible",
+        "detail": "identity fails: 4·x·y·z = 868266515031654225633130370478731105988 but n·(yz+xz+xy) = 868266515031654225633130370478731105987 for n=1000033 x=250009 y=83339083433 z=10418104241095463514801; operator note: Instance from frozen rule: p=1000033 (first prime \u003e= 10^6 with p = 1 mod 24; verified with sympy.isprime). Greedy tuple computed by the committed A1 procedure (python3 Fraction, exact rational arithmetic); remainder after 3 terms = 1/217073791956662567555644065945239226028624401 (nonzero). Cost step 1: ~28s wall-clock from preregistration, one python3 run (\u003c0.5s CPU), zero model calls.",
+        "created_at": "2026-09-12T18:35:16.792737Z"
+      },
+      {
+        "id": "epo_01M2BEG3N1SHBAHFRKQ19VH7TJ",
+        "commitment_id": "epc_01M2BEF1YEWZFBM3KD8G3RCWTB",
+        "checker": "erdos-straus-witness/v1",
+        "payload": "{\"checker\":\"erdos-straus-witness/v1\",\"n\":\"1000033\",\"x\":\"250009\",\"y\":\"83339083442\",\"z\":\"718489947739347664906\"}",
+        "verdict": "witness-valid",
+        "score": "hit",
+        "verification_subject": "domain-goal",
+        "verification_strength": "reproducible",
+        "detail": "identity holds exactly over big integers; operator note: A2 executed exactly as committed: first admissible x was 250009 itself (the same x greedy used); divisor d=29 of b'^2 with d = -b' (mod a') gave y=(b'+29)/a'=83339083442, z=718489947739347664906. The contrast with step 1 is structural: at the identical locality point x=250009, greedy's local rounding chose y=83339083433 and missed by 1 part in 10^38; the global divisor-lattice move chose y nine larger and is exact. Cost step 2: ~97s total episode wall-clock, one python3 run (0.4s CPU, sympy factorint), zero model calls. Total episode cost: 2 python3 runs (\u003c1s CPU), 5 newf CLI invocations, zero model calls, zero provider spend.",
+        "created_at": "2026-09-12T18:36:25.633305Z"
+      }
+    ],
+    "revisions": [
+      {
+        "id": "epr_01M2BEF1Y1YQQV1Q4QC6VT34EG",
+        "after_step": 1,
+        "map_ref_before": "ivr_01M2BCJZBSVP2XSCFNTBHWCJKH",
+        "map_ref_after": "ivr_01M2BCJZBSVP2XSCFNTBHWCJKH+epo_01M2BEE0DR8R8MXAXQN703TE2W",
+        "what_changed": "The frozen map said failed approaches share locality=local (inv_01M2BCJZBSVP2XSCFNTNTG8TDV, surviving) alongside identity-carried/constructive posture. The step-1 miss adds the first instance-level, domain-checked confirmation inside this episode: the local greedy truncation leaves residue 1/217073791956662567555644065945239226028624401 at p=1000033 in the QR-hard 1 (mod 24) class. Map change: the locality boundary is now load-bearing for THIS instance, not just corpus-statistical; the next action must violate locality=local - use the global multiplicative structure (divisor lattice of the remainder's denominator) instead of another residue-class identity.",
+        "basis": "Revision basis: episode-internal checked evidence epo_01M2BEE0DR8R8MXAXQN703TE2W plus the surviving enum-axis invariant. Cost: revision authored in \u003c2 min, zero compute, zero model calls.",
+        "created_at": "2026-09-12T18:35:51.105367Z"
+      }
+    ],
+    "step_scores": {
+      "1": "miss",
+      "2": "hit"
+    },
+    "revision_credit": "earned"
+  }
+}
