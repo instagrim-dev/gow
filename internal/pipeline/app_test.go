@@ -519,6 +519,14 @@ func (f *fakeProblemStore) CountHoldoutSourceDating(context.Context, string) (in
 	return 0, 0, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) RecordHoldoutSourceDating(context.Context, store.HoldoutSourceDatingRecord) (bool, error) {
+	return false, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) ListHoldoutSourceDating(context.Context, string) ([]store.HoldoutSourceDatingRecord, error) {
+	return nil, errors.New("unexpected call")
+}
+
 func (f *fakeProblemStore) RunLeakageCheck(context.Context, string, string, string, string) (store.LeakageCheckRecord, error) {
 	return store.LeakageCheckRecord{}, errors.New("unexpected call")
 }

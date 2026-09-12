@@ -20,7 +20,43 @@ experiment layer makes that discipline structural:
 
 Every view carries a `mode_disclaimer`; a blinded experiment structurally
 cannot record a historical conclusion. Lifting `historical` needs **data**
-(auditable dated sources), not code.
+(auditable dated sources), not new machinery: the write path is
+`experiment date-source`, and the epistemic burden of producing real dated
+evidence stays with the operator.
+
+## The historical dating gate (`experiment date-source`)
+
+A historical run is refused until **every** withheld source carries one
+dated-evidence row in `holdout_source_dating`:
+
+```text
+newf experiment date-source --holdout-set <id> --source <id> \
+  --dated-at <RFC3339> --evidence <URL/DOI/archive-ref> [--provenance <note>]
+```
+
+The contract, enforced at record time:
+
+- **Historical sets only.** A blinded set makes no chronological claim, so
+  there is nothing to date; the verb refuses.
+- **Membership.** The source must be a withheld member of the holdout set.
+- **Chronology.** `dated_at` must parse as RFC3339 and be **strictly after**
+  the set's cutoff — a withheld source dated at or before the cutoff cannot
+  be a *historically later* advance, and admitting it would let a run
+  "predict" something that predates its own training boundary.
+- **Auditability.** An evidence locator is required; a dating claim without
+  auditable evidence is just an assertion.
+- **Immutability.** Rows are immutable (trigger + verb): an identical
+  re-record is an idempotent no-op, a contradicting attestation is refused —
+  a changed dating claim needs a new holdout set, never a silent update.
+
+Once the gate opens, `experiment run` executes the same leakage-audited,
+equal-budget loop, and the conclusion is recorded through the **historical**
+vocabulary (`predicts_later_advance` / `fails_to_predict` / `inconclusive`) —
+the mapping from the one code-owned recovery outcome forks on mode
+(`experimentConclusion`), and the schema CHECK aborts any cross-vocabulary
+write. What the gate does **not** do: it does not verify that the dating
+evidence is true. `evidence_locator` makes the claim auditable; auditing it
+is operator work, recorded as provenance, not code-certified truth.
 
 ## Blinding is code-audited (KTD-2)
 
@@ -219,6 +255,7 @@ lifecycle change, no policy write, no train-atlas write.
 
 ```text
 newf experiment define --problem <train> --target-problem <target> [--mode blinded|historical] [--cutoff <t>] [--name <n>]
+newf experiment date-source --holdout-set <id> --source <id> --dated-at <t> --evidence <locator> [--provenance <p>]
 newf experiment run [--problem <train> | --holdout-set <id>] [--arms b0_undirected,b1_semantic_summary,b2_brainstorm,b3_invariant_guided] [--proposal-budget n] [--evaluation-budget n] [--b0-proposals-file <path>] [--b3-proposals-file <path>]
 newf experiment readiness --problem <id> [--holdout-set <id>] [--min-support n] [--vocab-version <v>]
 newf experiment validate-proposals --file <capture> [--problem <id>]

@@ -102,6 +102,115 @@ FROM holdout_sets WHERE id = ?
 	return rec, rows.Err()
 }
 
+// HoldoutSourceDatingRecord is one externally auditable dated-evidence row for
+// a withheld source. The historical-mode execution gate requires one per
+// withheld source before `experiment run` will execute. Rows are immutable by
+// trigger: dating is an operator attestation about external evidence, and a
+// changed attestation must be a visible contradiction, not a silent update.
+type HoldoutSourceDatingRecord struct {
+	HoldoutSetID    string
+	SourceID        string
+	DatedAt         string // externally auditable date for the withheld advance
+	EvidenceLocator string // where the dating evidence lives (URL, DOI, archive ref)
+	Provenance      string // optional free-form audit note
+}
+
+// RecordHoldoutSourceDating persists one dated-evidence row. Guards enforced
+// here (the schema has no dating guard trigger, so the verb is the boundary):
+// the holdout set must exist and be mode='historical'; the source must be a
+// member of the set's withheld sources. Idempotent on identical content; a
+// conflicting re-record is refused (immutability is semantic, not just a
+// trigger).
+func (s *Store) RecordHoldoutSourceDating(ctx context.Context, rec HoldoutSourceDatingRecord) (bool, error) {
+	if err := domain.ValidateHoldoutSetID(rec.HoldoutSetID); err != nil {
+		return false, err
+	}
+	if strings.TrimSpace(rec.SourceID) == "" {
+		return false, fmt.Errorf("source id is required")
+	}
+	if strings.TrimSpace(rec.DatedAt) == "" {
+		return false, fmt.Errorf("dated_at is required")
+	}
+	if strings.TrimSpace(rec.EvidenceLocator) == "" {
+		return false, fmt.Errorf("evidence locator is required: a historical dating claim without auditable evidence is just an assertion")
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+
+	var mode string
+	if err := tx.QueryRowContext(ctx, `SELECT mode FROM holdout_sets WHERE id = ?`, rec.HoldoutSetID).Scan(&mode); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, fmt.Errorf("%w: holdout set %s", ErrNotFound, rec.HoldoutSetID)
+		}
+		return false, err
+	}
+	if mode != "historical" {
+		return false, fmt.Errorf("holdout set %s is mode=%q: dated evidence is a historical-mode artifact; a blinded set makes no chronological claim to date", rec.HoldoutSetID, mode)
+	}
+	var member int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM holdout_set_sources WHERE holdout_set_id = ? AND source_id = ?`, rec.HoldoutSetID, rec.SourceID).Scan(&member); err != nil {
+		return false, err
+	}
+	if member == 0 {
+		return false, fmt.Errorf("source %s is not a withheld member of holdout set %s", rec.SourceID, rec.HoldoutSetID)
+	}
+
+	var existing HoldoutSourceDatingRecord
+	err = tx.QueryRowContext(ctx, `
+SELECT dated_at, evidence_locator, provenance FROM holdout_source_dating
+WHERE holdout_set_id = ? AND source_id = ?
+`, rec.HoldoutSetID, rec.SourceID).Scan(&existing.DatedAt, &existing.EvidenceLocator, &existing.Provenance)
+	switch {
+	case err == nil:
+		if existing.DatedAt == rec.DatedAt && existing.EvidenceLocator == rec.EvidenceLocator && existing.Provenance == rec.Provenance {
+			return false, nil // idempotent replay
+		}
+		return false, fmt.Errorf("source %s already carries dated evidence (dated_at=%s, locator=%s); dating rows are immutable — a contradicting attestation needs a new holdout set", rec.SourceID, existing.DatedAt, existing.EvidenceLocator)
+	case !errors.Is(err, sql.ErrNoRows):
+		return false, err
+	}
+
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO holdout_source_dating(holdout_set_id, source_id, dated_at, evidence_locator, provenance)
+VALUES(?, ?, ?, ?, ?)
+`, rec.HoldoutSetID, rec.SourceID, rec.DatedAt, rec.EvidenceLocator, rec.Provenance); err != nil {
+		return false, err
+	}
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// ListHoldoutSourceDating returns every dated-evidence row for a holdout set,
+// ordered by source id for deterministic rendering.
+func (s *Store) ListHoldoutSourceDating(ctx context.Context, holdoutSetID string) ([]HoldoutSourceDatingRecord, error) {
+	if err := domain.ValidateHoldoutSetID(holdoutSetID); err != nil {
+		return nil, err
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT holdout_set_id, source_id, dated_at, evidence_locator, provenance
+FROM holdout_source_dating WHERE holdout_set_id = ? ORDER BY source_id
+`, holdoutSetID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []HoldoutSourceDatingRecord
+	for rows.Next() {
+		var rec HoldoutSourceDatingRecord
+		if err := rows.Scan(&rec.HoldoutSetID, &rec.SourceID, &rec.DatedAt, &rec.EvidenceLocator, &rec.Provenance); err != nil {
+			return nil, err
+		}
+		out = append(out, rec)
+	}
+	return out, rows.Err()
+}
+
 // CountHoldoutSourceDating reports how many withheld sources carry dated
 // evidence — the historical-mode execution gate reads this.
 func (s *Store) CountHoldoutSourceDating(ctx context.Context, holdoutSetID string) (dated, total int, err error) {

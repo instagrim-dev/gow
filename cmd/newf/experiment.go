@@ -62,6 +62,53 @@ func newExperimentCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions
 	cmd.AddCommand(defineCmd)
 
 	var (
+		dateSet        string
+		dateSource     string
+		dateDatedAt    string
+		dateEvidence   string
+		dateProvenance string
+	)
+	dateCmd := &cobra.Command{
+		Use:   "date-source",
+		Short: "Record externally auditable dated evidence for one withheld source (historical gate)",
+		Long: "Record one dated-evidence row for a withheld source of a HISTORICAL holdout\n" +
+			"set. The historical execution gate refuses `experiment run` until EVERY\n" +
+			"withheld source carries a row. dated_at must be RFC3339 and STRICTLY AFTER\n" +
+			"the set's cutoff — a source dated at or before the cutoff cannot be a\n" +
+			"historically later advance. Rows are immutable: a contradicting attestation\n" +
+			"needs a new holdout set. Dating is refused for blinded sets, which make no\n" +
+			"chronological claim.",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			result, err := app.DateHoldoutSource(cmd.Context(), pipeline.DateHoldoutSourceInput{
+				DBPath: opts.dbPath, HoldoutSetID: dateSet, SourceID: dateSource,
+				DatedAt: dateDatedAt, EvidenceLocator: dateEvidence, Provenance: dateProvenance,
+				JSONOutput: opts.jsonOutput,
+			})
+			if err != nil {
+				return wrapCommandError("experiment date-source", err)
+			}
+			if opts.jsonOutput {
+				return writeJSON(stdout, result)
+			}
+			gate := "historical gate CLOSED"
+			if result.GateOpen {
+				gate = "historical gate OPEN (every withheld source dated)"
+			}
+			fmt.Fprintf(stdout, "%s Dated source %s in %s\n  dated_at: %s\n  evidence: %s\n  progress: %d/%d — %s\n",
+				idempotencyTag(result.Created), result.Dating.SourceID, result.Dating.HoldoutSetID,
+				result.Dating.DatedAt, result.Dating.EvidenceLocator, result.Dated, result.Total, gate)
+			return nil
+		},
+	}
+	dateCmd.Flags().StringVar(&dateSet, "holdout-set", "", "Historical holdout set ID")
+	dateCmd.Flags().StringVar(&dateSource, "source", "", "Withheld source ID to date")
+	dateCmd.Flags().StringVar(&dateDatedAt, "dated-at", "", "RFC3339 date of the withheld advance (must be after the cutoff)")
+	dateCmd.Flags().StringVar(&dateEvidence, "evidence", "", "Auditable locator for the dating claim (URL/DOI/archive ref)")
+	dateCmd.Flags().StringVar(&dateProvenance, "provenance", "", "Optional audit note")
+	cmd.AddCommand(dateCmd)
+
+	var (
 		runProblem string
 		runSet     string
 		runArms    []string

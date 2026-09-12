@@ -142,6 +142,11 @@ type problemStore interface {
 	GetHoldoutSet(context.Context, string) (store.HoldoutSetRecord, error)
 	LatestHoldoutSet(context.Context, string) (string, bool, error)
 	CountHoldoutSourceDating(context.Context, string) (int, int, error)
+	// RecordHoldoutSourceDating / ListHoldoutSourceDating: the historical-mode
+	// gate's write path — one externally auditable dated-evidence row per
+	// withheld source, immutable, recorded via `experiment date-source`.
+	RecordHoldoutSourceDating(context.Context, store.HoldoutSourceDatingRecord) (bool, error)
+	ListHoldoutSourceDating(context.Context, string) ([]store.HoldoutSourceDatingRecord, error)
 	RunLeakageCheck(context.Context, string, string, string, string) (store.LeakageCheckRecord, error)
 	GetLeakageCheck(context.Context, string) (store.LeakageCheckRecord, error)
 	ListTargetSignaturesForHoldout(context.Context, string) ([]store.TargetSignatureRow, error)

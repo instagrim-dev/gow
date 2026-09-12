@@ -263,6 +263,31 @@ func modeDisclaimer(mode string) string {
 	return "blinded benchmark: structural-move recovery under enforced blinding; NO chronological claim is made or implied"
 }
 
+// experimentConclusion maps the one code-owned recovery outcome into the
+// mode's conclusion vocabulary (CHECK-enforced disjoint on experiment_runs):
+// the same mechanical result records a chronological claim ONLY when the mode
+// earned one via dated evidence, and a structural claim otherwise. A negative
+// requires EVERY membership proposal decisively assessed; anything less is
+// inconclusive — an epistemic gap, never coerced.
+func experimentConclusion(mode string, b3 *store.ExperimentArmRow) string {
+	if b3 == nil || b3.ProposalCount == 0 {
+		return "inconclusive"
+	}
+	switch {
+	case b3.Recovered:
+		if mode == "historical" {
+			return "predicts_later_advance"
+		}
+		return "structural_recovery"
+	case b3.DecisiveCount == b3.ProposalCount:
+		if mode == "historical" {
+			return "fails_to_predict"
+		}
+		return "no_recovery"
+	}
+	return "inconclusive"
+}
+
 // defaultExperimentArms is the v0 arm set: the scientifically decisive
 // comparison is undirected (B0) vs invariant-guided (B3). B1/B2 baselines are
 // now executable via their deriving fixtures and may be requested explicitly.
@@ -581,17 +606,7 @@ func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore,
 	}
 
 	// Conclusion (F5): unknown/unassessed are epistemic gaps, never coerced.
-	// no_recovery requires EVERY membership proposal to have been decisively
-	// assessed; anything less concludes inconclusive.
-	conclusion := "inconclusive"
-	if hs.Mode == "blinded" && b3 != nil && b3.ProposalCount > 0 {
-		switch {
-		case b3.Recovered:
-			conclusion = "structural_recovery"
-		case b3.DecisiveCount == b3.ProposalCount:
-			conclusion = "no_recovery"
-		}
-	}
+	conclusion := experimentConclusion(hs.Mode, b3)
 
 	// identityParts is the ORDERED per-arm assessment manifest (finding 1); it is
 	// NOT sorted — arm-iteration order and per-arm rank order carry the
