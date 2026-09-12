@@ -1,0 +1,15 @@
+=== RUN   TestReviewC1C8V3DisposableScenario
+    review_c1c8_v3_disposable_test.go:157: PREDECLARED policy=rpol_01M2B23WAGSK4MX79RMHZHQMSB obligation=robl_01M2B23WAGSK4MX79RMJ1D7Y8T applicability=rapp_01M2B23Y90M946PSC2HDVBG3AY (before any observation row)
+    review_c1c8_v3_disposable_test.go:175: PIN problem=prb_01M2B23Z88JMPXYAZX3ZH93HYK D0=clr_01M2B2490RRFPSE0VR4T8643PJ |D0|=2 candidate=inv_01M2B24EW8EJ42YN0W9920QB32
+    review_c1c8_v3_disposable_test.go:200: C1 PASS campaign=run_01M2B24KRGG110Z630147XWSCP targets(typed) include inv_01M2B24EW8EJ42YN0W9920QB32
+    review_c1c8_v3_disposable_test.go:243: C2 PASS withheld=evl_01M2B24WHR48K2CEJTSY0NA086 on proposal fpr_01M2B24SM0AXZAJHCV4ZANYW7A; membership set identical to D0
+    review_c1c8_v3_disposable_test.go:260: C5 PASS unrelated episode write; candidate still targeted
+    review_c1c8_v3_disposable_test.go:300: C3 PASS executed attempt admitted=msig_01M2B25D50CCSX53546AKNM2ZC basis carries verified binding; A1 == D0 + admitted signature
+    review_c1c8_v3_disposable_test.go:317: C4 PASS stale exclusion reason=authority_assessed_obsolete_population
+    review_c1c8_v3_disposable_test.go:345: C6 PASS campaign=run_01M2B25NY807NX79SD30K4060R surviving over A1; candidate targeted again
+    review_c1c8_v3_disposable_test.go:379: C7 PASS both branches: obsolete restoration still impossible (r2 authority is compatible+surviving) AND preservation holds. replay=run_01M2B25VSRYK4N2XKC3VK0PE9Q state="surviving"; post-replay targeted=true staleExcl=[]; compatible authority=run_01M2B25NY807NX79SD30K4060R
+    review_c1c8_v3_disposable_test.go:471: C8/F-1 PASS same-proposal witness-after-model-judged admitted=evl_01M2B26AEG8RF7ACV8DP23ABVM (withheld=evl_01M2B24WHR48K2CEJTSY0NA086 preserved)
+    review_c1c8_v3_disposable_test.go:497: C8 PASS policy=rpol_01M2B23WAGSK4MX79RMHZHQMSB recordedOutcome=conforms decision=ELIGIBLE_TO_ADVANCE deterministic=true afterRealChange=UNDETERMINED reasons=[stale_dependency]
+--- PASS: TestReviewC1C8V3DisposableScenario (0.25s)
+PASS
+ok  	github.com/instagrim-dev/newf/internal/pipeline	0.263s

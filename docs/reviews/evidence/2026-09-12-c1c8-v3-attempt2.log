@@ -1,0 +1,13 @@
+=== RUN   TestReviewC1C8V3DisposableScenario
+    review_c1c8_v3_disposable_test.go:157: PREDECLARED policy=rpol_01M2B23WAGHRBNAEFJ1EDFNGPS obligation=robl_01M2B23WAGHRBNAEFJ1HT8PRAQ applicability=rapp_01M2B23Y90G3HCP3RDW5YTVWRN (before any observation row)
+    review_c1c8_v3_disposable_test.go:175: PIN problem=prb_01M2B23Z880FEWGGTXE3WFHZDS D0=clr_01M2B2490RNA4EZCF9PXRKW4QN |D0|=2 candidate=inv_01M2B24EW8YXG0AMGNBD7EZG1Y
+    review_c1c8_v3_disposable_test.go:200: C1 PASS campaign=run_01M2B24KRGNF7DRRQDB6W6T325 targets(typed) include inv_01M2B24EW8YXG0AMGNBD7EZG1Y
+    review_c1c8_v3_disposable_test.go:238: C2 PASS withheld=evl_01M2B24WHRT26RYBYNN4XA8HVK on proposal fpr_01M2B24SM03R7TTKXF8MAJ7CAK; membership set identical to D0
+    review_c1c8_v3_disposable_test.go:255: C5 PASS unrelated episode write; candidate still targeted
+    review_c1c8_v3_disposable_test.go:299: C3 PASS same-proposal executed attempt admitted=msig_01M2B25D508KTHSZ5KW1Q0E7N2 basis carries verified binding; A1 == D0 + admitted signature
+    review_c1c8_v3_disposable_test.go:316: C4 PASS stale exclusion reason=authority_assessed_obsolete_population
+    review_c1c8_v3_disposable_test.go:329: C7 positive-branch setup requires current survival over A1; got "challenged"
+--- FAIL: TestReviewC1C8V3DisposableScenario (0.30s)
+FAIL
+FAIL	github.com/instagrim-dev/newf/internal/pipeline	0.311s
+FAIL

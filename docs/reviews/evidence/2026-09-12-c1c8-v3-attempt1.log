@@ -1,0 +1,9 @@
+=== RUN   TestReviewC1C8V3DisposableScenario
+    review_c1c8_v3_disposable_test.go:141: PREDECLARED policy=rpol_01M2B23WAGTVNSVZ9YWAEYJ7YM obligation=robl_01M2B23WAGTVNSVZ9YWBG2AGSS applicability=rapp_01M2B23Y90K6Z2ADHM5ZNRSH45 (before any observation row)
+    review_c1c8_v3_disposable_test.go:159: PIN problem=prb_01M2B23Z88VFGWJJDT64P0HQRF D0=clr_01M2B2490RS8RMRHNX67JXTCAK |D0|=2 candidate=inv_01M2B24EW88ZE79QX8JM37A2JZ
+    review_c1c8_v3_disposable_test.go:184: C1 PASS campaign=run_01M2B24KRGNZSWE4TJTY6Q1Q3D targets(typed) include inv_01M2B24EW88ZE79QX8JM37A2JZ
+    review_c1c8_v3_disposable_test.go:208: C2: want model-judged failure, got "failure"/"deterministic"
+--- FAIL: TestReviewC1C8V3DisposableScenario (0.15s)
+FAIL
+FAIL	github.com/instagrim-dev/newf/internal/pipeline	0.158s
+FAIL

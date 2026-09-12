@@ -1,6 +1,17 @@
 # Review-run: one-obligation integration (C1–C8), 2026-09-12
 
 > [!IMPORTANT]
+> **Revision 3 (2026-09-12, after remediation handoffs 1–3 landed).** Run 3
+> re-executed the complete strengthened scenario on the remediated tree (base
+> `9b901f7`: v45 per-evaluation markers, F-2 population-compatible authority,
+> v46 attempt→output bindings). **All eight cases passed with both C7
+> branches asserted and the same-proposal C2→witness case demonstrated
+> live.** The recipe-validation decision moves from `WITHHOLD` to
+> **`ELIGIBLE_TO_ADVANCE` (scoped)** — see §0. Revision 2's decision layer is
+> superseded for that one row; everything else below is retained as the
+> history that produced the remediations.
+
+> [!IMPORTANT]
 > **Revision 2 (2026-09-12, after external critique of revision 1 at `00c3c58`).**
 > Revision 1's closing decision `ELIGIBLE_TO_ADVANCE` is **retracted**: it
 > conflated the coverage projection of a supplied review record with candidate
@@ -14,6 +25,44 @@ Executed per `docs/reviews/prompts/README.md` →
 `docs/reviews/prompts/review-contract.md`. This bundle records executed
 checks; it is not whole-project completeness or scientific success.
 
+## 0. Run 3 — re-execution on the remediated tree (supersedes §1's third row)
+
+**Pinned tree.** Base `9b901f7` + complete manifest: tracked patch
+`evidence/2026-09-12-worktree-9b901f7-tracked.patch`, untracked archive
+`…-9b901f7-untracked.tgz`, sha256 manifest `…-9b901f7-untracked.sha256`.
+Procedure retained at `evidence/2026-09-12-c1c8-v3-procedure.go.txt`; final
+log `…-c1c8-v3-run-final.log`; generated coverage documents
+`…-c1c8-v3-coverage-1.md` (eligible) and `…-c1c8-v3-coverage-3-stale.md`
+(after the real dependency change). Policy **P1r3** + applicability persisted
+**before any observation row** (monotonic store clock); assessment outcome
+**derived at runtime** from observed case results. Zero provider calls; zero
+production writes; disposable source deleted after retention.
+
+**What run 3 demonstrated that runs 1–2 could not:**
+
+| Property | Run 1–2 status | Run 3 result |
+| --- | --- | --- |
+| C7 positive branch: valid current authority survives a historical replay | run 2: **failed (F-2)** | **asserted and PASSED**; the operative authority is store-verified as the *compatible* campaign (surviving over A1), not the replay |
+| Same-proposal witness-after-model-judged admission (F-1 layout) | run 1: failed; runs 1–2 restricted to distinct proposals | **asserted and PASSED** live in-scenario: the shared proposal's withheld model judgment is preserved and its later executed-attempt failure is rule-admitted |
+| C3 attribution | declared bounded-probe note | **checkable**: tuple computed by `--procedure equal-denominator`; admission basis carries the recomputation-verified binding |
+| C8 decision derivation | run 2 projected `WITHHOLD` from derived `nonconforms` | derived `conforms` → `ELIGIBLE_TO_ADVANCE`; the pipeline-produced A2 change then correctly degrades to `UNDETERMINED` / `stale_dependency` |
+
+**Attempt ledger (run 3): three executions, two failures, one pass.**
+
+| # | Outcome | Classification |
+| --- | --- | --- |
+| 3.1 | assertion failure at C2 | harness error (LOCAL-posture shared proposal is *deterministically* refuted at C2 instead of model-judged) — log `…-c1c8-v3-attempt1.log` |
+| 3.2 | assertion failure at C6/C7 precondition | harness layout gap (an unknown-locality member in A1 leaves the counterexample search inconclusive: reassessment ends `challenged`, not `surviving`) — log `…-c1c8-v3-attempt2.log`. Incidental observation, not a defect: the challenger refused to promote an undecidable non-violation into survival — honest non-promotion |
+| 3.3 | **PASS** | final layout: C3's bound admission on a decidably-local proposal; the same-proposal F-1 case carried by the C8 staleness input — log `…-c1c8-v3-run-final.log` |
+
+**Scoped decision (replaces §1 row 3):** the one-obligation recipe
+(`current-assessment-authority@1` under P1r3) is **validated on the exercised
+paths**: preservation testing is no longer gated by this bundle. Scope
+limits, stated: one obligation, one candidate, fixture corpus, fixture
+miner/challenger/model verifier; the reason-code matrix beyond
+`eligible`/`stale_dependency` remains unexercised; attempt→proposal mechanism
+fidelity remains a recorded separate judgment (v46 scope note).
+
 ## 1. Decisions (separated), policy, and scope
 
 The critique's central correction is adopted: three different questions get
@@ -23,7 +72,7 @@ three different answers. None inherits another's verdict.
 | --- | --- |
 | May the exercised candidate guide the next search action in the final tested state? | **No.** The selector excludes it after the historical replay (run 2, C7). |
 | Did the authority implementation preserve the tested safety boundaries? | **Partially.** Withholding, relevant-vs-unrelated discrimination, obsolete-restoration prevention, and membership-exact admission held. Preservation of valid current authority did **not** (F-2). |
-| Has the one-obligation recipe been validated sufficiently to proceed to preservation testing? | **WITHHOLD** (revised from revision 1's eligibility and below the critique's floor of `UNDETERMINED`): run 2 examined the missing branch and demonstrated a blocking nonconformance of the obligation. Preservation testing remains gated. |
+| Has the one-obligation recipe been validated sufficiently to proceed to preservation testing? | **Superseded by §0 (run 3): `ELIGIBLE_TO_ADVANCE`, scoped.** Revision 2's answer was `WITHHOLD` on the then-demonstrated F-2 nonconformance; the remediated tree passed the full strengthened scenario. |
 
 - **Policy provenance.** Run 1's policy was persisted *after* C1–C7 with an
   authored `conforms` — a predeclaration failure, acknowledged. Run 2 persists
@@ -43,8 +92,10 @@ three different answers. None inherits another's verdict.
 - **Procedure hashes (sha256).** Run 1
   `f0437229d794e2697443c0b97b382578cdf98a915d425f139e0c0f7410da6cce`; run 2
   `7c37b47857c887f3afb37332ad0a1e0ae41c316e08b2d7857cbe0171629cec82`
-  (`evidence/2026-09-12-c1c8-v2-procedure.go.txt`). Contract/recipe hashes as
-  in revision 1. Mode both runs: review-only + disposable test on the real
+  (`evidence/2026-09-12-c1c8-v2-procedure.go.txt`); run 3
+  `cec45c18b494fdda81b43984c1aec816a9d765c462cb7441262406cbdcde43b1`
+  (`evidence/2026-09-12-c1c8-v3-procedure.go.txt`). Contract/recipe hashes as
+  in revision 1. Mode all runs: review-only + disposable test on the real
   migrated store (`t.TempDir()` SQLite), zero provider calls, zero production
   writes; disposable sources deleted after retention.
 
@@ -246,14 +297,26 @@ claim is made.
    Remaining honest scope: attempt→proposal *mechanism fidelity* is a separate
    judgment, recorded as such — not silently claimed by the binding.
 
-> The final disposable harness passed on a now-reconstructable snapshot (base
-> `7c54dcc` + retained patch and untracked archive). It provides positive
-> evidence for the exercised admission and authority-exclusion paths; an
-> earlier variant reproduced evaluation shadowing in admission (F-1); and the
-> re-executed positive current-authority-preservation branch **failed,
-> demonstrating F-2**. C3 demonstrates supplied-witness checking and
-> membership-exact admission without mechanism-to-output attribution. C8
-> demonstrates deterministic projection of derived review records, including
-> `WITHHOLD` on demonstrated nonconformance — not candidate eligibility. The
-> full one-obligation recipe is **not validated**; preservation testing
-> remains gated.
+> **Closing statement (revision 2, superseded by run 3 — retained as
+> history):** The final disposable harness passed on a now-reconstructable
+> snapshot (base `7c54dcc` + retained patch and untracked archive). It
+> provides positive evidence for the exercised admission and
+> authority-exclusion paths; an earlier variant reproduced evaluation
+> shadowing in admission (F-1); and the re-executed positive
+> current-authority-preservation branch **failed, demonstrating F-2**. C3
+> demonstrates supplied-witness checking and membership-exact admission
+> without mechanism-to-output attribution. C8 demonstrates deterministic
+> projection of derived review records, including `WITHHOLD` on demonstrated
+> nonconformance — not candidate eligibility.
+
+> **Closing statement (revision 3, current):** With handoffs 1–3 landed, run
+> 3 passed the complete strengthened scenario on the reconstructable snapshot
+> base `9b901f7` + retained manifest: both C7 branches asserted (the
+> compatible campaign is store-verified as the operative authority after a
+> historical replay), the same-proposal witness-after-model-judged case
+> rule-admitted with the earlier withheld decision preserved, C3 admission
+> carrying the recomputation-verified attempt→output binding, and the C8
+> decision derived — `conforms` → `ELIGIBLE_TO_ADVANCE`, then correctly
+> degraded to `UNDETERMINED`/`stale_dependency` by a real pipeline change.
+> The one-obligation recipe is **validated on the exercised paths**, scoped
+> as stated in §0; preservation testing is no longer gated by this bundle.
