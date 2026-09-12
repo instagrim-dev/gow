@@ -234,7 +234,8 @@ We formalize the GoW loop
 \textsc{Measure}), describe \texttt{newf}---an instrumented realization with
 typed representations, immutable provenance, and an adversarial challenge
 lifecycle---and report exploratory experiments on an Erd\H{o}s--Straus study
-corpus organized as a four-experiment progression. In negative controls, the
+corpus organized as a four-experiment progression, followed by a fifth,
+deterministically checked demonstration. In negative controls, the
 system abstains rather than manufacturing structure when preconditions are
 absent. In curated-feature trials, shape-guided context produced the only
 proposal a blinded reviewer judged a full criterion recovery, though identifier
@@ -246,7 +247,14 @@ endpoint was not met. One model-generated reference-absent hypothesis
 (``density-averaging ceiling'') was subjected to a seven-part, model-assisted
 analysis that proposed a boundary refinement splitting one structural ceiling
 into two sub-mechanisms; counterexample coverage remained incomplete and the
-mathematical arguments were not independently verified. The experiments do not
+mathematical arguments were not independently verified. Finally, in a
+preregistered closed decision loop scored by an exact integer checker --- the
+paper's only reproducible-computation evidence --- a recorded map revision
+changed the committed next action from a failing local move to a succeeding
+global one, and a matched-budget comparison measured the map's ordering value
+(20/20 verified witnesses at 20 checker submissions vs.\ 3/20 at 57 for an
+undirected arm) at demonstration scale on one hard instance class. The
+experiments do not
 establish mathematical validity, general discovery effectiveness, or autonomous
 theorem solving; they demonstrate the framework's epistemic behavior and a
 constituent set of capabilities.
@@ -1511,7 +1519,13 @@ preregistered test; it reports no measured result about GoW or the pilots
 above (\cref{rem:superiority-status}).
 
 The experiments above are exploratory and establish no statistical effect
-(\cref{sec:limitations}). This section is a separate, \emph{theoretical}
+(\cref{sec:limitations}). Experiment E (\cref{sec:results-episode}) is a
+deterministically checked, demonstration-scale instance of exactly the
+accounting this section formalizes --- matched budget, frozen decision rule,
+cost per verified hit --- but with twenty instances of a single class and a
+fixed shared move pool it is not the finite-sample certificate of
+\cref{sec:superiority-cert}, and it leaves this section's illustrative
+values unmeasured. This section is a separate, \emph{theoretical}
 contribution: it states precisely when a shape-guided method \emph{can}
 outperform a conventional comparator under a fixed resource budget, and it
 specifies the finite-sample test that would establish such an advantage from
@@ -2308,7 +2322,12 @@ conjectures, program synthesis benchmarks, and scientific hypothesis refinement.
 
 \paragraph{Statistical evaluation.}
 \Cref{sec:superiority} states the conditional advantage and the finite-sample
-certificate that would establish superiority; the missing piece is the data. The
+certificate that would establish superiority; the missing piece is the data.
+Experiment E's matched-budget comparison (\cref{sec:results-episode}) is a
+first deterministic data point of the right \emph{shape} --- frozen protocol,
+matched budget, exact checking --- but not the specified experiment: it lacks
+the adaptive-search baseline, the curation-only ablation, held-out task
+structures, and any statistical form. The
 next empirical target is the preregistered paired experiment specified there and
 in \path{corpus/experiments/superiority-preregistration/}: a matched
 adaptive-search baseline, a GoW-guided arm, and a curation-only ablation over a
@@ -2378,6 +2397,11 @@ move (identifier masking, not full concealment of the experimental condition,
 was achieved), and one reference-absent hypothesis was subjected to a seven-part,
 model-assisted challenge that proposed a boundary refinement, with counterexample
 coverage left incomplete and the mathematical steps not independently verified.
+Beyond the C4 progression, a preregistered closed decision loop and a
+matched-budget comparison --- the paper's only reproducible-computation
+evidence --- demonstrated at small scale that a recorded map revision changed
+the committed next action and that the map's ordering of a fixed move pool
+earned its checker-submission cost under a frozen decision rule.
 The experiments
 establish epistemic behavior and constituent capabilities; they do not establish
 mathematical validity, general discovery effectiveness, or autonomous theorem
