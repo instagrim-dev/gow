@@ -325,6 +325,21 @@ func (a *App) modelVerifier() provider.ModelVerifier {
 // verifiers returns the routing verifier set: the two deterministic tiers plus
 // the model tier last. The model tier is a fixture in CI; a live adapter would
 // replace modelVerifierFn.
+//
+// NOT YET WIRED: lean.ProofVerifier (internal/lean) is a real deterministic tier
+// that consults the Lean kernel, but it is deliberately absent here because
+// nothing can currently REACH it. It decides only when
+// verify.VerificationContext.Formalization is non-empty, and
+// verificationContext() cannot populate that field: frontier proposals carry no
+// formalization column, so there is no persisted proof term to submit. Adding it
+// to this set today would register a tier that always abstains — routing
+// theater, not verification.
+//
+// Enabling it requires, in order: (1) an additive migration giving proposals a
+// formalization document, (2) populating it during frontier generation, (3)
+// loading it in verificationContext(), and only then (4) appending
+// lean.ProofVerifier here. It sorts ahead of the model tier automatically
+// (deterministic band) and behind the in-process checks (Cost 40 vs 10/20).
 func (a *App) verifiers(model provider.ModelVerifier) []verify.Verifier {
 	return []verify.Verifier{verify.DeterministicCheck{}, verify.CounterexampleSearch{}, model}
 }

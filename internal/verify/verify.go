@@ -199,6 +199,22 @@ type VerificationContext struct {
 	// ClaimedViolation is the provider's structural-violation claim (prose),
 	// carried for the model tier; deterministic tiers ignore it.
 	ClaimedViolation string
+	// Formalization is an OPTIONAL proof-assistant document (Lean 4 source)
+	// carrying a formal statement together with a candidate proof term. It is the
+	// input to an external kernel check (internal/lean), which is the only route
+	// to mechanically-checked evidence in this system.
+	//
+	// Empty is the normal case and means "no formalization was produced": a
+	// proof-checking tier then abstains (unknown) and routing falls through, so
+	// adding this field changes no existing behavior. It is NOT persisted as part
+	// of a verdict; the durable record is the resulting evaluation row plus its
+	// tool name/version provenance.
+	//
+	// A kernel verdict over this document is about the FORMAL STATEMENT, never
+	// about whether the formalization faithfully expresses the domain goal — that
+	// fidelity gap is unverified, which is why an accepted proof is deliberately
+	// non-decisive here (see internal/lean).
+	Formalization string
 }
 
 // Decision is a verifier's structured result.
