@@ -41,6 +41,17 @@ type PolicyEvidence struct {
 	UncoveredFamilies []string              `json:"uncovered_families"`
 	RedundantAttacks  []string              `json:"redundant_attacks"`
 	RepeatedFailures  []string              `json:"repeated_failures"`
+	// RefutedBoundaries (v43, D5): confirmed challenges' boundary deltas the
+	// provider may cite as expand targets (by predicate fingerprint).
+	RefutedBoundaries []PolicyRefutedBoundaryFact `json:"refuted_boundaries,omitempty"`
+}
+
+// PolicyRefutedBoundaryFact is one confirmed boundary delta projected for the
+// provider: fingerprint identity plus the delta kind (only separation-class
+// kinds are admissible expand evidence; the pipeline re-verifies).
+type PolicyRefutedBoundaryFact struct {
+	PredicateFingerprint string `json:"predicate_fingerprint"`
+	DeltaKind            string `json:"delta_kind"`
 }
 
 // Fingerprint is a stable, order-independent content hash of the evidence.
@@ -55,6 +66,13 @@ func (e PolicyEvidence) Fingerprint() string {
 	cp.UncoveredFamilies = sortedCopy(e.UncoveredFamilies)
 	cp.RedundantAttacks = sortedCopy(e.RedundantAttacks)
 	cp.RepeatedFailures = sortedCopy(e.RepeatedFailures)
+	cp.RefutedBoundaries = append([]PolicyRefutedBoundaryFact(nil), e.RefutedBoundaries...)
+	sort.Slice(cp.RefutedBoundaries, func(a, b int) bool {
+		if cp.RefutedBoundaries[a].PredicateFingerprint != cp.RefutedBoundaries[b].PredicateFingerprint {
+			return cp.RefutedBoundaries[a].PredicateFingerprint < cp.RefutedBoundaries[b].PredicateFingerprint
+		}
+		return cp.RefutedBoundaries[a].DeltaKind < cp.RefutedBoundaries[b].DeltaKind
+	})
 	raw, _ := json.Marshal(cp)
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:])

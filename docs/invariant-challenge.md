@@ -203,12 +203,14 @@ challenge's persisted transitions; derived candidate ids stay on its
 derived-children rows. Unconfirmed/inert challenges derive no delta. The
 delta surfaces in `--json` as `challenges[].boundary_delta`.
 
-> **Current limitation (recorded, 2026-09-12 review F10):** boundary deltas
-> are persisted and surfaced but **no search-policy mutation consumes them
-> yet** — "subsequent policy consumes a typed object" states the design
-> intent, not shipped behavior. Until a policy revision reads
-> `challenge_boundary_deltas`, the next-decision edge exists only as durable
-> state.
+> **Resolved (v43, decision D5):** boundary deltas are now consumed by
+> search-policy derivation. Every confirmed **separation-class** delta
+> (`counterexample-separation`, `constructibility`) earns one
+> `expand`/`refuted_boundary` directive at its predicate fingerprint, with
+> provenance naming the confirmed challenge. Bookkeeping-class deltas
+> (`contrast-collapse`, `support-recount`) record epistemic defects of the
+> claim, not domain structure, and earn no directive; split/merge deltas flow
+> through the child invariants' own lifecycle. See `docs/search-policy.md`.
 
 ## Provenance, determinism, offline CI
 

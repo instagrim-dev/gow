@@ -55,6 +55,7 @@ Directives are typed over typed targets:
 | `prefer` | `success_invariant` | favor proposals whose signature satisfies a supported success condition |
 | `avoid` | `surviving_invariant` | steer away from re-preserving conserved failure structure |
 | `expand` | `mechanism_family` | sample under-covered mechanism families *(derived + persisted; generation-path application deferred — see below)* |
+| `expand` | `refuted_boundary` | expand where a confirmed challenge PROVED believed failure structure violable (v43, D5) *(same generation-path deferral as `mechanism_family`)* |
 | `penalize` | `redundant_attack` | dampen directed attacks seen on ≥2 distinct proposals (down-rank in the applied rerank) |
 | `penalize` | `repeated_failure` | dampen repeatedly-failing mechanisms *(generation-path lever; deferred — see below)* |
 
@@ -94,6 +95,8 @@ does not yet consume the persisted policy:
 
 - `expand` (`mechanism_family`) — would broaden sampling into under-covered
   families;
+- `expand` (`refuted_boundary`) — would direct generation toward predicates a
+  confirmed challenge proved violable;
 - `penalize` (`repeated_failure`) — would dampen repeatedly-failing mechanisms.
 
 They are carried in the revision so an operator can see the accumulated
@@ -103,6 +106,38 @@ consume policy is deferred to a follow-up so this slice stays a bounded,
 testable rerank rather than a change to generation semantics. Until then,
 `expand`/`repeated_failure` directives do not alter search behavior, and this is
 stated rather than implied.
+
+## Next-decision edges: which persisted feedback feeds `Derive` (decision D5, v43)
+
+Three durable next-decision edges exist in the store. The 2026-09-12 decision
+pass (D5) ordered their consumption; the first is now active:
+
+1. **`challenge_boundary_deltas` — consumed (v43).** A confirmed challenge's
+   typed boundary refinement. Only **separation-class** deltas
+   (`counterexample-separation`, `constructibility`) earn a directive: they
+   record a domain artifact that actually violated believed failure structure,
+   which is precisely the frontier doctrine's cheapest expansion direction.
+   Bookkeeping-class deltas (`contrast-collapse`, `support-recount`) expose
+   epistemic defects of the *claim*, not domain structure; split/merge deltas
+   flow through the child invariants' own lifecycle. Identity is the predicate
+   fingerprint (repeated refutations dedupe); provenance rows name each
+   justifying confirmed challenge; weight is `medium` (a demonstrated
+   violation earns a direction, not a mandate). The doctrine lives in one
+   place: `policy.ExpansionBearingDelta`.
+2. **Projection obligation decisions — not consumed (rejected for first
+   place).** Discharge decisions are proposal-scoped: keying directives on
+   them would emit unbounded single-use rows — the same recorded objection
+   that defers `repeated_failure` derivation. Trigger to revisit: a
+   mechanism-level key for obligation outcomes.
+3. **Episode outcomes (v41) — not consumed (rejected for first place).** The
+   two-observation protocol is new; deriving policy from n≈1 episodes would
+   bias search on anecdote, and the episode lane's own consumption protocol
+   (revision credit) is still forming. Trigger to revisit: enough completed
+   episodes for hit/miss to be population evidence.
+
+Provider proposals may cite refuted boundaries (`expand`/`refuted_boundary` by
+fingerprint); the admission gate re-verifies the delta class exactly as
+`Derive` does, and caps the weight at `medium`.
 
 ## Idempotent, revisioned persistence (migration `v19`)
 

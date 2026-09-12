@@ -198,6 +198,25 @@ func (a *App) buildPolicyEvidence(ctx context.Context, repoStore problemStore, p
 		}
 	}
 
+	// Refuted boundaries (v43, D5): confirmed challenges' boundary deltas. The
+	// store returns them deterministically ordered; the engine filters to
+	// separation-class kinds and dedupes by fingerprint. This is the first of
+	// the three persisted next-decision edges (boundary deltas, projection
+	// obligations, episode outcomes) to feed Derive — the other two stay
+	// recorded-but-unconsumed with their own triggers (see
+	// docs/search-policy.md "Deferred").
+	deltas, lerr := repoStore.ListBoundaryDeltasForProblem(ctx, problemID)
+	if lerr != nil {
+		return policy.Evidence{}, resolvableEvidence{}, lerr
+	}
+	for _, d := range deltas {
+		ev.RefutedBoundaries = append(ev.RefutedBoundaries, policy.RefutedBoundaryEvidence{
+			PredicateFingerprint: d.PredicateFingerprint,
+			DeltaKind:            d.Kind,
+			ChallengeID:          d.ChallengeID,
+		})
+	}
+
 	sort.Strings(ev.UncoveredFamilies)
 	sort.Strings(ev.RedundantAttacks)
 	return ev, rv, nil
@@ -236,6 +255,12 @@ func policyEvidenceProjection(problemID string, ev policy.Evidence) provider.Pol
 	proj.UncoveredFamilies = append(proj.UncoveredFamilies, ev.UncoveredFamilies...)
 	proj.RedundantAttacks = append(proj.RedundantAttacks, ev.RedundantAttacks...)
 	proj.RepeatedFailures = append(proj.RepeatedFailures, ev.RepeatedFailures...)
+	for _, rb := range ev.RefutedBoundaries {
+		proj.RefutedBoundaries = append(proj.RefutedBoundaries, provider.PolicyRefutedBoundaryFact{
+			PredicateFingerprint: rb.PredicateFingerprint,
+			DeltaKind:            rb.DeltaKind,
+		})
+	}
 	return proj
 }
 
@@ -329,6 +354,20 @@ func policyRevisionRecord(problemID, runID string, ev policy.Evidence, pol polic
 				EvidenceRef:  ev.UncoveredFamiliesClusterRunID,
 			})
 		}
+		// Refuted-boundary expand directives record WHICH confirmed
+		// challenge(s) demonstrated the violation (v43, D5): the directive is
+		// justified by a specific refutation event, not a timeless property
+		// of the fingerprint.
+		if d.Kind == policy.KindExpand && d.TargetKind == policy.TargetRefutedBoundary {
+			for _, rb := range ev.RefutedBoundaries {
+				if rb.PredicateFingerprint == d.TargetID && rb.ChallengeID != "" && policy.ExpansionBearingDelta(rb.DeltaKind) {
+					row.Provenance = append(row.Provenance, store.PolicyProvenanceRow{
+						EvidenceKind: "invariant_challenge",
+						EvidenceRef:  rb.ChallengeID,
+					})
+				}
+			}
+		}
 		rec.Directives = append(rec.Directives, row)
 	}
 	return rec
@@ -356,6 +395,9 @@ func evidenceCohortHash(ev policy.Evidence) string {
 	}
 	for _, fp := range ev.RepeatedFailures {
 		lines = append(lines, "repeated|"+fp)
+	}
+	for _, rb := range ev.RefutedBoundaries {
+		lines = append(lines, "refuted|"+rb.PredicateFingerprint+"|"+rb.DeltaKind+"|"+rb.ChallengeID)
 	}
 	sort.Strings(lines)
 	sum := sha256.Sum256([]byte(strings.Join(lines, "\n")))

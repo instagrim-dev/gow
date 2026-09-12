@@ -241,6 +241,44 @@ func TestIntegrationChallengeAssessmentPopulation(t *testing.T) {
 	if got := r.Challenges[0].ResultSummary; got != "unconfirmed" {
 		t.Fatalf("replay over A must find no counterexample, got %q", got)
 	}
+
+	// 6. D5 falsifier (v43): the persisted boundary delta feeds policy
+	// derivation — one expand directive at the refuted boundary, provenance
+	// naming the confirmed challenge. The next-decision edge is ACTIVE, not
+	// merely durable.
+	deltas, err := repo.ListBoundaryDeltasForProblem(ctx, problemID)
+	if err != nil || len(deltas) == 0 {
+		t.Fatalf("expected persisted boundary deltas for the problem: %v %+v", err, deltas)
+	}
+	mut, err := app.MutatePolicy(ctx, PolicyMutateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("policy mutate: %v", err)
+	}
+	foundBoundary := false
+	for _, d := range mut.Revision.Directives {
+		if d.Kind != "expand" || d.TargetKind != "refuted_boundary" {
+			continue
+		}
+		foundBoundary = true
+		if d.TargetID != deltas[0].PredicateFingerprint {
+			t.Fatalf("directive target must be the delta's predicate fingerprint %s: %+v", deltas[0].PredicateFingerprint, d)
+		}
+		if d.EpistemicSource != "counterexample-separation" {
+			t.Fatalf("directive source must carry the delta kind: %+v", d)
+		}
+		provOK := false
+		for _, p := range d.Provenance {
+			if p.EvidenceKind == "invariant_challenge" && p.EvidenceRef == deltas[0].ChallengeID {
+				provOK = true
+			}
+		}
+		if !provOK {
+			t.Fatalf("directive provenance must name the confirmed challenge %s: %+v", deltas[0].ChallengeID, d.Provenance)
+		}
+	}
+	if !foundBoundary {
+		t.Fatalf("expected an expand/refuted_boundary directive derived from the boundary delta, got %+v", mut.Revision.Directives)
+	}
 }
 
 // TestIntegrationMixedPopulationAssociationNotFalsified pins the association

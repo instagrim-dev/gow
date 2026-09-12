@@ -88,6 +88,19 @@ func AdmitProposedDirective(kind Kind, tk TargetKind, targetID string, ev Eviden
 			}
 		}
 		return Directive{}, false
+	case TargetRefutedBoundary:
+		if kind != KindExpand {
+			return Directive{}, false
+		}
+		for _, rb := range ev.RefutedBoundaries {
+			// Same gate as Derive: only a separation-class delta is evidence
+			// FOR expansion; a bookkeeping-class delta on the same fingerprint
+			// earns nothing.
+			if rb.PredicateFingerprint == targetID && ExpansionBearingDelta(rb.DeltaKind) {
+				return Directive{Kind: KindExpand, TargetKind: tk, TargetID: targetID, Weight: domain.OrdinalMedium, Source: "provider:" + rb.DeltaKind}, true
+			}
+		}
+		return Directive{}, false
 	default:
 		return Directive{}, false
 	}

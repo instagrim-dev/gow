@@ -122,6 +122,9 @@ type problemStore interface {
 	// including failed attempts.
 	ListProviderInvocationsForRun(context.Context, string) ([]store.ProviderInvocationPayloadRow, error)
 	RedundantAttackKeys(context.Context, string, int) ([]string, error)
+	// Boundary deltas (v43, D5): the first persisted next-decision edge the
+	// search-policy stage consumes from the challenge stage.
+	ListBoundaryDeltasForProblem(context.Context, string) ([]store.ProblemBoundaryDeltaRow, error)
 	ListBreakCohortRows(context.Context, string) ([]store.BreakCohortRow, error)
 	PersistSuccessRevision(context.Context, store.SuccessRevisionRecord) (store.PersistSuccessRevisionResult, error)
 	GetSuccessRevision(context.Context, string) (store.SuccessRevisionRecord, error)

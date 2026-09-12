@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 42
+const currentSchemaVersion = 43
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -1177,6 +1177,20 @@ END;
 		// left untouched. Artifact schema_version has no CHECK, so
 		// 'projection/v2' rows need no DDL change.
 		apply: migrateV42SemanticPreservationObligations,
+	},
+	{
+		version: 43,
+		// v43 (decision D5): boundary deltas become the FIRST persisted
+		// next-decision edge consumed by search-policy derivation. Widens the
+		// search_policy_directives.target_kind CHECK to admit
+		// 'refuted_boundary' — an expand directive at a predicate fingerprint
+		// whose believed failure structure a confirmed challenge PROVED
+		// violable (separation-class deltas only; doctrine in
+		// policy.ExpansionBearingDelta). Same FK-safe in-place CHECK edit as
+		// v42; introspective + idempotent. The other two candidate edges
+		// (projection obligations, episode outcomes) stay recorded-but-
+		// unconsumed with their own triggers.
+		apply: migrateV43RefutedBoundaryDirectives,
 	},
 }
 
@@ -4048,4 +4062,20 @@ func migrateV42SemanticPreservationObligations(ctx context.Context, tx *sql.Tx) 
 	return editTableCheckInPlace(ctx, tx, "projection_obligations",
 		"kind IN ('steps-compose','domain-realization')",
 		"kind IN ('steps-compose','domain-realization','semantic-preservation')")
+}
+
+// migrateV43RefutedBoundaryDirectives widens the
+// search_policy_directives.target_kind CHECK vocabulary to admit
+// 'refuted_boundary' (decision D5). Introspective + idempotent.
+func migrateV43RefutedBoundaryDirectives(ctx context.Context, tx *sql.Tx) error {
+	var ddl string
+	if err := tx.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type='table' AND name='search_policy_directives'`).Scan(&ddl); err != nil {
+		return err
+	}
+	if strings.Contains(ddl, "'refuted_boundary'") {
+		return nil
+	}
+	return editTableCheckInPlace(ctx, tx, "search_policy_directives",
+		"target_kind IN ('success_invariant','surviving_invariant','mechanism_family','redundant_attack','repeated_failure')",
+		"target_kind IN ('success_invariant','surviving_invariant','mechanism_family','redundant_attack','repeated_failure','refuted_boundary')")
 }

@@ -541,3 +541,43 @@ func nullable(s string) any {
 	}
 	return s
 }
+
+// ProblemBoundaryDeltaRow is one confirmed boundary delta joined to its
+// problem: the next-decision edge the search-policy stage consumes (v43, D5).
+type ProblemBoundaryDeltaRow struct {
+	ChallengeID          string
+	Kind                 string
+	PredicateFingerprint string
+	Condition            string
+}
+
+// ListBoundaryDeltasForProblem returns every persisted boundary delta of the
+// problem's confirmed challenges, deterministically ordered (fingerprint,
+// kind, challenge id) so downstream directive derivation is order-stable.
+func (s *Store) ListBoundaryDeltasForProblem(ctx context.Context, problemID string) ([]ProblemBoundaryDeltaRow, error) {
+	if err := domain.ValidateProblemID(problemID); err != nil {
+		return nil, err
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT d.challenge_id, d.kind, d.predicate_fingerprint, d.condition
+FROM challenge_boundary_deltas d
+JOIN invariant_challenges c ON c.id = d.challenge_id
+JOIN candidate_invariants ci ON ci.id = c.invariant_id
+JOIN invariant_revisions ir ON ir.id = ci.invariant_revision_id
+WHERE ir.problem_id = ?
+ORDER BY d.predicate_fingerprint, d.kind, d.challenge_id
+`, problemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []ProblemBoundaryDeltaRow
+	for rows.Next() {
+		var r ProblemBoundaryDeltaRow
+		if err := rows.Scan(&r.ChallengeID, &r.Kind, &r.PredicateFingerprint, &r.Condition); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}

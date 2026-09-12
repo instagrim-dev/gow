@@ -69,13 +69,18 @@ const (
 	// TargetRepeatedFailure references a mechanism fingerprint that re-entered the
 	// atlas.
 	TargetRepeatedFailure TargetKind = "repeated_failure"
+	// TargetRefutedBoundary references a confirmed challenge's boundary delta by
+	// predicate fingerprint (v43, decision D5): believed-conserved failure
+	// structure PROVEN violable at a named condition. Expansion there is the
+	// cheapest frontier direction — the violation is already demonstrated.
+	TargetRefutedBoundary TargetKind = "refuted_boundary"
 )
 
 // Valid reports whether t is a defined target kind.
 func (t TargetKind) Valid() bool {
 	switch t {
 	case TargetSuccessInvariant, TargetSurvivingInvariant, TargetMechanismFamily,
-		TargetRedundantAttack, TargetRepeatedFailure:
+		TargetRedundantAttack, TargetRepeatedFailure, TargetRefutedBoundary:
 		return true
 	default:
 		return false
@@ -126,6 +131,40 @@ type Evidence struct {
 	// RepeatedFailures are mechanism fingerprints that re-entered the atlas
 	// (penalize).
 	RepeatedFailures []string
+	// RefutedBoundaries are confirmed challenges' typed boundary deltas (v43,
+	// decision D5): the first persisted next-decision edge from the challenge
+	// stage. Only SEPARATION-CLASS deltas (counterexample-separation,
+	// constructibility) earn a directive — those record a domain artifact that
+	// actually violated believed failure structure. Bookkeeping-class deltas
+	// (contrast-collapse, support-recount) expose epistemic defects of the
+	// claim, not domain structure, and split/merge deltas flow through the
+	// child invariants' own lifecycle instead.
+	RefutedBoundaries []RefutedBoundaryEvidence
+}
+
+// RefutedBoundaryEvidence is one confirmed boundary delta projected for
+// expansion. ChallengeID is provenance only (recorded on the directive's
+// provenance rows by the caller); directive identity is the predicate
+// fingerprint, so two challenges refuting the same predicate dedupe.
+type RefutedBoundaryEvidence struct {
+	PredicateFingerprint string
+	// DeltaKind is the boundary-delta kind (invariant.Delta* vocabulary).
+	DeltaKind string
+	// ChallengeID is the confirmed challenge that derived the delta.
+	ChallengeID string
+}
+
+// ExpansionBearingDelta reports whether a boundary-delta kind records a domain
+// violation (separation class) rather than an epistemic defect or a
+// restructuring that the child invariants' lifecycle already carries. Exported
+// so the pipeline records provenance with the SAME doctrine Derive applies (no
+// duplicated kind lists).
+func ExpansionBearingDelta(kind string) bool {
+	switch kind {
+	case "counterexample-separation", "constructibility":
+		return true
+	}
+	return false
 }
 
 // SuccessEvidence is one M6.1 success invariant projected for preference.
@@ -212,6 +251,24 @@ func Derive(ev Evidence) SearchPolicy {
 			TargetKind: TargetRepeatedFailure,
 			TargetID:   fp,
 			Weight:     domain.OrdinalHigh,
+		})
+	}
+	// Refuted boundaries (v43, D5): expand where believed failure structure was
+	// PROVEN violable. Weight medium — a single demonstrated violation earns a
+	// direction, not a mandate; identity is the predicate fingerprint, so
+	// repeated refutations of the same predicate contribute one directive.
+	seenBoundary := map[string]bool{}
+	for _, rb := range ev.RefutedBoundaries {
+		if rb.PredicateFingerprint == "" || !ExpansionBearingDelta(rb.DeltaKind) || seenBoundary[rb.PredicateFingerprint] {
+			continue
+		}
+		seenBoundary[rb.PredicateFingerprint] = true
+		ds = append(ds, Directive{
+			Kind:       KindExpand,
+			TargetKind: TargetRefutedBoundary,
+			TargetID:   rb.PredicateFingerprint,
+			Weight:     domain.OrdinalMedium,
+			Source:     rb.DeltaKind,
 		})
 	}
 

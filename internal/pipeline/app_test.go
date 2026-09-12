@@ -605,6 +605,10 @@ func (f *fakeProblemStore) LatestProposalSignatureContent(context.Context, strin
 	return store.ProposalSignatureContentRow{}, false, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) ListBoundaryDeltasForProblem(context.Context, string) ([]store.ProblemBoundaryDeltaRow, error) {
+	return nil, errors.New("unexpected call")
+}
+
 func (f *fakeProblemStore) PersistProjection(context.Context, store.ProjectionRecord) (store.ProjectionRecord, error) {
 	return store.ProjectionRecord{}, errors.New("unexpected call")
 }
