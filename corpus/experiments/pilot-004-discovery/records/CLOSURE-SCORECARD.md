@@ -11,6 +11,52 @@ for downstream use.
 
 ---
 
+## 0. Category note — paper-space vs pipeline-space
+
+Every row in this scorecard is one of two structural categories. The
+distinction was made explicit at commit
+[`66c96a5`](https://github.com/instagrim-dev/gow/commit/66c96a5) after
+running the joint-crossing proposal wire through `newf frontier generate`
+end-to-end and observing that its target invariants returned
+`verdict: unknown` — because those invariants are not persisted in the live
+corpus. Full record: `records/pipeline-space-vs-paper-space.md`.
+
+- **Paper-space** — markdown/CMA-tier research reasoning. Durable via git
+  history and line-anchored corpus citations. Not consumed by any code-owned
+  typed operation. All admission/challenge/frontier-generation rows in
+  §§1–7 authored before 2026-09-12 are paper-space by default.
+- **Pipeline-space** — code-owned persisted state in a live SQLite corpus
+  (invariants, cluster runs, frontier generations, proposals, evaluations,
+  admissions). Consumed by the pipeline's typed operators. Currently
+  materialised only by `corpus/experiments/m7-blinded-run/run.sh` into
+  `.newf/m7/newf.db` (not checked in); Pilot-004-specific pipeline-space
+  state does not yet exist.
+
+**Reading rule.** Rows carrying an explicit `[Paper-space only; no live
+SQLite persistence]` or `[Paper-space; no code-owned ... row]` annotation
+are paper-space (the annotations were retrofitted in `66c96a5`). Rows
+carrying persisted IDs like `fpr_...`, `fgr_...`, `inv_...`, or
+`clr_...` are pipeline-space. Unannotated rows without persisted IDs are
+paper-space by default.
+
+**Both categories are legitimate.** The distinction is honesty, not a
+value ranking. Paper-space records ratchet the research chain forward
+under AGENTS.md's discipline (typed epistemic status, CMA-verifiable
+citations, durable git provenance); pipeline-space records are what
+future automated operators consume. Confusion between them is what the
+naming prevents.
+
+**Class-move opportunities** (the classes this distinction now names):
+
+| From | To | Move |
+|---|---|---|
+| Paper-space challenge campaign (e.g. N2a-child-1) | Pipeline-space challenge campaign | Run `newf challenge` against a persisted surviving invariant with a code-owned campaign row |
+| Paper-space admission (e.g. N2a `surviving` at mechanism/v4) | Pipeline-space admission | Materialise a corpus at the target vocab and persist the predicate |
+| Paper-space frontier proposal | Pipeline-space frontier proposal | Serialise to `proposal-wire/v1` and run through `newf frontier generate --proposals-file` |
+| Paper-space evidence claim | Pipeline-space admission | Run `newf evidence admit` under S2's typed-observation-kind rules |
+
+---
+
 ## 1. Frozen endpoint (predeclared success criteria)
 
 | Criterion | Result |
