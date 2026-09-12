@@ -24,7 +24,7 @@ These are unconditional. A user request does not override them; if asked to brea
 - **Never put SQL or Cobra in `internal/domain`.** Domain types stay pure; SQLite lives behind `internal/store`, CLI wiring stays in `cmd/newf`.
 - **Never add provider coupling to a domain package.** Provider adapters live in `internal/provider`; domain records carry no vendor concepts.
 - **Never silently promote epistemic status** (`Hypothesis`→`Evidence`, `CandidateInvariant`→`EstablishedInvariant`). Preserve the weaker type and record the limitation.
-- **Build with Go 1.25 or newer.** The operative floor lives in exactly one place: the `go` directive in `go.mod`. Every runner must derive from it (`actions/setup-go` uses `go-version-file: go.mod`); never add a competing pin in a workflow, a `.go-version`/`mise.toml` file, or a `toolchain` directive below the floor. A runner stuck on an older Go (for example a hosted container defaulting to Go 1.23) is a blocked gate to report, not a reason to lower the floor. `toolchain_test.go` enforces this.
+- **Build with Go 1.25 or newer.** The operative floor lives in exactly one place: the `go` directive in `go.mod`. Every runner must derive from it (the GitHub `setup-go` action reading `go-version-file: go.mod`); never add a competing pin in a workflow, a `.go-version`/`mise.toml` file, or a `toolchain` directive below the floor. A runner stuck on an older Go (for example a hosted container defaulting to Go 1.23) is a blocked gate to report, not a reason to lower the floor. `toolchain_test.go` enforces this.
 - **Before you call work done:** run `go build ./...`, `go test ./...`, and `gofmt -l .` (output must be empty). Add a test at the boundary where behavior is introduced.
 - **Read `README.md` and the relevant `docs/` file before changing architecture.**
 
@@ -258,6 +258,16 @@ When implementing an issue:
 - **Build or test failure in code you did not touch:** report it; do not silently repair unrelated failures. Fix forward only within your slice.
 - **Dirty working tree or overlapping concurrent edits:** reconcile toward your task's outcome; do not revert or stash others' work.
 - **A gate you cannot satisfy for reasons outside your change:** record the blocker explicitly instead of declaring the work done.
+
+## Staging and commits
+
+This repository is multi-writer and high-churn: an unrelated modification in the tree is the normal case, not a signal to stop.
+
+- **Stage by concern, not by file count.** Prefer several small commits that each carry one coherent change over one bulk commit, and over splitting a change across commits to make each look tidy.
+- **Exclude other writers' work from your commit.** Where one file mixes your change with theirs, stage only your hunks (`git apply --cached` with a filtered patch); leave the rest in the working tree.
+- **`.gitignore` is staged whole.** Do not split its hunks to keep a commit "pure" — note in the commit body which unrelated entries rode along. The same applies to any other shared bookkeeping file where a hunk split costs more review attention than it saves.
+- **A commit that publishes code you did not write is worth saying out loud.** Committing another writer's in-flight work is allowed and often correct; report which commits contain it, and that the design judgments in it are theirs.
+- **Never** `git revert`, `git checkout` to discard, `git stash`, `git clone`, or create worktrees as a recovery step or cleanliness ritual. Git ceremony is never a reason to pause a task.
 
 ## Go implementation bias
 
