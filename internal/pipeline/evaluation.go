@@ -56,8 +56,9 @@ type EvaluationShowInput struct {
 // the nearest families re-checked against each target predicate), routes it
 // cheap-first / strongest-decisive through the verifier hierarchy, and persists
 // a durable Evaluation stamped with the deciding verifier's kind + strength.
-// The proposal's result is populated in the same transaction; failures re-enter
-// the atlas. Holdout mode is refused pending M7 (R9).
+// The initial result and historical failure marker are written atomically.
+// A failure marker is not admission to the observed atlas. Holdout mode is
+// refused pending M7 (R9).
 func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateResponse, error) {
 	if input.Mode == "holdout" {
 		return EvaluateResponse{}, fmt.Errorf("holdout evaluation mode is deferred to M7; only mode=proposal is supported")
@@ -133,12 +134,10 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 		return EvaluateResponse{}, oerr
 	}
 
-	// Select proposals: a single id, or every proposal whose occurrence in
-	// THIS generation has not been assessed. Eligibility is CONTENT-scoped
-	// (a47dd24 finding 3): an artifact-level result from an earlier
-	// interpretation must not hide a newly emitted, never-assessed occurrence.
-	// Proposals without persisted occurrence content (pre-v17) fall back to
-	// the artifact-level result.
+	// Result is a store-derived assessment of THIS generation and its exact
+	// occurrence content. A content-only cache hit from a different generation
+	// cannot suppress assessment under a new context. Explicit by-id evaluation
+	// always remains available, including for already-assessed occurrences.
 	selected := make([]store.FrontierProposalRow, 0, len(membership))
 	for _, p := range membership {
 		if input.ProposalID != "" {
@@ -147,16 +146,8 @@ func (a *App) Evaluate(ctx context.Context, input EvaluateInput) (EvaluateRespon
 			}
 			continue
 		}
-		if oc, ok := occurrences[p.ID]; ok && oc.ContentHash != "" {
-			assessed, herr := repoStore.HasEvaluationForContent(ctx, p.ID, oc.ContentHash)
-			if herr != nil {
-				return EvaluateResponse{}, herr
-			}
-			if assessed {
-				continue // THIS interpretation already assessed; re-evaluation is explicit
-			}
-		} else if p.Result.Valid {
-			continue // pre-v17 content gap: artifact-level result is all we have
+		if p.Result.Valid {
+			continue
 		}
 		selected = append(selected, p)
 	}
@@ -482,12 +473,10 @@ func (a *App) ShowEvaluation(ctx context.Context, input EvaluationShowInput) (Ev
 	}, nil
 }
 
-// ListEvaluatedFailures returns the proposals a prior evaluation marked as
-// re-entered failures for a problem (R6/KTD-5). This is the queryable
-// eligibility path a subsequent `cluster build` (or an M6.2 search policy) can
-// consult to include newly-evaluated failure structure in the next pass:
-// FailureSpace(t+1) ⊇ FailureSpace(t) + these failures. It does NOT trigger any
-// re-clustering; re-entry is an explicit operator/policy decision.
+// ListEvaluatedFailures returns historical failure markers, not current verdicts
+// or evidence-admitted atlas members. A marker alone neither materializes a
+// mechanism signature nor establishes an independently observed domain failure.
+// Explicit evidence admission and atlas materialization remain separate work.
 func (a *App) ListEvaluatedFailures(ctx context.Context, input EvaluationListInput) (EvaluatedFailureListResponse, error) {
 	dbPath, repoStore, err := a.openStoreFn(ctx, input.DBPath)
 	if err != nil {

@@ -476,28 +476,26 @@ FROM signature_boundaries WHERE signature_id = ? ORDER BY ordinal
 	return rec, nil
 }
 
-// ListSignaturesForProblem returns the persisted signature ids for a problem
-// under one (schema_version, vocabulary_version), newest-mechanism first is not
-// meaningful here so results are ordered by signature id for determinism. It
-// joins signatures back to their owning problem through
-// mechanism -> approach_revision -> approach.
-//
-// Clustering keys on a single version tuple (KTD-1), so callers pass the exact
-// schema + vocabulary version; a signature under a different version is a
-// different clustering run and is excluded here.
+// ListSignaturesForProblem returns current interpretation signatures under the
+// requested schema/vocabulary tuple. A superseded interpretation is historical
+// evidence, not another current observation. Select the approach head BEFORE
+// applying the signature version filter: a missing current signature must not
+// resurrect a stale one. Historical cluster runs remain replayable by ID.
 func (s *Store) ListSignaturesForProblem(ctx context.Context, problemID, schemaVersion, vocabVersion string) ([]string, error) {
+	return s.listSignaturePopulation(ctx, problemID, schemaVersion, vocabVersion, false)
+}
+
+// ListHistoricalSignaturesForProblem explicitly includes every interpretation.
+// This is an audit population, not the default population for new clustering.
+func (s *Store) ListHistoricalSignaturesForProblem(ctx context.Context, problemID, schemaVersion, vocabVersion string) ([]string, error) {
+	return s.listSignaturePopulation(ctx, problemID, schemaVersion, vocabVersion, true)
+}
+
+func (s *Store) listSignaturePopulation(ctx context.Context, problemID, schemaVersion, vocabVersion string, allHistory bool) ([]string, error) {
 	if err := domain.ValidateProblemID(problemID); err != nil {
 		return nil, err
 	}
-	rows, err := s.db.QueryContext(ctx, `
-SELECT sig.id
-FROM mechanism_signatures sig
-JOIN mechanisms m ON m.id = sig.mechanism_id
-JOIN approach_revisions ar ON ar.id = m.approach_revision_id
-JOIN approaches a ON a.id = ar.approach_id
-WHERE a.problem_id = ? AND sig.schema_version = ? AND sig.vocabulary_version = ?
-ORDER BY sig.id
-`, problemID, schemaVersion, vocabVersion)
+	rows, err := s.db.QueryContext(ctx, signaturePopulationSQL, problemID, schemaVersion, vocabVersion, allHistory)
 	if err != nil {
 		return nil, err
 	}

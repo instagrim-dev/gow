@@ -45,7 +45,9 @@ type FrontierNearestRow struct {
 }
 
 // FrontierProposalRow is one persisted, ranked frontier proposal. The `result`
-// column is intentionally left NULL by this slice (M5.2 evaluation populates it).
+// column retains the initial verdict for compatibility. Read surfaces derive
+// Result from the latest evaluation of the selected generation and exact content;
+// they never present the immutable initial verdict as a current assessment.
 // CanonicalFingerprint/SignatureJSON are the proposed mechanism's canonical
 // content, persisted in the v17 sidecar (success compression must evaluate
 // condition predicates against successful proposals; a hash is not evaluable).
@@ -302,6 +304,11 @@ FROM frontier_proposals WHERE frontier_generation_run_id = ? ORDER BY rank_ordin
 		return FrontierGenerationRecord{}, err
 	}
 	for i := range rec.Proposals {
+		result, err := s.latestOccurrenceResult(ctx, id, rec.Proposals[i].ID)
+		if err != nil {
+			return FrontierGenerationRecord{}, err
+		}
+		rec.Proposals[i].Result = result
 		if err := s.loadFrontierProposalDetail(ctx, &rec.Proposals[i]); err != nil {
 			return FrontierGenerationRecord{}, err
 		}
@@ -617,6 +624,11 @@ ORDER BY p.id
 		return nil, err
 	}
 	for i := range out {
+		result, err := s.latestOccurrenceResult(ctx, generationRunID, out[i].ID)
+		if err != nil {
+			return nil, err
+		}
+		out[i].Result = result
 		if err := s.loadFrontierProposalDetail(ctx, &out[i]); err != nil {
 			return nil, err
 		}
