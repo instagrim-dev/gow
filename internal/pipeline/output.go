@@ -155,6 +155,65 @@ type SourceSnapshotVerifyResponse struct {
 	Bytes      int64  `json:"bytes,omitempty"`
 }
 
+// SourceLineageDiffSide names one endpoint of a lineage-diff comparison.
+// Store paths are echoed so operators can audit which two datasets were
+// compared (the diagnostic is only as strong as the two sides).
+type SourceLineageDiffSide struct {
+	Store          string `json:"store"`
+	ProblemID      string `json:"problem_id"`
+	SnapshotCount  int    `json:"snapshot_count"`
+	DistinctSHA256 int    `json:"distinct_sha256"`
+}
+
+// SourceLineageOverlapEntry names one shared SHA-256 with the operator-legible
+// logical_name each side used for it. Same-bytes-different-name is a
+// legitimate outcome (an operator may relabel an attested source), so both
+// names are surfaced verbatim.
+type SourceLineageOverlapEntry struct {
+	SHA256           string `json:"sha256"`
+	LeftLogicalName  string `json:"left_logical_name"`
+	RightLogicalName string `json:"right_logical_name"`
+}
+
+// SourceLineageDiffResponse is the JSON shape of the diagnostic. It is
+// deliberately not a lineage record persisted to the store: this is
+// operator-consumed comparison output, not an admission-scoped artifact.
+type SourceLineageDiffResponse struct {
+	OK             bool                  `json:"ok"`
+	Command        string                `json:"command"`
+	Left           SourceLineageDiffSide `json:"left"`
+	Right          SourceLineageDiffSide `json:"right"`
+	SharedCount    int                   `json:"shared_count"`
+	LeftOnlyCount  int                   `json:"left_only_count"`
+	RightOnlyCount int                   `json:"right_only_count"`
+	// Verdict summarizes the overlap: "disjoint" (0 shared),
+	// "partial_overlap" (>0 shared but not identical), "identical" (both
+	// sides have exactly the same non-empty SHA-256 set), "subset_left"
+	// (left is a non-empty proper subset of right), "subset_right"
+	// (right is a non-empty proper subset of left), or "empty" (at least
+	// one side has no snapshots).
+	Verdict string `json:"verdict"`
+	// SharedSample carries up to a bounded number of overlapping SHA-256
+	// values with each side's logical_name for operator inspection. It is
+	// a sample, not an exhaustive list: the counts above are authoritative
+	// for the overlap size.
+	SharedSample []SourceLineageOverlapEntry `json:"shared_sample,omitempty"`
+}
+
+// SourceLineageDiffInput selects the two sides of the comparison. When
+// AgainstDBPath is empty, the diff runs against another problem in the same
+// database. Both AgainstProblemID and (DBPath, ProblemID) are required; the
+// diff is deliberately problem-scoped on both sides so operators cannot
+// silently compare a specific corpus against an unrelated aggregate.
+type SourceLineageDiffInput struct {
+	DBPath            string
+	ProblemID         string
+	AgainstDBPath     string
+	AgainstProblemID  string
+	JSONOutput        bool
+	SharedSampleLimit int
+}
+
 type NormalizeApproachResult struct {
 	ApproachID      string `json:"approach_id"`
 	RevisionID      string `json:"revision_id"`

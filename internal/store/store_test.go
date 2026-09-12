@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -568,6 +569,207 @@ func TestCreateSourceSnapshotDedupesBytesButKeepsDistinctSources(t *testing.T) {
 		if summary.SnapshotCount != 1 || summary.LatestSnapshotID == nil {
 			t.Fatalf("unexpected summary = %+v", summary)
 		}
+	}
+}
+
+func TestListSnapshotLineageForProblem(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	repo := openTestStore(t)
+	defer repo.Close()
+
+	// Two problems in one DB. Problem A carries hashes {aaa, bbb, ccc};
+	// problem B carries hashes {bbb, ccc, ddd}. Overlap = {bbb, ccc}.
+	baseNow := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	problemAID := domain.NewProblemID(baseNow)
+	problemAInitRun := domain.NewRunID(baseNow)
+	if _, _, err := repo.CreateProblemWithRun(ctx,
+		domain.NewProblem{
+			ID:             problemAID,
+			Slug:           "lineage-problem-a",
+			Statement:      "Lineage problem A",
+			Status:         domain.ProblemStatusActive,
+			CreatedAt:      baseNow,
+			CreatedByRunID: problemAInitRun,
+		},
+		domain.NewRun{
+			ID:          problemAInitRun,
+			ProblemID:   problemAID,
+			Operation:   "init",
+			Status:      domain.RunStatusInitialized,
+			InputRef:    "problem_slug:lineage-problem-a",
+			ToolName:    "newf",
+			ToolVersion: "dev",
+			StartedAt:   baseNow,
+			CompletedAt: baseNow,
+		},
+	); err != nil {
+		t.Fatalf("create A: %v", err)
+	}
+
+	problemBNow := baseNow.Add(time.Minute)
+	problemBID := domain.NewProblemID(problemBNow)
+	problemBInitRun := domain.NewRunID(problemBNow)
+	if _, _, err := repo.CreateProblemWithRun(ctx,
+		domain.NewProblem{
+			ID:             problemBID,
+			Slug:           "lineage-problem-b",
+			Statement:      "Lineage problem B",
+			Status:         domain.ProblemStatusActive,
+			CreatedAt:      problemBNow,
+			CreatedByRunID: problemBInitRun,
+		},
+		domain.NewRun{
+			ID:          problemBInitRun,
+			ProblemID:   problemBID,
+			Operation:   "init",
+			Status:      domain.RunStatusInitialized,
+			InputRef:    "problem_slug:lineage-problem-b",
+			ToolName:    "newf",
+			ToolVersion: "dev",
+			StartedAt:   problemBNow,
+			CompletedAt: problemBNow,
+		},
+	); err != nil {
+		t.Fatalf("create B: %v", err)
+	}
+
+	// Ingest run per problem.
+	ingestA := domain.NewRunID(baseNow.Add(2 * time.Minute))
+	if _, err := repo.CreateRun(ctx, domain.NewRun{
+		ID: ingestA, ProblemID: problemAID, Operation: "ingest",
+		Status: domain.RunStatusCompleted, InputRef: "ingest",
+		ToolName: "newf", ToolVersion: "dev",
+		StartedAt: baseNow.Add(2 * time.Minute), CompletedAt: baseNow.Add(2 * time.Minute),
+	}); err != nil {
+		t.Fatalf("run A: %v", err)
+	}
+	ingestB := domain.NewRunID(baseNow.Add(3 * time.Minute))
+	if _, err := repo.CreateRun(ctx, domain.NewRun{
+		ID: ingestB, ProblemID: problemBID, Operation: "ingest",
+		Status: domain.RunStatusCompleted, InputRef: "ingest",
+		ToolName: "newf", ToolVersion: "dev",
+		StartedAt: baseNow.Add(3 * time.Minute), CompletedAt: baseNow.Add(3 * time.Minute),
+	}); err != nil {
+		t.Fatalf("run B: %v", err)
+	}
+
+	ingest := func(problemID, runID, logical, sha string, when time.Time) {
+		t.Helper()
+		_, err := repo.CreateSourceSnapshot(ctx, SnapshotAdmission{
+			ProblemID:   problemID,
+			Kind:        domain.SourceKindLocalPath,
+			LogicalName: logical,
+			Origin:      "/tmp/" + logical,
+			SHA256:      sha,
+			ByteLength:  int64(len(sha)),
+			MediaType:   "text/markdown",
+			ObjectPath:  "sha256/" + sha[:2] + "/" + sha,
+			IngestRunID: runID,
+			ObservedAt:  when,
+		})
+		if err != nil {
+			t.Fatalf("ingest %s/%s: %v", problemID, sha, err)
+		}
+	}
+	ingest(problemAID, ingestA, "shared-1.md", "bbb1000000000000000000000000000000000000000000000000000000000001", baseNow.Add(4*time.Minute))
+	ingest(problemAID, ingestA, "shared-2.md", "ccc2000000000000000000000000000000000000000000000000000000000002", baseNow.Add(5*time.Minute))
+	ingest(problemAID, ingestA, "a-only.md", "aaa3000000000000000000000000000000000000000000000000000000000003", baseNow.Add(6*time.Minute))
+	// Problem B — note: same bytes-different-name is a legitimate case;
+	// re-use one shared hash under a different logical name to prove
+	// the diff surfaces both names verbatim rather than assuming equality.
+	ingest(problemBID, ingestB, "renamed-shared-1.md", "bbb1000000000000000000000000000000000000000000000000000000000001", baseNow.Add(7*time.Minute))
+	ingest(problemBID, ingestB, "shared-2.md", "ccc2000000000000000000000000000000000000000000000000000000000002", baseNow.Add(8*time.Minute))
+	ingest(problemBID, ingestB, "b-only.md", "ddd4000000000000000000000000000000000000000000000000000000000004", baseNow.Add(9*time.Minute))
+
+	aEntries, err := repo.ListSnapshotLineageForProblem(ctx, problemAID)
+	if err != nil {
+		t.Fatalf("list A: %v", err)
+	}
+	if len(aEntries) != 3 {
+		t.Fatalf("A: len(entries) = %d, want 3; entries = %+v", len(aEntries), aEntries)
+	}
+	// Ascending SHA-256 ordering.
+	for i := 1; i < len(aEntries); i++ {
+		if aEntries[i-1].SHA256 >= aEntries[i].SHA256 {
+			t.Fatalf("A: entries not SHA-ordered: %+v", aEntries)
+		}
+	}
+
+	bEntries, err := repo.ListSnapshotLineageForProblem(ctx, problemBID)
+	if err != nil {
+		t.Fatalf("list B: %v", err)
+	}
+	if len(bEntries) != 3 {
+		t.Fatalf("B: len(entries) = %d, want 3; entries = %+v", len(bEntries), bEntries)
+	}
+
+	// Overlap check: {bbb..., ccc...} shared, {aaa...} A-only, {ddd...} B-only.
+	inA := map[string]string{}
+	for _, e := range aEntries {
+		inA[e.SHA256] = e.LogicalName
+	}
+	shared := 0
+	for _, e := range bEntries {
+		if _, ok := inA[e.SHA256]; ok {
+			shared++
+		}
+	}
+	if shared != 2 {
+		t.Fatalf("shared = %d, want 2", shared)
+	}
+
+	// Same-bytes-different-name discipline: A calls bbb... "shared-1.md",
+	// B calls it "renamed-shared-1.md". Both must be preserved.
+	var aNameForBBB, bNameForBBB string
+	for _, e := range aEntries {
+		if strings.HasPrefix(e.SHA256, "bbb") {
+			aNameForBBB = e.LogicalName
+		}
+	}
+	for _, e := range bEntries {
+		if strings.HasPrefix(e.SHA256, "bbb") {
+			bNameForBBB = e.LogicalName
+		}
+	}
+	if aNameForBBB != "shared-1.md" || bNameForBBB != "renamed-shared-1.md" {
+		t.Fatalf("logical names not preserved: A=%q B=%q", aNameForBBB, bNameForBBB)
+	}
+
+	// Empty problem returns an empty slice, not an error.
+	problemCNow := baseNow.Add(20 * time.Minute)
+	problemCID := domain.NewProblemID(problemCNow)
+	problemCInitRun := domain.NewRunID(problemCNow)
+	if _, _, err := repo.CreateProblemWithRun(ctx,
+		domain.NewProblem{
+			ID:             problemCID,
+			Slug:           "lineage-problem-c-empty",
+			Statement:      "Empty",
+			Status:         domain.ProblemStatusActive,
+			CreatedAt:      problemCNow,
+			CreatedByRunID: problemCInitRun,
+		},
+		domain.NewRun{
+			ID:          problemCInitRun,
+			ProblemID:   problemCID,
+			Operation:   "init",
+			Status:      domain.RunStatusInitialized,
+			InputRef:    "problem_slug:lineage-problem-c-empty",
+			ToolName:    "newf",
+			ToolVersion: "dev",
+			StartedAt:   problemCNow,
+			CompletedAt: problemCNow,
+		},
+	); err != nil {
+		t.Fatalf("create C: %v", err)
+	}
+	cEntries, err := repo.ListSnapshotLineageForProblem(ctx, problemCID)
+	if err != nil {
+		t.Fatalf("list C: %v", err)
+	}
+	if len(cEntries) != 0 {
+		t.Fatalf("empty problem: len(entries) = %d, want 0", len(cEntries))
 	}
 }
 

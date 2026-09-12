@@ -722,6 +722,67 @@ WHERE id = ?
 	return snapshot, nil
 }
 
+// SnapshotLineageEntry names one source snapshot's identity-relevant fields
+// for cross-problem or cross-database lineage comparison. It carries the
+// SHA-256 (the source-byte identity), the source's logical name (operator-
+// legible label), and the source id (for provenance back to the store).
+//
+// This projection is deliberately narrow: lineage comparison is a
+// diagnostic read, not an admission decision. It never carries snapshot
+// revision, ingest run, or media type, so callers cannot accidentally use
+// it to make an admission-scoped inference from a diagnostic-scoped read.
+type SnapshotLineageEntry struct {
+	SHA256      string
+	LogicalName string
+	SourceID    string
+}
+
+// ListSnapshotLineageForProblem returns the lineage projection for every
+// snapshot recorded under `problemID`. Deduplicated by SHA-256 —
+// re-ingestion under the same source_id still yields distinct
+// source_snapshots rows (revision history), but for lineage-diff the
+// interesting identity is the SHA-256, so this method collapses multiple
+// snapshots at the same hash to one entry (keeping the earliest by
+// observed_at for stability).
+//
+// Ordering: ascending by SHA-256, so cross-DB comparisons produce
+// deterministic diff output regardless of ingest order.
+//
+// Read-only. Never modifies admission rules or source admission behavior.
+func (s *Store) ListSnapshotLineageForProblem(ctx context.Context, problemID string) ([]SnapshotLineageEntry, error) {
+	if err := domain.ValidateProblemID(problemID); err != nil {
+		return nil, err
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT
+  ss.sha256,
+  MIN(s.logical_name) AS logical_name,
+  MIN(s.id)           AS source_id
+FROM source_snapshots ss
+JOIN sources s ON s.id = ss.source_id
+WHERE s.problem_id = ?
+GROUP BY ss.sha256
+ORDER BY ss.sha256 ASC
+`, problemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []SnapshotLineageEntry
+	for rows.Next() {
+		var e SnapshotLineageEntry
+		if err := rows.Scan(&e.SHA256, &e.LogicalName, &e.SourceID); err != nil {
+			return nil, err
+		}
+		entries = append(entries, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return entries, nil
+}
+
 func (s *Store) ListSourceSnapshots(ctx context.Context, sourceID string) ([]domain.SourceSnapshot, error) {
 	if err := domain.ValidateSourceID(sourceID); err != nil {
 		return nil, err

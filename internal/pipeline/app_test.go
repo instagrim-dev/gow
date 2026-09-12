@@ -247,6 +247,10 @@ func (f *fakeProblemStore) ListSourcesWithSnapshotStats(context.Context, string)
 	return nil, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) ListSnapshotLineageForProblem(context.Context, string) ([]store.SnapshotLineageEntry, error) {
+	return nil, errors.New("unexpected call")
+}
+
 func (f *fakeProblemStore) GetSource(context.Context, string) (domain.Source, error) {
 	return domain.Source{}, errors.New("unexpected call")
 }
@@ -401,6 +405,10 @@ func (f *fakeProblemStore) ListInvariantStates(context.Context, string, string) 
 
 func (f *fakeProblemStore) GetLatestCompatibleAuthority(context.Context, string, string) (store.CompatibleAuthorityRow, bool, error) {
 	return store.CompatibleAuthorityRow{}, false, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetWitnessAttemptBinding(context.Context, string) (store.WitnessAttemptBindingRow, bool, error) {
+	return store.WitnessAttemptBindingRow{}, false, nil // absence is the normal supplied-tuple case
 }
 
 func (f *fakeProblemStore) ListChallengesForInvariant(context.Context, string) ([]store.ChallengeRecord, error) {

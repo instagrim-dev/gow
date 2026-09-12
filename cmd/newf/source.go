@@ -111,7 +111,78 @@ func newSourceCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *c
 	})
 	cmd.AddCommand(snapshotCmd)
 
+	var (
+		lineageDiffProblem         string
+		lineageDiffAgainstProblem  string
+		lineageDiffAgainstDB       string
+		lineageDiffSharedSampleLim int
+	)
+	lineageDiffCmd := &cobra.Command{
+		Use:   "lineage-diff",
+		Short: "Diagnostic: compare two problem-scoped source corpora at the SHA-256 layer",
+		Long: `Report how two problem-scoped source corpora relate at the SHA-256 layer.
+
+This is a read-only diagnostic. It never modifies admission state or source
+snapshots. Use it before sealing a fresh corpus to check whether its source
+bytes overlap with a known lineage.
+
+The verdict is one of: "empty" (a side has no snapshots), "disjoint" (no
+shared SHA-256 values), "identical" (equal non-empty SHA-256 sets),
+"subset_left" / "subset_right" (proper subset), or "partial_overlap".`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if lineageDiffProblem == "" {
+				return wrapCommandError("source lineage-diff", errors.New("--problem is required"))
+			}
+			if lineageDiffAgainstProblem == "" {
+				return wrapCommandError("source lineage-diff", errors.New("--against-problem is required"))
+			}
+			result, err := app.SourceLineageDiff(cmd.Context(), pipeline.SourceLineageDiffInput{
+				DBPath:            opts.dbPath,
+				ProblemID:         lineageDiffProblem,
+				AgainstDBPath:     lineageDiffAgainstDB,
+				AgainstProblemID:  lineageDiffAgainstProblem,
+				JSONOutput:        opts.jsonOutput,
+				SharedSampleLimit: lineageDiffSharedSampleLim,
+			})
+			if err != nil {
+				return wrapCommandError("source lineage-diff", err)
+			}
+			if opts.jsonOutput {
+				return writeJSON(stdout, result)
+			}
+			writeLineageDiffHuman(stdout, result)
+			return nil
+		},
+	}
+	lineageDiffCmd.Flags().StringVar(&lineageDiffProblem, "problem", "", "Left problem ID (in the primary --db)")
+	lineageDiffCmd.Flags().StringVar(&lineageDiffAgainstProblem, "against-problem", "", "Right problem ID")
+	lineageDiffCmd.Flags().StringVar(&lineageDiffAgainstDB, "against-db", "", "Right database path (default: same as --db)")
+	lineageDiffCmd.Flags().IntVar(&lineageDiffSharedSampleLim, "shared-sample", 20, "Max shared SHA-256 entries to include in sample")
+	cmd.AddCommand(lineageDiffCmd)
+
 	return cmd
+}
+
+func writeLineageDiffHuman(stdout io.Writer, response pipeline.SourceLineageDiffResponse) {
+	_, _ = fmt.Fprintf(stdout, "Source lineage diff (verdict: %s)\n\n", response.Verdict)
+	_, _ = fmt.Fprintf(stdout, "  Left:  problem=%s  store=%s  snapshots=%d\n",
+		response.Left.ProblemID, response.Left.Store, response.Left.SnapshotCount)
+	_, _ = fmt.Fprintf(stdout, "  Right: problem=%s  store=%s  snapshots=%d\n\n",
+		response.Right.ProblemID, response.Right.Store, response.Right.SnapshotCount)
+	_, _ = fmt.Fprintf(stdout, "  shared:     %d\n", response.SharedCount)
+	_, _ = fmt.Fprintf(stdout, "  left-only:  %d\n", response.LeftOnlyCount)
+	_, _ = fmt.Fprintf(stdout, "  right-only: %d\n", response.RightOnlyCount)
+	if len(response.SharedSample) == 0 {
+		return
+	}
+	_, _ = fmt.Fprintf(stdout, "\nShared sample (%d shown):\n", len(response.SharedSample))
+	tw := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
+	_, _ = fmt.Fprintln(tw, "SHA256\tLEFT NAME\tRIGHT NAME")
+	for _, e := range response.SharedSample {
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\n", e.SHA256, e.LeftLogicalName, e.RightLogicalName)
+	}
+	_ = tw.Flush()
 }
 
 func writeSourceListHuman(stdout io.Writer, sources []pipeline.SourceListView) {

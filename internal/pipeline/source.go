@@ -530,3 +530,168 @@ func snapshotView(snapshot domain.SourceSnapshot) SourceSnapshotView {
 }
 
 const timeLayout = "2006-01-02T15:04:05.999999999Z07:00"
+
+// SourceLineageDiff reports how two problem-scoped source corpora relate at
+// the SHA-256 layer. It is a read-only diagnostic — it never modifies
+// admission state, source snapshots, or any admission-scoped rule. The
+// intended use is operator freeze checklists ("does this new corpus share
+// source bytes with a known lineage?"), following the (source-lineage-check)
+// finding that the four ES databases shared 12/13 source SHA-256 values
+// byte-for-byte and therefore were not four independent research
+// replications.
+//
+// Both sides are problem-scoped by construction: operators must name a
+// specific problem on each side, so the diff cannot silently compare a
+// specific corpus against an unrelated aggregate.
+//
+// The `verdict` field is a summary of the overlap:
+//   - "empty":           at least one side has no snapshots.
+//   - "disjoint":        both sides non-empty, zero shared SHA-256 values.
+//   - "identical":       both sides non-empty and their SHA-256 sets are equal.
+//   - "subset_left":     left is a non-empty proper subset of right.
+//   - "subset_right":    right is a non-empty proper subset of left.
+//   - "partial_overlap": some but not all values shared, neither side a subset.
+//
+// The verdict is descriptive; it never gates admission. Operators consult
+// it before sealing a fresh corpus.
+func (a *App) SourceLineageDiff(ctx context.Context, input SourceLineageDiffInput) (SourceLineageDiffResponse, error) {
+	if strings.TrimSpace(input.ProblemID) == "" {
+		return SourceLineageDiffResponse{}, errors.New("--problem is required")
+	}
+	if strings.TrimSpace(input.AgainstProblemID) == "" {
+		return SourceLineageDiffResponse{}, errors.New("--against-problem is required")
+	}
+
+	leftDBPath, leftStore, err := a.openStoreFn(ctx, input.DBPath)
+	if err != nil {
+		return SourceLineageDiffResponse{}, err
+	}
+	defer leftStore.Close()
+
+	if _, err := leftStore.GetProblem(ctx, input.ProblemID); err != nil {
+		return SourceLineageDiffResponse{}, err
+	}
+
+	leftEntries, err := leftStore.ListSnapshotLineageForProblem(ctx, input.ProblemID)
+	if err != nil {
+		return SourceLineageDiffResponse{}, err
+	}
+
+	rightDBPath := input.AgainstDBPath
+	var rightEntries []store.SnapshotLineageEntry
+	if strings.TrimSpace(input.AgainstDBPath) == "" || input.AgainstDBPath == input.DBPath {
+		// Same-DB comparison: reuse the already-open store so operators
+		// don't pay a second migration/open cycle and so tests exercising
+		// same-DB comparisons don't need a second fixture.
+		rightDBPath = leftDBPath
+		if _, err := leftStore.GetProblem(ctx, input.AgainstProblemID); err != nil {
+			return SourceLineageDiffResponse{}, err
+		}
+		rightEntries, err = leftStore.ListSnapshotLineageForProblem(ctx, input.AgainstProblemID)
+		if err != nil {
+			return SourceLineageDiffResponse{}, err
+		}
+	} else {
+		rightPath, rightStore, err := a.openStoreFn(ctx, input.AgainstDBPath)
+		if err != nil {
+			return SourceLineageDiffResponse{}, err
+		}
+		defer rightStore.Close()
+		rightDBPath = rightPath
+		if _, err := rightStore.GetProblem(ctx, input.AgainstProblemID); err != nil {
+			return SourceLineageDiffResponse{}, err
+		}
+		rightEntries, err = rightStore.ListSnapshotLineageForProblem(ctx, input.AgainstProblemID)
+		if err != nil {
+			return SourceLineageDiffResponse{}, err
+		}
+	}
+
+	sampleLimit := input.SharedSampleLimit
+	if sampleLimit <= 0 {
+		sampleLimit = 20
+	}
+
+	return buildLineageDiffResponse(
+		SourceLineageDiffSide{
+			Store:          leftDBPath,
+			ProblemID:      input.ProblemID,
+			SnapshotCount:  len(leftEntries),
+			DistinctSHA256: len(leftEntries),
+		},
+		SourceLineageDiffSide{
+			Store:          rightDBPath,
+			ProblemID:      input.AgainstProblemID,
+			SnapshotCount:  len(rightEntries),
+			DistinctSHA256: len(rightEntries),
+		},
+		leftEntries,
+		rightEntries,
+		sampleLimit,
+	), nil
+}
+
+// buildLineageDiffResponse is factored out for pure-function testability:
+// the intersection/verdict logic is the epistemically interesting part and
+// benefits from tests that don't need a live SQLite fixture.
+func buildLineageDiffResponse(left, right SourceLineageDiffSide, leftEntries, rightEntries []store.SnapshotLineageEntry, sampleLimit int) SourceLineageDiffResponse {
+	rightByHash := make(map[string]store.SnapshotLineageEntry, len(rightEntries))
+	for _, e := range rightEntries {
+		rightByHash[e.SHA256] = e
+	}
+
+	shared := make([]SourceLineageOverlapEntry, 0)
+	leftOnly := 0
+	for _, l := range leftEntries {
+		if r, ok := rightByHash[l.SHA256]; ok {
+			shared = append(shared, SourceLineageOverlapEntry{
+				SHA256:           l.SHA256,
+				LeftLogicalName:  l.LogicalName,
+				RightLogicalName: r.LogicalName,
+			})
+		} else {
+			leftOnly++
+		}
+	}
+	rightOnly := len(rightEntries) - len(shared)
+
+	verdict := lineageVerdict(len(leftEntries), len(rightEntries), len(shared))
+
+	// shared is already SHA-ordered because leftEntries is; truncate to
+	// sample limit deterministically.
+	sample := shared
+	if len(sample) > sampleLimit {
+		sample = sample[:sampleLimit]
+	}
+
+	return SourceLineageDiffResponse{
+		OK:             true,
+		Command:        "source lineage-diff",
+		Left:           left,
+		Right:          right,
+		SharedCount:    len(shared),
+		LeftOnlyCount:  leftOnly,
+		RightOnlyCount: rightOnly,
+		Verdict:        verdict,
+		SharedSample:   sample,
+	}
+}
+
+func lineageVerdict(leftCount, rightCount, sharedCount int) string {
+	if leftCount == 0 || rightCount == 0 {
+		return "empty"
+	}
+	if sharedCount == 0 {
+		return "disjoint"
+	}
+	if sharedCount == leftCount && sharedCount == rightCount {
+		return "identical"
+	}
+	if sharedCount == leftCount && sharedCount < rightCount {
+		return "subset_left"
+	}
+	if sharedCount == rightCount && sharedCount < leftCount {
+		return "subset_right"
+	}
+	return "partial_overlap"
+}
