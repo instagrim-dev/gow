@@ -1,0 +1,15 @@
+=== RUN   TestReviewC1C8DisposableScenario
+    review_c1c8_disposable_test.go:42: PIN problem=prb_01M2AV8340671D7TFAG9J7WTQA D0=clr_01M2AV8340671D7TFAH5H71QKD candidate=inv_01M2AV8340671D7TFAHNX4ED3J
+    review_c1c8_disposable_test.go:84: C1 PASS campaign=run_01M2AV8340671D7TFAHQHWW4B2 assessment=clr_01M2AV8340671D7TFAH5H71QKD decision: inv_01M2AV8340671D7TFAHNX4ED3J targeted (generation fgr_01M2AV8340671D7TFAHZNHA6ZB, proposal fpr_01M2AV8340671D7TFAJ6GZ1NCK)
+    review_c1c8_disposable_test.go:105: C2 PASS withheld=evl_01M2AV8340671D7TFAJGSDME8V auditable, population unchanged (2)
+    review_c1c8_disposable_test.go:122: C5 PASS unrelated episode write; inv_01M2AV8340671D7TFAHNX4ED3J still targeted
+    review_c1c8_disposable_test.go:152: C3 PASS admitted=msig_01M2AV8340671D7TFAKKNHTNWZ kind=domain-checked-failure hash=61ae6eb8a4ca A1=clr_01M2AV8340671D7TFAKWRBNA0M (pop 3)
+    review_c1c8_disposable_test.go:170: C4 PASS stale exclusion reason=authority_assessed_obsolete_population assessed=clr_01M2AV8340671D7TFAH5H71QKD current=clr_01M2AV8340671D7TFAKWRBNA0M
+    review_c1c8_disposable_test.go:187: C6 PASS reassessment campaign=run_01M2AV8340671D7TFAMCJ1HRXW state="weaken" over A1=clr_01M2AV8340671D7TFAKWRBNA0M; A0 row durable
+    review_c1c8_disposable_test.go:193: C6 decision: state="weaken" targeted=false staleExcl=0
+    review_c1c8_disposable_test.go:209: C7 OBSERVE replay campaign=run_01M2AV8340671D7TFAMX8R3QC4 state="surviving"; post-replay: targeted=false staleExcl=[{InvariantID:inv_01M2AV8340671D7TFAHNX4ED3J State:surviving Reason:authority_assessed_obsolete_population AssessedClusterRunID:clr_01M2AV8340671D7TFAH5H71QKD CurrentClusterRunID:clr_01M2AV8340671D7TFAKWRBNA0M AuthorityPopulation:discovery ReassessmentInstruction:re-run `newf challenge --invariant inv_01M2AV8340671D7TFAHNX4ED3J` under the current population to restore current target eligibility}]
+    review_c1c8_disposable_test.go:225: C7 rows durable: A0=run_01M2AV8340671D7TFAHQHWW4B2 A1=run_01M2AV8340671D7TFAMCJ1HRXW replay=run_01M2AV8340671D7TFAMX8R3QC4
+    review_c1c8_disposable_test.go:305: C8 PASS policy=rpol_01M2AV8340671D7TFANBE9B51Z decision1=ELIGIBLE_TO_ADVANCE decision2=ELIGIBLE_TO_ADVANCE deterministic=true afterRelevantChange=UNDETERMINED reasons=[stale_dependency]
+--- PASS: TestReviewC1C8DisposableScenario (0.21s)
+PASS
+ok  	github.com/instagrim-dev/newf/internal/pipeline	0.215s

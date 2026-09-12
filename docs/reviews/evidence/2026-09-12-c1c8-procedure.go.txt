@@ -1,0 +1,324 @@
+package pipeline
+
+// DISPOSABLE REVIEW ARTIFACT — docs/reviews/prompts/recipes/assessment-admission-decision.md
+// Cases C1-C8 for obligation `current-assessment-authority` rev 1 under policy P1
+// (pinned in the review report). This file is review evidence, not repository
+// implementation: it is executed once, its output retained in the evidence
+// bundle, and the file deleted. Contract: review-only + disposable tests.
+
+import (
+	"context"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/instagrim-dev/newf/internal/canon"
+	"github.com/instagrim-dev/newf/internal/provider"
+	"github.com/instagrim-dev/newf/internal/verify"
+)
+
+func TestReviewC1C8DisposableScenario(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 12, 13, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+	app.invariantMinerFn = localityMiner{}
+	app.challengerFn = counterexampleOnlyChallenger{}
+	app.modelVerifierFn = provider.NewFixtureModelVerifier(verify.VerdictFailure, "high")
+
+	problemID, runID, snapshotID := seedProblemAndSnapshot(t, ctx, dbPath, now)
+	seedAndSign(t, ctx, app, dbPath, problemID, runID, snapshotID, "challenge_population_a.json")
+	discovery, err := app.BuildClustering(ctx, ClusterBuildInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("cluster build (D0): %v", err)
+	}
+	if _, err := app.BuildFailureSpace(ctx, FailureSpaceBuildInput{DBPath: dbPath, ProblemID: problemID}); err != nil {
+		t.Fatalf("failure space: %v", err)
+	}
+	mined, err := app.MineInvariants(ctx, InvariantMineInput{DBPath: dbPath, ProblemID: problemID, MinSupport: 2})
+	if err != nil || mined.Revision.CandidateCount == 0 {
+		t.Fatalf("mine: %v (candidates=%d)", err, mined.Revision.CandidateCount)
+	}
+	invID := mined.Revision.Candidates[0].ID
+	t.Logf("PIN problem=%s D0=%s candidate=%s", problemID, discovery.ClusterRun.ID, invID)
+
+	// ── C1: baseline — assess C under P1/D0, derive the decision ──────────
+	if _, err := app.AuthorInvariantClaim(ctx, AuthorClaimInput{
+		DBPath: dbPath, InvariantID: invID, Quantifier: "universal", ClaimRole: "regularity",
+		Scope: "failure families of discovery cluster run " + discovery.ClusterRun.ID,
+		Note:  "review C1: policy P1 pins universal treatment over D0",
+	}); err != nil {
+		t.Fatalf("C1 author claim: %v", err)
+	}
+	first, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID})
+	if err != nil {
+		t.Fatalf("C1 challenge: %v", err)
+	}
+	r1 := first.Reports[0]
+	if r1.StateAfter != "surviving" || r1.AssessmentClusterRunID != discovery.ClusterRun.ID {
+		t.Fatalf("C1: want surviving over D0, got %q over %s", r1.StateAfter, r1.AssessmentClusterRunID)
+	}
+	gen1, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("C1 generate: %v", err)
+	}
+	if len(gen1.ExcludedStaleAuthority) != 0 {
+		t.Fatalf("C1: no stale exclusion expected, got %+v", gen1.ExcludedStaleAuthority)
+	}
+	if !reviewPayloadTargets(t, ctx, app, dbPath, gen1.Generation.ID, invID) {
+		t.Fatalf("C1: decision must target %s via the generation request payload", invID)
+	}
+	// Mint one proposal for C2/C3 via a trusted fixture generator; decision
+	// generations elsewhere keep the default deriving generator, whose
+	// persisted request payload names its targets.
+	app.generatorFn = pcGenerator{signatures: []canon.MechanismSignature{
+		pcSignature(pcResidueLocality, "", true),
+		pcSignature(pcResidueLocality, "", false),
+	}}
+	genMint, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil || len(genMint.Generation.Proposals) < 2 {
+		t.Fatalf("C1 mint: %v (proposals=%d)", err, len(genMint.Generation.Proposals))
+	}
+	app.generatorFn = nil
+	proposalID := genMint.Generation.Proposals[0].ID
+	witnessProposalID := genMint.Generation.Proposals[1].ID
+	t.Logf("C1 PASS campaign=%s assessment=%s decision: %s targeted (generation %s, proposal %s)",
+		r1.RunID, r1.AssessmentClusterRunID, invID, gen1.Generation.ID, proposalID)
+
+	// ── C2: withheld control — model-only failure stays out of the population ──
+	res, err := app.Evaluate(ctx, EvaluateInput{DBPath: dbPath, ProblemID: problemID, ProposalID: proposalID})
+	if err != nil {
+		t.Fatalf("C2 evaluate: %v", err)
+	}
+	ev := res.Run.Evaluations[0]
+	if ev.Verdict != "failure" || ev.VerificationStrength != "single-model-judgment" {
+		t.Fatalf("C2: want model-judged failure, got %q/%q", ev.Verdict, ev.VerificationStrength)
+	}
+	admitC2, err := app.AdmitEvidence(ctx, AdmitEvidenceInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil || len(admitC2.Admitted) != 0 || len(admitC2.Withheld) != 1 {
+		t.Fatalf("C2: rule pass must withhold: %+v err=%v", admitC2, err)
+	}
+	afterWithhold, err := app.BuildClustering(ctx, ClusterBuildInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil || afterWithhold.ClusterRun.SignatureCount != discovery.ClusterRun.SignatureCount {
+		t.Fatalf("C2: withheld must not change population: %d -> %d err=%v",
+			discovery.ClusterRun.SignatureCount, afterWithhold.ClusterRun.SignatureCount, err)
+	}
+	t.Logf("C2 PASS withheld=%s auditable, population unchanged (%d)", ev.ID, afterWithhold.ClusterRun.SignatureCount)
+
+	// ── C5 (before the relevant change): unrelated write must not stale ──────
+	if _, err := app.PreregisterEpisode(ctx, PreregisterEpisodeInput{
+		DBPath: dbPath, ProblemID: problemID, Title: "review C5 unrelated write",
+		MapRef: "review-c5-unrelated", Action: "none", Prediction: "none",
+		PredictedVerdict: "witness-valid", Note: "outside the declared dependency graph of the assessment",
+	}); err != nil {
+		t.Fatalf("C5 unrelated write: %v", err)
+	}
+	gen2, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("C5 generate: %v", err)
+	}
+	if len(gen2.ExcludedStaleAuthority) != 0 || !reviewPayloadTargets(t, ctx, app, dbPath, gen2.Generation.ID, invID) {
+		t.Fatalf("C5: unrelated write must not stale the assessment: excl=%+v", gen2.ExcludedStaleAuthority)
+	}
+	t.Logf("C5 PASS unrelated episode write; %s still targeted", invID)
+
+	// ── C3: independently checked observation enters through real admission ──
+	wit, err := app.WitnessCheck(ctx, WitnessCheckInput{
+		DBPath: dbPath, ProposalID: witnessProposalID, Tuple: "7,2,2,2",
+		Note: "review C3: deliberately invalid tuple; exact-integer check decides the observation",
+	})
+	if err != nil {
+		t.Fatalf("C3 witness: %v", err)
+	}
+	if wit.WitnessVerdict != "witness-invalid" {
+		t.Fatalf("C3: want witness-invalid, got %q", wit.WitnessVerdict)
+	}
+	admitC3, err := app.AdmitEvidence(ctx, AdmitEvidenceInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil || len(admitC3.Admitted) != 1 {
+		t.Fatalf("C3: rule pass must admit the checked failure: %+v err=%v", admitC3, err)
+	}
+	adm := admitC3.Admitted[0]
+	if adm.ObservationKind != ObservationDomainCheckedFailure || adm.AdmittedBy != "rule" || adm.ContentHash == "" {
+		t.Fatalf("C3: admitted row must be domain-checked/rule with content hash: %+v", adm)
+	}
+	recluster, err := app.BuildClustering(ctx, ClusterBuildInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil || !recluster.Created || recluster.ClusterRun.ID == discovery.ClusterRun.ID {
+		t.Fatalf("C3: admitted content must produce population A1: created=%v run=%s err=%v",
+			recluster.Created, recluster.ClusterRun.ID, err)
+	}
+	if recluster.ClusterRun.SignatureCount != discovery.ClusterRun.SignatureCount+1 {
+		t.Fatalf("C3: A1 must contain exactly the admitted signature: %d -> %d",
+			discovery.ClusterRun.SignatureCount, recluster.ClusterRun.SignatureCount)
+	}
+	t.Logf("C3 PASS admitted=%s kind=%s hash=%s A1=%s (pop %d)",
+		adm.SignatureID, adm.ObservationKind, adm.ContentHash[:12], recluster.ClusterRun.ID, recluster.ClusterRun.SignatureCount)
+
+	// ── C4: relevant change — eligibility is not inherited from A0 ──────────
+	gen3, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("C4 generate: %v", err)
+	}
+	if len(gen3.ExcludedStaleAuthority) != 1 || gen3.ExcludedStaleAuthority[0].InvariantID != invID {
+		t.Fatalf("C4: stale assessment must be excluded: %+v", gen3.ExcludedStaleAuthority)
+	}
+	ex := gen3.ExcludedStaleAuthority[0]
+	if ex.AssessedClusterRunID != discovery.ClusterRun.ID || ex.CurrentClusterRunID != recluster.ClusterRun.ID {
+		t.Fatalf("C4: exclusion must name A0 and A1: %+v", ex)
+	}
+	if reviewPayloadTargets(t, ctx, app, dbPath, gen3.Generation.ID, invID) {
+		t.Fatalf("C4: stale-authority claim must not be targeted")
+	}
+	t.Logf("C4 PASS stale exclusion reason=%s assessed=%s current=%s", ex.Reason, ex.AssessedClusterRunID, ex.CurrentClusterRunID)
+
+	// ── C6: reassessment against A1 under the pinned policy ─────────────────
+	second, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID, Population: PopulationLatest})
+	if err != nil {
+		t.Fatalf("C6 challenge: %v", err)
+	}
+	r2 := second.Reports[0]
+	if r2.AssessmentClusterRunID != recluster.ClusterRun.ID || r2.RunID == r1.RunID {
+		t.Fatalf("C6: distinct assessment against A1 required: run=%s assessed=%s", r2.RunID, r2.AssessmentClusterRunID)
+	}
+	repo := openTestStore(t, ctx, dbPath)
+	defer repo.Close()
+	d0row, found, err := repo.GetChallengeAssessmentPopulation(ctx, r1.RunID, invID)
+	if err != nil || !found || d0row.AssessmentClusterRunID != discovery.ClusterRun.ID {
+		t.Fatalf("C6: historical A0 row must remain reproducible: found=%v %+v err=%v", found, d0row, err)
+	}
+	t.Logf("C6 PASS reassessment campaign=%s state=%q over A1=%s; A0 row durable", r2.RunID, r2.StateAfter, r2.AssessmentClusterRunID)
+	gen4, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("C6 generate: %v", err)
+	}
+	c6Targeted := reviewPayloadTargets(t, ctx, app, dbPath, gen4.Generation.ID, invID)
+	t.Logf("C6 decision: state=%q targeted=%v staleExcl=%d", r2.StateAfter, c6Targeted, len(gen4.ExcludedStaleAuthority))
+
+	// ── C7: historical replay must not displace compatible current context ──
+	replay, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID, Population: PopulationDiscovery})
+	if err != nil {
+		t.Fatalf("C7 replay: %v", err)
+	}
+	r3 := replay.Reports[0]
+	if r3.AssessmentClusterRunID != discovery.ClusterRun.ID {
+		t.Fatalf("C7: replay must assess A0, got %s", r3.AssessmentClusterRunID)
+	}
+	gen5, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("C7 generate: %v", err)
+	}
+	c7Targeted := reviewPayloadTargets(t, ctx, app, dbPath, gen5.Generation.ID, invID)
+	t.Logf("C7 OBSERVE replay campaign=%s state=%q; post-replay: targeted=%v staleExcl=%+v",
+		r3.RunID, r3.StateAfter, c7Targeted, gen5.ExcludedStaleAuthority)
+	// The recipe's requirement: the current decision selects the compatible
+	// current context (the C6 assessment over A1), not the last execution.
+	if r2.StateAfter == "surviving" && !c7Targeted {
+		t.Errorf("C7 FINDING: a compatible current assessment (campaign %s, surviving over A1) exists, "+
+			"but the post-replay decision does not select it — the replay (last execution, obsolete population) displaced current authority", r2.RunID)
+	}
+	if c7Targeted && r2.StateAfter != "surviving" {
+		t.Errorf("C7 FINDING: replay restored targetability without a compatible current surviving assessment")
+	}
+	// Historical rows all durable and distinct.
+	rrow, found, err := repo.GetChallengeAssessmentPopulation(ctx, r3.RunID, invID)
+	if err != nil || !found || rrow.PopulationPolicy != PopulationDiscovery {
+		t.Fatalf("C7: replay population row must be durable and say discovery: found=%v %+v err=%v", found, rrow, err)
+	}
+	t.Logf("C7 rows durable: A0=%s A1=%s replay=%s", r1.RunID, r2.RunID, r3.RunID)
+
+	// ── C8: derived coverage projection (in-flight four-record surface) ──────
+	pol, err := app.DefineReviewPolicy(ctx, ReviewPolicyDefineInput{
+		DBPath: dbPath, Key: "review-c1c8-p1", Revision: 1,
+		DecisionName: "may candidate " + invID + " guide the next search action",
+		Owner:        "operator:jmh", AuthoritySource: "user instruction 2026-09-12: run the prompt-based review workflow",
+		ScopeJustification: "one mandatory obligation (current-assessment-authority rev 1) per the pinned recipe; non-vacuous",
+		EvidenceCutoff:     now.Format(time.RFC3339), CaseBudget: 8, AttemptBudget: 2, ProviderCallBudget: 0,
+		Obligations: []ReviewObligationSpec{{
+			Key: "current-assessment-authority", SemanticRevision: 1,
+			Requirement:        "a current decision uses assessments compatible with its declared evidence population and policy; historical replay remains reproducible without restoring obsolete current authority",
+			AcceptanceCriteria: "cases C1-C7 of the pinned recipe observed on the real migrated store",
+			ApplicabilityRule:  "applies to any candidate with a challenge campaign", PrimaryOwner: "assessment-identity", Mandatory: true,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("C8 policy: %v", err)
+	}
+	oblID := pol.ObligationIDs["current-assessment-authority@1"]
+	if oblID == "" {
+		t.Fatalf("C8: obligation id missing from %v", pol.ObligationIDs)
+	}
+	appl, err := app.DecideReviewApplicability(ctx, ReviewApplicabilityInput{
+		DBPath: dbPath, PolicyID: pol.PolicyID, ObligationID: oblID, SubjectRef: invID,
+		Decision: "applies", Rationale: "candidate has three challenge campaigns across two populations", Authorizer: "operator:jmh",
+	})
+	if err != nil {
+		t.Fatalf("C8 applicability: %v", err)
+	}
+	chk, err := app.RecordReviewCheck(ctx, ReviewCheckInput{
+		DBPath: dbPath, PolicyID: pol.PolicyID, ObligationID: oblID,
+		CaseLabel: "C1-C7 combined scenario", ProcedureRef: "internal/pipeline/review_c1c8_disposable_test.go",
+		ProcedureRevision: "disposable-1", InputsRef: "challenge_population_a.json + witness 7,2,2,2",
+		Executor: "go test", Environment: "darwin/local", Mode: "executed", Outcome: "completed",
+		OutputRef: "/tmp/review-c1c8-run4.log", StartedAt: now.Format(time.RFC3339), EndedAt: now.Format(time.RFC3339),
+		ResourceNote: "single go test invocation; zero provider calls",
+	})
+	if err != nil {
+		t.Fatalf("C8 check: %v", err)
+	}
+	if _, err := app.RecordReviewAssessment(ctx, ReviewAssessInput{
+		DBPath: dbPath, PolicyID: pol.PolicyID, ObligationID: oblID,
+		ApplicabilityDecisionID: appl.ID, SubjectRef: invID, ContextRef: "population " + recluster.ClusterRun.ID,
+		Outcome:  "conforms",
+		Argument: "C1-C7 observed on the real store: withheld control held, checked admission produced A1, staleness fired on the relevant change only, replay stayed bounded",
+		Assessor: "operator:jmh", ProjectRevision: "worktree-7e24160+", EvidenceCutoff: now.Format(time.RFC3339),
+		Dependencies: []ReviewDependencySpec{{
+			Kind: "assessment_population", Ref: recluster.ClusterRun.ID,
+			WhyRelevant: "the conformance argument is about authority relative to this current population",
+		}},
+		CheckAttemptIDs: []string{chk.ID},
+	}); err != nil {
+		t.Fatalf("C8 assessment: %v", err)
+	}
+	deps := map[string]string{"assessment_population": recluster.ClusterRun.ID}
+	cov1, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{DBPath: dbPath, PolicyID: pol.PolicyID, CurrentDependencies: deps})
+	if err != nil {
+		t.Fatalf("C8 coverage 1: %v", err)
+	}
+	cov2, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{DBPath: dbPath, PolicyID: pol.PolicyID, CurrentDependencies: deps})
+	if err != nil {
+		t.Fatalf("C8 coverage 2: %v", err)
+	}
+	if cov1.Document != cov2.Document {
+		t.Errorf("C8 FINDING: repeated generation from identical records changed the document")
+	}
+	if cov1.Decision != "ELIGIBLE_TO_ADVANCE" {
+		t.Errorf("C8: conforming mandatory obligation under authorized policy should be eligible, got %s reasons=%v", cov1.Decision, cov1.Reasons)
+	}
+	cov3, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
+		DBPath: dbPath, PolicyID: pol.PolicyID,
+		CurrentDependencies: map[string]string{"assessment_population": "clr_hypothetical_newer_population"},
+	})
+	if err != nil {
+		t.Fatalf("C8 coverage 3: %v", err)
+	}
+	if cov3.Decision == "ELIGIBLE_TO_ADVANCE" {
+		t.Errorf("C8 FINDING: relevant dependency change did not stale the assessment: %s %v", cov3.Decision, cov3.Reasons)
+	}
+	t.Logf("C8 PASS policy=%s decision1=%s decision2=%s deterministic=%v afterRelevantChange=%s reasons=%v",
+		pol.PolicyID, cov1.Decision, cov2.Decision, cov1.Document == cov2.Document, cov3.Decision, cov3.Reasons)
+}
+
+// reviewPayloadTargets reports whether the generation's persisted provider
+// request payload names the invariant — the operative next-search-action test.
+func reviewPayloadTargets(t *testing.T, ctx context.Context, app *App, dbPath, generationID, invID string) bool {
+	t.Helper()
+	repo := openTestStore(t, ctx, dbPath)
+	defer repo.Close()
+	gen, err := repo.GetFrontierGeneration(ctx, generationID)
+	if err != nil {
+		t.Fatalf("get generation %s: %v", generationID, err)
+	}
+	invocs, err := repo.ListProviderInvocationsForRun(ctx, gen.RunID)
+	if err != nil || len(invocs) == 0 {
+		t.Fatalf("list invocations for %s: %v", gen.RunID, err)
+	}
+	return strings.Contains(invocs[0].RequestPayload, invID)
+}
