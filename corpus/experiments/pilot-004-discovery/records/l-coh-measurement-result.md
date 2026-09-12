@@ -62,6 +62,17 @@ Concrete corrections applied:
    > provide four independent research replications. Independence
    > between the two corpus constructions has not been established.
 
+   **ES-side residual DISCHARGED 2026-09-12** by
+   `(source-lineage-check)`. Positive source-byte evidence: the
+   four ES databases share 12 of 13 `source_snapshots.sha256`
+   values byte-for-byte, with identical `sources.logical_name`
+   values on each shared source. The single non-shared row is
+   M7's target file. See
+   `records/source-lineage-check-result.md`. ES-vs-pvnp
+   independence residual remains open (different source corpora,
+   but "independence" in the stronger research sense requires
+   more than a sha256 diff).
+
 6. **Population-query validation is a prerequisite the record did
    not discharge.** Family prevalence must count the eligible
    families used by the miner and challenger, not every persisted
