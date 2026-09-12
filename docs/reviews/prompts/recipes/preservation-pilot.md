@@ -2,7 +2,7 @@
 id: review-preservation
 revision: 1
 kind: qualitative_comparison_protocol
-status: gate_satisfied_preparation_frozen_awaiting_ceilings
+status: ceilings_declared_twelve_runs_authorized
 preparation: ../../preservation-pilot/PREPARATION.md
 covers: [study-design, comparative-validation, decisions, reporting]
 contract: ../review-contract.md

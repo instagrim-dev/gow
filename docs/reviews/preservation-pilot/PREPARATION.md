@@ -1,10 +1,12 @@
 # Preservation pilot — frozen preparation package (revision 1)
 
-**Status: PREPARATION ONLY.** Per
-[`recipes/preservation-pilot.md`](../prompts/recipes/preservation-pilot.md):
-*"Missing ceilings permit preparation only."* No resource ceilings are
-declared below (§7 is deliberately unfilled), therefore **no dispatch is
-authorized by this document**. Zero runs have been executed.
+**Status: CEILINGS DECLARED — TWELVE RUNS AUTHORIZED (authorization
+revision 1, §7).** Per
+[`recipes/preservation-pilot.md`](../prompts/recipes/preservation-pilot.md),
+preparation was frozen first with §7 unfilled (zero dispatches); the owner
+then declared ceilings on 2026-09-12. Exactly the twelve runs of §4 plus one
+blinded adjudication pass are authorized — no retries, no sanity runs, no
+case or prompt refinement after outputs are observed.
 
 **Prerequisite confirmed.** The integrated obligation slice has a retained
 passing assessment: run 3 of the C1–C8 scenario
@@ -132,24 +134,79 @@ A pass records feasibility on these six cases and uncertainty. It does not
 establish generality, an error-rate advantage, or cost noninferiority. No new
 domain-prompt series follows automatically.
 
-## 7. Resource ceilings — REQUIRED, DELIBERATELY UNFILLED
+## 7. Resource ceilings — DECLARED (authorization revision 1, 2026-09-12)
 
-Per protocol, dispatch requires the owner to declare, before any run:
+Owner declaration received 2026-09-12 (operator, in-session). Ceilings are
+deliberately simple so they cannot become a second treatment variable.
 
 ```text
-total model-call ceiling:        ____
-total token ceiling:             ____
-total currency ceiling:          ____
-per-run limits:                  ____
-human adjudication budget:       ____
-environment controls:            ____  (model/version, tools, settings — identical across arms)
-plausible future reuse horizon H:____  (number of comparable future reviews)
+total model-call ceiling:   13 agent dispatches: exactly 12 primary review runs
+                            + exactly 1 blinded adjudication pass. No retries,
+                            no continuation/resume calls, no sanity runs.
+total token ceiling:        enforced structurally, identically across arms:
+                            one dispatch per run, one report file per run,
+                            report capped at 2,500 words. Fine-grained token
+                            metering is not exposed by the execution harness;
+                            declared limitation. Proxy accounting retained:
+                            wall time + report word count per run.
+total currency ceiling:     zero external paid API calls. All 13 dispatches
+                            execute inside the operator's existing session;
+                            the hard dispatch count above IS the currency
+                            ceiling (derived, not an independent soft limit).
+per-run limits:             exactly 1 isolated agent dispatch; fixed max
+                            report output (2,500 words); 30-minute wall
+                            timeout; an incomplete run is retained as aborted
+                            and never redispatched. The run is agentic (an
+                            internal tool loop); internal loop calls are not
+                            separately meterable — declared limitation,
+                            identical across arms.
+human adjudication budget:  one blinded adjudication pass over all 12
+                            reports by a FRESH isolated agent that receives
+                            only blinded reports + case specs + rubric.
+                            Predeclared tie/ambiguity procedure: (a) a
+                            false-reassertion judgment requires an
+                            affirmative assertion of the SPECIFIED defect on
+                            a corrected control, not a mere mention or
+                            hedged question; (b) an essential-recovery
+                            judgment that cannot be made decisively is
+                            recorded "ambiguous" and does NOT credit the arm
+                            (severity favors rejection of unclear recovery,
+                            never rejection-by-unclear-reassertion).
+environment controls:       identical across arms: same session model for
+                            every dispatch ("inherit"); same toolset; single
+                            self-contained prompt with the frozen packaging
+                            content pasted VERBATIM; temperature/seed not
+                            exposed by the harness (declared limitation,
+                            symmetric). Case checkout rule: first action is
+                            `git archive <REV> | tar -x -C <fresh tmpdir>`;
+                            the extracted tree (no .git, hence no commit
+                            messages) is the entire review subject; nothing
+                            under the live working tree may be read
+                            afterwards. Denial list (docs/reviews/, post-
+                            revision commits, remediation notes, this
+                            package) OVERRIDES any instruction embedded in a
+                            packaging (the bespoke engineering prompt
+                            internally cites an answer-containing fix report;
+                            that citation is inert under this control).
+                            Uniform report envelope for blinding: both arms
+                            emit the same five section headers, must not
+                            name/quote their packaging, and must list every
+                            file consulted and every command executed.
+reuse horizon H:            H ∈ {5, 10, 20} comparable future reviews
+                            (sensitivity range), H_decision = 10 — a
+                            planning estimate chosen independently of pilot
+                            results, before any run.
 ```
 
-Until an owner fills and commits these, **this package authorizes zero
-dispatches and zero paid calls**. All preparation costs to date: operator +
-agent session time authoring this package; zero model-provider calls; zero
-paid retrieval.
+**Dispatch is now authorized for exactly the twelve runs of §4, in the
+frozen order, plus one adjudication pass — nothing else.** Case refinement,
+prompt edits after observing outputs, and repetitions remain unauthorized;
+any packaging revision starts a new protocol revision.
+
+**Reporting interpretation note (predeclared):** the seeded dispatch order
+is reproducibly shuffled, not statistically randomized in any averaging
+sense — with one observation per cell it controls obvious sequencing effects
+only. Results reporting must carry this interpretation.
 
 ## 8. Cost model (skeleton, rates to be fixed BEFORE results)
 
