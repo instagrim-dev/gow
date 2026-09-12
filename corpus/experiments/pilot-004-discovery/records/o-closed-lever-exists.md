@@ -1,6 +1,13 @@
-# (o-closed) Concrete-falsifiability priority — lever already exists
+# (o-closed) Concrete-falsifiability priority — no additional ranking directive justified for this iteration
 
-Recorded: 2026-09-12. Pipeline-space (CMA + SGO).
+Recorded: 2026-09-12.
+**2026-09-12 revision** — this record was rewritten to narrow the
+warrant of the no-change decision. The first version overstated the
+equivalence between declared evaluation cost and verifier readiness,
+overstated the guarantee of the falsifiability floor, and
+mislabeled a design disposition as a deterministic consequence.
+Reviewer correction verbatim is preserved below in "Reviewer
+correction 2026-09-12 (post-`12cbaa3`)".
 
 ## What (o) proposed to solve
 
@@ -10,22 +17,21 @@ paths are non-concrete." User authorization on (g-scoped) explicitly
 sanctioned bounded observations informing search priority.
 
 (o) as first framed would have added a new policy directive — some
-form of "penalize non-concrete falsification path." The task of this
-loop was to predeclare (o) rigorously before authorization.
+form of "penalize non-concrete falsification path." This loop's task
+was to predeclare (o) rigorously before authorization.
 
-## CMA on the existing policy engine
+## CMA on the existing policy engine (establishes the mechanism, not its adequacy)
 
-`internal/policy/engine.go` and `internal/policy/apply.go` reveal
-the pipeline already carries the concrete-falsifiability lever, and
-carries it at exactly the right position.
+`internal/policy/engine.go` and `internal/policy/apply.go` show that
+the pipeline persists an ordinal ranking that consumes a candidate's
+**declared** `EvaluationCost` and floor-protects one violator per
+target.
 
 **Directive vocabulary (verbatim from `engine.go:56-88`)**: every
 policy directive targets a PERSISTED ROW by ID or predicate
-fingerprint — success invariants, surviving invariants, mechanism
-families, redundant attacks, mechanism fingerprints, refuted-
-boundary predicates. Every target kind resolves to a real row (KTD-1).
-Free-form falsification-path text is not a persisted-row target;
-a directive keyed on it would fail the resolution contract.
+fingerprint. Every target kind resolves to a real row (KTD-1). Free-
+form falsification-path text is not a persisted-row target; a
+directive keyed on it would fail the resolution contract.
 
 **Ranking function (`apply.go:142-156`)**:
 
@@ -44,99 +50,160 @@ func baseObjectiveLess(ca, cb frontier.Candidate) bool {
 }
 ```
 
-The ordering is: mechanistic distance (novelty) > info gain (learning
-value) > **evaluation cost (concrete-falsifiability, cheaper wins)**
-> hash. Concrete-falsifiability is a first-class tiebreaker.
+The comparator is a base-objective ordering: mechanistic distance
+desc, then info gain desc, then declared evaluation cost asc, then
+hash. Within a violation tier and applied-bias band, the cheaper
+declared cost sorts earlier.
 
-**Falsifiability floor (`apply.go:160-190`)**: separately, the pipeline
-protects the cheapest-to-falsify violating candidate per target
-invariant. Verbatim from `apply.go:34-36`: *"the code-verified violation
-gate is inviolable — a non-violating proposal can never outrank a
-violating one no matter how strongly preferred — and every candidate
-is retained."* The falsification surface is code-guaranteed.
+**Falsifiability floor (`apply.go:160-190`)**: the floor selects, per
+target invariant, the cheapest declared-cost violating candidate and
+prevents its net applied-policy bias from becoming negative
+(`ab.Net = 0` if it would otherwise be negative). What the floor
+does NOT do:
 
-## SGO on M7 to verify the lever is consumed
+- It does not establish that any verifier CAN decide the protected
+  candidate's claim.
+- It does not reserve execution budget for the protected candidate.
+- It does not guarantee the protected candidate will be evaluated.
+- It provides no witness attribution.
 
-Ranked M7 proposals by `rank_ordinal`:
+The floor is an anti-suppression protection against active-directive
+policy penalties; it is not a "check exists" guarantee.
 
-| id | eval_cost | info_gain | mech_dist | violates | rank |
-|---|---|---|---|---|---|
-| fpr_...STE4T95 | low | low | medium | 0 | 0 |
-| fpr_...RS607H | low | low | medium | 0 | 0 |
-| fpr_...DF6FXYG | low | medium | medium | **1** | 0 |
-| fpr_...KD2YB1 | medium | high | medium | 0 | 0 |
-| fpr_...ETFTE  | medium | high | medium | 0 | 0 |
-| **fpr_...J3F0ECY** (my H2-escape) | **low** | high | medium | **1** | **0** |
-| fpr_...XRDPYDJ | low | low | medium | 0 | 1 |
-| fpr_...F2DEQAQ | low | medium | medium | 1 | 1 |
-| fpr_...MDFAWA | low | low | medium | 0 | 2 |
-| fpr_...HR7MVX3 | low | medium | medium | 1 | 2 |
+## Property distinction (correcting the earlier record)
 
-The concrete-eval-cost lever is being consumed. My H2-escape
-proposal, self-attested `evaluation_cost: low`, sits at rank 0 in
-its violation tier — exactly what the ranker's design predicts for
-a `low/high/medium/violates=1` tuple. No policy change is needed
-to give concrete-falsifiable proposals priority; they already have
-it.
+**Declared evaluation cost and verifier readiness are different
+properties.** The first record conflated them; this rewrite separates
+them.
 
-## Verdict on (o)
+- A concretely-checkable claim can honestly declare `evaluation_cost:
+  medium` or `high` when the concrete check is expensive.
+- An abstract mechanism-family claim can declare `evaluation_cost:
+  low` if the operator reads "cost" as reflecting the cost of
+  observing an existing pipeline output rather than the cost of
+  producing a domain outcome.
 
-**No code change required.** The lever the user's authorization
-sanctioned already exists at the correct position in the ordering,
-with a documented boundary (never dominates the violation gate,
-never breaks falsifiability). Adding a new directive kind for
-"non-concrete falsification path" would either:
+My H2-escape proposal (`fpr_01M2BCSS7EJ5WBYNST2J3F0ECY`) is the
+counterexample from within this pilot's own records: it self-attests
+`evaluation_cost: low` because its "falsification" is a pipeline-
+verdict read, and it ranks at 0 in its violation tier. Yet (g-scoped)
+recorded that this proposal has no candidate-specific witness
+obligation. **Cost ranking is operating; verifier readiness is not
+established.** The two properties do not coincide.
 
-1. Duplicate the existing `EvaluationCost` signal — proposals with
-   concrete falsification paths ALREADY self-attest lower
-   evaluation_cost; the ranker already prefers them. A duplicative
-   directive would be redundant.
-2. Rank on falsification-text patterns — model-judgment over prose,
-   masquerading as code-owned discrimination. KTD-3 forbids this.
-3. Rank on a new declared wire field — wire schema evolution, and
-   the new field would encode the same information `evaluation_cost`
-   already does.
+## SGO on M7 rank ordinals (consistency, not isolated cost demonstration)
 
-## Where the actual research signal lives
+The persisted `rank_ordinal` values in M7's `frontier_proposals`
+table are consistent with `baseObjectiveLess` on the persisted
+ordinal tuples. The table does not, on its own, isolate the cost
+term — earlier ordering dimensions and applied-bias net contributions
+are not held equal across the rank-0 rows. Consistency with the
+comparator is what the SGO establishes; a controlled cost
+discrimination would require holding mechanistic distance, info
+gain, and applied bias equal. No new experiment is required; the
+distinction matters only in the labeling.
 
-The observation from (g-scoped) was: *"none of the persisted target-
-violating proposals has a candidate-specific witness obligation."*
-Reading that observation carefully:
+## Reviewer correction 2026-09-12 (post-`12cbaa3`)
 
-- The **ranker's** concrete-falsifiability lever is a signal about
-  proposal ORDERING within a corpus.
-- The **corpus-level** observation from (g-scoped) is a signal about
-  the WHOLE POPULATION of proposals: none is concrete enough to enter
-  the witness path.
+Verbatim reviewer commentary on the first version of this record:
 
-These are different objects. The ranker cannot fix a corpus that has
-no concrete proposals — it can only choose the cheapest-to-evaluate
-proposal from among those available. The corpus-level signal is about
-what the GENERATOR (or the human wire authors) produce, not about how
-the ranker orders them.
+> Closing (o) as "no additional ranking directive justified" is
+> defensible. Closing it as "concrete falsifiability is already
+> established by the ranker" is not. I checked `12cbaa3`; the
+> implementation supports the narrower conclusion, while the new
+> record overstates the equivalence between evaluation cost and
+> checkability.
+>
+> - Cost and concreteness are different properties. A concrete check
+>   can be expensive; an abstract proposal can declare
+>   `evaluation_cost: low`. Your own record supplies the
+>   counterexample: the H2-escape proposal declares low cost and
+>   ranks first, while the investigation reports that the relevant
+>   population lacks candidate-specific witness obligations. That
+>   demonstrates cost-based prioritization, not verifier readiness.
+>   The authoring convention in (q) can improve this signal, but it
+>   remains an operator judgment requiring calibration.
+> - The ranking protection is narrower than "the falsification
+>   surface is code-guaranteed." With active directives, Apply
+>   orders by violation tier, then net policy bias, then
+>   baseObjectiveLess. The floor selects the cheapest declared-cost
+>   violator per target and prevents its net bias becoming negative.
+>   It does not establish that a check exists, reserve execution
+>   budget, or guarantee that the protected candidate will be
+>   evaluated.
+> - The recorded rank table supports consistency, not an isolated
+>   demonstration of the cost term. It omits generation/occurrence
+>   identifiers and applied policy bias, and contains several
+>   rank-zero entries. To demonstrate cost discrimination
+>   specifically, compare candidates within the same ranking context
+>   with earlier ordering dimensions held equal.
+> - "No code change justified" is a design disposition, not a
+>   deterministic consequence. Code inspection establishes the
+>   existing mechanism. Whether that mechanism adequately represents
+>   the desired preference depends on the validity of its inputs
+>   and the decision being supported. The record's classification of
+>   the no-change verdict as a deterministic consequence should
+>   therefore be narrowed.
+> - Campaign closure and review closure must stay separate. This
+>   commit changes only the scorecard and the new research record.
+>   It does not discharge the previously identified C7, witness-
+>   occurrence attribution, or C8 obligations.
+>
+> Keep the no-change decision. Narrow its warrant.
 
-## Consequence for authoring discipline (recorded, not proposed as change)
+## Closure wording (reviewer-supplied, adopted)
 
-Wire authors have a legitimate handle: `evaluation_cost` self-
-attestation. An honestly-authored concrete proposal declares
-`evaluation_cost: low` when a witness tuple or exact check is
-derivable from its mechanism; a mechanism-family claim requiring
-domain math declares `medium/high`. The ranker will then favor the
-concrete when both exist. This is the pipeline's designed
-integration point for the observation from (g-scoped): the operator's
-authoring judgment IS the code-owned discriminator, expressed via
-the self-attested ordinal.
+> **Path (o) closed without implementation.** Existing ordinal
+> evaluation-cost ranking and per-target anti-suppression protection
+> make an additional cost-priority directive unjustified for this
+> iteration. These mechanisms consume declared cost; they do not
+> establish concrete verifier readiness or witness attribution. The
+> next research input must supply those properties explicitly. H3
+> remains unchanged, and review-integration obligations retain their
+> separate status.
 
-## Consequence for the frontier generator (recorded, not proposed as change)
+## Where the signal that (o) targeted actually lives
 
-The stronger, longer-horizon research move is not a ranker change
-but a GENERATOR change: bias the frontier generator toward
-mechanisms that CAN produce concrete witnesses. For ES specifically,
-the atlas contains mechanism families (es-01 Mordell polynomial
-identities, es-03 factorization scheme) that produce witness tuples
-for specific residue classes. A generator that seeded new proposals
-from those families would produce concrete-witness-path candidates
-naturally. Recorded for downstream authority; not proposed as change.
+The observation from (g-scoped) — "none of the persisted target-
+violating proposals has a candidate-specific witness obligation" — is
+a corpus-level signal about the proposal population, not a lack in
+the ranker. A ranker cannot manufacture verifier readiness from
+declared cost alone. Concrete verifier readiness requires each of:
+
+1. a candidate-specific claim whose form matches an existing verifier
+   contract (e.g. a specific `(n, x, y, z)` tuple for the witness
+   path);
+2. attributed provenance connecting the claim to the proposal's
+   mechanism;
+3. execution against the verifier — code-persisted, code-attributed.
+
+None of these is a ranking concern. The next research input to close
+this gap must supply properties (1)–(3) explicitly on a proposal, not
+change the ranker.
+
+## Follow-on observations (recorded, not proposed as change)
+
+- **(q) Authoring discipline** — operators authoring wire proposals
+  should self-attest `evaluation_cost: low` only when the
+  falsification path IS concretely checkable, and use `medium/high`
+  when domain math is required. This is an operator-judgment signal
+  that requires calibration; it is not a code-owned discriminator.
+- **(p) Generator bias** — a longer-horizon research direction is to
+  bias the frontier generator toward mechanisms that produce concrete
+  witnesses (e.g., seeded from es-01 Mordell polynomial identities,
+  es-03 factorization scheme). This would supply property (1) above
+  by construction. Recorded for downstream authority; not proposed
+  here.
+
+## Separately open (not discharged by this loop)
+
+- **C7 obligation** (as previously identified by review).
+- **Witness-occurrence attribution obligation.**
+- **C8 obligation.**
+
+Pausing pilot-004's exploratory code-change work is not evidence of
+end-to-end conformance on these obligations. They retain their
+separate status.
 
 ## H3 gate status: PRESERVED (unchanged)
 
@@ -147,19 +214,21 @@ naturally. Recorded for downstream authority; not proposed as change.
 - The ranker's evaluation_cost tiebreaker continues to operate as
   the pipeline authors designed it.
 
-## Verification tier
+## Verification tier (corrected)
 
-- Code trace of policy engine directive vocabulary: **CMA** (verbatim
-  reading of `engine.go` and `apply.go`).
-- Existing evaluation_cost lever consumed by the ranker: **SGO**
-  (verbatim sqlite output showing consistent rank_ordinal assignment
-  matching `baseObjectiveLess` on the ordinal tuple).
-- Verdict "no code change required": **CMA** (deterministic consequence
-  of the two observations above — the lever exists, is consumed, and
-  is at the right position; a new directive would duplicate or launder).
-- Corpus-level observation about the current proposal population:
-  **SGO** (a summary of (g-scoped)'s findings, unchanged here).
-- Authoring-discipline observation: **PE** (a plausible research-
-  methodology hypothesis; recorded, not proposed as change).
-- Generator-bias observation: **PE** (a longer-horizon design-space
-  observation; recorded, not proposed as change).
+- Existence of the policy directive vocabulary and the ranking
+  comparator: **CMA** (verbatim reading of `engine.go`, `apply.go`).
+- Existence of the anti-suppression floor and its exact effect: **CMA**
+  (verbatim reading of `apply.go:160-190`).
+- M7 rank ordinals consistent with the comparator: **SGO on
+  consistency**, not an isolated demonstration of the cost term.
+- Property distinction between declared cost and verifier readiness:
+  **CMA + SGO counterexample** (the H2-escape proposal declares
+  `low` and ranks first, yet has no witness obligation).
+- "No code change justified for this iteration": **design
+  disposition**, not a deterministic consequence. Downgraded from
+  the earlier record's CMA label.
+- Adequacy of the existing signal for future decisions: **not
+  established** by this loop.
+- Discharge of C7, witness-occurrence attribution, C8: **not claimed
+  and not established** by this loop.
