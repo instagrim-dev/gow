@@ -688,9 +688,15 @@ implemented contract requires at least one adversarial attack completed with
 a negative result, while other probes may individually be inapplicable or
 inconclusive on the given corpus. The per-probe record --- which attacks
 completed, which could not be executed, and why --- travels with the status.
-A \emph{surviving} or \emph{weakened} claim may be independently verified,
+A \emph{surviving} claim may be independently verified,
 which advances it toward \emph{operator-attested} or (with proof-level evidence)
-toward an established result. No transition may occur automatically; each
+toward an established result. A \emph{weakened} claim has no direct path to
+attestation: it must first re-earn \emph{surviving} through a further
+challenge over its narrowed scope. (In the implementation, \emph{split} is
+likewise not a resting state: it is recorded as a weaken transition whose
+child claims are persisted as new \emph{proposed} claims that must survive
+their own challenges, inheriting no authority from the parent.) No transition
+may occur automatically; each
 requires explicit evidence and an operator or independent critic to record the
 transition.
 
@@ -1097,7 +1103,7 @@ section is traceable to a specific file and row in those artifacts.
 \node[negexp] (A) {\textbf{A. Negative controls}\\ \scriptsize empty failure pop.\\ \scriptsize M7 Stage 1 (pristine)\\[1pt] \tiny \emph{inconclusive}};
 \node[mixexp, right=8mm of A] (B) {\textbf{B. Curated features}\\ \scriptsize Pilot-003 B0/B3\\ \scriptsize target withheld\\[1pt] \tiny \emph{rule: inconclusive}\\ \tiny \emph{review: 1 recovery (B3)}};
 \node[mixexp, right=8mm of B] (C) {\textbf{C. Shape discovery}\\ \scriptsize Pilot-004 (23 entries)\\ \scriptsize reference withheld\\[1pt] \tiny \emph{aggregate criterion:}\\ \tiny \emph{not met}\\ \tiny \emph{10 defensible novel}};
-\node[posexp, right=8mm of C] (D) {\textbf{D. Novel challenge}\\ \scriptsize N2a: 7-probe lifecycle\\ \scriptsize reference-absent\\[1pt] \tiny \emph{survived + refinement}\\ \tiny \emph{boundary\_delta @ C4}};
+\node[mixexp, right=8mm of C] (D) {\textbf{D. Novel challenge}\\ \scriptsize N2a: 7-part challenge\\ \scriptsize reference-absent\\[1pt] \tiny \emph{refinement proposed}\\ \tiny \emph{coverage incomplete}};
 
 \draw (A) -- (B);
 \draw (B) -- (C);
@@ -1115,8 +1121,9 @@ section is traceable to a specific file and row in those artifacts.
 \caption{Pilot progression. Each experiment addresses a different constituent
 capability, cumulatively supporting Claim~C4 without any single experiment
 being asked to establish it alone. Negative-outcome experiments (A, C's
-predeclared aggregate endpoint) are as informative as positive-outcome
-experiments (B's blinded review, D's completed lifecycle).}
+predeclared aggregate endpoint) are as informative as positive-outcome and
+mixed-outcome experiments (B's blinded review, D's recorded seven-part
+challenge with incomplete coverage).}
 \label{fig:progression}
 \end{figure}
 
@@ -1350,14 +1357,17 @@ reported per probe:
 \end{itemize}
 
 \paragraph{Disposition.}
-\textbf{Survived with one required refinement (boundary delta), at
-model-judgment strength.} N2a stands as a failure-conditioned regularity
-proposal for this corpus, refined to distinguish rate-ceiling (es-05) from
-reach-ceiling (es-10) sub-mechanisms. Probe coverage is mixed: C1/C3/C4/C6
-are corpus-grounded, C2 characterizes a hypothetical construction, and C7 is
-a proposed explanation with known unchecked mathematical steps. A child
-hypothesis (N2a-child-1) was derived but not yet independently motivated by
-two corpus instances and therefore not yet admitted.
+\textbf{Seven-part challenge recorded; refinement proposed; coverage
+incomplete, at model-judgment strength.} N2a stands as a failure-conditioned
+regularity proposal for this corpus, refined to distinguish rate-ceiling
+(es-05) from reach-ceiling (es-10) sub-mechanisms. Probe coverage is mixed:
+C1/C3/C4/C6 are corpus-grounded, C2 characterizes a hypothetical
+construction rather than producing one, and C7 is a proposed explanation
+with known unchecked mathematical steps; the synthetic-counterexample
+construction (C2) and the counterexample search were not completed, so this
+is not a survival across all seven probes. A child hypothesis (N2a-child-1)
+was derived but not yet independently motivated by two corpus instances and
+therefore not yet admitted.
 
 \paragraph{Significance for C4.}
 This experiment provides the evidence required for Claim C4: a reference-absent,
@@ -1384,9 +1394,14 @@ structure). Experiment B establishes a directional capability finding (shape-gui
 context produced the only full-recovery proposal, visible to a blinded reviewer
 but not to the automatic rule). Experiment C establishes that reference-absent
 shape generation occurs (the predeclared effectiveness endpoint was not met, but
-the constituent capability was demonstrated). Experiment D establishes that the
-challenge lifecycle can be completed for a model-generated reference-absent
-hypothesis, and that the outcome is informative regardless of direction.
+the constituent capability was demonstrated). Experiment D establishes that a
+model-generated reference-absent hypothesis can be subjected to an explicit
+seven-part challenge with per-probe evidential character recorded: a
+refinement was proposed (a boundary delta splitting one structural ceiling
+into two sub-mechanisms), two of seven probes were not fully discharged, and
+the outcome is a recorded challenge with incomplete coverage --- not a
+completed lifecycle or a survived hypothesis --- informative regardless of
+that incompleteness.
 
 What the progression does not establish: that GoW reliably outperforms undirected
 generation (one pilot does not support this), that the found structural hypotheses
@@ -1618,19 +1633,43 @@ different questions.
 \paragraph{Automated theorem proving and conjecture generation.}
 ATP systems (Lean, Isabelle, Metamath) \citep{harrison2014history} search proof
 space. Conjecturing systems (Graffiti, TxGraffiti) \citep{fajtlowicz1988graffiti}
-generate conjectures from graph properties. Proof failures in ATP are dead ends,
-not structured measurements of terrain. GoW's failure population is the set of
-\emph{mathematical approaches}; its geometry is over mechanism structure, not
-proof-tree structure.
+generate conjectures from graph properties. Some recent ATP work explicitly
+learns from failed search paths: TrialMaster \citep{an2024trialmaster} trains
+on complete proof trees including failed tactic sequences and backtracking
+instructions, reporting higher success on unseen theorems at lower search cost
+than models trained on correct paths alone. So the claim that ATP failures are
+categorically unused is false; the narrower and defensible distinction is what
+is being learned \emph{from}. TrialMaster's object of learning is proof-tree
+structure within a single formal system, indexed by tactic sequences and
+backtracking signals inside one proof search. GoW's failure population is a
+heterogeneous set of \emph{mathematical approaches} --- distinct mechanisms,
+often from different sub-fields, compared at the level of preserved structural
+properties rather than shared proof steps. Both treat failure as informative;
+they differ in what object failure is measured over (a proof tree vs.\ a
+cross-attempt mechanism population) and in whether the resulting structure is
+a typed, provenance-carrying record subject to explicit epistemic-state
+transitions (GoW) or a training signal folded into model weights (TrialMaster).
 
-\paragraph{Program synthesis and counterexample-guided inductive synthesis.}
+\paragraph{Program synthesis and counterexample-guided abstraction refinement.}
 CEGIS \citep{solar-lezama2008program} and CEGAR \citep{clarke2000counterexample}
-are the closest neighbors. Both use counterexamples to refine an abstraction.
-CEGAR refines the correctness proof of a \emph{single} synthesis target; GoW
-mines the geometry of a \emph{population of heterogeneous attempts}. In CEGIS
-the abstraction space is given; in GoW it is inferred from work descriptions.
-In both, a counterexample is productive; in GoW, any challenge outcome
-(including a boundary delta) is a structured measurement of terrain.
+are the closest neighbors. Both use counterexamples to refine an abstraction:
+CEGAR's original object is an abstract model built for verification/model
+checking, refined by spurious counterexamples the abstraction admits but the
+concrete system does not; CEGIS refines a candidate program against
+counterexamples from a verifier. In both, the refinement target is one
+abstraction (of one model or one synthesis target), and a counterexample
+against it is consumed directly to sharpen that same abstraction. GoW's
+proposed distinction is narrower than ``GoW mines a population, CEGAR does
+not'': it is that GoW treats a heterogeneous population of \emph{approach-level
+Work} as a persistent typed object whose cross-attempt structural hypotheses
+carry provenance and epistemic state (proposed / challenged / surviving /
+weakened / falsified), rather than refining a single abstraction in place. In
+CEGIS the abstraction space is given; in GoW it is inferred from work
+descriptions and can itself be re-represented. In both, a counterexample is
+productive; in GoW, any challenge outcome (including a boundary delta that
+splits rather than falsifies a hypothesis) is a structured measurement of
+terrain, retained with the hypothesis's history rather than only used to patch
+the current abstraction.
 
 \paragraph{Meta-learning and learning-to-search.}
 Meta-learning \citep{schmidhuber1987evolutionary, finn2017maml} learns across
@@ -1902,8 +1941,15 @@ of the reported instrument, not an incidental drafting aid. Specifically:
 (a)~all shape claims, adversarial-challenge probes, and quorum-lane votes
 recorded in \path{corpus/experiments/pilot-003/} and
 \path{corpus/experiments/pilot-004-discovery/} were produced by
-large-language-model inference under the pinned prompts and pinned recovery
-rule; (b)~the blinded model reviewer described in Experiment~B is an isolated
+large-language-model inference, but under different pinned contracts per
+experiment: Pilot-003's B0/B3 proposal arms and automatic recovery
+classification ran under the pinned \texttt{recovery-rule/v1} /
+\texttt{classify/v1} contract, while Pilot-004's discovery arms (D0/D1) ran
+under a separate pinned discovery-wire contract and prompt, and its
+adjudication ran under the predeclared quorum categories and aggregation
+rule in \path{quorum-adjudication-packet.json} --- \texttt{recovery-rule/v1}
+was not Pilot-004's governing contract; (b)~the blinded model reviewer
+described in Experiment~B is an isolated
 session drawn from the \emph{same} model family as both proposer arms, blinded
 to arm labels, target-invariant IDs, and automatic classifications --- exactly
 the strongest assessment this run could obtain without an external reviewer,
@@ -1913,10 +1959,14 @@ lanes in Pilot-004 are
 independent LLM invocations reading the same 23 proposal occurrences under
 identical instructions. Per-invocation provider and model identifiers, along
 with request/response artifacts, are retained in the frozen experiment
-records; specific provider identities are not load-bearing for the claims
-made in this paper because those claims are made at the level of framework
-behavior (abstention, survival, weakening, boundary refinement), not at the
-level of any specific model's capability.
+records as part of the evidence package, because model family is not neutral
+to this paper's own claims: \cref{sec:limitations} lists same-model-family
+generation and adjudication as a limitation on external validity precisely
+because provider/family identity bears on how much the results generalize.
+Provider identity is not load-bearing for the \emph{conceptual} framework
+(the epistemic-state machinery is stated independently of any model), but it
+is load-bearing for the empirical external-validity claims, and is reported
+accordingly rather than treated as an interchangeable implementation detail.
 
 \paragraph{In manuscript preparation.} Drafts of this manuscript were
 produced with substantial LLM assistance for outlining, prose iteration,
@@ -2259,7 +2309,7 @@ Pilot-004: 23 proposal occurrences, three-lane quorum & \cref{sec:results-pilot0
 Predeclared composite endpoint not met (C1 fail: 1/3 runs; C2 fail: 2 vs 0; C3 reference-recovery comparison did not favor D0 --- L3 recovered in D1 only, L4 not recovered; the 36\%/50\% figures are a separate novelty-classification rate, not the C3 measurement) & \cref{sec:results-pilot004} & \path{corpus/experiments/pilot-004-discovery/records/CLOSURE-SCORECARD.md} \\
 Reference-absent shape generation observed (10 defensible\_novel) & \cref{sec:results-pilot004}, \cref{sec:conclusion} & \path{docs/findings/001-unencoded-shape-generation.md} \\
 N2a (density-averaging ceiling) proposed as reference-absent hypothesis & \cref{sec:results-challenge} & \path{corpus/experiments/pilot-004-discovery/quorum-result.json} (E13, E16, E20, E23) \\
-N2a seven-probe campaign: survived with required refinement (boundary delta at C4), model-judgment strength; C2/C7 evidential character qualified & \cref{sec:results-challenge}, \cref{sec:discussion} & \path{corpus/experiments/pilot-004-discovery/records/N2a-challenge.md} incl.\ attributed reassessment \\
+N2a seven-part challenge: refinement proposed (boundary delta at C4), coverage incomplete (C2/C7 not fully discharged), model-judgment strength & \cref{sec:results-challenge}, \cref{sec:discussion} & \path{corpus/experiments/pilot-004-discovery/records/N2a-challenge.md} incl.\ attributed reassessment \\
 Boundary delta: rate-ceiling (es-05) vs reach-ceiling (es-10) sub-mechanisms & \cref{sec:results-challenge}, \cref{sec:example} & idem. \\
 N5 seven-probe campaign: six probes consistent; C3 inapplicable by corpus construction (no success outcomes) & \cref{sec:results-pilot004}, \cref{app:tables} & \path{corpus/experiments/pilot-004-discovery/records/N5-challenge.md} incl.\ attributed reassessment \\
 N2a admitted to \path{mechanism/v4} vocabulary & \cref{sec:results-challenge} & \path{internal/canon/vocabulary\_seed.go} \\

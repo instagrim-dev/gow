@@ -32,7 +32,8 @@ below. The progression is the record; the origin point alone is not.
 | Implementation (v0 CLI slice through hardening v32) | 2026-09-10 05:51–22:26 | Commit-anchored | `260c74e`…`3607965` |
 | Experiments (pilot-001 STOP through N5 vocabulary admission) | 2026-09-10 22:43 – 2026-09-11 11:22 | Commit-anchored | `a868dec`…`9af3376` |
 | Broader GoW formulation (theory series, thesis documents, manuscript) | 2026-09-11 10:26–12:47 | Commit-anchored | `259c593`…`bde6d88` |
-| External source-faithfulness review + reconciliation | 2026-09-11 ~12:46–13:20 | Review record + working tree | `docs/reviews/2026-09-11-manuscript-source-faithfulness.md` |
+| External source-faithfulness review + reconciliation | 2026-09-11 ~12:46–14:29 | Review record + commits | `docs/reviews/2026-09-11-manuscript-source-faithfulness.md`; `23fcc64`, `39ba88d`, `1780933` |
+| Software release (`newf` substrate only) | 2026-09-11 16:44 — tag `v1.0.0` | Commit-anchored | `a70c5f1`; scope split per `CHANGELOG.md` § Versioning |
 | Public release (arXiv freeze) | **Pending** — blocked on external re-review | Gate | `paper/PUBLICATION-PLAN.md` stage 10 |
 
 ## Headline
@@ -43,8 +44,9 @@ below. The progression is the record; the origin point alone is not.
 | First commit (`dfb441c`) | 2026-09-10 04:52 (+1h 03m) |
 | Manuscript at reviewed SHA (`4f3fa56`) | 2026-09-11 12:31 (+32h 42m) |
 | External source-faithfulness review received | 2026-09-11 ~12:46 (+32h 57m) |
-| R1–R5 reconciliation complete (working tree) | 2026-09-11 ~13:20 (+33h 31m) |
-| Public release | pending |
+| R1–R5 reconciliation committed (`23fcc64`) | 2026-09-11 13:35 (+33h 46m) |
+| Software tag `v1.0.0` (substrate only) | 2026-09-11 16:44 (+36h 55m) |
+| Public release (arXiv manuscript) | pending |
 | Total commits at reviewed SHA | 132 |
 
 ## Timeline
@@ -89,7 +91,14 @@ below. The progression is the record; the origin point alone is not.
 | 12:15–12:31 | +32.4h | Author metadata + ORCID → **reviewed SHA `4f3fa56`** | `e55e7e7`, `4f3fa56` |
 | ~12:46 | +32.9h | **External source-faithfulness review received** (5 findings; 7/7 spot-checkable claims locally confirmed) | `docs/reviews/2026-09-11-manuscript-source-faithfulness.md` |
 | 12:46–12:47 | +33.0h | Theory series 07–10, thesis worked example, pilot-005 comparative protocol committed | `bde6d88`, `71196af` |
-| ~13:00–13:20 | +33.5h | **R1–R5 reconciliation**: methods/results rebuilt from frozen records; N2a/N5 attributed reassessments; epistemic + architecture sections corrected; assembly deduplicated; publication gates reopened pending external re-review | working tree |
+| ~13:00–13:20 | +33.5h | **R1–R5 reconciliation authored**: methods/results rebuilt from frozen records; N2a/N5 attributed reassessments; epistemic + architecture sections corrected; assembly deduplicated; publication gates reopened pending external re-review | committed at `23fcc64` (below) |
+| 13:07 | +33.3h | Authoritative GoW naming canon adopted | `321c356` |
+| 13:30 | +33.7h | Manuscript redesigned as a monograph | `c0777fc` |
+| 13:35 | +33.8h | **R1–R5 reconciliation committed** (source-faithfulness blockers 1–5) | `23fcc64` |
+| 13:36 | +33.8h | CI wired: repo gates + M7 reproducibility + paper compile with duplicate-label guard | `87fbf97` |
+| 13:41–14:29 | +33.9h | Source-fidelity residue sweep; v1.0.0 gap analysis; QC correction pass (endpoint reporting, claim strength) | `39ba88d`, `4e38ecb`, `1780933` |
+| 16:44 | +36.9h | **Software tag `v1.0.0`** — versions the `newf` substrate only; the arXiv manuscript is versioned separately and remains gated | `a70c5f1` |
+| 17:19–17:20 | +37.5h | CHANGELOG corrections (quorum count 23; canonical repo URL after rename to `instagrim-dev/gow`) | `7ec89dc`, `9895dc0` |
 
 ## What this timeline is evidence for
 
@@ -131,3 +140,17 @@ re-verified with:
 ```bash
 git log --reverse --format='%h %ad %s' --date=format-local:'%Y-%m-%d %H:%M'
 ```
+
+### Correction note — 2026-09-11 (evening)
+
+A same-day adversarial review found this file stale within hours of creation:
+status rows still said "working tree" after the reconciliation was committed
+(`23fcc64`), the headline said "Public release: pending" without
+distinguishing the software surface after tag `v1.0.0` was pushed, and the
+timeline ended at ~13:20 while eight committed events followed. Status-bearing
+cells were updated to current fact, the Day-1 table was extended through
+17:20, and the stage table gained the software-release row with its scope
+split (`CHANGELOG.md` § Versioning: `v1.0.0` versions the substrate; the
+arXiv manuscript is gated separately). The lesson is recorded rather than
+erased: a provenance document is itself a claim about the repository and
+drifts like any other claim unless re-verified against the commit record.
