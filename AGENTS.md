@@ -141,6 +141,16 @@ SurvivingInvariant --independent-proof--> EstablishedInvariant
 
 If independent verification is unavailable, preserve the weaker type and record the limitation.
 
+> **Implementation note (stricter than this doc):** the shipped invariant
+> lifecycle deliberately has NO state named `established`
+> (`internal/pipeline/challenge.go`; a regression test forbids the name —
+> attestation is not verification). The strongest shipped states are
+> `surviving` (survived challenge) and `operator_attested` (operator-scoped
+> attestation, still challengeable). `EstablishedInvariant` above names the
+> aspirational endpoint reachable only through independent proof; until a
+> proof-checked path exists end-to-end, code must keep the weaker states and
+> this doc's promotion arrow stays unimplemented rather than approximated.
+
 ## Failure is a first-class artifact
 
 A failed proposal is valuable when it narrows the search space, falsifies an invariant, identifies a boundary, or reveals redundancy.
@@ -344,6 +354,16 @@ verification_blocked
 ```
 
 `no_information_gain` is not permission to regenerate the same mechanism with different adjectives.
+
+> **Implementation note:** this is the doctrinal vocabulary; the shipped
+> schema (the experiment arms' `stopping_condition` CHECK,
+> `internal/store/migrations.go`) currently implements
+> `completed`, `budget_exhausted`, `no_information_gain`, and
+> `verification_blocked`, and the experiment pipeline assigns only
+> `completed`/`budget_exhausted` today. `solved`, `invariant_established`,
+> `frontier_exhausted`, and `insufficient_failure_diversity` are
+> not yet representable; add them to the CHECK (a migration) when a stage
+> can genuinely detect them — do not overload an existing value to fake one.
 
 ## Current repository direction
 

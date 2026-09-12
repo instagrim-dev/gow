@@ -530,15 +530,24 @@ verification strength, see [`docs/evaluation.md`](docs/evaluation.md)) →
 `policy mutate`/`policy list`/`policy show` (explicit, versioned search-policy
 mutation that biases the next `frontier generate`, see
 [`docs/search-policy.md`](docs/search-policy.md)) → `experiment
-define`/`run`/`readiness`/`show`/`validate-proposals`/`list`/`compare` (the M7
-BLINDED-BENCHMARK holdout harness, see [`docs/experiment.md`](docs/experiment.md)).
+define`/`run`/`readiness`/`show`/`validate-proposals`/`list`/`compare`/`date-source` (the M7
+holdout harness, see [`docs/experiment.md`](docs/experiment.md)). Newer
+command families with their own docs: `witness check`
+([`docs/evaluation.md`](docs/evaluation.md)), `projection
+propose`/`discharge`/`list` ([`docs/projection.md`](docs/projection.md)),
+`evidence admit`/`list`, `episode …` ([`docs/episode.md`](docs/episode.md)),
+`review applicability`/`check`/`coverage`
+([`docs/normative-review-records.md`](docs/normative-review-records.md)),
+`invariant claim`, `source lineage-diff`, and `mechanism list`.
 
-`experiment run` ships as a harness, not a completed historical result:
-`mode=historical` execution is refused pending an operator-supplied
-dated-evidence artifact establishing that the held-out material predates the
-candidate invariants being tested (both a data gap, not a code gap — see
-`EPIC.md` §M7). `mode=BLINDED-BENCHMARK` is fully exercised today
-(`corpus/experiments/m7-blinded-run/`).
+`experiment run` supports both modes with mode-disjoint conclusion
+vocabularies: `mode=BLINDED-BENCHMARK` is fully exercised
+(`corpus/experiments/m7-blinded-run/`), and `mode=historical` executed for the
+first time on 2026-09-12 (`corpus/experiments/pvnp-holdout/`) after its dating
+gate was lifted with `experiment date-source` — per-store, historical execution
+stays refused until every withheld source carries auditable dated evidence
+that it became public strictly after the declared cutoff (see `EPIC.md` §M7
+and `docs/experiment.md`).
 
 The one milestone genuinely **not started** is M8 (cross-discipline
 portability — a Navier–Stokes litmus outside the Erdős–Straus corpus); no

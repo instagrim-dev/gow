@@ -653,7 +653,8 @@ better compression + worse prediction     = abstraction drift
 
 ## M7 — Historical holdout validation
 
-**Status: v0 delivered as a BLINDED-BENCHMARK harness; historical mode gated.**
+**Status: v0 delivered as a BLINDED-BENCHMARK harness; historical mode
+executed 2026-09-12 (pvnp-holdout).**
 `newf experiment define/run/show/list/compare` (schema `v21`) composes the whole
 loop into a measured, mode-stamped experiment: a quarantined target problem whose
 every source is withheld, a **code-computed leakage audit** (content-identity
@@ -666,11 +667,11 @@ to every arm. Conclusion vocabularies are mode-disjoint by CHECK —
 **BlindedRecovery != HistoricalPrediction** — so a benchmark result can never
 be cited as historical evidence (`corpus/README.md` documents why: the shipped
 corpus is a synthetic blinded benchmark, not a dated holdout). `mode=historical`
-remains execution-refused until every withheld source carries auditable dated
-evidence (`holdout_source_dating`); the write path for that evidence is
+is execution-refused per store until every withheld source carries auditable
+dated evidence (`holdout_source_dating`); the write path for that evidence is
 `experiment date-source` (per-source RFC3339 dating strictly after the cutoff,
-required evidence locator, immutable rows), so lifting the gate now needs only
-**data** — real, auditable dated sources — with no remaining code gap. All four
+required evidence locator, immutable rows). The gate was first lifted and
+exercised for the pvnp-holdout corpus on 2026-09-12 (see below). All four
 arms now execute offline through **one shared frontier core**: `b0_undirected`
 (no targets/policy — the deriving fixture yields honest-empty offline),
 `b1_semantic_summary` (summarize-next restatement, role `'summarize-next'`),
@@ -711,8 +712,24 @@ This is the first scientifically meaningful end-to-end milestone.
 > classifies `mechanism-distinct` from the affine-lattice target. Leakage passed
 > (blinding clean) in both. The negative is the expected offline-fixture result;
 > the v0 win is the harness plus decisive assessability. A real recovery signal
-> needs a live-model campaign; `mode=historical` remains gated on dated evidence
-> — both data, not code.
+> needs a live-model campaign.
+
+> **Historical mode executed (2026-09-12).** The dating gate was lifted for a
+> real dated corpus and `mode=historical` ran end to end
+> ([`corpus/experiments/pvnp-holdout/`](corpus/experiments/pvnp-holdout/)): a
+> 12-source pre-2005 P-vs-NP train corpus against the withheld Williams
+> 2010/2011 algorithm-to-lower-bound advance, under a preregistered freeze
+> (vocabulary `mechanism/v6`, `classify/v3`, budgets 8/8), a blind chronology
+> audit of all 14 dated claims, `experiment date-source` for both withheld
+> sources (earliest-public dates, audited locators), blinded external
+> B0/B3 captures, and a clean leakage audit. Mechanical conclusion:
+> **`inconclusive`, exactly as preregistered** (classify/v3 strips untrusted
+> completeness for externally captured proposals). Predeclared secondary
+> endpoint (ModelJudgment, never promoted): two independent blinded
+> adjudicators, 11/11 concordant — both arms' rank-0 proposals recover the
+> withheld structural move; no arm differential, so the run is null-at-n=1 on
+> guidance value with a recorded parametric-contamination caveat. See
+> `corpus/experiments/pvnp-holdout/RESULT.md` for the binding limitations.
 
 ### Experiment shape
 

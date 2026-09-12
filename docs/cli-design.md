@@ -18,13 +18,18 @@ newf compress
 
 ## Global CLI contracts
 
-- `--db <path>`: SQLite path (default `.newf/newf.db`).
-- each command invocation creates a new `run` provenance record.
-- `--experiment-id <id>`: optional link to an existing experiment for cross-command grouping.
-- `--json`: stable machine-readable output.
-- `--format table|json|yaml` (human defaults to table; `--json` wins).
-- `--quiet`: suppress narrative text, keep IDs/summaries.
-- `--no-write`: dry run where supported.
+> **Superseded (v0 sketch).** The shipped global surface is exactly two
+> persistent flags: `--db <path>` and `--json` (`cmd/newf/root.go`). The
+> flags struck through below were designed but never implemented; they are
+> retained for design history only and are NOT contracts.
+
+- `--db <path>`: SQLite path (default `.newf/newf.db`). **(shipped)**
+- each command invocation creates a new `run` provenance record. **(shipped)**
+- ~~`--experiment-id <id>`: optional link to an existing experiment for cross-command grouping.~~ (never implemented)
+- `--json`: stable machine-readable output. **(shipped)**
+- ~~`--format table|json|yaml` (human defaults to table; `--json` wins).~~ (never implemented)
+- ~~`--quiet`: suppress narrative text, keep IDs/summaries.~~ (never implemented)
+- ~~`--no-write`: dry run where supported.~~ (never implemented)
 
 Common machine envelope:
 
@@ -51,6 +56,11 @@ the survey.
 
 Every response carries `ok`, `command`, `store`. The entity payload key varies
 by command (historical drift, now frozen):
+
+> Note (2026-09-12): the table below predates the `episode`, `projection`,
+> `witness`, `review`, `evidence`, and `experiment date-source` command
+> families, which follow the same `ok`/`command`/`store` envelope; see their
+> per-stage docs for payload shapes.
 
 | command | entity key | notes |
 |---|---|---|
@@ -82,6 +92,17 @@ Conventions for NEW surfaces (not retrofitted onto frozen shapes):
   `migration_failed`, `internal_error`.
 
 ## Command contracts
+
+> **Superseded (v0 sketch).** This section is the original design sketch and
+> has drifted from the shipped verbs: e.g. the shipped surface is
+> `invariants mine` (not `newf invariants`), `challenge --problem/--all/--population`
+> (not `--mode/--budget/--parent-invariant-id`), `frontier generate
+> [--count --no-policy --proposals-file]` (no `--against`), `successes
+> compress` (no `newf compress`), and holdout evaluation runs through
+> `experiment run`, not an `evaluate --mode holdout`. For the shipped
+> contracts, consult each command's `--help` and the per-stage docs
+> (`docs/experiment.md`, `docs/evaluation.md`, `docs/projection.md`,
+> `docs/search-policy.md`). Retained for design history only.
 
 ### `newf init <problem>`
 
@@ -254,6 +275,13 @@ surviving -> challenged | weaken | falsified | operator_attested
 - Confidence is shown with provenance (`provider`, `prompt/schema version`, `evidence IDs`), not prose-heavy explanations.
 
 ## Suggested package boundaries
+
+> **Superseded (v0 sketch).** `internal/eval` was never created (holdout
+> evaluation lives in `internal/pipeline/experiment.go` + `internal/experiment`),
+> and the shipped tree has grown packages this sketch predates:
+> `internal/canon`, `config`, `experiment`, `lean`, `policy`, `projection`,
+> `relational`, `review`, `success`, `verify`, `witness`,
+> `provider/localfp`. Retained for design history only.
 
 ```text
 cmd/newf/                 # Cobra wiring only

@@ -26,6 +26,44 @@ conjecture is likewise explicitly not a `v1.0.0` requirement (`AGENTS.md`,
 
 ## [Unreleased]
 
+### Added — Lean 4 kernel as a deterministic verifier tier
+
+`internal/lean` (commit `5cba8b7`): an asymmetric deterministic verifier —
+kernel-checked acceptance is `deterministic` strength; rejection or
+unavailability degrades, never blocks, the evaluation route.
+
+### Added — local-model fingerprint split
+
+`internal/provider/localfp` (commit `8f6b1e5`): semantic fingerprints
+(what was asked) separated from execution fingerprints (how the local
+runtime was configured), so replay identity survives runtime upgrades.
+
+### Added — mechanism/v6 vocabulary + first executed historical holdout
+
+- **`mechanism/v6`** (commit `aaca121`): verbatim per-label canonicalization
+  of the pvnp-holdout corpus; strict superset of v5 with regression tests
+  pinning the no-merging discipline (KI03 implication vs target conversion
+  stay distinct IDs).
+- **First `mode=historical` execution** (commits `cb62bf2`→`e3caac2`,
+  `corpus/experiments/pvnp-holdout/`): preregistered freeze, blind
+  chronology audit, `experiment date-source` for both withheld sources,
+  blinded external B0/B3 captures, clean leakage audit. Mechanical
+  conclusion `inconclusive` exactly as preregistered; secondary
+  ModelJudgment endpoint: 11/11 adjudicator concordance, both arms' rank-0
+  proposals recover the withheld move (null-at-n=1 on guidance value;
+  binding limitations in `RESULT.md`). Discharges the 1.0.0 "Deferred"
+  note on the historical dating gate: `docs/experiment.md` now documents
+  the exact dated-evidence bar and a dated corpus exists.
+
+### Fixed — provenance-bearing paths fail loudly
+
+Commit `f95821f` (rode along with the preservation-pilot lane): four
+swallowed errors (frontier signature marshal, experiment capture-file
+hash, policy evidence reads, success-compression vocabulary resolution)
+now fail their stage instead of silently degrading persisted provenance;
+`RecordExperimentExecutions` and `RunLeakageCheck` now run in
+transactions.
+
 ### Added — checkable attempt→output binding (v46, review attribution slice)
 
 Remediates the C3 attribution finding of the 2026-09-12 C1–C8 review run: a
