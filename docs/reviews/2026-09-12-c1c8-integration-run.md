@@ -104,6 +104,21 @@ as conformance: any `ELIGIBLE_TO_ADVANCE` derived from it is superseded by
 this bundle's demonstrated nonconformance until remediation handoff 1 lands
 (fixing the gate or recording the explicit contract decision).
 
+**Resolution (2026-09-12 14:2x, handoff 1 landed):** current-authority
+selection is now population-compatibility-aware
+(`store.GetLatestCompatibleAuthority` consulted at the frontier decision
+boundary): a replay's latest transition no longer displaces a campaign that
+assessed the current compatible population and earned the same targetable
+state; a compatible campaign that earned a *different* state still grants
+nothing, so the 5b negative control (weaken) still excludes. The committed
+regression `TestIntegrationReplayPreservesCompatibleCurrentAuthority` is
+exactly the run-2 C7 positive branch and passes; the obligation gate's C7 was
+corrected to assert preservation (`compatible_current_authority_preserved`)
+instead of encoding the displacement as its pass condition, and
+`COVERAGE.md` was regenerated from the corrected gate. F-2 is closed for the
+exercised path; its `ELIGIBLE_TO_ADVANCE` verdict is no longer contradicted
+on this point.
+
 ### F-1 — reclassified per critique: **reproduced admission omission, supported by a static root-cause trace**
 
 Retained from revision 1 (runtime evidence:
@@ -169,11 +184,11 @@ claim is made.
 
 ## 5. Remediation handoffs (≤3)
 
-1. **F-2 (`decisions`/`assessment-identity`):** make current-authority
-   selection population-compatibility-aware (or record an explicit contract
-   decision that replay intentionally parks all authority). Acceptance: run-2
-   C7 positive branch passes (or the documented decision states why it must
-   not), with the negative control still passing.
+1. **F-2 (`decisions`/`assessment-identity`): LANDED 2026-09-12.**
+   Current-authority selection is population-compatibility-aware; acceptance
+   met by the committed regression
+   `TestIntegrationReplayPreservesCompatibleCurrentAuthority` (run-2 C7
+   positive branch) with the 5b negative control still passing.
 2. **F-1 (`evidence-admission`):** per-evaluation admission visibility under
    exact context (not strength ranking), with the no-inflation companion
    constraint. Acceptance: the same-proposal witness-after-model-judged case

@@ -136,7 +136,44 @@ type InvariantStateRow struct {
 	PredicateFingerprint string
 	InvariantRevisionID  string
 	AssociationStatus    string
+	// Authority of the CURRENT state (F1, 2026-09-12 review-flow run): the
+	// campaign whose transition produced this state, and the population that
+	// campaign actually assessed. A lifecycle state alone does not say WHICH
+	// evidence earned it, so current search authority cannot be decided from
+	// State: a `discovery` replay of an obsolete population legitimately
+	// re-earns `surviving` for its own historical claim, and that outcome must
+	// stay reproducible without restoring current target eligibility.
+	//
+	// All four are empty when no transition has run yet (the state is the
+	// candidate's initial state) or when the transition came from an operator
+	// attestation campaign, which searches no population and writes no row.
+	// Empty means "no assessed population recorded", never "current".
+	AuthorityRunID                  string
+	AuthorityDiscoveryClusterRunID  string
+	AuthorityAssessmentClusterRunID string
+	AuthorityPopulationPolicy       string
 }
+
+// invariantStateAuthoritySelect and invariantStateAuthorityJoin resolve the
+// campaign behind an invariant's CURRENT state: the highest-sequence transition,
+// the challenge that carried it, that challenge's run, and the run's recorded
+// assessment population (v34/S1 rows). Both readers share this exact lineage so
+// a state and its authority can never disagree between them.
+const invariantStateAuthoritySelect = `, COALESCE(lch.run_id,''), COALESCE(cap.discovery_cluster_run_id,''), COALESCE(cap.assessment_cluster_run_id,''), COALESCE(cap.population_policy,'')`
+
+const invariantStateAuthorityJoin = `
+LEFT JOIN (
+  SELECT t.invariant_id, t.challenge_id
+  FROM invariant_state_transitions t
+  JOIN (
+    SELECT invariant_id, MAX(transition_seq) AS max_seq
+    FROM invariant_state_transitions
+    GROUP BY invariant_id
+  ) m ON m.invariant_id = t.invariant_id AND m.max_seq = t.transition_seq
+) lt ON lt.invariant_id = ics.invariant_id
+LEFT JOIN invariant_challenges lch ON lch.id = lt.challenge_id
+LEFT JOIN challenge_assessment_populations cap
+  ON cap.run_id = lch.run_id AND cap.invariant_id = ics.invariant_id`
 
 // PersistChallengeCampaign writes a full challenge pass transactionally:
 // the provider invocation, every challenge row with its evidence / synthetic
@@ -348,6 +385,50 @@ func currentStateTx(ctx context.Context, tx *sql.Tx, invariantID string) (string
 	return state, err
 }
 
+// CompatibleAuthorityRow is the most recent state transition earned by a
+// campaign that assessed one specific population. It exists for the CURRENT
+// decision boundary (F-2, 2026-09-12 review run 2): the latest transition
+// overall may come from a historical replay over an obsolete population, and
+// that replay must not displace authority earned against the current
+// compatible population.
+type CompatibleAuthorityRow struct {
+	RunID         string
+	ChallengeID   string
+	ToState       string
+	TransitionSeq int64
+}
+
+// GetLatestCompatibleAuthority returns the highest-sequence state transition of
+// one invariant whose campaign's recorded assessment population equals
+// clusterRunID. found=false means no campaign ever assessed that population
+// (attestation campaigns write no population row and never match).
+func (s *Store) GetLatestCompatibleAuthority(ctx context.Context, invariantID, clusterRunID string) (CompatibleAuthorityRow, bool, error) {
+	if err := domain.ValidateCandidateInvariantID(invariantID); err != nil {
+		return CompatibleAuthorityRow{}, false, err
+	}
+	if err := domain.ValidateClusterRunID(clusterRunID); err != nil {
+		return CompatibleAuthorityRow{}, false, err
+	}
+	row := s.db.QueryRowContext(ctx, `
+SELECT t.challenge_id, t.to_state, t.transition_seq, ch.run_id
+FROM invariant_state_transitions t
+JOIN invariant_challenges ch ON ch.id = t.challenge_id
+JOIN challenge_assessment_populations cap
+  ON cap.run_id = ch.run_id AND cap.invariant_id = t.invariant_id
+WHERE t.invariant_id = ? AND cap.assessment_cluster_run_id = ?
+ORDER BY t.transition_seq DESC
+LIMIT 1
+`, invariantID, clusterRunID)
+	var out CompatibleAuthorityRow
+	if err := row.Scan(&out.ChallengeID, &out.ToState, &out.TransitionSeq, &out.RunID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return CompatibleAuthorityRow{}, false, nil
+		}
+		return CompatibleAuthorityRow{}, false, err
+	}
+	return out, true, nil
+}
+
 // GetChallengeAssessmentPopulation loads the population identity of one
 // challenge campaign (v34/S1). Attestation campaigns have no row; found=false
 // distinguishes "no population searched" from an error.
@@ -372,19 +453,23 @@ FROM challenge_assessment_populations WHERE run_id = ? AND invariant_id = ?
 	return out, true, nil
 }
 
-// GetInvariantState returns the current lifecycle state of one candidate.
+// GetInvariantState returns the current lifecycle state of one candidate,
+// together with the authority behind that state (see InvariantStateRow).
 func (s *Store) GetInvariantState(ctx context.Context, invariantID string) (InvariantStateRow, error) {
 	if err := domain.ValidateCandidateInvariantID(invariantID); err != nil {
 		return InvariantStateRow{}, err
 	}
 	row := s.db.QueryRowContext(ctx, `
-SELECT ics.invariant_id, ics.state, ics.as_of, ci.statement, ci.predicate_fingerprint, ci.invariant_revision_id, ci.association_status
+SELECT ics.invariant_id, ics.state, ics.as_of, ci.statement, ci.predicate_fingerprint, ci.invariant_revision_id, ci.association_status`+
+		invariantStateAuthoritySelect+`
 FROM invariant_current_state ics
-JOIN candidate_invariants ci ON ci.id = ics.invariant_id
+JOIN candidate_invariants ci ON ci.id = ics.invariant_id`+
+		invariantStateAuthorityJoin+`
 WHERE ics.invariant_id = ?
 `, invariantID)
 	var out InvariantStateRow
-	if err := row.Scan(&out.InvariantID, &out.State, &out.AsOf, &out.Statement, &out.PredicateFingerprint, &out.InvariantRevisionID, &out.AssociationStatus); err != nil {
+	if err := row.Scan(&out.InvariantID, &out.State, &out.AsOf, &out.Statement, &out.PredicateFingerprint, &out.InvariantRevisionID, &out.AssociationStatus,
+		&out.AuthorityRunID, &out.AuthorityDiscoveryClusterRunID, &out.AuthorityAssessmentClusterRunID, &out.AuthorityPopulationPolicy); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return InvariantStateRow{}, fmt.Errorf("%w: candidate invariant %s", ErrNotFound, invariantID)
 		}
@@ -393,18 +478,25 @@ WHERE ics.invariant_id = ?
 	return out, nil
 }
 
-// ListInvariantStates lists candidates for a problem with their current state,
-// optionally filtered to one state. This is the M5.1 read surface: frontier
-// generation may consume only surviving/established.
+// ListInvariantStates lists candidates for a problem with their current state
+// and that state's authority, optionally filtered to one state. This is the
+// M5.1 read surface: frontier generation may consume only surviving/established.
+//
+// A state filter is NOT a current-authority filter. Callers deciding current
+// search eligibility must also check the authority population (F1); this reader
+// deliberately surfaces both rather than pre-filtering, so historical replay
+// stays visible and reproducible.
 func (s *Store) ListInvariantStates(ctx context.Context, problemID, stateFilter string) ([]InvariantStateRow, error) {
 	if err := domain.ValidateProblemID(problemID); err != nil {
 		return nil, err
 	}
 	query := `
-SELECT ics.invariant_id, ics.state, ics.as_of, ci.statement, ci.predicate_fingerprint, ci.invariant_revision_id, ci.association_status
+SELECT ics.invariant_id, ics.state, ics.as_of, ci.statement, ci.predicate_fingerprint, ci.invariant_revision_id, ci.association_status` +
+		invariantStateAuthoritySelect + `
 FROM invariant_current_state ics
 JOIN candidate_invariants ci ON ci.id = ics.invariant_id
-JOIN invariant_revisions ir ON ir.id = ci.invariant_revision_id
+JOIN invariant_revisions ir ON ir.id = ci.invariant_revision_id` +
+		invariantStateAuthorityJoin + `
 WHERE ir.problem_id = ?`
 	args := []any{problemID}
 	if stateFilter != "" {
@@ -420,7 +512,8 @@ WHERE ir.problem_id = ?`
 	var out []InvariantStateRow
 	for rows.Next() {
 		var r InvariantStateRow
-		if err := rows.Scan(&r.InvariantID, &r.State, &r.AsOf, &r.Statement, &r.PredicateFingerprint, &r.InvariantRevisionID, &r.AssociationStatus); err != nil {
+		if err := rows.Scan(&r.InvariantID, &r.State, &r.AsOf, &r.Statement, &r.PredicateFingerprint, &r.InvariantRevisionID, &r.AssociationStatus,
+			&r.AuthorityRunID, &r.AuthorityDiscoveryClusterRunID, &r.AuthorityAssessmentClusterRunID, &r.AuthorityPopulationPolicy); err != nil {
 			return nil, err
 		}
 		out = append(out, r)

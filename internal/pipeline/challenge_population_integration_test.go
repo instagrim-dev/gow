@@ -241,6 +241,107 @@ func TestIntegrationChallengeAssessmentPopulation(t *testing.T) {
 	if got := r.Challenges[0].ResultSummary; got != "unconfirmed" {
 		t.Fatalf("replay over A must find no counterexample, got %q", got)
 	}
+	// The replay legitimately re-earned `surviving` for its OWN bounded claim
+	// about A — history is immutable and reproducible.
+	if r.StateAfter != "surviving" {
+		t.Fatalf("the replay's negative search over A must remain reproducible (surviving), got %q", r.StateAfter)
+	}
+
+	// 5b. C7 (F1, 2026-09-12 review-flow run): the replay must NOT restore
+	// CURRENT target eligibility. A lifecycle state alone cannot carry current
+	// search authority, because a `discovery` campaign searched an obsolete
+	// population. The next generation therefore selects NO target for this
+	// claim, and says exactly why, naming both populations.
+	//
+	// This is the assertion the earlier S1 test lacked: it checked the recorded
+	// assessment population but never the next generation's actual target set,
+	// so a replay could restore targetability with no failing check.
+	afterReplay, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("generate after replay: %v", err)
+	}
+	if len(afterReplay.ExcludedStaleAuthority) != 1 {
+		t.Fatalf("the replayed survivor must be reported as excluded from current selection, got %+v", afterReplay.ExcludedStaleAuthority)
+	}
+	ex := afterReplay.ExcludedStaleAuthority[0]
+	if ex.InvariantID != invID || ex.State != "surviving" {
+		t.Fatalf("exclusion must name the replayed survivor: %+v", ex)
+	}
+	if ex.Reason != staleReasonObsoletePopulation {
+		t.Fatalf("exclusion reason = %q, want %q", ex.Reason, staleReasonObsoletePopulation)
+	}
+	if ex.AssessedClusterRunID != discovery.ClusterRun.ID || ex.CurrentClusterRunID != recluster.ClusterRun.ID {
+		t.Fatalf("exclusion must name the obsolete assessed run %s and the current run %s: %+v",
+			discovery.ClusterRun.ID, recluster.ClusterRun.ID, ex)
+	}
+	if ex.AuthorityPopulation != PopulationDiscovery {
+		t.Fatalf("exclusion must record that the authority campaign ran under %q, got %q", PopulationDiscovery, ex.AuthorityPopulation)
+	}
+	// The generation REQUEST is the operative boundary: the generator must not
+	// be asked to attack an invariant whose only surviving authority is
+	// obsolete. Asserting on the persisted payload (not just the response) is
+	// what makes this a claim about the next search action.
+	repl, err := repo.GetFrontierGeneration(ctx, afterReplay.Generation.ID)
+	if err != nil {
+		t.Fatalf("get post-replay generation: %v", err)
+	}
+	replInvocs, err := repo.ListProviderInvocationsForRun(ctx, repl.RunID)
+	if err != nil || len(replInvocs) == 0 {
+		t.Fatalf("expected a persisted post-replay invocation: %v", err)
+	}
+	if strings.Contains(replInvocs[0].RequestPayload, invID) {
+		t.Fatalf("post-replay generation request must not target the obsolete-authority invariant %s:\n%s", invID, replInvocs[0].RequestPayload)
+	}
+	// And the historical record itself is untouched: the replay campaign's
+	// population identity is still durable and still says `discovery`.
+	replayPop, found, err := repo.GetChallengeAssessmentPopulation(ctx, r.RunID, invID)
+	if err != nil || !found {
+		t.Fatalf("replay campaign population row missing (found=%v, err=%v)", found, err)
+	}
+	if replayPop.AssessmentClusterRunID != discovery.ClusterRun.ID || replayPop.PopulationPolicy != PopulationDiscovery {
+		t.Fatalf("the replay's historical population identity must be preserved verbatim: %+v", replayPop)
+	}
+
+	// 5c. C4 (F1): eligibility is not inherited across a relevant population
+	// change. Reassessment under the CURRENT population is the path back — and
+	// it is the ONLY path, so the gate cannot be a dead end. Here the current
+	// population contains the violator, so reassessment lands on `weaken`
+	// (correctly non-targetable for a different, evidential reason). What must
+	// hold is that the exclusion reason is no longer stale authority: the claim
+	// was actually examined against the current population.
+	current, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID, Population: PopulationLatest})
+	if err != nil {
+		t.Fatalf("reassessment under the current population: %v", err)
+	}
+	cr := current.Reports[0]
+	if cr.AssessmentClusterRunID != recluster.ClusterRun.ID {
+		t.Fatalf("reassessment must assess the current population %s, got %s", recluster.ClusterRun.ID, cr.AssessmentClusterRunID)
+	}
+	afterReassess, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("generate after reassessment: %v", err)
+	}
+	for _, e := range afterReassess.ExcludedStaleAuthority {
+		if e.InvariantID == invID {
+			t.Fatalf("after reassessment against the current population, the claim must no longer be withheld for STALE AUTHORITY (its state governs instead): %+v", e)
+		}
+	}
+	// State-driven exclusion still applies: `weaken` is not targetable, and the
+	// contextual gate did not smuggle it back in.
+	if state, serr := repo.GetInvariantState(ctx, invID); serr != nil {
+		t.Fatalf("read back state: %v", serr)
+	} else {
+		if state.State != "weaken" {
+			t.Fatalf("reassessment under the current population must weaken (in-population violator), got %q", state.State)
+		}
+		// The authority lineage is readable: the state names the campaign and
+		// the population that produced it, so current authority is never
+		// inferred from the bare state.
+		if state.AuthorityRunID != cr.RunID || state.AuthorityAssessmentClusterRunID != recluster.ClusterRun.ID ||
+			state.AuthorityPopulationPolicy != PopulationLatest {
+			t.Fatalf("current state must carry its authority lineage: %+v", state)
+		}
+	}
 
 	// 6. D5 falsifier (v43): the persisted boundary delta feeds policy
 	// derivation — one expand directive at the refuted boundary, provenance

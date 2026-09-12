@@ -36,9 +36,10 @@ func newWitnessCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *
 
 func newWitnessCheckCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cobra.Command {
 	var (
-		proposalID string
-		tuple      string
-		note       string
+		proposalID   string
+		generationID string
+		tuple        string
+		note         string
 	)
 	cmd := &cobra.Command{
 		Use:   "check",
@@ -49,7 +50,8 @@ func newWitnessCheckCommand(stdout io.Writer, app *pipeline.App, opts *rootOptio
 				return wrapCommandError("witness check", errors.New("--proposal and --tuple are required"))
 			}
 			result, err := app.WitnessCheck(cmd.Context(), pipeline.WitnessCheckInput{
-				DBPath: opts.dbPath, ProposalID: proposalID, Tuple: tuple, Note: note,
+				DBPath: opts.dbPath, ProposalID: proposalID, GenerationID: generationID,
+				Tuple: tuple, Note: note,
 				JSONOutput: opts.jsonOutput,
 			})
 			if err != nil {
@@ -63,6 +65,11 @@ func newWitnessCheckCommand(stdout io.Writer, app *pipeline.App, opts *rootOptio
 			if result.Detail != "" {
 				fmt.Fprintf(stdout, "  detail:     %s\n", result.Detail)
 			}
+			fmt.Fprintf(stdout, "  occurrence: %s", result.FrontierGenerationRunID)
+			if !result.OccurrencePinned {
+				fmt.Fprint(stdout, " (no content binding; attribution gap)")
+			}
+			fmt.Fprintln(stdout)
 			fmt.Fprintf(stdout, "  evaluation: %s (verdict %s, %s, strength %s, subject %s)\n",
 				result.Evaluation.ID, result.Evaluation.Verdict, result.Evaluation.VerifierKind,
 				result.Evaluation.VerificationStrength, result.Evaluation.VerificationSubject)
@@ -70,6 +77,7 @@ func newWitnessCheckCommand(stdout io.Writer, app *pipeline.App, opts *rootOptio
 		},
 	}
 	cmd.Flags().StringVar(&proposalID, "proposal", "", "Frontier proposal ID (fpr_...) whose attempted mechanism produced the tuple")
+	cmd.Flags().StringVar(&generationID, "generation", "", "Pin the occurrence the verdict is about (fgr_...); default is the proposal's latest occurrence generation")
 	cmd.Flags().StringVar(&tuple, "tuple", "", "Produced witness tuple n,x,y,z (decimal, arbitrary precision; checked exactly)")
 	cmd.Flags().StringVar(&note, "note", "", "Provenance of the tuple (required)")
 	return cmd

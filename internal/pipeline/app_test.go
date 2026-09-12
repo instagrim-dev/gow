@@ -399,6 +399,10 @@ func (f *fakeProblemStore) ListInvariantStates(context.Context, string, string) 
 	return nil, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) GetLatestCompatibleAuthority(context.Context, string, string) (store.CompatibleAuthorityRow, bool, error) {
+	return store.CompatibleAuthorityRow{}, false, errors.New("unexpected call")
+}
+
 func (f *fakeProblemStore) ListChallengesForInvariant(context.Context, string) ([]store.ChallengeRecord, error) {
 	return nil, errors.New("unexpected call")
 }
@@ -479,6 +483,45 @@ func (f *fakeProblemStore) RedundantAttackKeys(context.Context, string, int) ([]
 
 func (f *fakeProblemStore) ListBreakCohortRows(context.Context, string) ([]store.BreakCohortRow, error) {
 	return nil, errors.New("unexpected call")
+}
+
+// Normative review ledger (v44). The fake refuses these: the review ledger is
+// exercised against the real migrated store, because a fake that answers
+// coverage queries could report conformance no record supports.
+func (f *fakeProblemStore) PersistReviewPolicy(context.Context, store.ReviewPolicyRecord) (store.ReviewPolicyRow, error) {
+	return store.ReviewPolicyRow{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistReviewObligation(context.Context, store.ReviewObligationRow) (store.ReviewObligationRow, error) {
+	return store.ReviewObligationRow{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistReviewApplicabilityDecision(context.Context, store.ReviewApplicabilityDecisionRow) (store.ReviewApplicabilityDecisionRow, error) {
+	return store.ReviewApplicabilityDecisionRow{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistReviewDependencyManifest(context.Context, store.ReviewDependencyManifestRow) (store.ReviewDependencyManifestRow, error) {
+	return store.ReviewDependencyManifestRow{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistReviewCheckAttempt(context.Context, store.ReviewCheckAttemptRow) (store.ReviewCheckAttemptRow, error) {
+	return store.ReviewCheckAttemptRow{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) PersistReviewAssessment(context.Context, store.ReviewAssessmentRow) (store.ReviewAssessmentRow, error) {
+	return store.ReviewAssessmentRow{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) LatestReviewPolicy(context.Context, string) (store.ReviewPolicyRow, bool, error) {
+	return store.ReviewPolicyRow{}, false, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) GetReviewPolicy(context.Context, string) (store.ReviewPolicyRow, error) {
+	return store.ReviewPolicyRow{}, errors.New("unexpected call")
+}
+
+func (f *fakeProblemStore) LoadReviewCoverage(context.Context, string) (store.ReviewCoverage, error) {
+	return store.ReviewCoverage{}, errors.New("unexpected call")
 }
 
 func (f *fakeProblemStore) PersistSuccessRevision(context.Context, store.SuccessRevisionRecord) (store.PersistSuccessRevisionResult, error) {

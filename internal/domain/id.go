@@ -54,6 +54,17 @@ const (
 	SearchPolicyRevisionIDPrefix  = "spr_"
 	SearchPolicyDirectiveIDPrefix = "spd_"
 	InterpretationClaimIDPrefix   = "icl_"
+	// Normative review records (G1, 2026-09-12 review-flow run). These are the
+	// review contract's four record responsibilities. They are NOT scientific
+	// domain records: a normative obligation requires a property, whereas a
+	// CandidateInvariant claims a regularity over a conditioned population.
+	// Distinct id kinds keep that distinction visible in every reference.
+	ReviewPolicyIDPrefix                = "rpol_"
+	ReviewObligationIDPrefix            = "robl_"
+	ReviewApplicabilityDecisionIDPrefix = "rapp_"
+	ReviewAssessmentIDPrefix            = "rasm_"
+	ReviewCheckAttemptIDPrefix          = "rchk_"
+	ReviewDependencyManifestIDPrefix    = "rdep_"
 )
 
 var (
@@ -97,6 +108,13 @@ var (
 	ErrInvalidExperimentID            = errors.New("invalid experiment id")
 	ErrInvalidSearchPolicyRevisionID  = errors.New("invalid search policy revision id")
 	ErrInvalidSearchPolicyDirectiveID = errors.New("invalid search policy directive id")
+
+	ErrInvalidReviewPolicyID                = errors.New("invalid review policy id")
+	ErrInvalidReviewObligationID            = errors.New("invalid review obligation id")
+	ErrInvalidReviewApplicabilityDecisionID = errors.New("invalid review applicability decision id")
+	ErrInvalidReviewAssessmentID            = errors.New("invalid review assessment id")
+	ErrInvalidReviewCheckAttemptID          = errors.New("invalid review check attempt id")
+	ErrInvalidReviewDependencyManifestID    = errors.New("invalid review dependency manifest id")
 
 	entropyMu sync.Mutex
 	entropy   = ulid.Monotonic(defaultEntropy(), 0)
@@ -332,6 +350,50 @@ func NewEpisodeRevisionID(now time.Time) string { return newID(EpisodeRevisionID
 
 func ValidateEpisodeRevisionID(id string) error {
 	return validateID(id, EpisodeRevisionIDPrefix, ErrInvalidEpisodeRevisionID)
+}
+
+// Normative review record ids (G1). Each of the contract's four record
+// responsibilities gets its own kind, plus the versioned inputs they cite
+// (decision policy, obligation revision).
+
+func NewReviewPolicyID(now time.Time) string { return newID(ReviewPolicyIDPrefix, now) }
+
+func ValidateReviewPolicyID(id string) error {
+	return validateID(id, ReviewPolicyIDPrefix, ErrInvalidReviewPolicyID)
+}
+
+func NewReviewObligationID(now time.Time) string { return newID(ReviewObligationIDPrefix, now) }
+
+func ValidateReviewObligationID(id string) error {
+	return validateID(id, ReviewObligationIDPrefix, ErrInvalidReviewObligationID)
+}
+
+func NewReviewApplicabilityDecisionID(now time.Time) string {
+	return newID(ReviewApplicabilityDecisionIDPrefix, now)
+}
+
+func ValidateReviewApplicabilityDecisionID(id string) error {
+	return validateID(id, ReviewApplicabilityDecisionIDPrefix, ErrInvalidReviewApplicabilityDecisionID)
+}
+
+func NewReviewAssessmentID(now time.Time) string { return newID(ReviewAssessmentIDPrefix, now) }
+
+func ValidateReviewAssessmentID(id string) error {
+	return validateID(id, ReviewAssessmentIDPrefix, ErrInvalidReviewAssessmentID)
+}
+
+func NewReviewCheckAttemptID(now time.Time) string { return newID(ReviewCheckAttemptIDPrefix, now) }
+
+func ValidateReviewCheckAttemptID(id string) error {
+	return validateID(id, ReviewCheckAttemptIDPrefix, ErrInvalidReviewCheckAttemptID)
+}
+
+func NewReviewDependencyManifestID(now time.Time) string {
+	return newID(ReviewDependencyManifestIDPrefix, now)
+}
+
+func ValidateReviewDependencyManifestID(id string) error {
+	return validateID(id, ReviewDependencyManifestIDPrefix, ErrInvalidReviewDependencyManifestID)
 }
 
 func NewSuccessRevisionID(now time.Time) string {

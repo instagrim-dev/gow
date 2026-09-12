@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 43
+const currentSchemaVersion = 44
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -1191,6 +1191,20 @@ END;
 		// (projection obligations, episode outcomes) stay recorded-but-
 		// unconsumed with their own triggers.
 		apply: migrateV43RefutedBoundaryDirectives,
+	},
+	{
+		version: 44,
+		// v44 (G1, 2026-09-12 review-flow run): the NORMATIVE REVIEW LEDGER —
+		// the review contract's four record responsibilities, plus the
+		// versioned inputs they cite. Additive and fully separate from the
+		// scientific tables: an obligation REQUIRES a property, whereas a
+		// candidate invariant CLAIMS a regularity over a conditioned
+		// population, so no scientific row is reused, relabeled, or promoted.
+		// The four records are applicability decisions, assessments, check
+		// attempts and dependency manifests; every one is immutable, and there
+		// is deliberately NO editable coverage-status column anywhere —
+		// coverage is generated from these records.
+		sql: reviewLedgerSQL,
 	},
 }
 
@@ -4079,3 +4093,236 @@ func migrateV43RefutedBoundaryDirectives(ctx context.Context, tx *sql.Tx) error 
 		"target_kind IN ('success_invariant','surviving_invariant','mechanism_family','redundant_attack','repeated_failure')",
 		"target_kind IN ('success_invariant','surviving_invariant','mechanism_family','redundant_attack','repeated_failure','refuted_boundary')")
 }
+
+// reviewLedgerSQL is the additive DDL for migration v44: the normative review
+// ledger (G1 of the 2026-09-12 review-flow run).
+//
+// The review contract names four record responsibilities and forbids a second
+// independently editable coverage status. This mapping preserves those
+// distinctions structurally:
+//
+//	review_policies              versioned decision policy (input)
+//	review_obligations           versioned normative obligation (input)
+//	review_applicability_decisions   applies | does_not_apply, with authority
+//	review_dependency_manifests      what the assessment's meaning depends on
+//	review_assessments               conforms | nonconforms | inconclusive
+//	review_check_attempts            procedure, inputs, executor, outcome, cost
+//
+// Deliberate design choices, each traceable to a contract requirement:
+//
+//   - NOTHING here is a CandidateInvariant. An obligation REQUIRES a property;
+//     that scientific type CLAIMS a regularity over a conditioned population.
+//     Separate tables, separate id kinds, no cross-promotion path.
+//   - No `status` or `coverage` column exists. Coverage is DERIVED from these
+//     rows by the generator; there is no field to hand-patch.
+//   - Absence is not a pass. An obligation with no assessment is `unexamined`
+//     by absence, so empty assessments are never needed and never created.
+//   - `inconclusive` (an executed check that decided nothing) is a distinct
+//     assessment outcome from a blocked check attempt, and both are distinct
+//     from never having been examined. The contract forbids collapsing these.
+//   - Every assessment REQUIRES a dependency manifest (NOT NULL FK): an
+//     assessment whose staleness cannot be evaluated is not a usable record.
+//   - Rows are immutable. A new policy revision, a reassessment, or a re-run is
+//     a NEW row; the superseded one keeps its authorizer, rationale and timing.
+//     Removing an unfavorable obligation therefore cannot be hidden.
+//   - review_policy_obligations carries `mandatory`, so a vacuous (empty
+//     mandatory set) policy is detectable rather than silently granting
+//     eligibility, and `scope_justification` on the policy is NOT NULL/non-empty
+//     so an authorized affirmative scope must be stated.
+const reviewLedgerSQL = `
+CREATE TABLE IF NOT EXISTS review_policies (
+  id TEXT PRIMARY KEY,
+  policy_key TEXT NOT NULL,
+  revision INTEGER NOT NULL CHECK (revision >= 1),
+  decision_name TEXT NOT NULL CHECK (length(decision_name) > 0),
+  owner TEXT NOT NULL CHECK (length(owner) > 0),
+  authority_source TEXT NOT NULL CHECK (length(authority_source) > 0),
+  scope_justification TEXT NOT NULL CHECK (length(scope_justification) > 0),
+  evidence_cutoff TEXT NOT NULL,
+  case_budget INTEGER NOT NULL CHECK (case_budget >= 0),
+  attempt_budget INTEGER NOT NULL CHECK (attempt_budget >= 0),
+  provider_call_budget INTEGER NOT NULL CHECK (provider_call_budget >= 0),
+  supersedes_policy_id TEXT REFERENCES review_policies(id),
+  supersede_rationale TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  UNIQUE(policy_key, revision)
+);
+
+CREATE TABLE IF NOT EXISTS review_obligations (
+  id TEXT PRIMARY KEY,
+  obligation_key TEXT NOT NULL,
+  semantic_revision INTEGER NOT NULL CHECK (semantic_revision >= 1),
+  requirement TEXT NOT NULL CHECK (length(requirement) > 0),
+  acceptance_criteria TEXT NOT NULL CHECK (length(acceptance_criteria) > 0),
+  applicability_rule TEXT NOT NULL CHECK (length(applicability_rule) > 0),
+  primary_owner TEXT NOT NULL CHECK (length(primary_owner) > 0),
+  created_at TEXT NOT NULL,
+  UNIQUE(obligation_key, semantic_revision)
+);
+
+CREATE TABLE IF NOT EXISTS review_policy_obligations (
+  policy_id TEXT NOT NULL REFERENCES review_policies(id),
+  obligation_id TEXT NOT NULL REFERENCES review_obligations(id),
+  mandatory INTEGER NOT NULL CHECK (mandatory IN (0, 1)),
+  PRIMARY KEY(policy_id, obligation_id)
+);
+
+CREATE TABLE IF NOT EXISTS review_applicability_decisions (
+  id TEXT PRIMARY KEY,
+  obligation_id TEXT NOT NULL REFERENCES review_obligations(id),
+  policy_id TEXT NOT NULL REFERENCES review_policies(id),
+  subject_ref TEXT NOT NULL CHECK (length(subject_ref) > 0),
+  decision TEXT NOT NULL CHECK (decision IN ('applies', 'does_not_apply')),
+  rationale TEXT NOT NULL CHECK (length(rationale) > 0),
+  authorizer TEXT NOT NULL CHECK (length(authorizer) > 0),
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_review_applicability_obligation
+  ON review_applicability_decisions(obligation_id, policy_id);
+
+CREATE TABLE IF NOT EXISTS review_dependency_manifests (
+  id TEXT PRIMARY KEY,
+  policy_id TEXT NOT NULL REFERENCES review_policies(id),
+  obligation_id TEXT NOT NULL REFERENCES review_obligations(id),
+  project_revision TEXT NOT NULL CHECK (length(project_revision) > 0),
+  contract_hash TEXT NOT NULL DEFAULT '',
+  recipe_hash TEXT NOT NULL DEFAULT '',
+  evidence_cutoff TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS review_manifest_dependencies (
+  manifest_id TEXT NOT NULL REFERENCES review_dependency_manifests(id),
+  ordinal INTEGER NOT NULL,
+  dependency_kind TEXT NOT NULL CHECK (length(dependency_kind) > 0),
+  dependency_ref TEXT NOT NULL CHECK (length(dependency_ref) > 0),
+  why_relevant TEXT NOT NULL CHECK (length(why_relevant) > 0),
+  PRIMARY KEY(manifest_id, ordinal)
+);
+
+CREATE TABLE IF NOT EXISTS review_check_attempts (
+  id TEXT PRIMARY KEY,
+  obligation_id TEXT NOT NULL REFERENCES review_obligations(id),
+  policy_id TEXT NOT NULL REFERENCES review_policies(id),
+  case_label TEXT NOT NULL CHECK (length(case_label) > 0),
+  procedure_ref TEXT NOT NULL CHECK (length(procedure_ref) > 0),
+  procedure_revision TEXT NOT NULL CHECK (length(procedure_revision) > 0),
+  inputs_ref TEXT NOT NULL DEFAULT '',
+  executor TEXT NOT NULL CHECK (length(executor) > 0),
+  environment TEXT NOT NULL DEFAULT '',
+  mode TEXT NOT NULL CHECK (mode IN ('executed', 'inspected')),
+  outcome TEXT NOT NULL CHECK (outcome IN ('completed', 'inconclusive', 'blocked')),
+  output_ref TEXT NOT NULL DEFAULT '',
+  blocker TEXT NOT NULL DEFAULT '',
+  started_at TEXT NOT NULL,
+  ended_at TEXT NOT NULL,
+  resource_note TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_review_check_attempts_obligation
+  ON review_check_attempts(obligation_id, case_label);
+
+CREATE TABLE IF NOT EXISTS review_assessments (
+  id TEXT PRIMARY KEY,
+  obligation_id TEXT NOT NULL REFERENCES review_obligations(id),
+  policy_id TEXT NOT NULL REFERENCES review_policies(id),
+  applicability_decision_id TEXT NOT NULL REFERENCES review_applicability_decisions(id),
+  manifest_id TEXT NOT NULL REFERENCES review_dependency_manifests(id),
+  subject_ref TEXT NOT NULL CHECK (length(subject_ref) > 0),
+  context_ref TEXT NOT NULL DEFAULT '',
+  outcome TEXT NOT NULL CHECK (outcome IN ('conforms', 'nonconforms', 'inconclusive')),
+  argument TEXT NOT NULL CHECK (length(argument) > 0),
+  assessor TEXT NOT NULL CHECK (length(assessor) > 0),
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_review_assessments_obligation
+  ON review_assessments(obligation_id, policy_id);
+
+CREATE TABLE IF NOT EXISTS review_assessment_checks (
+  assessment_id TEXT NOT NULL REFERENCES review_assessments(id),
+  check_attempt_id TEXT NOT NULL REFERENCES review_check_attempts(id),
+  PRIMARY KEY(assessment_id, check_attempt_id)
+);
+
+CREATE TRIGGER IF NOT EXISTS review_policies_immutable_update
+BEFORE UPDATE ON review_policies
+BEGIN
+  SELECT RAISE(ABORT, 'review policies are immutable; supersede with a new revision');
+END;
+CREATE TRIGGER IF NOT EXISTS review_policies_immutable_delete
+BEFORE DELETE ON review_policies
+BEGIN
+  SELECT RAISE(ABORT, 'review policies are immutable; supersede with a new revision');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_obligations_immutable_update
+BEFORE UPDATE ON review_obligations
+BEGIN
+  SELECT RAISE(ABORT, 'review obligations are immutable; version them individually');
+END;
+CREATE TRIGGER IF NOT EXISTS review_obligations_immutable_delete
+BEFORE DELETE ON review_obligations
+BEGIN
+  SELECT RAISE(ABORT, 'review obligations are immutable; version them individually');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_applicability_decisions_immutable_update
+BEFORE UPDATE ON review_applicability_decisions
+BEGIN
+  SELECT RAISE(ABORT, 'review applicability decisions are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS review_applicability_decisions_immutable_delete
+BEFORE DELETE ON review_applicability_decisions
+BEGIN
+  SELECT RAISE(ABORT, 'review applicability decisions are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_dependency_manifests_immutable_update
+BEFORE UPDATE ON review_dependency_manifests
+BEGIN
+  SELECT RAISE(ABORT, 'review dependency manifests are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS review_dependency_manifests_immutable_delete
+BEFORE DELETE ON review_dependency_manifests
+BEGIN
+  SELECT RAISE(ABORT, 'review dependency manifests are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_check_attempts_immutable_update
+BEFORE UPDATE ON review_check_attempts
+BEGIN
+  SELECT RAISE(ABORT, 'review check attempts are immutable; re-running is a new attempt');
+END;
+CREATE TRIGGER IF NOT EXISTS review_check_attempts_immutable_delete
+BEFORE DELETE ON review_check_attempts
+BEGIN
+  SELECT RAISE(ABORT, 'review check attempts are immutable; re-running is a new attempt');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_assessments_immutable_update
+BEFORE UPDATE ON review_assessments
+BEGIN
+  SELECT RAISE(ABORT, 'review assessments are immutable; reassessment is a new assessment');
+END;
+CREATE TRIGGER IF NOT EXISTS review_assessments_immutable_delete
+BEFORE DELETE ON review_assessments
+BEGIN
+  SELECT RAISE(ABORT, 'review assessments are immutable; reassessment is a new assessment');
+END;
+
+-- A blocked check attempt cannot be the basis of a CONFORMS assessment: an
+-- execution blocker leaves examination unresolved, which is inconclusive at
+-- best. Enforced in the schema so no writer can launder a blocker into support.
+CREATE TRIGGER IF NOT EXISTS review_assessment_checks_no_blocked_conformance
+BEFORE INSERT ON review_assessment_checks
+BEGIN
+  SELECT CASE
+    WHEN (SELECT outcome FROM review_assessments WHERE id = NEW.assessment_id) = 'conforms'
+     AND (SELECT outcome FROM review_check_attempts WHERE id = NEW.check_attempt_id) = 'blocked'
+    THEN RAISE(ABORT, 'a blocked check attempt cannot support a conforms assessment')
+  END;
+END;
+`

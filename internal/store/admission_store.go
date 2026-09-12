@@ -246,11 +246,15 @@ type ProposalSignatureContentRow struct {
 }
 
 // LatestProposalSignatureContent loads the newest persisted signature
-// revision of a proposal. A NEW assessment (e.g. `newf witness check`) binds
-// to this revision at assessment time and records its hash as the assessed
-// content — the same revision-pinning rule the evaluation stage follows.
-// It is NOT a substitute for GetProposalSignatureContentByHash when reading
-// back what a PAST verdict assessed.
+// revision of a proposal.
+//
+// This is NOT the assessment-context selector. A new assessment must pin the
+// OCCURRENCE it is about (its generation's bound content revision, via
+// ListGenerationOccurrenceContents); binding a verdict to "whatever is newest"
+// produces a result no contextual current-result reader can attribute (F2 of
+// the 2026-09-12 review-flow run). It is also NOT a substitute for
+// GetProposalSignatureContentByHash when reading back what a PAST verdict
+// assessed.
 func (s *Store) LatestProposalSignatureContent(ctx context.Context, proposalID string) (ProposalSignatureContentRow, bool, error) {
 	if err := domain.ValidateFrontierProposalID(proposalID); err != nil {
 		return ProposalSignatureContentRow{}, false, err

@@ -11,6 +11,13 @@
 // domain-checked failure (admission) and what discharges a domain-realization
 // obligation with typed strength (projection discharge --evaluation).
 //
+// The verdict is an assessment of ONE OCCURRENCE: the generation whose emitted
+// interpretation produced the tuple, that generation's population, and the
+// exact content revision it bound. That context is selected and pinned before
+// any write, so the contextual current-result reader can attribute the result
+// to the occurrence (F2, 2026-09-12 review-flow run). An unattributable request
+// is refused rather than persisted as an orphan verdict.
+//
 // The proposal wire is deliberately NOT extended: witnesses are checkable
 // domain claims authored outside the untrusted provider channel (D2 rejected
 // option A). Models own nothing in this path.
@@ -32,6 +39,11 @@ type WitnessCheckInput struct {
 	// ProposalID is the frontier proposal whose attempted mechanism produced
 	// the tuple. The verdict lands on this proposal's evaluation history.
 	ProposalID string
+	// GenerationID pins the OCCURRENCE the witness verdict is about (F2 of the
+	// 2026-09-12 review-flow run). Empty selects the proposal's latest
+	// occurrence generation — the same default the evaluation stage uses — so
+	// a historical occurrence is replayable by pinning it explicitly.
+	GenerationID string
 	// Tuple is the concrete produced outcome "n,x,y,z" (decimal, arbitrary
 	// precision), checked exactly.
 	Tuple string
@@ -50,10 +62,23 @@ type WitnessCheckResponse struct {
 	WitnessVerdict string `json:"witness_verdict"`
 	// CanonicalClaim is the deterministic serialization sufficient to re-run
 	// the check.
-	CanonicalClaim  string         `json:"canonical_claim"`
-	Detail          string         `json:"detail,omitempty"`
-	EvaluationRunID string         `json:"evaluation_run_id"`
-	Evaluation      EvaluationView `json:"evaluation"`
+	CanonicalClaim string `json:"canonical_claim"`
+	Detail         string `json:"detail,omitempty"`
+	// FrontierGenerationRunID / ClusterRunID are the pinned OCCURRENCE context
+	// the verdict is about, written onto the evaluation run so the current-result
+	// reader can attribute this assessment to that occurrence (F2).
+	FrontierGenerationRunID string `json:"frontier_generation_run_id"`
+	ClusterRunID            string `json:"cluster_run_id,omitempty"`
+	// OccurrenceContentHash is the exact content revision the pinned occurrence
+	// bound — the bytes this verdict is about.
+	OccurrenceContentHash string `json:"occurrence_content_hash,omitempty"`
+	// OccurrencePinned reports whether an actual occurrence binding backed the
+	// selected content. False means pre-v24 history without a binding: the
+	// verdict is retained, but it cannot be attributed to an occurrence and the
+	// contextual current-result reader will not surface it. Never faked.
+	OccurrencePinned bool           `json:"occurrence_pinned"`
+	EvaluationRunID  string         `json:"evaluation_run_id"`
+	Evaluation       EvaluationView `json:"evaluation"`
 }
 
 // WitnessCheck parses and exactly checks a witness tuple for a proposal, then
@@ -100,13 +125,25 @@ func (a *App) WitnessCheck(ctx context.Context, input WitnessCheckInput) (Witnes
 		return WitnessCheckResponse{}, err
 	}
 
+	// F2 (2026-09-12 review-flow run): SELECT AND PIN THE OCCURRENCE BEFORE ANY
+	// WRITE. A witness verdict is an assessment of one occurrence of a proposal
+	// — a specific generation's emitted interpretation — not of "whatever bytes
+	// are newest". Resolving it here means an unattributable request fails
+	// before a run row exists, and the persisted evaluation run carries the
+	// generation and cluster context the contextual current-result reader
+	// requires.
+	occ, err := resolveWitnessOccurrence(ctx, repoStore, problemID, input)
+	if err != nil {
+		return WitnessCheckResponse{}, err
+	}
+
 	now := a.now()
 	run, err := repoStore.CreateRun(ctx, domain.NewRun{
 		ID:          domain.NewRunID(now),
 		ProblemID:   problemID,
 		Operation:   "witness check",
 		Status:      domain.RunStatusRunning,
-		InputRef:    "frontier_proposal:" + input.ProposalID,
+		InputRef:    "frontier_generation_run:" + occ.GenerationRunID + " frontier_proposal:" + input.ProposalID,
 		ToolName:    "newf",
 		ToolVersion: a.version,
 		StartedAt:   now,
@@ -116,29 +153,26 @@ func (a *App) WitnessCheck(ctx context.Context, input WitnessCheckInput) (Witnes
 		return WitnessCheckResponse{}, err
 	}
 
-	// Bind the verdict to the proposal's newest persisted signature revision
-	// at assessment time — the same revision-pinning rule the evaluation
-	// stage follows. Admission materializes exactly these bytes.
-	contentHash := ""
-	if content, found, gerr := repoStore.LatestProposalSignatureContent(ctx, input.ProposalID); gerr != nil {
-		a.failRun(ctx, repoStore, run.ID, gerr)
-		return WitnessCheckResponse{}, gerr
-	} else if found {
-		contentHash = content.ContentHash
-	}
-
 	notes := "witness " + witnessVerdict + " " + claim.Canonical()
 	if detail != "" {
 		notes += ": " + detail
 	}
 	notes += " — provenance: " + input.Note
+	notes += " — occurrence: " + occ.GenerationRunID
+	if !occ.OccurrencePinned {
+		// Pre-v24 history: the generation recorded no occurrence binding, so
+		// the assessed bytes cannot be attributed to it. Recorded, never faked.
+		notes += " (no occurrence content binding; attribution gap)"
+	}
 
 	record := store.EvaluationRunRecord{
-		ID:        domain.NewEvaluationRunID(now),
-		ProblemID: problemID,
-		RunID:     run.ID,
-		Mode:      "proposal",
-		CreatedAt: now.Format(timeLayout),
+		ID:                      domain.NewEvaluationRunID(now),
+		ProblemID:               problemID,
+		RunID:                   run.ID,
+		FrontierGenerationRunID: occ.GenerationRunID,
+		ClusterRunID:            occ.ClusterRunID,
+		Mode:                    "proposal",
+		CreatedAt:               now.Format(timeLayout),
 		Evaluations: []store.EvaluationRow{{
 			ID:                   domain.NewEvaluationID(now),
 			ProposalID:           input.ProposalID,
@@ -149,7 +183,7 @@ func (a *App) WitnessCheck(ctx context.Context, input WitnessCheckInput) (Witnes
 			ToolName:             witness.CheckerName,
 			ToolVersion:          witness.CheckerVersion,
 			Notes:                notes,
-			SignatureContentHash: contentHash,
+			SignatureContentHash: occ.ContentHash,
 		}},
 	}
 	persisted, err := repoStore.PersistEvaluationRun(ctx, record)
@@ -163,13 +197,17 @@ func (a *App) WitnessCheck(ctx context.Context, input WitnessCheckInput) (Witnes
 
 	ev := persisted.Evaluations[0]
 	return WitnessCheckResponse{
-		OK:              true,
-		Command:         "witness check",
-		Store:           dbPath,
-		WitnessVerdict:  witnessVerdict,
-		CanonicalClaim:  claim.Canonical(),
-		Detail:          detail,
-		EvaluationRunID: persisted.ID,
+		OK:                      true,
+		Command:                 "witness check",
+		Store:                   dbPath,
+		WitnessVerdict:          witnessVerdict,
+		CanonicalClaim:          claim.Canonical(),
+		Detail:                  detail,
+		FrontierGenerationRunID: occ.GenerationRunID,
+		ClusterRunID:            occ.ClusterRunID,
+		OccurrenceContentHash:   occ.ContentHash,
+		OccurrencePinned:        occ.OccurrencePinned,
+		EvaluationRunID:         persisted.ID,
 		Evaluation: EvaluationView{
 			ID:                   ev.ID,
 			ProposalID:           ev.ProposalID,
@@ -182,4 +220,79 @@ func (a *App) WitnessCheck(ctx context.Context, input WitnessCheckInput) (Witnes
 			Notes:                ev.Notes,
 		},
 	}, nil
+}
+
+// witnessOccurrence is the pinned assessment context of one witness check: the
+// generation whose emitted interpretation the verdict is about, that
+// generation's population (cluster run), and the exact content revision it
+// bound.
+type witnessOccurrence struct {
+	GenerationRunID string
+	ClusterRunID    string
+	ContentHash     string
+	// OccurrencePinned is false only for pre-v24 generations that recorded no
+	// occurrence content binding: the content hash then comes from the
+	// proposal's latest revision and is NOT an occurrence attribution.
+	OccurrencePinned bool
+}
+
+// resolveWitnessOccurrence selects the occurrence a witness verdict is about,
+// following the same context rules the evaluation stage uses (an explicit
+// generation pins historical replay; otherwise the proposal's latest occurrence
+// generation). Membership — what a generation EMITTED — is authoritative, not
+// artifact ownership: a fully-deduped later generation owns no row yet binds
+// the revised interpretation the verdict should attach to.
+//
+// Refusing an unattributable request here is deliberate. Attaching a checked
+// tuple to a proposal without its occurrence produced an evaluation that no
+// contextual current-result reader could ever surface (F2), which silently
+// downgraded a reproducible domain observation to an orphan row.
+func resolveWitnessOccurrence(ctx context.Context, repoStore problemStore, problemID string, input WitnessCheckInput) (witnessOccurrence, error) {
+	genID := input.GenerationID
+	if genID == "" {
+		resolved, found, err := repoStore.LatestProposalOccurrenceGeneration(ctx, problemID, input.ProposalID)
+		if err != nil {
+			return witnessOccurrence{}, err
+		}
+		if !found {
+			return witnessOccurrence{}, fmt.Errorf("proposal %s has no frontier occurrence: a witness verdict must be attributed to the generation whose interpretation it assesses", input.ProposalID)
+		}
+		genID = resolved
+	}
+	gen, err := repoStore.GetFrontierGeneration(ctx, genID)
+	if err != nil {
+		return witnessOccurrence{}, err
+	}
+	if gen.ProblemID != problemID {
+		return witnessOccurrence{}, fmt.Errorf("generation %s belongs to problem %s, not proposal %s's problem %s", gen.ID, gen.ProblemID, input.ProposalID, problemID)
+	}
+
+	membership, err := repoStore.ListOccurrenceProposalRows(ctx, gen.ID)
+	if err != nil {
+		return witnessOccurrence{}, err
+	}
+	if len(membership) == 0 {
+		membership = gen.Proposals
+	}
+	member := false
+	for _, p := range membership {
+		if p.ID == input.ProposalID {
+			member = true
+			break
+		}
+	}
+	if !member {
+		return witnessOccurrence{}, fmt.Errorf("proposal %s is not part of generation %s's occurrence membership", input.ProposalID, gen.ID)
+	}
+
+	contents, err := repoStore.ListGenerationOccurrenceContents(ctx, gen.ID)
+	if err != nil {
+		return witnessOccurrence{}, err
+	}
+	out := witnessOccurrence{GenerationRunID: gen.ID, ClusterRunID: gen.ClusterRunID}
+	if oc, ok := contents[input.ProposalID]; ok {
+		out.ContentHash = oc.ContentHash
+		out.OccurrencePinned = !oc.FallbackLatest
+	}
+	return out, nil
 }

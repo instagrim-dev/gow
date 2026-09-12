@@ -85,6 +85,7 @@ func newRootCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions, vers
 	cmd.AddCommand(newEpisodeCommand(stdout, app, opts))
 	cmd.AddCommand(newWitnessCommand(stdout, app, opts))
 	cmd.AddCommand(newPolicyCommand(stdout, app, opts))
+	cmd.AddCommand(newReviewCommand(stdout, app, opts))
 
 	return cmd
 }

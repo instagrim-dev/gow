@@ -87,6 +87,7 @@ type problemStore interface {
 	PersistChallengeCampaign(context.Context, store.ChallengeCampaignRecord) error
 	GetInvariantState(context.Context, string) (store.InvariantStateRow, error)
 	ListInvariantStates(context.Context, string, string) ([]store.InvariantStateRow, error)
+	GetLatestCompatibleAuthority(context.Context, string, string) (store.CompatibleAuthorityRow, bool, error)
 	ListChallengesForInvariant(context.Context, string) ([]store.ChallengeRecord, error)
 	FindInvariantRevisionForCandidate(context.Context, string) (string, error)
 	PersistFrontierGeneration(context.Context, store.FrontierGenerationRecord) (store.PersistFrontierGenerationResult, error)
@@ -126,6 +127,20 @@ type problemStore interface {
 	// search-policy stage consumes from the challenge stage.
 	ListBoundaryDeltasForProblem(context.Context, string) ([]store.ProblemBoundaryDeltaRow, error)
 	ListBreakCohortRows(context.Context, string) ([]store.BreakCohortRow, error)
+	// Normative review ledger (v44, G1 of the 2026-09-12 review-flow run).
+	// These are NORMATIVE records — obligations, applicability, checks,
+	// assessments — kept strictly apart from the scientific lifecycle above.
+	// There is no coverage-status writer: coverage is generated from
+	// LoadReviewCoverage.
+	PersistReviewPolicy(context.Context, store.ReviewPolicyRecord) (store.ReviewPolicyRow, error)
+	PersistReviewObligation(context.Context, store.ReviewObligationRow) (store.ReviewObligationRow, error)
+	PersistReviewApplicabilityDecision(context.Context, store.ReviewApplicabilityDecisionRow) (store.ReviewApplicabilityDecisionRow, error)
+	PersistReviewDependencyManifest(context.Context, store.ReviewDependencyManifestRow) (store.ReviewDependencyManifestRow, error)
+	PersistReviewCheckAttempt(context.Context, store.ReviewCheckAttemptRow) (store.ReviewCheckAttemptRow, error)
+	PersistReviewAssessment(context.Context, store.ReviewAssessmentRow) (store.ReviewAssessmentRow, error)
+	LatestReviewPolicy(context.Context, string) (store.ReviewPolicyRow, bool, error)
+	GetReviewPolicy(context.Context, string) (store.ReviewPolicyRow, error)
+	LoadReviewCoverage(context.Context, string) (store.ReviewCoverage, error)
 	PersistSuccessRevision(context.Context, store.SuccessRevisionRecord) (store.PersistSuccessRevisionResult, error)
 	GetSuccessRevision(context.Context, string) (store.SuccessRevisionRecord, error)
 	ListSuccessRevisions(context.Context, string) ([]store.SuccessRevisionRecord, error)
@@ -188,8 +203,12 @@ type problemStore interface {
 	AdmittedSignatureKinds(context.Context, string) (map[string]string, error)
 	GetProposalSignatureContentByHash(context.Context, string, string) (store.ProposalSignatureContentRow, bool, error)
 	// Witness-backed evaluations (issue #23 slice 2, D2-C): a new assessment
-	// binds to the proposal's newest signature revision at assessment time.
-	LatestProposalSignatureContent(context.Context, string) (store.ProposalSignatureContentRow, bool, error)
+	// pins the OCCURRENCE it is about (F2, 2026-09-12 review) — its generation,
+	// that generation's population, and the exact content revision the
+	// generation bound — via GetFrontierGeneration /
+	// ListOccurrenceProposalRows / ListGenerationOccurrenceContents above.
+	// Deliberately NOT a "latest revision" lookup: an assessment attached to
+	// arbitrary newest bytes cannot be attributed to any occurrence.
 	// Projection chain (v37/S5): concrete plan -> obligations -> decisions.
 	GetProposalProblem(context.Context, string) (string, error)
 	PersistProjection(context.Context, store.ProjectionRecord) (store.ProjectionRecord, error)

@@ -761,6 +761,29 @@ type FrontierGenerateResponse struct {
 	Store      string                 `json:"store"`
 	Created    bool                   `json:"created"`
 	Generation FrontierGenerationView `json:"generation"`
+	// ExcludedStaleAuthority lists targetable-state invariants withheld from
+	// THIS generation's target set because the campaign behind their state
+	// assessed an obsolete population (F1). Their history is untouched; the
+	// exclusion is reported so a reader never has to infer why a survivor was
+	// not targeted.
+	ExcludedStaleAuthority []StaleAuthorityView `json:"excluded_stale_authority,omitempty"`
+}
+
+// StaleAuthorityView reports one survivor withheld from current target
+// selection, with the population mismatch that withheld it and the reassessment
+// that restores eligibility.
+type StaleAuthorityView struct {
+	InvariantID string `json:"invariant_id"`
+	State       string `json:"state"`
+	Reason      string `json:"reason"`
+	// AssessedClusterRunID is the population the authority campaign searched.
+	AssessedClusterRunID string `json:"assessed_cluster_run_id"`
+	// CurrentClusterRunID is the compatible current population it must match.
+	CurrentClusterRunID string `json:"current_cluster_run_id"`
+	// AuthorityPopulation is the population policy that campaign recorded
+	// (`latest` or `discovery`).
+	AuthorityPopulation     string `json:"authority_population_policy,omitempty"`
+	ReassessmentInstruction string `json:"reassessment_instruction"`
 }
 
 // FrontierListResponse is returned by `newf frontier list`.

@@ -29,6 +29,10 @@ import (
 // search policy (EPIC M4.3 exit condition). Attesting an invariant must never
 // REMOVE it from search-policy influence — strengthening knowledge cannot
 // reduce search directedness.
+//
+// A targetable STATE is necessary but not sufficient for CURRENT eligibility.
+// See survivingInvariants: the campaign behind the state must also have
+// assessed a population compatible with the current one (F1).
 var targetableStates = []string{"surviving", "operator_attested"}
 
 // FrontierGenerateInput requests a generation pass for a problem. Count <= 0
@@ -127,11 +131,17 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 	// Surviving invariants are the only legal targets for the directed arm. If
 	// none survive, there is nothing to generate against — a legitimate empty
 	// outcome, not an error. Baseline arms (opts.noTargets) attack nothing.
+	//
+	// Eligibility is population-contextual (F1): a survivor whose authority
+	// campaign assessed an obsolete population is EXCLUDED from current target
+	// selection and reported, not silently dropped and not rewritten. Its
+	// historical outcome stays intact and replayable.
 	var survivors []frontier.SurvivingInvariant
+	var staleSurvivors []staleAuthority
 	var discoveryRuns map[string]bool
 	if !opts.noTargets {
 		var err error
-		survivors, discoveryRuns, err = a.survivingInvariants(ctx, repoStore, input.ProblemID)
+		survivors, staleSurvivors, discoveryRuns, err = a.currentTargetableInvariants(ctx, repoStore, input.ProblemID)
 		if err != nil {
 			return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
 		}
@@ -380,40 +390,143 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 	}
 
 	return FrontierGenerateResponse{
-		OK:         true,
-		Command:    "frontier generate",
-		Store:      dbPath,
-		Created:    result.Created,
-		Generation: frontierGenerationView(result.Record),
+		OK:                     true,
+		Command:                "frontier generate",
+		Store:                  dbPath,
+		Created:                result.Created,
+		Generation:             frontierGenerationView(result.Record),
+		ExcludedStaleAuthority: staleAuthorityViews(staleSurvivors),
 	}, result, nil
 }
 
-// survivingInvariants reads the problem's candidate invariants whose CURRENT
-// state is `surviving`, resolving each one's parsed predicate (from its
-// originating revision) so the engine can verify violations against it. An
-// invariant whose predicate cannot be resolved/parsed is skipped with no
-// silent promotion.
-// survivingInvariants returns the targetable invariant set with parsed
+// staleAuthorityViews maps excluded survivors to their stable response view.
+func staleAuthorityViews(stale []staleAuthority) []StaleAuthorityView {
+	if len(stale) == 0 {
+		return nil
+	}
+	out := make([]StaleAuthorityView, 0, len(stale))
+	for _, s := range stale {
+		out = append(out, StaleAuthorityView{
+			InvariantID:             s.InvariantID,
+			State:                   s.State,
+			Reason:                  s.Reason,
+			AssessedClusterRunID:    s.AssessedClusterRunID,
+			CurrentClusterRunID:     s.CurrentClusterRunID,
+			AuthorityPopulation:     s.PopulationPolicy,
+			ReassessmentInstruction: "re-run `newf challenge --invariant " + s.InvariantID + "` under the current population to restore current target eligibility",
+		})
+	}
+	return out
+}
+
+// survivingInvariants returns the CURRENTLY TARGETABLE invariant set with parsed
 // predicates, plus the set of DISCOVERY cluster run ids their revisions were
 // mined against (for vocabulary pinning at generation time).
+//
+// Targetability is population-contextual, not lifecycle-only (F1, 2026-09-12
+// review-flow run). A lifecycle state says an attack completed and did not
+// land; it does not say WHICH population that attack searched. Historical
+// replay is legitimate and must stay reproducible — a `discovery` campaign
+// re-earns `surviving` for its own bounded historical claim — but the campaign
+// that produced the current state is then an obsolete-population campaign, and
+// a claim whose only surviving authority is obsolete must not silently regain
+// current search authority. So a survivor is eligible only when its authority
+// campaign assessed a population COMPATIBLE with the current one:
+//
+//	authority assessment run == the problem's current compatible population
+//
+// Everything else is reported as an excluded survivor with its reason, never
+// dropped silently and never rewritten in history. Reassessment under `latest`
+// is the intended, always-available path back to eligibility.
 func (a *App) survivingInvariants(ctx context.Context, repoStore problemStore, problemID string) ([]frontier.SurvivingInvariant, map[string]bool, error) {
+	survivors, _, discoveryRuns, err := a.currentTargetableInvariants(ctx, repoStore, problemID)
+	return survivors, discoveryRuns, err
+}
+
+// staleAuthority is one survivor excluded from CURRENT target selection because
+// the campaign behind its state did not assess a compatible current population.
+// It is a reportable outcome, not an error: the historical claim stands, and
+// reassessment under the current population restores eligibility.
+type staleAuthority struct {
+	InvariantID string
+	State       string
+	// AssessedClusterRunID is the population the authority campaign actually
+	// searched; empty when no campaign is recorded (initial state, or an
+	// operator attestation, which searches no population).
+	AssessedClusterRunID string
+	// CurrentClusterRunID is the compatible current population the assessment
+	// would have to match.
+	CurrentClusterRunID string
+	PopulationPolicy    string
+	Reason              string
+}
+
+const (
+	// staleReasonObsoletePopulation: a campaign ran, but over a population that
+	// is not the current compatible one (typically a `discovery` replay after
+	// the atlas widened). This is the F1 trigger.
+	staleReasonObsoletePopulation = "authority_assessed_obsolete_population"
+)
+
+// currentTargetableInvariants resolves the targetable set and the survivors
+// excluded for stale authority, along with the discovery runs of the ELIGIBLE
+// survivors (only eligible predicates are scored, so only their vocabularies
+// need pinning).
+func (a *App) currentTargetableInvariants(ctx context.Context, repoStore problemStore, problemID string) ([]frontier.SurvivingInvariant, []staleAuthority, map[string]bool, error) {
 	var states []store.InvariantStateRow
 	for _, targetable := range targetableStates {
 		rows, err := repoStore.ListInvariantStates(ctx, problemID, targetable)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		states = append(states, rows...)
 	}
 	discoveryRuns := make(map[string]bool)
 	out := make([]frontier.SurvivingInvariant, 0, len(states))
+	var stale []staleAuthority
 	for _, s := range states {
 		pred, clusterRunID, ok, perr := predicateForCandidate(ctx, repoStore, s.InvariantRevisionID, s.InvariantID)
 		if perr != nil {
-			return nil, nil, perr
+			return nil, nil, nil, perr
 		}
 		if !ok {
 			continue
+		}
+		// The current compatible population for THIS claim: the newest cluster
+		// run under the predicate's own schema/vocabulary. Reusing the
+		// challenge stage's selector keeps "compatible" one definition — a run
+		// under a different vocabulary is not a substitute either way.
+		current, eligible, cerr := a.currentAuthorityPopulation(ctx, repoStore, problemID, clusterRunID)
+		if cerr != nil {
+			return nil, nil, nil, cerr
+		}
+		if reason, stalled := staleAuthorityReason(s, current, eligible); stalled {
+			// F-2 (2026-09-12 review run 2): the latest transition is not the
+			// only admissible authority. A historical replay legitimately
+			// re-earns its bounded claim over an OLD population and takes the
+			// latest transition — but it must not DISPLACE authority already
+			// earned against the current compatible population. Before
+			// excluding, ask whether any campaign assessed the current
+			// population and earned exactly this targetable state; if so, that
+			// campaign is the operative current authority and the claim stays
+			// selectable. A compatible campaign that earned a DIFFERENT state
+			// (e.g. weaken) grants nothing: the exclusion stands and
+			// reassessment under the current population remains the path back.
+			compat, compatFound, compatErr := repoStore.GetLatestCompatibleAuthority(ctx, s.InvariantID, current)
+			if compatErr != nil {
+				return nil, nil, nil, compatErr
+			}
+			if !compatFound || compat.ToState != s.State {
+				stale = append(stale, staleAuthority{
+					InvariantID:          s.InvariantID,
+					State:                s.State,
+					AssessedClusterRunID: s.AuthorityAssessmentClusterRunID,
+					CurrentClusterRunID:  current,
+					PopulationPolicy:     s.AuthorityPopulationPolicy,
+					Reason:               reason,
+				})
+				continue
+			}
 		}
 		discoveryRuns[clusterRunID] = true
 		out = append(out, frontier.SurvivingInvariant{
@@ -424,7 +537,61 @@ func (a *App) survivingInvariants(ctx context.Context, repoStore problemStore, p
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].InvariantID < out[j].InvariantID })
-	return out, discoveryRuns, nil
+	sort.Slice(stale, func(i, j int) bool { return stale[i].InvariantID < stale[j].InvariantID })
+	return out, stale, discoveryRuns, nil
+}
+
+// currentAuthorityPopulation resolves the compatible current population for a
+// claim mined over discoveryClusterRunID. eligible=false means the contextual
+// gate cannot be applied at all (the discovery run is unknown/unreadable — for
+// example pre-v34 history that recorded no population); the claim then keeps
+// lifecycle-only eligibility, and the weaker basis is not disguised as a
+// verified current match.
+func (a *App) currentAuthorityPopulation(ctx context.Context, repoStore problemStore, problemID, discoveryClusterRunID string) (string, bool, error) {
+	if discoveryClusterRunID == "" {
+		return "", false, nil
+	}
+	discovery, err := repoStore.GetClusterRun(ctx, discoveryClusterRunID)
+	if err != nil {
+		return "", false, err
+	}
+	latest, found, err := repoStore.LatestClusterRunForVersions(ctx, problemID, discovery.SchemaVersion, discovery.VocabularyVersion)
+	if err != nil {
+		return "", false, err
+	}
+	if !found {
+		return discovery.ID, true, nil
+	}
+	return latest, true, nil
+}
+
+// staleAuthorityReason decides whether a targetable state's authority is stale
+// for CURRENT selection.
+//
+// The gate is deliberately narrow: it fires only on a RECORDED mismatch — a
+// campaign that did assess a population, and a population that is not the
+// current compatible one. Two cases are explicitly NOT stale:
+//
+//   - No recorded assessment population. That is pre-v34 history (populations
+//     were not recorded) or an operator attestation campaign, which searches no
+//     population and writes no row. Excluding those would remove existing
+//     search authority on the basis of missing metadata rather than evidence,
+//     and would make attestation REDUCE search directedness — the opposite of
+//     the targetableStates rule that strengthening knowledge cannot reduce
+//     directedness. The weaker basis stays weaker; it is simply not this gate's
+//     question.
+//   - No resolvable current population (gate inapplicable).
+func staleAuthorityReason(s store.InvariantStateRow, currentClusterRunID string, gateApplicable bool) (string, bool) {
+	if !gateApplicable || currentClusterRunID == "" {
+		return "", false
+	}
+	if s.AuthorityAssessmentClusterRunID == "" {
+		return "", false
+	}
+	if s.AuthorityAssessmentClusterRunID != currentClusterRunID {
+		return staleReasonObsoletePopulation, true
+	}
+	return "", false
 }
 
 // predicateForCandidate loads a candidate invariant's parsed predicate from its
