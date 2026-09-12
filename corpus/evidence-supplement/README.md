@@ -74,6 +74,8 @@ files in this selection:
 | N2a seven-part challenge: refinement proposed, coverage incomplete | `pilot-004-discovery/records/N2a-challenge.md` (current-claim banner atop; superseded verdict line flagged in place) |
 | N5 seven-probe campaign | `pilot-004-discovery/records/N5-challenge.md` (current-claim banner atop) |
 | Authoritative current claim + supersession links (N2a, N5, children, E15) | `pilot-004-discovery/records/CURRENT-CLAIMS.md` — **read this first**; it governs over original verdict lines per the 2026-09-12 review's propagation finding |
+| E1 episode: miss → revision → different action → hit; `revision_credit: earned` | `m7-blinded-run/records/episode-001-greedy-vs-global.md` + `.json` typed export |
+| E2 comparison: map arm 20/20 @ 20 subs vs undirected 3/20 @ 57 | `two-arm-comparison/PROTOCOL.md` (frozen pre-execution), `RESULT.md`, `main.go` (deterministic runner) |
 | Interpretation notes / vocabulary admission context | `pilot-004-discovery/records/INTERPRETATION-NOTES.md` |
 | Reference-absent shape generation observed | `docs/findings/001-unencoded-shape-generation.md` *(not included — outside the three named corpora)* |
 
@@ -90,14 +92,15 @@ tier-2 (reproducible deterministic computation). Reading these records proves
 what was recorded and when — it does not upgrade any claim's verification
 tier.
 
-Separately from this selection: the repository now contains tier-2
+Separately from the original selection: the repository's tier-2
 (reproducible deterministic computation) artifacts — the closed-loop episode
 (`corpus/experiments/m7-blinded-run/records/episode-001-greedy-vs-global.md`)
 and the two-arm comparison (`corpus/experiments/two-arm-comparison/`), both
-adjudicated by the exact-integer witness checker. They are **not in this
-supplement** because the manuscript's claims ledger does not yet cite them;
-if a manuscript revision adds them, they must be added to `manifest.json` by
-a recorded amendment, not silently.
+adjudicated by the exact-integer witness checker — **were added to this
+supplement by recorded amendment on 2026-09-12**, when the manuscript's
+Experiment E (`sec:results-episode`) and its claims-ledger rows began citing
+them. They are the paper's only tier-2 rows; everything else above remains
+tier-4/5.
 
 ## Redaction discipline (if a redaction pass is later requested)
 

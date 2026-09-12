@@ -1439,6 +1439,68 @@ mathematical steps were not independently verified; the claim is only that the
 framework can subject such a hypothesis to explicit, recorded evidentiary
 challenge.
 
+\subsection{Experiment E: Closed-loop episode and matched-budget comparison}
+\label{sec:results-episode}
+
+Experiments A--D test model-facing capabilities and are tier-4/5 evidence
+throughout. Experiment E, run after the progression above
+(\cref{fig:progression} is scoped to A--D), tests something different: whether
+the system's map can demonstrably change a concrete next decision and whether
+that change earns its cost --- with every outcome decided by a deterministic,
+exact-integer checker rather than by any model. It is the paper's only
+tier-2 (reproducible computation) evidence.
+
+\paragraph{Instrument.}
+An exact witness checker for single-instance Erd\H{o}s--Straus claims:
+$(x,y,z)$ witnesses $4/n = 1/x + 1/y + 1/z$ iff
+$4xyz = n(yz + xz + xy)$, decided over arbitrary-precision integers
+(\path{internal/witness}). No floats, no tolerance, no judgment.
+
+\paragraph{E1: preregistered two-observation episode.}
+Under a typed episode protocol (preregistration, commitment, observation, and
+revision records; ordering and immutability enforced at the persistence
+layer; hit/miss scores derived by code from the checker verdict, never
+authored), a single closed loop was run against the live blinded-benchmark
+map: the instance rule (smallest prime $\geq 10^6$ congruent to $1$ modulo
+$24$, a class the corpus's failure geometry marks as hard for local identity
+moves; $p = 1000033$) and the first action were frozen before any
+computation. Step 1 --- a local greedy 3-term truncation, exactly the
+failure-side posture the map's surviving invariants flag --- was predicted
+valid and was refuted exactly (the identity misses by $1$ part in $10^{38}$,
+a margin no floating-point check would resolve). A recorded map revision
+then required the next action to differ structurally; step 2 --- a global
+divisor-lattice search, committed before execution --- produced an exact
+witness at the \emph{same} first denominator where the greedy move failed.
+The protocol completed with the code-derived verdict
+\texttt{revision\_credit: earned}: $97$ seconds wall-clock, zero model calls.
+
+\paragraph{E2: matched-budget two-arm comparison.}
+With the protocol (instance rule, shared four-move pool, budget of three
+checker submissions per instance, and decision rule) frozen and committed
+before execution, twenty instances from the same class were attempted by two
+arms: an undirected arm ordering cheap local moves first, and a map-guided
+arm consulting the surviving \texttt{locality} invariant once per class to
+order the global move first. The undirected arm produced $3/20$ verified
+witnesses at $57$ submissions (cost per hit $19.0$); the map-guided arm
+produced $20/20$ at $20$ submissions (cost per hit $1.0$). Under the frozen
+decision rule the map earned its cost. The local-move hit rate in this class
+--- $3/57 \approx 5.3\%$ --- is the budget-independent measurement; the
+local family is not a strawman (it genuinely hits at three instances).
+
+\paragraph{What E does and does not establish.}
+E measures the \emph{ordering} value of the failure geometry over a fixed,
+shared move pool at a fixed budget, with the contrast compressing as budget
+grows (at budget four the undirected arm reaches the global move); it is a
+demonstration-scale result on a single instance class. It does not measure
+discovery --- the map promoted a known move; it did not find a new mechanism
+family --- and it contributes no evidence about the Erd\H{o}s--Straus
+conjecture itself: every witness is independently checkable by one
+multiplication. Its role in this paper's argument is narrow and specific:
+the decision-loop accounting that \cref{sec:superiority} formalizes
+(concentration, budget, when guidance wins) is demonstrated end-to-end on
+real records with code-owned scoring, at the lowest rung of the claimed
+capability rather than the highest.
+
 % ── 9. Conditional Superiority ───────────────────────────────────────
 \section{Conditional Superiority: When Shape-Guided Concentration Wins}
 \label{sec:superiority}
@@ -2455,8 +2517,11 @@ To let a reader identify \emph{which} records back which claims without
 having to read the whole corpus, we have selected, hashed, and frozen the
 specific records the paper depends on --- the M7 blinded-run artifacts, the
 Pilot-003 and Pilot-004 record directories (including \path{RESULT.md},
-\path{CLOSURE-SCORECARD.md}, and the independent review results), and the
-N2a/N5 challenge records --- into a manifest with a SHA-256 hash per file and
+\path{CLOSURE-SCORECARD.md}, and the independent review results), the
+N2a/N5 challenge records with their authoritative current-claim view
+(\path{CURRENT-CLAIMS.md}), and the Experiment E artifacts (episode record
+and typed export, two-arm protocol/result/runner) --- into a manifest with a
+SHA-256 hash per file and
 a reading guide mapping each row of \cref{app:claims} to its source file
 (\path{corpus/evidence-supplement/manifest.json},
 \path{corpus/evidence-supplement/README.md}), also public in the same
@@ -2767,6 +2832,9 @@ N5 seven-probe campaign: six probes consistent; C3 inapplicable by corpus constr
 N2a admitted to \path{mechanism/v4} vocabulary & \cref{sec:results-challenge} & \path{internal/canon/vocabulary\_seed.go} \\
 N5 admitted to \path{mechanism/v5} vocabulary & \cref{sec:results-pilot004} & idem. \\
 Blinding audit clean (0 leakage across snapshots/normalizations/signatures) & \cref{sec:results-negative} & \path{corpus/experiments/m7-blinded-run/RESULT.md} \\
+E1 episode: preregistered miss $\to$ recorded revision $\to$ structurally different action $\to$ exact hit; \texttt{revision\_credit: earned} (code-derived) & \cref{sec:results-episode} & \path{corpus/experiments/m7-blinded-run/records/episode-001-greedy-vs-global.md} + typed JSON export \\
+E2 comparison: map arm 20/20 witnesses at 20 submissions vs.\ undirected 3/20 at 57; local hit rate 5.3\%; protocol frozen pre-execution & \cref{sec:results-episode} & \path{corpus/experiments/two-arm-comparison/PROTOCOL.md}, \path{RESULT.md}, \path{main.go} (deterministic runner) \\
+N2a/N5 current claim strength (authoritative, supersession-linked) & \cref{sec:results-challenge} & \path{corpus/experiments/pilot-004-discovery/records/CURRENT-CLAIMS.md} \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -2775,9 +2843,12 @@ Blinding audit clean (0 leakage across snapshots/normalizations/signatures) & \c
 All Pilot-003 B3 rank-4 findings are tier-5 evidence (single-model reviewer,
 blinded). All Pilot-004 quorum verdicts are tier-4 evidence (same-family
 multi-lane agreement). N2a and N5 challenge dispositions are tier-4/5 evidence.
-No claim in this paper is tier-1 (formal proof) or tier-2 (reproducible
-deterministic computation). This is the intended epistemic strength for a
-paper that reports exploratory case-study evidence.
+The Experiment E rows are the paper's only tier-2 evidence (reproducible
+deterministic computation: exact-integer checking, deterministic runner,
+preregistered protocols) --- and they are demonstration-scale results about
+the decision loop and its accounting, not about discovery capability. No
+claim in this paper is tier-1 (formal proof). This mix is the intended
+epistemic strength for a paper that reports exploratory case-study evidence.
 
 \section{Falsification Conditions}
 \label{app:falsification}

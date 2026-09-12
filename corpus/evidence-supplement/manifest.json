@@ -3,7 +3,7 @@
  "status": "selected_and_hashed_not_yet_deposited",
  "purpose": "Frozen source-record selection backing the empirical claims in paper/geometry-of-work.tex. This manifest freezes WHICH files and their byte content; it is not itself a public deposit.",
  "basis_commit": "7c7d289394cc1a8653e8f1ac6e69212d3806f84b",
- "selection_scope": "The three frozen experiment corpora the manuscript's empirical sections and Appendix claims ledger (app:claims) depend on: m7-blinded-run (negative controls), pilot-003 (curated-feature guided search), pilot-004-discovery (shape discovery + N2a/N5 challenge).",
+ "selection_scope": "The three frozen experiment corpora the manuscript's empirical sections and Appendix claims ledger (app:claims) depend on: m7-blinded-run (negative controls), pilot-003 (curated-feature guided search), pilot-004-discovery (shape discovery + N2a/N5 challenge). Amended 2026-09-12: plus the Experiment E artifacts (closed-loop episode record + typed export; two-arm comparison protocol/result/runner), the paper's only tier-2 evidence.",
  "explicit_exclusions": [
   "This is not the full newf repository or its source code.",
   "Working/scratch material outside the three named corpora is excluded.",
@@ -14,8 +14,8 @@
   "No redaction pass has been requested or performed; if one is, redacted copies must use a distinguishable filename/suffix and never edit an original file in place.",
   "pre-capture.db is a binary SQLite file; its contents were not individually reviewed row-by-row for release sensitivity beyond the automated grep sweep above."
  ],
- "file_count": 66,
- "total_bytes": 1972049,
+ "file_count": 71,
+ "total_bytes": 1997038,
  "files": [
   {
    "path": "corpus/experiments/m7-blinded-run/RESULT.md",
@@ -26,6 +26,16 @@
    "path": "corpus/experiments/m7-blinded-run/records/compare-b0-b3.json",
    "sha256": "3efad8e21c3369dbe7a1310a4271feba356ed6e4bcf286bde826c25d9e085094",
    "bytes": 3353
+  },
+  {
+   "path": "corpus/experiments/m7-blinded-run/records/episode-001-greedy-vs-global.json",
+   "sha256": "9d3d1280d7a8196bb4804580138d4b1d0655409478e66695dc015fa3e0a5dd10",
+   "bytes": 7044
+  },
+  {
+   "path": "corpus/experiments/m7-blinded-run/records/episode-001-greedy-vs-global.md",
+   "sha256": "3346f693a2a615b168eb0f33df9da3a8b22ddc4c52b2c147b18d24fa51233eb1",
+   "bytes": 5919
   },
   {
    "path": "corpus/experiments/m7-blinded-run/records/experiment.json",
@@ -346,6 +356,21 @@
    "path": "corpus/experiments/pilot-004-discovery/records/RESULT.md",
    "sha256": "faf6c5464f09feba18afe373df38219272642f82a77d3135e95806c37ebe1495",
    "bytes": 22473
+  },
+  {
+   "path": "corpus/experiments/two-arm-comparison/PROTOCOL.md",
+   "sha256": "e5eaa02d1bb59afd9913d6fd2f22bab55b5d22cfe450ba2cf1e5f406000c05d6",
+   "bytes": 3735
+  },
+  {
+   "path": "corpus/experiments/two-arm-comparison/RESULT.md",
+   "sha256": "bbbe1b2f0d05d992c77bbc4b2fa16b9b7b236e3f44b9c82be84f51836dd99e4e",
+   "bytes": 2814
+  },
+  {
+   "path": "corpus/experiments/two-arm-comparison/main.go",
+   "sha256": "ab91c1bd22bd540f9fbb51cc76accb8583d1f998a5303861edf50f4c0806195c",
+   "bytes": 5477
   }
  ],
  "amendments": [
@@ -359,6 +384,18 @@
    ],
    "added": [
     "corpus/experiments/pilot-004-discovery/records/CURRENT-CLAIMS.md"
+   ]
+  },
+  {
+   "date": "2026-09-12",
+   "reason": "Manuscript revision added Experiment E (sec:results-episode) and four claims-ledger rows citing the episode-001 and two-arm-comparison artifacts; per the supplement's rule, manuscript-cited records join the selection by recorded amendment.",
+   "rehashed": [],
+   "added": [
+    "corpus/experiments/m7-blinded-run/records/episode-001-greedy-vs-global.md",
+    "corpus/experiments/m7-blinded-run/records/episode-001-greedy-vs-global.json",
+    "corpus/experiments/two-arm-comparison/PROTOCOL.md",
+    "corpus/experiments/two-arm-comparison/RESULT.md",
+    "corpus/experiments/two-arm-comparison/main.go"
    ]
   }
  ]
