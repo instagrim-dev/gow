@@ -5,10 +5,14 @@ on:
     branches: [main]
     paths:
       - "paper/**"
+      - "scripts/build-paper.sh"
+      - "Makefile"
       - ".github/workflows/paper.yml"
   pull_request:
     paths:
       - "paper/**"
+      - "scripts/build-paper.sh"
+      - "Makefile"
       - ".github/workflows/paper.yml"
 
 permissions:
@@ -24,19 +28,15 @@ jobs:
       - name: Cache tectonic bundle
         uses: actions/cache@v4
         with:
-          path: ~/.cache/Tectonic
-          key: tectonic-${{ runner.os }}-${{ hashFiles('paper/geometry-of-work.tex') }}
+          path: |
+            .cache/Tectonic
+            .cache/tools/tectonic
+          key: tectonic-${{ runner.os }}-${{ hashFiles('paper/geometry-of-work.tex', 'paper/references.bib', 'scripts/build-paper.sh') }}
           restore-keys: |
             tectonic-${{ runner.os }}-
 
-      - name: Install tectonic
-        run: |
-          curl -fsSL https://drop-sh.fullyjustified.net | sh
-          sudo mv tectonic /usr/local/bin/
-
       - name: Compile
-        working-directory: paper
-        run: tectonic geometry-of-work.tex
+        run: make paper
 
       - name: Duplicate-label guard
         run: |

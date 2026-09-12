@@ -16,6 +16,13 @@ docs/reviews
 # Root build binary only — anchored so new files under cmd/newf/ stay visible to git status.
 /newf
 
+# Conventional local output dir for `go build -o bin/`. Ignored for the same reason
+# as /newf, and because a binary built on one runner's GOARCH is useless on another.
+/bin/
+
+# Repo-local tool and Tectonic caches populated by `make paper`.
+.cache/
+
 # Local research substrate (default CLI state per README).
 .newf/
 
