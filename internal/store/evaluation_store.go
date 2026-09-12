@@ -212,6 +212,9 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 				return EvaluationRunRecord{}, err
 			}
 			// R6: failure/partial_failure re-enters the atlas as a queryable marker.
+			// PER-EVALUATION (v45, F-1): every failed evaluation of a proposal gets
+			// its own marker, so a later stronger-verdict evaluation stays visible
+			// to admission; OR IGNORE only dedupes re-persisting the same evaluation.
 			if e.Verdict == "failure" || e.Verdict == "partial_failure" {
 				if _, err := tx.ExecContext(ctx, `
 INSERT OR IGNORE INTO evaluated_failures(proposal_id, evaluation_id, problem_id, verdict, created_at)

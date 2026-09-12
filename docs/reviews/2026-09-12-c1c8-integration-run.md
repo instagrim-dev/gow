@@ -134,6 +134,26 @@ of the result**; the distinct-proposal layout in both final harnesses is a
 diagnostic restriction, is hereby made explicit, and narrows what C3 admission
 evidence covers (distinct-proposal path only).
 
+**Resolution (2026-09-12 14:3x, handoff 2 landed):** the `evaluated_failures`
+re-entry marker is now keyed **per evaluation** (migration v45 rebuilds the
+per-proposal-PK table in place, preserving rows and immutability triggers;
+fresh stores carry the new shape from the baseline DDL). Admission already
+keyed its decision ledger per evaluation, so the later witness-checked failure
+of an already-decided proposal now simply appears and is rule-admitted under
+its own context; the earlier withheld model judgment is **preserved, not
+replaced** — visibility, not strength ranking. The no-inflation companion holds
+structurally: materialization uses the stable logical identity
+`frontier-proposal:<id>`, so a second admitted evaluation of the same proposal
+produces a new revision of the same approach and the current-heads population
+does not grow a second member. Committed regressions:
+`TestIntegrationLaterStrongerEvaluationReachesAdmission` (the exact run-1
+shadowing case: withheld model judgment → witness-invalid → rule-admitted
+exactly once, rerun skips both, population +1 total across two admitted
+evaluations) and `TestMigrateV45RebuildsPerProposalMarkerTable` (upgrade path
+on a real pre-v45 store). The distinct-proposal restriction on C3's admission
+evidence is now unnecessary for *visibility*; mechanism-to-output attribution
+(handoff 3) remains open.
+
 ### C3 — narrowed claim (adopted verbatim in substance)
 
 What both runs establish: exact arithmetic checking, evaluation persistence,
@@ -189,10 +209,12 @@ claim is made.
    met by the committed regression
    `TestIntegrationReplayPreservesCompatibleCurrentAuthority` (run-2 C7
    positive branch) with the 5b negative control still passing.
-2. **F-1 (`evidence-admission`):** per-evaluation admission visibility under
-   exact context (not strength ranking), with the no-inflation companion
-   constraint. Acceptance: the same-proposal witness-after-model-judged case
-   is rule-admissible exactly once.
+2. **F-1 (`evidence-admission`): LANDED 2026-09-12.** Per-evaluation admission
+   visibility under exact context (migration v45: per-evaluation marker key),
+   with the no-inflation companion constraint holding structurally via
+   current-heads revisioning. Acceptance met by the committed regression
+   `TestIntegrationLaterStrongerEvaluationReachesAdmission`: the same-proposal
+   witness-after-model-judged case is rule-admissible exactly once.
 3. **Attribution slice (`verification`/`transformation`):** an adapter-level
    binding from a proposal's executed bounded attempt to its emitted tuple, so
    C3 can assert mechanism-to-output attribution instead of declaring it.

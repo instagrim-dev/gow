@@ -24,6 +24,88 @@ for v0/`v1.0.0` per `EPIC.md`'s own exit criteria; resolving the Erdős–Straus
 conjecture is likewise explicitly not a `v1.0.0` requirement (`AGENTS.md`,
 `EPIC.md`) — see `docs/plans/2026-09-11-012-plan-v1.0.0-gap-analysis.md`.
 
+## [Unreleased]
+
+### Fixed — per-evaluation admission visibility (v45, review finding F-1)
+
+Remediates F-1 of the 2026-09-12 C1–C8 review run (reproduced admission
+omission): the `evaluated_failures` re-entry marker was keyed per **proposal**
+with `INSERT OR IGNORE`, so a proposal whose first failure was model-judged
+(withheld) permanently shadowed a later witness-checked failure of the same
+proposal from admission.
+
+- **Migration `v45`** — rebuilds `evaluated_failures` with a per-**evaluation**
+  primary key (rows and immutability triggers preserved; introspective and
+  idempotent; fresh stores get the new shape from the baseline DDL). Every
+  applicable evaluation now remains independently visible to admission under
+  its exact context; earlier decisions are preserved, not replaced — visibility
+  is not strength-ranked replacement.
+- **No-inflation companion** — unchanged by design: admission materializes
+  under the stable logical identity `frontier-proposal:<id>`, so a second
+  admitted evaluation of the same proposal revises the same approach and the
+  current-heads population does not grow a second member.
+- **Regressions** — `TestIntegrationLaterStrongerEvaluationReachesAdmission`
+  (the exact shadowing case, exactly-once admission, no-inflation) and
+  `TestMigrateV45RebuildsPerProposalMarkerTable` (upgrade path on a real
+  pre-v45 store).
+
+### Added — normative review records (v44)
+
+Remediates G1 of the 2026-09-12 review-flow run, whose disposition was
+`UNDETERMINED` because the review contract's four record responsibilities had no
+storage mapping: coverage could only have been hand-written.
+
+- **`internal/review`** — pure decision projection and deterministic
+  `COVERAGE.md` generator. Derives `WITHHOLD` / `UNDETERMINED` /
+  `ELIGIBLE_TO_ADVANCE` from records alone, with reason codes. Emits no
+  generation timestamp, so identical records render byte-identical output.
+- **Migration `v44`** — `review_policies`, `review_obligations`,
+  `review_policy_obligations`, `review_applicability_decisions`,
+  `review_dependency_manifests` (+ dependencies), `review_check_attempts`,
+  `review_assessments` (+ check references), with immutability triggers and a
+  trigger refusing to link a blocked check attempt to a `conforms` assessment.
+  These are normative records; they share nothing with the scientific lifecycle
+  and have no promotion path into it.
+- **`newf review applicability|check|coverage`** — record applicability
+  decisions and check attempts, and generate coverage. There is deliberately no
+  status writer: coverage is derived on every read.
+- **`TestIntegrationCurrentAssessmentAuthorityObligation`** — cases C1–C8 of
+  `docs/reviews/prompts/recipes/assessment-admission-decision.md` for the single
+  obligation `current-assessment-authority@1`, through the real migrated store,
+  plus a control policy proving `unexamined` and execution-`blocked` remain
+  distinguishable from each other and from a pass.
+- **`docs/normative-review-records.md`** — the mapping, the refusals it encodes,
+  and the C4/C5 staleness boundary (relevance, not "HEAD moved").
+
+Encoded refusals: an inspected procedure cannot be recorded as `completed`; a
+blocked attempt cannot support conformance; absence of an assessment reports
+`unexamined` rather than a pass; conflicting applicability stays unresolved
+instead of being settled by recency; a demonstrated nonconformance is not erased
+by a later favorable assessment; and vacuous or unauthorized policies cannot
+grant eligibility.
+
+### Changed — build requirements
+
+- **Minimum Go toolchain is standardized at 1.25.** The floor was already
+  declared by the `go` directive in `go.mod`; it is now stated for operators in
+  `README.md`, made a hard constraint in `AGENTS.md`, and enforced by
+  `toolchain_test.go` so it cannot regress or be shadowed by a competing pin.
+- `toolchain_test.go` — repository-scoped gate asserting that the `go` (and any
+  `toolchain`) directive meets the 1.25 floor, that every `actions/setup-go`
+  step derives its version from `go.mod` rather than hardcoding one, and that
+  any hosted-container pin in `.codex/environments/environment.toml` does not
+  undercut the floor (that file is gitignored and per-operator, so the last
+  check skips in CI). Motivated by a hosted runner defaulting to Go 1.23.2,
+  which cannot build this module and previously failed with no pointer to the
+  cause. Each assertion was mutation-checked: lowering the directive, adding a
+  below-floor `toolchain` line, hardcoding `go-version:`, dropping the version
+  source from one of two `setup-go` steps, redirecting `go-version-file` away
+  from `go.mod`, and lowering the container pin all turn the gate red.
+- `.gitignore` — ignore `/bin/`, the conventional `go build -o bin/` output
+  directory (a binary built for one runner's `GOARCH` is not portable to
+  another), and `.codex/`, autogenerated per-operator agent-host config that is
+  not a repository contract.
+
 ## [1.0.0] — 2026-09-11
 
 First tagged release of the `newf` research substrate: a provenance-heavy

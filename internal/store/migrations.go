@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 44
+const currentSchemaVersion = 45
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -1206,6 +1206,26 @@ END;
 		// coverage is generated from these records.
 		sql: reviewLedgerSQL,
 	},
+	{
+		version: 45,
+		// v45 (F-1, 2026-09-12 review run remediation handoff 2): the
+		// evaluated_failures re-entry marker becomes PER-EVALUATION. The
+		// original PK was proposal_id with INSERT OR IGNORE, so a proposal
+		// whose first failure was model-judged (withheld) kept that first
+		// marker forever: a later witness-checked (reproducible-strength)
+		// failure of the SAME proposal never reached admission — stronger
+		// evidence silently shadowed by a weaker earlier marker. Every
+		// applicable evaluation must remain independently visible to
+		// admission under its exact context; visibility is NOT strength-
+		// ranked replacement, and earlier decisions are preserved. The
+		// companion no-inflation constraint is already structural: admission
+		// materializes under the stable logical identity
+		// "frontier-proposal:<id>", so a re-admitted proposal produces a new
+		// REVISION of the same approach and the current-heads population
+		// keeps exactly one interpretation current. Introspective +
+		// idempotent; fresh DBs already carry the per-evaluation shape.
+		apply: migrateV45EvaluatedFailuresPerEvaluation,
+	},
 }
 
 // invariantTablesSQL is the additive DDL for the candidate-invariant layer
@@ -2328,8 +2348,8 @@ CREATE TABLE IF NOT EXISTS evaluation_run_metrics (
 -- records the proposal as a newly-evaluated failure so a later cluster build can
 -- include it. It is a persisted, queryable flag, not an auto-rerun.
 CREATE TABLE IF NOT EXISTS evaluated_failures (
-  proposal_id TEXT PRIMARY KEY REFERENCES frontier_proposals(id),
-  evaluation_id TEXT NOT NULL REFERENCES evaluations(id),
+  evaluation_id TEXT PRIMARY KEY REFERENCES evaluations(id),
+  proposal_id TEXT NOT NULL REFERENCES frontier_proposals(id),
   problem_id TEXT NOT NULL REFERENCES problems(id),
   verdict TEXT NOT NULL CHECK (verdict IN ('failure','partial_failure')),
   created_at TEXT NOT NULL
@@ -2338,6 +2358,7 @@ CREATE TABLE IF NOT EXISTS evaluated_failures (
 CREATE INDEX IF NOT EXISTS idx_evaluations_run ON evaluations(evaluation_run_id);
 CREATE INDEX IF NOT EXISTS idx_evaluation_runs_problem ON evaluation_runs(problem_id);
 CREATE INDEX IF NOT EXISTS idx_evaluated_failures_problem ON evaluated_failures(problem_id);
+CREATE INDEX IF NOT EXISTS idx_evaluated_failures_proposal ON evaluated_failures(proposal_id);
 
 CREATE TRIGGER IF NOT EXISTS evaluation_runs_immutable_update
 BEFORE UPDATE ON evaluation_runs
@@ -4081,6 +4102,61 @@ func migrateV42SemanticPreservationObligations(ctx context.Context, tx *sql.Tx) 
 // migrateV43RefutedBoundaryDirectives widens the
 // search_policy_directives.target_kind CHECK vocabulary to admit
 // 'refuted_boundary' (decision D5). Introspective + idempotent.
+// migrateV45EvaluatedFailuresPerEvaluation rebuilds evaluated_failures with a
+// per-evaluation primary key (see the v45 migration comment). FK-safe only
+// under foreign_keys=OFF (the mode Migrate establishes); Migrate's pre-commit
+// foreign_key_check proves no child dangled. No-op when the PK is already
+// evaluation_id (fresh databases, or an already-migrated store).
+func migrateV45EvaluatedFailuresPerEvaluation(ctx context.Context, tx *sql.Tx) error {
+	var ddl string
+	if err := tx.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type='table' AND name='evaluated_failures'`).Scan(&ddl); err != nil {
+		return err
+	}
+	if !strings.Contains(ddl, "proposal_id TEXT PRIMARY KEY") {
+		return nil // already per-evaluation.
+	}
+	if _, err := tx.ExecContext(ctx, `CREATE TABLE evaluated_failures__rebuild (
+  evaluation_id TEXT PRIMARY KEY REFERENCES evaluations(id),
+  proposal_id TEXT NOT NULL REFERENCES frontier_proposals(id),
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  verdict TEXT NOT NULL CHECK (verdict IN ('failure','partial_failure')),
+  created_at TEXT NOT NULL
+)`); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO evaluated_failures__rebuild (evaluation_id, proposal_id, problem_id, verdict, created_at)
+SELECT evaluation_id, proposal_id, problem_id, verdict, created_at FROM evaluated_failures`); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DROP TABLE evaluated_failures`); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `ALTER TABLE evaluated_failures__rebuild RENAME TO evaluated_failures`); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `CREATE INDEX IF NOT EXISTS idx_evaluated_failures_problem ON evaluated_failures(problem_id)`); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `CREATE INDEX IF NOT EXISTS idx_evaluated_failures_proposal ON evaluated_failures(proposal_id)`); err != nil {
+		return err
+	}
+	// DROP TABLE dropped the immutability triggers; recreate them against the
+	// rebuilt table (same DDL as the v14 originals).
+	_, err := tx.ExecContext(ctx, `
+CREATE TRIGGER IF NOT EXISTS evaluated_failures_immutable_update
+BEFORE UPDATE ON evaluated_failures
+BEGIN
+  SELECT RAISE(ABORT, 'evaluated failures are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS evaluated_failures_immutable_delete
+BEFORE DELETE ON evaluated_failures
+BEGIN
+  SELECT RAISE(ABORT, 'evaluated failures are immutable');
+END;
+`)
+	return err
+}
+
 func migrateV43RefutedBoundaryDirectives(ctx context.Context, tx *sql.Tx) error {
 	var ddl string
 	if err := tx.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type='table' AND name='search_policy_directives'`).Scan(&ddl); err != nil {
