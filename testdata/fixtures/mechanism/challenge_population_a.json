@@ -1,0 +1,42 @@
+{
+  "approaches": [
+    {
+      "logical_identity": "descent-local-a",
+      "label": "Local congruence descent",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "representations": [
+        "congruence classes"
+      ],
+      "operators": [
+        "modular decomposition"
+      ],
+      "preserves": [
+        "residue locality"
+      ],
+      "outcome": {
+        "class": "failure"
+      }
+    },
+    {
+      "logical_identity": "descent-local-b",
+      "label": "Local averaging descent",
+      "locality": "local",
+      "construction_mode": "constructive",
+      "uncertainty_mode": "deterministic",
+      "representations": [
+        "affine lattice"
+      ],
+      "operators": [
+        "density averaging"
+      ],
+      "preserves": [
+        "mean growth rate"
+      ],
+      "outcome": {
+        "class": "failure"
+      }
+    }
+  ]
+}

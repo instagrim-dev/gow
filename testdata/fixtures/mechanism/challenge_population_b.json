@@ -1,0 +1,23 @@
+{
+  "approaches": [
+    {
+      "logical_identity": "global-averaging-crossing",
+      "label": "Global averaging crossing (later-ingested failure)",
+      "locality": "global",
+      "construction_mode": "existential",
+      "uncertainty_mode": "probabilistic",
+      "representations": [
+        "congruence classes"
+      ],
+      "operators": [
+        "density averaging"
+      ],
+      "preserves": [
+        "mean growth rate"
+      ],
+      "outcome": {
+        "class": "failure"
+      }
+    }
+  ]
+}

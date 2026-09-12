@@ -339,3 +339,90 @@ func TestAbortedCampaignPersistsNoDerivedChildren(t *testing.T) {
 		t.Fatalf("aborted campaign must persist no lineage, got %d", lineageCount)
 	}
 }
+
+// TestChallengeCampaignPersistsAssessmentPopulation is the v34/S1 store
+// boundary: a population-assessed campaign records which evidence its searches
+// ran against (discovery vs assessment cluster run + policy) in the same
+// transaction as its challenges; the row round-trips and is immutable.
+func TestChallengeCampaignPersistsAssessmentPopulation(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+	rec := sampleRevision(t, st)
+	res, err := st.PersistInvariantRevision(ctx, rec)
+	if err != nil {
+		t.Fatalf("persist revision: %v", err)
+	}
+	invID := res.Record.Candidates[0].ID
+
+	campaign := sampleCampaign(rec.ProblemID, rec.RunID, invID, challengeRow(t, "known-counterexample", "unconfirmed"))
+	campaign.DiscoveryClusterRunID = rec.ClusterRunID
+	campaign.AssessmentClusterRunID = rec.ClusterRunID
+	campaign.PopulationPolicy = "latest"
+	if err := st.PersistChallengeCampaign(ctx, campaign); err != nil {
+		t.Fatalf("persist campaign: %v", err)
+	}
+
+	row, found, err := st.GetChallengeAssessmentPopulation(ctx, rec.RunID, invID)
+	if err != nil {
+		t.Fatalf("get assessment population: %v", err)
+	}
+	if !found {
+		t.Fatal("assessment population row not persisted")
+	}
+	if row.DiscoveryClusterRunID != rec.ClusterRunID || row.AssessmentClusterRunID != rec.ClusterRunID || row.PopulationPolicy != "latest" {
+		t.Fatalf("assessment population round-trip lost data: %+v", row)
+	}
+
+	// Immutable: population identity is provenance, never editable.
+	if _, err := st.db.ExecContext(ctx, `UPDATE challenge_assessment_populations SET population_policy = 'discovery' WHERE run_id = ?`, rec.RunID); err == nil {
+		t.Fatal("assessment population rows must be immutable")
+	}
+	if _, err := st.db.ExecContext(ctx, `DELETE FROM challenge_assessment_populations WHERE run_id = ?`, rec.RunID); err == nil {
+		t.Fatal("assessment population rows must not be deletable")
+	}
+}
+
+// TestChallengeCampaignPartialPopulationIdentityRefused: either all three
+// population fields are set or none — a partial tuple is a caller bug the
+// store refuses rather than guesses at.
+func TestChallengeCampaignPartialPopulationIdentityRefused(t *testing.T) {
+	st := openMigratedStore(t)
+	ctx := context.Background()
+	rec := sampleRevision(t, st)
+	res, err := st.PersistInvariantRevision(ctx, rec)
+	if err != nil {
+		t.Fatalf("persist revision: %v", err)
+	}
+	invID := res.Record.Candidates[0].ID
+
+	campaign := sampleCampaign(rec.ProblemID, rec.RunID, invID, challengeRow(t, "known-counterexample", "unconfirmed"))
+	campaign.PopulationPolicy = "latest" // discovery/assessment run ids missing
+	err = st.PersistChallengeCampaign(ctx, campaign)
+	if err == nil || !strings.Contains(err.Error(), "partial") {
+		t.Fatalf("partial population identity must be refused, got %v", err)
+	}
+
+	// And no campaign side effects survive the refused write.
+	if _, found, gerr := st.GetChallengeAssessmentPopulation(ctx, rec.RunID, invID); gerr != nil || found {
+		t.Fatalf("refused campaign must persist nothing (found=%v, err=%v)", found, gerr)
+	}
+}
+
+// TestAttestationCampaignHasNoPopulationRow: `invariant establish` campaigns
+// search no population; they persist no assessment-population row and reads
+// report found=false rather than fabricating one.
+func TestAttestationCampaignHasNoPopulationRow(t *testing.T) {
+	st, problemID, runID, invID := persistSampleInvariant(t)
+	ctx := context.Background()
+
+	if err := st.PersistChallengeCampaign(ctx, sampleCampaign(problemID, runID, invID, challengeRow(t, "known-counterexample", "unconfirmed"))); err != nil {
+		t.Fatalf("persist campaign: %v", err)
+	}
+	_, found, err := st.GetChallengeAssessmentPopulation(ctx, runID, invID)
+	if err != nil {
+		t.Fatalf("get assessment population: %v", err)
+	}
+	if found {
+		t.Fatal("campaign without population identity must persist no row")
+	}
+}
