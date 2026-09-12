@@ -99,12 +99,22 @@ That the system is production-ready or feature-complete.
 - At least one novel-shape challenge lifecycle (N2a or another candidate)
   run end-to-end, whether the hypothesis survives, weakens, splits, or is
   falsified.
+- Experiment E (2026-09-12): a preregistered two-observation episode
+  (`revision_credit: earned`, code-derived) and a matched-budget two-arm
+  comparison (map arm 20/20 verified witnesses at 20 checker submissions vs
+  undirected 3/20 at 57, decision rule frozen pre-execution), both scored by
+  an exact-integer witness checker — the paper's only tier-2
+  (reproducible-computation) evidence; demonstration-scale, ordering value
+  over a fixed move pool, not discovery.
 - Every number traceable to an immutable frozen experiment artifact.
 
 **What it does not claim:**
 Mathematical validity of any generated structure. That GoW outperforms
 conventional search statistically — the manuscript's §9 gives only a
-*conditional* theorem and the (unrun) preregistered test for such a claim; no
+*conditional* theorem and the (unrun) preregistered test for such a claim;
+Experiment E2 is a demonstration-scale data point of the right shape (frozen
+protocol, matched budget, exact checking) but lacks the adaptive baseline,
+curation-only ablation, held-out structures, and statistical form, so no
 empirical superiority is asserted. That the results generalize to other
 domains. That LLM-generated shapes are "discoveries" in the mathematical
 sense. That quorum agreement constitutes independent verification.
@@ -259,3 +269,6 @@ The paper must state what future evidence would make GoW uninteresting or wrong:
 - Pilot-004 frozen record: `corpus/experiments/pilot-004-discovery/`
 - Finding 001: `docs/findings/001-unencoded-shape-generation.md`
 - N2a challenge: `corpus/experiments/pilot-004-discovery/records/N2a-challenge.md`
+- N2a/N5 authoritative current claims: `corpus/experiments/pilot-004-discovery/records/CURRENT-CLAIMS.md`
+- Experiment E episode: `corpus/experiments/m7-blinded-run/records/episode-001-greedy-vs-global.md`
+- Experiment E comparison: `corpus/experiments/two-arm-comparison/` (PROTOCOL frozen pre-execution, RESULT, deterministic runner)
