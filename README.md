@@ -86,7 +86,12 @@ newf policy list --problem <problem-id>
 newf policy show [policy-revision-id] [--problem <problem-id>]
 ```
 
-Build it with:
+Requires **Go 1.25 or newer**. The floor is declared once, by the `go` directive
+in `go.mod`; CI and every other runner derive from that declaration rather than
+restate it. Hosted agent containers often default to an older Go — if a build
+fails with `go.mod requires go >= 1.25.0`, raise the container's toolchain (for
+the Codex universal image, set `CODEX_ENV_GO_VERSION=1.25.1`) rather than
+lowering the directive. Build it with:
 
 ```bash
 go build ./cmd/newf

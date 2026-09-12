@@ -24,6 +24,7 @@ These are unconditional. A user request does not override them; if asked to brea
 - **Never put SQL or Cobra in `internal/domain`.** Domain types stay pure; SQLite lives behind `internal/store`, CLI wiring stays in `cmd/newf`.
 - **Never add provider coupling to a domain package.** Provider adapters live in `internal/provider`; domain records carry no vendor concepts.
 - **Never silently promote epistemic status** (`Hypothesis`→`Evidence`, `CandidateInvariant`→`EstablishedInvariant`). Preserve the weaker type and record the limitation.
+- **Build with Go 1.25 or newer.** The operative floor lives in exactly one place: the `go` directive in `go.mod`. Every runner must derive from it (`actions/setup-go` uses `go-version-file: go.mod`); never add a competing pin in a workflow, a `.go-version`/`mise.toml` file, or a `toolchain` directive below the floor. A runner stuck on an older Go (for example a hosted container defaulting to Go 1.23) is a blocked gate to report, not a reason to lower the floor. `toolchain_test.go` enforces this.
 - **Before you call work done:** run `go build ./...`, `go test ./...`, and `gofmt -l .` (output must be empty). Add a test at the boundary where behavior is introduced.
 - **Read `README.md` and the relevant `docs/` file before changing architecture.**
 
