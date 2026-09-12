@@ -212,6 +212,34 @@ The proposal wire is deliberately **not** extended for witnesses: they are
 operator/tool-authored checkable claims and must not enter via the untrusted
 provider channel (decision D2 on issue #23).
 
+#### Executed bounded attempts (`--procedure`, v46 attribution slice)
+
+A supplied tuple proves only that the tuple fails the identity — not that the
+proposal's executed attempt *produced* it (2026-09-12 C1–C8 review, C3
+finding). `newf witness check --proposal <id> --procedure <name> --param k=v`
+closes that gap for tool-produced tuples:
+
+- a **registered deterministic procedure** (`equal-denominator`, `greedy`;
+  versioned executor) is executed over declared integer params, and its output
+  IS the checked tuple — the tuple cannot be supplied alongside a procedure;
+- the **attempt→output binding** (procedure, executor version, canonical
+  params, canonical tuple) persists in the **same transaction** as the
+  evaluation (`witness_attempt_bindings`, immutable, one per evaluation);
+- **admission rechecks the binding by recomputation** — it re-runs the
+  procedure over the recorded params and compares canonical tuples; a verified
+  binding is named in the rule basis, and a binding that fails or refuses
+  recomputation degrades rule admission to withholding (operator attestation
+  is the recorded escape);
+- a procedure that **abstains** for its params is an input-level refusal:
+  no tuple, no claim, nothing persisted;
+- the supplied-tuple path is unchanged and keeps its explicitly **weaker
+  provenance**, recorded in the evaluation notes (`supplied tuple; no
+  executed-attempt binding`) — an attribution gap is reported, never faked.
+
+The binding attributes the tuple to an identified executed bounded attempt;
+whether that attempt faithfully realizes the proposal's described mechanism is
+a separate judgment and is not claimed by the binding.
+
 ### Deliberately out of scope here
 
 Compressing partial successes into success invariants (M6.1), mutating search

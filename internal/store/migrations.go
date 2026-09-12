@@ -9,7 +9,34 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 45
+const currentSchemaVersion = 46
+
+// witnessAttemptBindingSQL is the additive DDL for migration v46: one
+// checkable attempt→output binding per witness-backed evaluation (see the v46
+// migration comment for doctrine).
+const witnessAttemptBindingSQL = `
+CREATE TABLE IF NOT EXISTS witness_attempt_bindings (
+  evaluation_id TEXT PRIMARY KEY REFERENCES evaluations(id),
+  proposal_id TEXT NOT NULL REFERENCES frontier_proposals(id),
+  procedure TEXT NOT NULL,
+  executor_version TEXT NOT NULL,
+  params_canonical TEXT NOT NULL,
+  tuple_canonical TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_witness_attempt_bindings_proposal
+  ON witness_attempt_bindings(proposal_id);
+CREATE TRIGGER IF NOT EXISTS witness_attempt_bindings_immutable_update
+BEFORE UPDATE ON witness_attempt_bindings
+BEGIN
+  SELECT RAISE(ABORT, 'witness attempt bindings are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS witness_attempt_bindings_immutable_delete
+BEFORE DELETE ON witness_attempt_bindings
+BEGIN
+  SELECT RAISE(ABORT, 'witness attempt bindings are immutable');
+END;
+`
 
 // migration is one ordered schema step. Most steps are a static SQL blob run as
 // one statement batch. A step may instead supply an `apply` func when the change
@@ -1225,6 +1252,21 @@ END;
 		// keeps exactly one interpretation current. Introspective +
 		// idempotent; fresh DBs already carry the per-evaluation shape.
 		apply: migrateV45EvaluatedFailuresPerEvaluation,
+	},
+	{
+		version: 46,
+		// v46 (attribution slice, 2026-09-12 review run remediation handoff 3):
+		// the ATTEMPT→OUTPUT BINDING for witness-backed evaluations. A supplied
+		// tuple proves only "this tuple fails the identity"; it does not
+		// establish that the proposal's executed bounded attempt PRODUCED the
+		// tuple. This table records, in the same transaction as the evaluation,
+		// which registered deterministic procedure over which declared params
+		// emitted the checked tuple — so admission can RECOMPUTE the procedure
+		// and verify the binding instead of trusting a declared fixture
+		// relationship. One binding per evaluation (PK); immutable; absence is
+		// the recorded attribution gap for operator-supplied tuples, never
+		// faked.
+		sql: witnessAttemptBindingSQL,
 	},
 }
 

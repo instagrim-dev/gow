@@ -4,10 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/instagrim-dev/newf/internal/pipeline"
+	"github.com/instagrim-dev/newf/internal/witness"
 )
 
 // newWitnessCommand hosts witness-backed evaluations (issue #23 slice 2,
@@ -39,6 +41,8 @@ func newWitnessCheckCommand(stdout io.Writer, app *pipeline.App, opts *rootOptio
 		proposalID   string
 		generationID string
 		tuple        string
+		procedure    string
+		params       []string
 		note         string
 	)
 	cmd := &cobra.Command{
@@ -46,12 +50,23 @@ func newWitnessCheckCommand(stdout io.Writer, app *pipeline.App, opts *rootOptio
 		Short: "Check a witness tuple and record the verdict as an evaluation",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if proposalID == "" || tuple == "" {
-				return wrapCommandError("witness check", errors.New("--proposal and --tuple are required"))
+			if proposalID == "" || (tuple == "" && procedure == "") {
+				return wrapCommandError("witness check", errors.New("--proposal and one of --tuple or --procedure are required"))
+			}
+			paramMap := map[string]string{}
+			for _, p := range params {
+				k, v, ok := strings.Cut(p, "=")
+				if !ok || strings.TrimSpace(k) == "" {
+					return wrapCommandError("witness check", fmt.Errorf("malformed --param %q (want k=v)", p))
+				}
+				if _, dup := paramMap[strings.TrimSpace(k)]; dup {
+					return wrapCommandError("witness check", fmt.Errorf("duplicate --param key %q", k))
+				}
+				paramMap[strings.TrimSpace(k)] = strings.TrimSpace(v)
 			}
 			result, err := app.WitnessCheck(cmd.Context(), pipeline.WitnessCheckInput{
 				DBPath: opts.dbPath, ProposalID: proposalID, GenerationID: generationID,
-				Tuple: tuple, Note: note,
+				Tuple: tuple, Procedure: procedure, Params: paramMap, Note: note,
 				JSONOutput: opts.jsonOutput,
 			})
 			if err != nil {
@@ -64,6 +79,10 @@ func newWitnessCheckCommand(stdout io.Writer, app *pipeline.App, opts *rootOptio
 			fmt.Fprintf(stdout, "  claim:      %s\n", result.CanonicalClaim)
 			if result.Detail != "" {
 				fmt.Fprintf(stdout, "  detail:     %s\n", result.Detail)
+			}
+			if result.AttemptBinding != nil {
+				fmt.Fprintf(stdout, "  attempt:    %s@%s(%s) produced the tuple (binding recorded)\n",
+					result.AttemptBinding.Procedure, result.AttemptBinding.ExecutorVersion, result.AttemptBinding.ParamsCanonical)
 			}
 			fmt.Fprintf(stdout, "  occurrence: %s", result.FrontierGenerationRunID)
 			if !result.OccurrencePinned {
@@ -78,7 +97,9 @@ func newWitnessCheckCommand(stdout io.Writer, app *pipeline.App, opts *rootOptio
 	}
 	cmd.Flags().StringVar(&proposalID, "proposal", "", "Frontier proposal ID (fpr_...) whose attempted mechanism produced the tuple")
 	cmd.Flags().StringVar(&generationID, "generation", "", "Pin the occurrence the verdict is about (fgr_...); default is the proposal's latest occurrence generation")
-	cmd.Flags().StringVar(&tuple, "tuple", "", "Produced witness tuple n,x,y,z (decimal, arbitrary precision; checked exactly)")
-	cmd.Flags().StringVar(&note, "note", "", "Provenance of the tuple (required)")
+	cmd.Flags().StringVar(&tuple, "tuple", "", "Produced witness tuple n,x,y,z (decimal, arbitrary precision; checked exactly). Mutually exclusive with --procedure")
+	cmd.Flags().StringVar(&procedure, "procedure", "", "Execute a registered bounded-attempt procedure ("+strings.Join(witness.AttemptProcedures(), " | ")+"); its output IS the checked tuple and the attempt→output binding is recorded")
+	cmd.Flags().StringArrayVar(&params, "param", nil, "Attempt parameter k=v (repeatable; e.g. --param n=7 --param x0_offset=1)")
+	cmd.Flags().StringVar(&note, "note", "", "Provenance of the tuple (required for --tuple; optional for --procedure, whose provenance is the recorded binding)")
 	return cmd
 }

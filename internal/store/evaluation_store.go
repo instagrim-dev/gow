@@ -101,6 +101,27 @@ type EvaluationRow struct {
 	// role='evaluate' and its ID linked from the evaluation row.
 	Invocation *EvaluationProviderInvocation
 	Metrics    []EvaluationMetricRow
+	// AttemptBinding, when set, is the checkable attempt→output binding for a
+	// witness-backed evaluation (v46, attribution slice): the registered
+	// deterministic procedure + declared params that PRODUCED the checked
+	// tuple. Written in the same transaction as the evaluation, so a binding
+	// can never exist without its evaluation nor the reverse claim be
+	// half-recorded. Nil is the recorded attribution gap for operator-supplied
+	// tuples.
+	AttemptBinding *WitnessAttemptBindingRow
+}
+
+// WitnessAttemptBindingRow is one persisted attempt→output binding: the
+// evaluation's checked tuple IS the recorded procedure's output over the
+// recorded canonical params, recomputable by anyone (witness.VerifyAttemptBinding).
+type WitnessAttemptBindingRow struct {
+	EvaluationID    string
+	ProposalID      string
+	Procedure       string
+	ExecutorVersion string
+	ParamsCanonical string
+	TupleCanonical  string
+	CreatedAt       string
 }
 
 // EvaluationRunRecord is the full persisted evaluation pass.
@@ -202,6 +223,20 @@ VALUES(?, ?, ?, ?)
 INSERT INTO evaluation_metrics(id, evaluation_id, metric_name, metric_scale, numeric_value, ordinal_value, ordinal_scale_key, ordinal_scale_version, categorical_value, comparator, created_at)
 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `, metricID, e.ID, m.MetricName, m.MetricScale, m.NumericValue, nullIfEmpty(m.OrdinalValue), nullIfEmpty(m.OrdinalScaleKey), nullIfEmpty(m.OrdinalScaleVersion), nullIfEmpty(m.CategoricalValue), nullIfEmpty(m.Comparator), record.CreatedAt); err != nil {
+				return EvaluationRunRecord{}, err
+			}
+		}
+		// v46 (attribution slice): the attempt→output binding commits with the
+		// evaluation whose tuple it explains — never separately.
+		if e.AttemptBinding != nil {
+			b := e.AttemptBinding
+			if b.EvaluationID != e.ID {
+				return EvaluationRunRecord{}, fmt.Errorf("attempt binding names evaluation %s but is attached to evaluation %s", b.EvaluationID, e.ID)
+			}
+			if _, err := tx.ExecContext(ctx, `
+INSERT INTO witness_attempt_bindings(evaluation_id, proposal_id, procedure, executor_version, params_canonical, tuple_canonical, created_at)
+VALUES(?, ?, ?, ?, ?, ?, ?)
+`, b.EvaluationID, b.ProposalID, b.Procedure, b.ExecutorVersion, b.ParamsCanonical, b.TupleCanonical, record.CreatedAt); err != nil {
 				return EvaluationRunRecord{}, err
 			}
 		}
@@ -413,4 +448,26 @@ type EvaluatedFailureRow struct {
 	EvaluationID string
 	Verdict      string
 	CreatedAt    string
+}
+
+// GetWitnessAttemptBinding loads the attempt→output binding recorded with one
+// witness-backed evaluation (v46). found=false is the recorded attribution
+// gap: the tuple was operator-supplied, not produced by a registered
+// deterministic procedure — reported, never faked.
+func (s *Store) GetWitnessAttemptBinding(ctx context.Context, evaluationID string) (WitnessAttemptBindingRow, bool, error) {
+	if err := domain.ValidateEvaluationID(evaluationID); err != nil {
+		return WitnessAttemptBindingRow{}, false, err
+	}
+	row := s.db.QueryRowContext(ctx, `
+SELECT evaluation_id, proposal_id, procedure, executor_version, params_canonical, tuple_canonical, created_at
+FROM witness_attempt_bindings WHERE evaluation_id = ?
+`, evaluationID)
+	var out WitnessAttemptBindingRow
+	if err := row.Scan(&out.EvaluationID, &out.ProposalID, &out.Procedure, &out.ExecutorVersion, &out.ParamsCanonical, &out.TupleCanonical, &out.CreatedAt); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return WitnessAttemptBindingRow{}, false, nil
+		}
+		return WitnessAttemptBindingRow{}, false, err
+	}
+	return out, true, nil
 }

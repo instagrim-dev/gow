@@ -24,6 +24,7 @@ import (
 	"github.com/instagrim-dev/newf/internal/domain"
 	"github.com/instagrim-dev/newf/internal/store"
 	"github.com/instagrim-dev/newf/internal/verify"
+	"github.com/instagrim-dev/newf/internal/witness"
 )
 
 // Observation kinds recorded on every admission decision.
@@ -329,6 +330,29 @@ func (a *App) AdmitEvidence(ctx context.Context, input AdmitEvidenceInput) (Admi
 		admit := class.RuleAdmissible
 		admittedBy := "rule"
 		basis := class.Basis
+		// Attribution slice (v46, 2026-09-12 review handoff 3): a recorded
+		// attempt→output binding is RECHECKED here by recomputation — the
+		// admission does not trust the write-time claim that the procedure
+		// produced the tuple; it re-runs the procedure. A verified binding is
+		// named in the rule basis (checkable attribution); a binding that
+		// fails or refuses recomputation degrades rule admission to
+		// withholding — the attribution the rule relied on cannot be
+		// machine-checked, and operator attestation is the recorded escape.
+		// Absence of a binding changes nothing: the supplied-tuple path keeps
+		// its explicitly weaker provenance (recorded in the evaluation notes).
+		attemptBinding, attemptBound, berr := repoStore.GetWitnessAttemptBinding(ctx, f.EvaluationID)
+		if berr != nil {
+			a.failRun(ctx, repoStore, run.ID, berr)
+			return AdmitEvidenceResponse{}, berr
+		}
+		if attemptBound && admit {
+			if verr := witness.VerifyAttemptBinding(attemptBinding.Procedure, attemptBinding.ExecutorVersion, attemptBinding.ParamsCanonical, attemptBinding.TupleCanonical); verr != nil {
+				admit = false
+				basis = "attempt→output binding failed recomputation recheck (" + verr.Error() + "); the rule cannot admit an attribution it cannot re-verify — operator attestation may"
+			} else {
+				basis += " — attempt→output binding verified by recomputation: " + attemptBinding.Procedure + "@" + attemptBinding.ExecutorVersion + "(" + attemptBinding.ParamsCanonical + ")"
+			}
+		}
 		if input.Attest {
 			if !class.Attestable {
 				err := fmt.Errorf("evaluation %s is a %s and cannot be admitted even by attestation: %s", ev.ID, class.ObservationKind, class.Basis)

@@ -45,10 +45,26 @@ type WitnessCheckInput struct {
 	// a historical occurrence is replayable by pinning it explicitly.
 	GenerationID string
 	// Tuple is the concrete produced outcome "n,x,y,z" (decimal, arbitrary
-	// precision), checked exactly.
+	// precision), checked exactly. Mutually exclusive with Procedure: a
+	// supplied tuple is an operator-provenance claim with a recorded
+	// attribution gap.
 	Tuple string
-	// Note records where the tuple came from (required: a witness claim
-	// without provenance is just a number).
+	// Procedure names a registered deterministic bounded-attempt procedure
+	// (witness.AttemptProcedures). When set, the tuple is not supplied — it is
+	// COMPUTED here from Params, and the attempt→output binding (procedure,
+	// executor version, canonical params, canonical tuple) is persisted in the
+	// same transaction as the evaluation, giving admission a checkable link
+	// instead of a declared fixture relationship (attribution slice,
+	// 2026-09-12 review handoff 3). A procedure that abstains for its params
+	// is an input-level refusal: no tuple, no claim, nothing persisted.
+	Procedure string
+	// Params are the declared parameters of the bounded attempt (decimal
+	// integers; e.g. n, x0_offset). Recorded canonically and re-parsed
+	// verbatim on recheck.
+	Params map[string]string
+	// Note records where the tuple came from (required for supplied tuples: a
+	// witness claim without provenance is just a number; optional for executed
+	// attempts, whose provenance IS the recorded binding).
 	Note       string
 	JSONOutput bool
 }
@@ -79,6 +95,18 @@ type WitnessCheckResponse struct {
 	OccurrencePinned bool           `json:"occurrence_pinned"`
 	EvaluationRunID  string         `json:"evaluation_run_id"`
 	Evaluation       EvaluationView `json:"evaluation"`
+	// AttemptBinding is the persisted attempt→output binding when the tuple
+	// was computed by a registered procedure (nil for supplied tuples: the
+	// attribution gap is recorded, not faked).
+	AttemptBinding *WitnessAttemptBindingView `json:"attempt_binding,omitempty"`
+}
+
+// WitnessAttemptBindingView is the machine-readable attempt→output binding.
+type WitnessAttemptBindingView struct {
+	Procedure       string `json:"procedure"`
+	ExecutorVersion string `json:"executor_version"`
+	ParamsCanonical string `json:"params_canonical"`
+	TupleCanonical  string `json:"tuple_canonical"`
 }
 
 // WitnessCheck parses and exactly checks a witness tuple for a proposal, then
@@ -95,12 +123,35 @@ func (a *App) WitnessCheck(ctx context.Context, input WitnessCheckInput) (Witnes
 	if input.ProposalID == "" {
 		return WitnessCheckResponse{}, fmt.Errorf("proposal id is required")
 	}
-	if input.Note == "" {
-		return WitnessCheckResponse{}, fmt.Errorf("a note recording the tuple's provenance is required: a witness claim without provenance is just a number")
-	}
-	claim, err := witness.ParseErdosStraus(input.Tuple)
-	if err != nil {
-		return WitnessCheckResponse{}, err
+	var claim witness.ErdosStrausClaim
+	var binding *store.WitnessAttemptBindingRow
+	switch {
+	case input.Procedure != "" && input.Tuple != "":
+		return WitnessCheckResponse{}, fmt.Errorf("--procedure and --tuple are mutually exclusive: an executed attempt computes its own tuple; a supplied tuple has no executed attempt to bind")
+	case input.Procedure != "":
+		// Attribution slice: the tuple IS the procedure's output. Abstention
+		// and malformed params are input errors — nothing persists.
+		executed, err := witness.ExecuteAttempt(input.Procedure, input.Params)
+		if err != nil {
+			return WitnessCheckResponse{}, err
+		}
+		claim = executed
+		binding = &store.WitnessAttemptBindingRow{
+			ProposalID:      input.ProposalID,
+			Procedure:       input.Procedure,
+			ExecutorVersion: witness.AttemptExecutorVersion,
+			ParamsCanonical: witness.CanonicalAttemptParams(input.Params),
+			TupleCanonical:  executed.Canonical(),
+		}
+	default:
+		if input.Note == "" {
+			return WitnessCheckResponse{}, fmt.Errorf("a note recording the tuple's provenance is required: a witness claim without provenance is just a number")
+		}
+		parsed, err := witness.ParseErdosStraus(input.Tuple)
+		if err != nil {
+			return WitnessCheckResponse{}, err
+		}
+		claim = parsed
 	}
 
 	// The check itself: pure, exact, before any store write.
@@ -157,7 +208,14 @@ func (a *App) WitnessCheck(ctx context.Context, input WitnessCheckInput) (Witnes
 	if detail != "" {
 		notes += ": " + detail
 	}
-	notes += " — provenance: " + input.Note
+	if binding != nil {
+		notes += " — attempt-bound: " + binding.Procedure + "@" + binding.ExecutorVersion + "(" + binding.ParamsCanonical + ") produced the tuple"
+		if input.Note != "" {
+			notes += " — note: " + input.Note
+		}
+	} else {
+		notes += " — provenance: " + input.Note + " (supplied tuple; no executed-attempt binding)"
+	}
 	notes += " — occurrence: " + occ.GenerationRunID
 	if !occ.OccurrencePinned {
 		// Pre-v24 history: the generation recorded no occurrence binding, so
@@ -186,6 +244,10 @@ func (a *App) WitnessCheck(ctx context.Context, input WitnessCheckInput) (Witnes
 			SignatureContentHash: occ.ContentHash,
 		}},
 	}
+	if binding != nil {
+		binding.EvaluationID = record.Evaluations[0].ID
+		record.Evaluations[0].AttemptBinding = binding
+	}
 	persisted, err := repoStore.PersistEvaluationRun(ctx, record)
 	if err != nil {
 		a.failRun(ctx, repoStore, run.ID, err)
@@ -196,7 +258,7 @@ func (a *App) WitnessCheck(ctx context.Context, input WitnessCheckInput) (Witnes
 	}
 
 	ev := persisted.Evaluations[0]
-	return WitnessCheckResponse{
+	resp := WitnessCheckResponse{
 		OK:                      true,
 		Command:                 "witness check",
 		Store:                   dbPath,
@@ -219,7 +281,16 @@ func (a *App) WitnessCheck(ctx context.Context, input WitnessCheckInput) (Witnes
 			ToolVersion:          ev.ToolVersion,
 			Notes:                ev.Notes,
 		},
-	}, nil
+	}
+	if binding != nil {
+		resp.AttemptBinding = &WitnessAttemptBindingView{
+			Procedure:       binding.Procedure,
+			ExecutorVersion: binding.ExecutorVersion,
+			ParamsCanonical: binding.ParamsCanonical,
+			TupleCanonical:  binding.TupleCanonical,
+		}
+	}
+	return resp, nil
 }
 
 // witnessOccurrence is the pinned assessment context of one witness check: the

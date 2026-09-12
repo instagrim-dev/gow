@@ -165,6 +165,28 @@ mechanism* produced the tuple — the proposal-to-attempt binding is still a
 declared fixture relationship, now stated rather than implicit. Full
 mechanism-to-output attribution remains future work at the adapter boundary.
 
+**Resolution (2026-09-12 14:5x, handoff 3 landed):** the attempt→output link
+is now checkable, not declared. `newf witness check --procedure <name>
+--param k=v` executes a registered deterministic bounded-attempt procedure
+(`internal/witness`: `equal-denominator`, `greedy`; versioned executor) whose
+**output is the checked tuple**, and persists the binding (procedure, executor
+version, canonical params, canonical tuple) in the **same transaction** as the
+evaluation (migration v46, immutable rows). Admission does not trust the
+write-time claim: it **recomputes the procedure over the recorded params** and
+compares canonical tuples (`witness.VerifyAttemptBinding`); a verified binding
+is named in the rule-admission basis, a binding that fails or refuses
+recomputation degrades rule admission to withholding (operator attestation is
+the recorded escape), and the supplied-tuple path keeps its explicitly weaker
+provenance — the attribution gap is recorded in the evaluation notes, never
+faked. An abstaining procedure is an input-level refusal: no tuple, no claim,
+nothing persisted. Committed regression:
+`TestIntegrationWitnessAttemptBinding` (bound path with recomputation-verified
+basis; supplied-tuple contrast without a binding claim; abstention refusal;
+`--procedure`/`--tuple` mutual exclusion; a bound *valid* witness). Scope kept
+honest: the binding attributes the tuple to an **identified executed bounded
+attempt**; whether that attempt faithfully realizes the proposal's described
+mechanism remains a separate judgment, recorded as such.
+
 ### Protections observed (retained)
 
 Withholding control; relevant-vs-unrelated change discrimination; obsolete-
@@ -215,10 +237,14 @@ claim is made.
    current-heads revisioning. Acceptance met by the committed regression
    `TestIntegrationLaterStrongerEvaluationReachesAdmission`: the same-proposal
    witness-after-model-judged case is rule-admissible exactly once.
-3. **Attribution slice (`verification`/`transformation`):** an adapter-level
-   binding from a proposal's executed bounded attempt to its emitted tuple, so
-   C3 can assert mechanism-to-output attribution instead of declaring it.
-   Acceptance: witness admission carries a checkable attempt→output link.
+3. **Attribution slice (`verification`/`transformation`): LANDED 2026-09-12.**
+   Adapter-level binding from an executed bounded attempt to its emitted tuple
+   (migration v46; `witness check --procedure`; admission rechecks by
+   recomputation). Acceptance met by the committed regression
+   `TestIntegrationWitnessAttemptBinding`: witness admission carries a
+   checkable attempt→output link, named in the rule basis after recomputation.
+   Remaining honest scope: attempt→proposal *mechanism fidelity* is a separate
+   judgment, recorded as such — not silently claimed by the binding.
 
 > The final disposable harness passed on a now-reconstructable snapshot (base
 > `7c54dcc` + retained patch and untracked archive). It provides positive

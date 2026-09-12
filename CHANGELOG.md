@@ -26,6 +26,32 @@ conjecture is likewise explicitly not a `v1.0.0` requirement (`AGENTS.md`,
 
 ## [Unreleased]
 
+### Added — checkable attempt→output binding (v46, review attribution slice)
+
+Remediates the C3 attribution finding of the 2026-09-12 C1–C8 review run: a
+supplied tuple proves only that the tuple fails the identity, not that the
+proposal's executed bounded attempt produced it.
+
+- **`newf witness check --procedure <name> --param k=v`** — executes a
+  registered deterministic bounded-attempt procedure (`equal-denominator`,
+  `greedy`; versioned executor in `internal/witness`) whose output IS the
+  checked tuple. Abstention is an input-level refusal (nothing persisted);
+  `--procedure` and `--tuple` are mutually exclusive.
+- **Migration `v46`** — `witness_attempt_bindings`: one immutable binding
+  (procedure, executor version, canonical params, canonical tuple) per
+  evaluation, written in the same transaction as the evaluation.
+- **Admission recheck** — rule admission recomputes the recorded procedure
+  over the recorded params and names the verified binding in the basis; a
+  binding that fails or refuses recomputation degrades rule admission to
+  withholding (operator attestation is the recorded escape). The
+  supplied-tuple path keeps its explicitly weaker provenance, recorded in the
+  evaluation notes. Scope: the binding attributes the tuple to an identified
+  executed bounded attempt; attempt→proposal mechanism fidelity remains a
+  separate, recorded judgment.
+- **Regressions** — `TestIntegrationWitnessAttemptBinding` plus executor unit
+  tests (determinism, canonical-params round trip, recheck mismatch, version
+  refusal, abstention).
+
 ### Fixed — per-evaluation admission visibility (v45, review finding F-1)
 
 Remediates F-1 of the 2026-09-12 C1–C8 review run (reproduced admission
