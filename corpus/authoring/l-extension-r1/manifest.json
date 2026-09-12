@@ -1,0 +1,184 @@
+{
+  "schema": "l-extension-authoring-package/v1",
+  "package": "l-extension-r1",
+  "artifact_status": "candidate_authoring_package",
+  "content_revision": 1,
+  "authored": "2026-09-12",
+  "source_head": "cbc3685a0a2bb668f59fc7985680f4ccdb665957",
+  "scope_ref": "SCOPE.md",
+  "domain": "SHA-1 collision cryptanalysis",
+  "objective": "Produce a collision for the full, unmodified SHA-1 hash function.",
+  "record_count": 12,
+  "distinct_external_work_origins": 13,
+  "authoring_provenance": {
+    "authored_by": "Cursor agent session, model us.anthropic.claude-opus-5",
+    "authored_at": "2026-09-12",
+    "human_operator": "jmh (task delegation and scope only; did not author record content)",
+    "note": "Recorded because the es-pvnp-independence audit found that neither the ES nor the pvnp corpus records its authoring model/provider/session. Closing that gap here does not close it for them.",
+    "outcome_blind": false,
+    "outcome_blind_note": "The authoring agent authored es-pvnp-independence-audit.md in the same session and knew the ES/pvnp mining outcomes reported in l-pvnp-replication-result.md before writing these records. See SCOPE.md section 6.",
+    "template_source": "corpus/train/ and corpus/experiments/pvnp-holdout/train/ shape, normalize/v1",
+    "vocabulary_source": "internal/domain/normalize.go posture axes; no new vocabulary introduced"
+  },
+  "known_dependencies": {
+    "reference": "DEPENDENCIES.md",
+    "vs_es_and_pvnp": {
+      "raw_source_identity": "distinct_origins_supported",
+      "underlying_work_lineage": "distinct_origins_supported",
+      "corpus_selection": "shared_dependency_observed",
+      "annotation_construction": "shared_dependency_observed",
+      "representation": "shared_dependency_observed",
+      "outcome_assessment": "shared_dependency_observed_partly_mitigated",
+      "execution": "shared_dependency_observed"
+    },
+    "summary": "Two dimensions distinct, five shared. This corpus does not add an independent observation to the ES/pvnp pair and cannot establish independence between them."
+  },
+  "outcome_distribution": {
+    "success": 1,
+    "partial_success": 6,
+    "partial_failure": 2,
+    "failure": 3
+  },
+  "checkable_outcomes": {
+    "count": 1,
+    "records": [
+      "sha1-11"
+    ],
+    "basis": "Both published SHAttered PDFs downloaded and hashed locally: shared SHA-1 38762cf7f55934b34d179ae6a4c80cadccbb7f0a, distinct SHA-256 digests. Confirms a collision exists; does not confirm mechanism attribution, boundary conditions, or cost figures."
+  },
+  "source_bytes_retained": false,
+  "source_bytes_note": "No primary source bytes are retained. Public locators plus authored summaries, in the same relationship to the literature as ES and pvnp. The SHAttered artifact bytes were fetched for hash verification and not retained.",
+  "unresolved_items": [
+    "Semantic support review: whether each cited passage supports the claim attributed to it. Structural validation cannot establish this. See validation/REVIEW.md.",
+    "src-chabaud-joux-1998: read_scope is abstract only; full text was behind a publisher wall.",
+    "src-joux-peyrin-2007: technical claims read from the ECRYPT workshop version, not the CRYPTO proceedings version; no absolute complexity figure verified.",
+    "src-mcdonald-hawkes-pieprzyk-2009: the Eurocrypt 2009 rump-session announcement venue is unverified and is not asserted.",
+    "src-manuel-2008: ePrint and journal versions reach different conclusions; both recorded, not reconciled.",
+    "src-shattered-2017: paper states 100 GPU years, vendor announcement states 110; both recorded, not reconciled.",
+    "src-leurent-peyrin-2020: paper estimates about 45k USD, project page reports about 75k USD actually spent; both recorded, not reconciled.",
+    "shattered.io is a repurposed domain; project prose must be cited from the Wayback capture. The PDFs at shattered.io/static/ remain genuine and hash-verified."
+  ],
+  "explicitly_not_claimed": [
+    "Independence between the ES and P-vs-NP corpora.",
+    "That this corpus is an independent replication of either predecessor.",
+    "Prospective, held-out, or historical-prediction evidence.",
+    "Cross-domain transfer of any invariant.",
+    "That n has increased to three independent observations; it has increased to three subject matters under one construction procedure."
+  ],
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "cf4ca76aa3041d685e9285b1d8ae4b1a7f0fa1a627891b68f4312014a111fe24"
+    },
+    {
+      "path": "SCOPE.md",
+      "sha256": "b3a49df658af8386283510ea8a7cc7137fe2317c9a690b03e05f9354a96f92bb"
+    },
+    {
+      "path": "DEPENDENCIES.md",
+      "sha256": "ba0676e48c96cc6ef79fbadc2faca18ca2a7e1dc83742ab09e029264b861b75e"
+    },
+    {
+      "path": "sources.json",
+      "sha256": "3b810583e7bcf69ffdd05dca4c8d447a4b07e618ff36fc9ad3772e5de9f68675"
+    },
+    {
+      "path": "validate.py",
+      "sha256": "4bebcfe24735f2a7207889d6da0010a56d4465e0fc41a52ac26d12e80efee8f1"
+    },
+    {
+      "path": "test_validate.py",
+      "sha256": "2b683b757303a1a4b9a33878900fbbfb6bc86b04b2d1354909cb2bcba3860400"
+    },
+    {
+      "path": "notes/sha1-01-linear-code-local-collisions.md",
+      "sha256": "4b7766e400052e3a2d4b2cae3012e60df5a7608e6b0b0661b363fe6839cdd8f1"
+    },
+    {
+      "path": "notes/sha1-02-neutral-bits-amplification.md",
+      "sha256": "ea28cc9400171eaa3fba0a910154d864f3fb2d03104b214eb14f2eb21a0bd6f1"
+    },
+    {
+      "path": "notes/sha1-03-multiblock-message-modification.md",
+      "sha256": "f4724cd6f01e3cd5afd924d7e81d531567d5986ab52b9af31f0f5f06505698c0"
+    },
+    {
+      "path": "notes/sha1-04-automated-characteristic-search.md",
+      "sha256": "f154c91da974b261b44c8739e47fe61870209439d99da194ec068c990848f7d1"
+    },
+    {
+      "path": "notes/sha1-05-boomerang-auxiliary-differentials.md",
+      "sha256": "c6edb29ab00d2188602fc76e921352cdcad6f44b3311ffa0d5d2c82530705439"
+    },
+    {
+      "path": "notes/sha1-06-disturbance-vector-classification.md",
+      "sha256": "951d94b36585feaf2caa148c6effb6cbfc5d5429ed4b3509345a993284daf28b"
+    },
+    {
+      "path": "notes/sha1-07-withdrawn-composed-path.md",
+      "sha256": "57c076e45982f49b0211f0cae2397db686b85abd67eddc52110b8193965e914d"
+    },
+    {
+      "path": "notes/sha1-08-sat-encoded-collision-search.md",
+      "sha256": "69dcf59575a81e73b8880e7a147a054635546b2f00ac6cfbcdb33356037f77f1"
+    },
+    {
+      "path": "notes/sha1-09-joint-local-collision-analysis.md",
+      "sha256": "f410034b344e500b917a55a937a394da12a0ce45d16b5cad6687238cbe39ea5f"
+    },
+    {
+      "path": "notes/sha1-10-freestart-compression-collision.md",
+      "sha256": "8ba5a42a2a7a75a98434a16b4bbaa6d41a2515ebd5700785e2f6785cbb7688e9"
+    },
+    {
+      "path": "notes/sha1-11-industrialized-identical-prefix-collision.md",
+      "sha256": "2e3d0f3622593efd6a5c0255b1b2fb383c46d6efd15727ec17bee199209962d6"
+    },
+    {
+      "path": "notes/sha1-12-chosen-prefix-target-clustering.md",
+      "sha256": "da517947bf20019084ca5b8ceab8c23acb77dc331be4aabbb56aaf456d2ed4d6"
+    },
+    {
+      "path": "validation/RESULTS.md",
+      "sha256": "7622ef1f9cf99bc5775ded7109295fd547d86a146c35da1264f5653d187ca2d6"
+    },
+    {
+      "path": "validation/REVIEW.md",
+      "sha256": "979329f9a0ed4440ba591b66258e4a805745e41f3958a4584c512bcbf0ef883f"
+    },
+    {
+      "path": "validation/lineage-es-vs-pvnp.json",
+      "sha256": "77a5d4fc376821590e7f181af83f73695fa1a7678882cd467859ece8cf0cfce0"
+    },
+    {
+      "path": "validation/lineage-new-vs-empty.json",
+      "sha256": "833e3066e94e3751cac23ea936e3034da55dc4b82d45d50fa8fe5d739dda1265"
+    },
+    {
+      "path": "validation/lineage-new-vs-es.json",
+      "sha256": "b6c6a1b0df6cb818732c8a394919731c36e1bc692356b4661a1a45010b0497ea"
+    },
+    {
+      "path": "validation/lineage-new-vs-pvnp.json",
+      "sha256": "bf240da6f1f4b09ca7c111d69854a2936844b1668f4ad9f62bae3e2c95f913ad"
+    },
+    {
+      "path": "validation/normalize-summary.json",
+      "sha256": "34152d83f5b1520d3b70e3c369e9b7a2bb3c2aaf5061e44888c02c4f226db152"
+    }
+  ],
+  "execution_authorization": null,
+  "validation": {
+    "structural_validation": "pass",
+    "validator_regressions": "26 passed",
+    "lineage_vs_es_train": "disjoint (0 shared, 12 left-only, 12 right-only)",
+    "lineage_vs_pvnp_train": "disjoint (0 shared, 12 left-only, 12 right-only)",
+    "lineage_es_vs_pvnp_control": "disjoint (reproduces the previously recorded verdict in a fresh store)",
+    "empty_population_control": "empty (inconclusive, not an approval)",
+    "fixture_normalization": "12 of 12 records normalized with --provider fixture",
+    "stores": "disposable databases under /tmp with explicit --db paths; no live .newf/ store read or written",
+    "populations": "train inventories only on all three sides; targets excluded",
+    "not_established": "Technical compatibility only. Not scientific validation, not research-methodological independence, not an operator attestation. Semantic support review outstanding: see validation/REVIEW.md.",
+    "record": "validation/RESULTS.md"
+  }
+}
