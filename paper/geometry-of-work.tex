@@ -2444,31 +2444,32 @@ responsibility rest with the named author.
 \section*{Evidence Availability}
 
 The empirical claims in this paper reference frozen artifacts under
-\path{corpus/experiments/} in the project repository. That repository is
-currently private, so the relative paths cited here support \emph{internal}
-traceability; they do not, on their own, let a reader independently audit the
-cited records. We distinguish ``traceable internally'' from ``auditable by the
-reader'' and do not conflate them.
+\path{corpus/experiments/} in the project repository. The repository is
+publicly hosted at
+\url{https://github.com/instagrim-dev/gow} under the Apache License 2.0, and
+every cited record is accessible in its exact byte-form at that repository's
+tree at the manuscript's freeze commit; the relative paths cited throughout
+this paper resolve directly at that commit-anchored URL.
 
-To make the cited evidence reader-accessible without releasing unrelated
-working material, we have selected, hashed, and frozen the specific records
-the paper depends on --- the M7 blinded-run artifacts, the Pilot-003 and
-Pilot-004 record directories (including \path{RESULT.md},
+To let a reader identify \emph{which} records back which claims without
+having to read the whole corpus, we have selected, hashed, and frozen the
+specific records the paper depends on --- the M7 blinded-run artifacts, the
+Pilot-003 and Pilot-004 record directories (including \path{RESULT.md},
 \path{CLOSURE-SCORECARD.md}, and the independent review results), and the
 N2a/N5 challenge records --- into a manifest with a SHA-256 hash per file and
 a reading guide mapping each row of \cref{app:claims} to its source file
 (\path{corpus/evidence-supplement/manifest.json},
-\path{corpus/evidence-supplement/README.md}). This selection is complete and
-verifiable against the working repository, but \textbf{it is not yet publicly
-deposited}: a public host (e.g.\ Zenodo, OSF, or a read-only mirror
-repository) has not yet been chosen, and no redaction pass over
-release-sensitive material has been requested or performed (a first-pass
-automated sweep of the selection for common secret patterns found none, but
-this is not represented as an exhaustive security review). Until a public
-deposit is posted, the methods and results in the manuscript are intended to
-be self-contained enough to evaluate the framework's epistemic behavior, and
-access to the underlying records is available on request subject to the
-stated restrictions.
+\path{corpus/evidence-supplement/README.md}), also public in the same
+repository. Content integrity can be verified against the recorded hashes;
+provenance can be re-verified against the commit record via
+\texttt{git log}. The evidence supplement is deposited by way of the
+public repository and its tagged release, not (yet) by a canonical archive
+such as Zenodo or OSF with an independent DOI; if that stronger form of
+immutability is required for a specific downstream use, we consider it
+available on request.
+A full-history secret scan (\texttt{gitleaks} across all commits) was run at
+the point of public release and reported no leaks, but this is not
+represented as an exhaustive security review.
 
 % ── Bibliography ─────────────────────────────────────────────────────
 \bibliographystyle{plainnat}
