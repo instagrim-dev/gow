@@ -85,9 +85,9 @@ against an Erdős–Straus conjecture corpus used as the running case study.
 - Pilot-001 (mapping/abstraction review, STOP disposition), Pilot-002
   (successor-protocol readiness), Pilot-003 (curated-feature blinded
   comparison, B0/B3 arms, `classify/v1`, independent review), and Pilot-004
-  (discovery protocol, quorum adjudication — 7 reference-recovered, 10
-  defensible-novel, 2 over-merge, 4 unsupported, 3 disputed of 26 candidates)
-  — frozen under `corpus/experiments/`.
+  (discovery protocol, three-lane quorum adjudication over 23 proposal
+  occurrences — 7 matches-reference, 10 defensible-novel, 2 over-merge,
+  4 unsupported, 3 disputed) — frozen under `corpus/experiments/`.
 - N2a and N5 novel-shape challenge lifecycles (`density_averaging_ceiling`,
   `reorganisation_without_qr_existence`) run against Pilot-004 discovery
   output, each with attributed reassessments narrowing claim strength after
