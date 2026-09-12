@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "command": "experiment date-source",
+  "store": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/records/pvnp.db",
+  "created": true,
+  "dating": {
+    "holdout_set_id": "hset_01M2BV02JWPE35ESA1M69WY93X",
+    "source_id": "src_01M2BTYNEDCFH9XJ4F2ZYXN5MD",
+    "dated_at": "2010-11-08T00:00:00Z",
+    "evidence_locator": "https://doi.org/10.1109/CCC.2011.36",
+    "provenance": "Williams, Non-Uniform ACC Circuit Lower Bounds, CCC 2011 (IEEE, pp. 115-125; JACM 61(1) 2014, doi:10.1145/2559903). Publicly released as a draft 2010-11-08: Godel's Lost Letter announcement https://rjlipton.com/2010/11/08/a-breakthrough-result/ linking the released draft (preprint internally dated 2010-11-23, https://www.cs.cmu.edu/~ryanw/acc-lbs.pdf). Chronology audited 2026-09-12; recorded date is the EARLIEST establishable public availability (conservative, nearest cutoff), ~7 months before the CCC venue date."
+  },
+  "dated_sources": 2,
+  "total_withheld_sources": 2,
+  "historical_gate_open": true
+}

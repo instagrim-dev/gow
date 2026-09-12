@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "command": "experiment date-source",
+  "store": "/Users/jmh/dev/gh/newf/corpus/experiments/pvnp-holdout/records/pvnp.db",
+  "created": true,
+  "dating": {
+    "holdout_set_id": "hset_01M2BV02JWPE35ESA1M69WY93X",
+    "source_id": "src_01M2BTYNECR6TS000YYVDRQ4WH",
+    "dated_at": "2010-05-04T00:00:00Z",
+    "evidence_locator": "https://doi.org/10.1145/1806689.1806723",
+    "provenance": "Williams, Improving Exhaustive Search Implies Superpolynomial Lower Bounds, STOC 2010 (ACM published 2010-06-05, pp. 231-240). Earliest establishable public full text: author draft dated 2010-05-04, https://www.cs.cmu.edu/~ryanw/improved-algs-lbs2.pdf. No ECCC/arXiv preprint exists (checked: suggested ECCC TR09-124 is a different paper). Chronology audited 2026-09-12 against publisher records; recorded date is the EARLIEST establishable public availability (conservative, nearest cutoff)."
+  },
+  "dated_sources": 1,
+  "total_withheld_sources": 2,
+  "historical_gate_open": false
+}
