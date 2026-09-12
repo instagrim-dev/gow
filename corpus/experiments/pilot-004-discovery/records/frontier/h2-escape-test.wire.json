@@ -1,0 +1,24 @@
+{
+  "schema_version": "proposal-wire/v1",
+  "proposals": [
+    {
+      "mechanism": {
+        "representations": ["global density argument"],
+        "assumptions": [],
+        "operators": ["circle method"],
+        "preserves": [],
+        "breaks": [],
+        "auxiliary_objects": [],
+        "locality": "global",
+        "construction_mode": "existential",
+        "uncertainty_mode": "deterministic"
+      },
+      "target_invariant_ids": ["inv_01M2BCJZBSVP2XSCFNTNTG8TDV"],
+      "structural_violation_claim": "H2 escape test. The new equals(locality, local) invariant asserts that failed ES approaches share posture.locality=local. This proposal declares posture.locality=global. Under the enum-axis evaluation rule (predicate.go OpEquals), a wire signature whose Posture.Locality is known and NOT equal to 'local' returns VerdictViolates on the invariant. This is the first pipeline-verifiable violation of an M7 invariant by a wire-authored proposal (the Contains(preserves, X) invariants all stall at VerdictUnknown per the H2 completeness-stripping mechanism).",
+      "novelty_argument": "Novelty is procedural, not mechanistic: the substantive content is a test of the pipeline's own H2 escape prediction from the enum-axis-invariant-survey. The claim is that AdmitProposalSignature does not touch Posture, that enum-axis evaluation is decisive on known values, and that the resulting violation verdict is distinguishable from the completeness-stripped Unknown that Contains-preserves invariants produce. If the target verdict returns as 'violates' rather than 'unknown', the H2 escape is demonstrated end-to-end.",
+      "cheapest_falsification_path": "One step. Run newf frontier generate --proposals-file with this wire, then read the proposal's target verdict from frontier_target_invariants. If the verdict is 'unknown', H2 has NOT been escaped and the enum-axis-survey prediction is wrong. If the verdict is 'violates', H2 has been escaped and the enum-axis-survey prediction is confirmed.",
+      "expected_information_gain": "high",
+      "evaluation_cost": "low"
+    }
+  ]
+}
