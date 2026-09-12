@@ -73,6 +73,19 @@ Concrete corrections applied:
    selected cluster-run IDs, normalization versions, and
    row-to-family mapping remain necessary before making the
    provenance conclusion definitive.
+
+   **DISCHARGED 2026-09-12** by
+   `(l-population-validation)`. A deterministic recomputation
+   using the exact eligibility semantics of
+   `derivePostureAxisProposals` (latest `cluster_run` per problem,
+   `mechanism_clusters` representative signatures, `outcome_mixed`/
+   `unknown` outcomes excluded, redundant-only clusters excluded,
+   `unknown` posture values excluded) reproduces the numerical
+   tables in this record exactly for M7 and pvnp. All four ES
+   corpora produce identical miner-eligible tables under this
+   query. The tables' values are correct for the correct
+   population. See
+   `records/l-population-validation-result.md`.
 7. **The zero-cell "iff" overgeneralizes.** The code-derivable
    relationship (from `VerifySuccessPreserving` inspection) is:
    the probe confirms exactly when at least one eligible success
@@ -137,20 +150,25 @@ Concrete corrections applied:
 
 ## Emission-eligible recomputation (SGO)
 
+Verified 2026-09-12 by `(l-population-validation)`; population is the
+miner's actual eligible-family set (see
+`records/l-population-validation-result.md`).
+
 | Corpus | Candidate (emission-eligible) | sPrev | Persisted at (l)? |
 |---|---|---:|---|
-| M7 | `equals(construction, constructive)` | 0.200 | (not persisted; support = 3 ≥ 2 in earlier reports — reverify) |
+| M7 | `equals(construction, constructive)` | 0.200 | (not present in the final `candidate_invariants` table; see M7 clarification below) |
 | M7 | `equals(locality, local)` | **0.000** | **YES, → `surviving`** |
 | pvnp | `equals(construction, existential)` | **0.286** | YES, → `weaken` |
 | pvnp | `equals(locality, global)` | 0.429 | YES, → `weaken` |
 | pvnp | `equals(uncertainty, deterministic)` | 0.714 | YES, → `weaken` |
 
-**Note**: the M7 row for `equals(construction, constructive)` needs
-re-verification against `.newf/m7/newf.db`'s `candidate_invariants`
-table; the earlier records mention it under different threshold
-readings but do not confirm whether it was persisted in this run.
-This is one of the population-query validations flagged as a
-prerequisite in correction 6 above.
+**M7 clarification**: `equals(construction, constructive)` is
+emission-eligible (fc = 3, fPrev > sPrev), but the (a‴-B) M7 run
+persisted only `equals(locality, local)` at `surviving`. This
+divergence between "would-be-eligible" and "actually persisted"
+belongs in the campaign-run investigation (why only one of two
+eligible candidates survived to persistence at that HEAD), not in
+(l-coh)'s scope. The eligibility semantics themselves are verified.
 
 ## Reviewer's message preserved verbatim
 
@@ -243,24 +261,28 @@ session's terminal record.
 
 ### Data-provenance note
 
-- M7, pilot-001, pilot-002 have **identical** posture distributions
-  under train-problem filtering. This is not proof of identical
-  underlying observations (different datasets can share a
-  histogram); it is a consistent-with-shared-lineage SGO signal.
-- pilot-003's counts are **exactly 3× M7's** under this query.
-  This does not by itself identify the cause — repeated source
-  data, retained interpretation revisions, and join multiplicity
-  can each produce that pattern.
+- M7, pilot-001, pilot-002, **and pilot-003** have **identical**
+  posture distributions under the miner-eligible query
+  (`internal/provider/invariant_fixture_derive.go:derivePostureAxisProposals`
+  semantics: latest `cluster_run` per problem, `mechanism_clusters`
+  representative signatures only, `outcome_mixed`/`unknown` excluded,
+  `redundant`-only clusters excluded, `unknown` postures excluded).
+  Under this query pilot-003 = M7, not 3× M7. The earlier "3×"
+  observation in this record was an artifact of joining every
+  signature × posture-axis without restricting to the latest
+  cluster_run; pilot-003 has two `cluster_runs`, the others one.
+  See `records/l-population-validation-result.md`.
 - **What the SGO establishes**: the four ES database instances
-  should not be counted as four independent research replications
-  under this measurement, and the (i) headline should not be read
-  that way. Source/snapshot lineage, selected cluster-run IDs,
-  normalization versions, and row-to-family mapping remain
-  necessary to make the provenance conclusion definitive.
+  produce identical miner-eligible marginals under a query that
+  faithfully implements the miner's eligibility semantics. This
+  strengthens the "consistent-with-shared-lineage" observation.
+  They should not be counted as four independent research
+  replications under this measurement.
 - **What the SGO does NOT establish**: that only two truly
-  independent observations exist. Independence between the two
-  corpus lineages (ES-shape and P-vs-NP-shape) has not been
-  established either. Defensible replacement:
+  independent observations exist. Different underlying data can
+  produce the same histogram. Independence between the two corpus
+  lineages (ES-shape and P-vs-NP-shape) has not been established
+  either. Defensible replacement (unchanged from earlier):
 
   > Five database instances represent two substantive corpus
   > lineages for this comparison. The four ES instances do not
@@ -268,12 +290,11 @@ session's terminal record.
   > between the two corpus constructions has not been
   > established.
 
-- **Additional caveat**: family prevalence used in the tables
-  below counts every persisted signature reachable through the
-  documented join, not necessarily the eligible families the
-  miner and challenger actually operated on. Arithmetic can be
-  correct for the wrong population. Population-query validation
-  is a prerequisite this record has not discharged.
+- **Family prevalence arithmetic is now verified** to count the
+  eligible families the miner and challenger actually operated on.
+  See (l-population-validation) result record. Correction 6 from
+  the reviewer's list is discharged; the values in the tables
+  below are correct for the correct population.
 
 ### M7 (ES) — N_F=7 failure-side, N_S=5 success-side
 
