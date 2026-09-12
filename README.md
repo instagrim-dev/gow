@@ -562,6 +562,11 @@ separate from implementation docs:
   domain-space*).
 - [`docs/thesis/why-solve-by-shape.md`](docs/thesis/why-solve-by-shape.md) — the
   authored, project-level statement of the move.
+- [`docs/book/`](docs/book/) — the authored book lane (*The Shape of Trying*):
+  the [method contract](docs/book/method-contract.md) that holds every
+  practitioner prescription with its authority tier, preconditions, discretion,
+  and failure mode, and the [warrant boundaries](docs/book/warrant-boundaries.md)
+  separating what a check establishes from what still needs its own support.
 - [`docs/findings/`](docs/findings/) — scoped capability findings from
   experiments (e.g. [Finding 001](docs/findings/001-unencoded-shape-generation.md)).
 

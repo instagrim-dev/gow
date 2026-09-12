@@ -143,6 +143,25 @@ Every substantive sentence in the manuscript should carry one of these roles
 The following are interesting and should appear in the paper, but as
 explicitly labeled hypotheses or future directions — not as claims:
 
+- **The method contract's prescriptions (H-MC).** The
+  [method contract](../book/method-contract.md) (v0.1.0, `proposed`) states the
+  mapping trigger, representation-selection procedure, action-selection rule,
+  evidence requirements, and stopping conditions that the practitioner-facing
+  material is written against. Its instructions are tiered `derived` (refusals
+  that follow from the epistemic model), `heuristic` (declared defaults with no
+  evidence of optimality), and `conditional-evidence` (supported only under a
+  frozen artifact's declared conditions). **No instruction at `heuristic` tier
+  is a claim of this registry**, and none may be presented as validated. Two
+  things are specifically unestablished: that the allocation rule (map / probe /
+  act / stop) is a good allocation, and that two practitioners following the
+  representation procedure on the same uncurated history produce maps
+  recommending compatible actions. The usability test is drafted at
+  `corpus/experiments/contract-usability-trial/` (`draft_not_frozen`; two
+  freezes owed before registration) and is explicitly a usability and
+  decision-behavior test, **not** a validation threshold: it can show the
+  instructions are unfollowable or underspecified, and cannot show the
+  recommendations are correct.
+
 - **Complement geometry / anti-vacuum.** Work informs search not only through
   the structures attempts instantiate (forward geometry) but through the
   regions of possibility-space they exclude (complement geometry). Sufficiently
@@ -264,11 +283,30 @@ The paper must state what future evidence would make GoW uninteresting or wrong:
 
 ## Provenance
 
-- Theory docs: `docs/theory/00–04`, `glossary.md`
-- Pilot-003 frozen record: `corpus/experiments/pilot-003/`
+- Theory docs: `docs/theory/00–04`, `glossary.md`- Pilot-003 frozen record: `corpus/experiments/pilot-003/`
 - Pilot-004 frozen record: `corpus/experiments/pilot-004-discovery/`
 - Finding 001: `docs/findings/001-unencoded-shape-generation.md`
 - N2a challenge: `corpus/experiments/pilot-004-discovery/records/N2a-challenge.md`
 - N2a/N5 authoritative current claims: `corpus/experiments/pilot-004-discovery/records/CURRENT-CLAIMS.md`
 - Experiment E episode: `corpus/experiments/m7-blinded-run/records/episode-001-greedy-vs-global.md`
 - Experiment E comparison: `corpus/experiments/two-arm-comparison/` (PROTOCOL frozen pre-execution, RESULT, deterministic runner)
+- Book lane (2026-09-12): `docs/book/README.md` (charter),
+  `docs/book/method-contract.md` (v0.1.0, `proposed`),
+  `docs/book/warrant-boundaries.md` (what a check licenses),
+  `docs/book/OUTLINE.md`, `corpus/experiments/contract-usability-trial/`
+  (PROTOCOL + manifest, `draft_not_frozen`)
+
+## Scope of this registry over the book lane
+
+This registry governs the authored book exactly as it governs the manuscript:
+the book may make no claim absent here, and inherits every "does not claim"
+above. The book carries **one additional constraint** the paper does not,
+because a book instructs where a paper describes: each of its prescriptions must
+carry the authority tier of the contract instruction it teaches, and no chapter's
+prose may be more certain than that tier
+([warrant boundaries §4](../book/warrant-boundaries.md#4-sentence-tagging-for-chapters)).
+
+Opening the book lane changed no claim's status. In particular, complement
+geometry (Counterform), general discovery superiority, cross-domain transfer,
+and convergence remain in the hypotheses list above and may appear in the book
+only as research questions or explicitly conditional arguments.

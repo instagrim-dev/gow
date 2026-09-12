@@ -5,6 +5,14 @@
 [theory series](../theory/) says what the objects mean; this document says when
 a practitioner should reach for it and what to do next.*
 
+> **Authority note (2026-09-12).** This guide's *trigger* is a declared
+> heuristic, not a validated rule, and it is paired with an
+> [allocation rule](#allocating-effort-map-probe-act-or-stop) so that "map the
+> Work" cannot mean unbounded analysis. The authoritative, versioned form of
+> every prescription here — with its preconditions, discretion, and failure
+> mode — is the [method contract](../book/method-contract.md); where this page
+> and the contract disagree, the contract wins and this page is a defect.
+
 ---
 
 ## The instrument, not the solver
@@ -69,8 +77,86 @@ I cannot explain the structural difference between those outcomes.
 Map the Work.
 ```
 
-This is a recognizable practitioner situation. The prescription is specific:
-**stop generating, and map**.
+This is a recognizable practitioner situation, and the prescription is
+specific: **stop generating, and map**. But "map" here is a bounded spend, not
+an open licence — which is what the next section is for.
+
+---
+
+## Allocating effort: map, probe, act, or stop
+
+The trigger above says *when the situation calls for mapping*. It does not say
+how much mapping, or how to choose between mapping and simply doing the work.
+Without that, a discipline can prescribe indefinite analysis and call it
+progress.
+
+The rule is a **declared default, not a result** — the authoritative, versioned
+form lives in
+[method contract §2](../book/method-contract.md#2-the-mapping-trigger-and-the-allocation-rule):
+
+> **Map or probe when a specific named uncertainty, if resolved, would change
+> which action you take next — with a declared spending limit and a stated
+> stopping condition. Otherwise act on the best current option.**
+
+### The decision-relevance test
+
+Write the uncertainty as a question with at least two candidate answers, and
+name the next action under each:
+
+```
+uncertainty   "is the ceiling caused by the shared gate, or by capacity?"
+answer A      gate      → narrow the gate's scope
+answer B      capacity  → add capacity
+verdict       two answers, two different actions → mapping is owed
+```
+
+```
+uncertainty   "which of these failures was the most embarrassing?"
+answers       → same next action either way
+verdict       no action depends on the answer → act
+```
+
+An uncertainty that changes no available action is interesting, not
+decision-relevant. Resolving it is a different activity from search.
+
+### The spending limit
+
+Before mapping, declare the budget — time, attempts, tokens, money, whichever
+actually binds you — and what you will do when it runs out. Exhaustion is not
+permission to extend; it is an instruction to act on the best current option
+and record the map as unfinished. If you do extend, record the extension and
+its reason, so a pattern of always extending in the same direction becomes
+visible.
+
+### Four choices, different prices
+
+| Situation | Choose | Produces |
+|---|---|---|
+| No decision-relevant uncertainty; an admissible action exists | **Act** | An attempt, recorded |
+| Decision-relevant uncertainty; existing attempts not yet comparable | **Map** | A comparison over work already paid for — no new attempts |
+| The map yields two explanations recommending different actions | **Probe** | Work designed to discriminate them |
+| A stopping condition holds | **Stop** | A record of which condition, and what may now be claimed |
+
+**Map** spends description effort on attempts already made; **probe** spends new
+attempt effort to buy a distinction. Choosing between them by mood is how a
+probe becomes an ordinary attempt with better vocabulary. A probe that would
+teach nothing if it failed is an attempt — budget it as one.
+
+### Stopping
+
+Seven conditions, each recorded with what it licenses:
+`decision_resolved`, `no_decision_relevant_uncertainty`, `budget_exhausted`,
+`no_discriminating_design`, `check_unavailable`, `population_inadequate`,
+`objective_changed`
+([contract §6](../book/method-contract.md#6-stopping-conditions)). Stopping
+without recording which one applied makes an exhausted budget
+indistinguishable, later, from a resolved question.
+
+**What this rule is not.** It is not an allocation optimum, and nothing here
+shows it beats a practitioner's ordinary judgment. It is a usable policy that
+states its own discretion and failure mode — the failure mode being that *any*
+named uncertainty satisfies the trigger, which is exactly why the spending
+limit is not optional.
 
 ---
 
@@ -82,12 +168,16 @@ The workflow then becomes cognitively small:
 
 1. **Collect** — gather meaningful attempts with their outcomes.
 2. **Shape** — describe each attempt structurally (representation, operators,
-   assumptions, preserved properties), not just narratively.
+   assumptions, preserved properties), not just narratively. The description
+   must retain what could change which action you would take, and must not use
+   features unavailable before the outcome — procedure in
+   [method contract §3](../book/method-contract.md#3-representation-selection-procedure).
 3. **Locate** — assign each attempt to an outcome regime (failure,
    partial, success).
 4. **Compare** — find what structurally differs between neighboring regimes.
 5. **Find** — identify conserved structure within regimes and boundaries
    between them.
+
 6. **Move** — generate Work that crosses or probes a promising boundary.
 7. **Project** — translate that structural move back into the native
    domain representation.
@@ -101,6 +191,12 @@ Map → Boundary → Move → Landing → Map'
 
 GoW is not only analysis-before-action. **Action is how you probe the geometry.**
 Each landing point updates the map.
+
+Steps 4 and 5 carry the hardest judgment in the loop, and the verb *find* hides
+it: what you can find depends entirely on what step 2 retained. Build a second
+plausible description before trusting either one, and locate the case where the
+two would recommend different actions
+([contract R4–R5](../book/method-contract.md#r4--construct-at-least-two-candidate-descriptions)).
 
 ---
 
@@ -137,7 +233,8 @@ Frontiers
     boundaries worth attempting to cross
 
 Next probes
-    Work that would maximally clarify the map
+    Work that would change a decision — not work that would merely
+    make the map more detailed
 ```
 
 Someone doesn't need to understand `candidate_invariant`,
@@ -178,10 +275,15 @@ uncertain boundary
 
 This is epistemic. You are not yet confident which map is true, and the best
 next Work is not the Work most likely to solve the problem — it is the Work
-most likely to **tell you which map is true**.
+most likely to **tell you which map is true**, *provided the answer would change
+what you do*. A probe whose result changes no available action is curiosity,
+and should be paid for out of a different budget.
 
 This second mode is experimental science hiding inside problem solving.
-Distinguishing navigate from probe is one of GoW's most practical outputs.
+Distinguishing navigate from probe is one of GoW's most practical outputs — and
+[the allocation rule](#allocating-effort-map-probe-act-or-stop) is what keeps
+the distinction from collapsing into "probe" meaning "attempt I feel good
+about."
 
 ---
 
@@ -379,6 +481,12 @@ existing Work contains more information than you have extracted from it.**
   updates.
 - **[Why Solve by Shape?](why-solve-by-shape.md)** — the thesis: why this
   is worth building at all.
+- **[Book lane charter](../book/README.md)** and
+  **[method contract](../book/method-contract.md)** — the versioned,
+  tier-labeled form of every prescription on this page, with its discretion and
+  failure mode. Where this guide and the contract disagree, the contract wins.
+- **[Warrant boundaries](../book/warrant-boundaries.md)** — what a successful
+  check does and does not license.
 - **[00 — Geometry of Work](../theory/00-geometry-of-work.md)** — the
   conceptual model: the objects and the governing principle.
 - **[Findings 001](../findings/001-unencoded-shape-generation.md)** — the

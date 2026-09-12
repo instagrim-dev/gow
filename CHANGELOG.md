@@ -52,6 +52,82 @@ proposal's executed bounded attempt produced it.
   tests (determinism, canonical-params round trip, recheck mismatch, version
   refusal, abstention).
 
+### Added — book lane and method contract (docs only)
+
+Opens the authored-book lane (*The Shape of Trying*) **without** freezing GoW as
+a generally validated prescriptive discipline, per the 2026-09-12 assessment of
+`fdf7f5e`. No code, CLI, schema, or claim status changes.
+
+- **`docs/book/method-contract.md`** (v0.1.0, `proposed`) — one compact contract
+  fixing the intended practitioner and task class, the mapping trigger and
+  spending limit, the representation-selection procedure, the action-selection
+  rule, the evidence requirements, and seven stopping conditions. Every
+  instruction carries an authority tier (`derived` / `heuristic` /
+  `conditional-evidence`) plus its preconditions, discretion, and failure mode.
+  Strengthening an instruction requires a derivation or a frozen artifact;
+  weakening one requires nothing.
+- **`docs/book/warrant-boundaries.md`** — the checked-result / additional-
+  conclusion ledger (witness checked ≠ mechanism attributed; success ≠
+  explanation; one improvement ≠ class exclusion; `ELIGIBLE_TO_ADVANCE` ≠ true),
+  three laundering routes, Counterform's constrained treatment, and sentence
+  tagging for chapter drafts.
+- **`docs/book/README.md`, `docs/book/OUTLINE.md`** — charter with three
+  authority tiers and gates B0–B5 (B5, freezing prescriptive chapters, is
+  blocked on the usability trial; B3, drafting the core practice, is not), and a
+  20-chapter outline where each chapter carries its tier and an explicit
+  may-not-claim list.
+- **`corpus/experiments/contract-usability-trial/`** (`draft_not_frozen`) —
+  PROTOCOL plus `manifest.json` (`schema: newf-usability-trial/v1`). Tests
+  whether the contract helps practitioners make **appropriate decisions,
+  including the decision not to map**; a completed WorkMap is not the endpoint.
+  Three-case battery with preregistered adverse observations: one suitable
+  decision-relevant case, one inadequate-population control, one
+  decision-irrelevant-uncertainty control. Two independent participants on all
+  three cases (six participant-case observations, **not** six replications),
+  with commitments sealed for all three cases **before** the instrument bundle is
+  released, compared on recommended actions rather than map appearance. No global
+  pass condition; the predeclared finding of primary interest is two participants
+  following the instructions and recommending incompatible actions, which locates
+  an underspecified prescription. Case selection is "predeclared rule without
+  outcome-based substitution" — the word *uncurated* is withdrawn, since
+  inclusion criteria are themselves selection. Two freezes: **F1 fixes the
+  selection policy** for cases *and* for the instrument's warrant extracts
+  (source-ledger revision, domain-to-row inclusion criteria, permitted editing,
+  treatment of qualifications / conflicting warrants / missing support); **F2
+  fixes what the policy produced** (packets, evaluator key, participant-visible
+  extract text, digests). Methodological warrants belong to the bundle; objective-
+  relevant domain facts belong to the case-information boundary and must be
+  available before and after exposure, or the treatment is renamed *contract plus
+  additional domain guidance*. A supplement may not complete N1's missing
+  evidence. Missing or noncompliant extracts **block exposure**. Consent and
+  out-of-repository handling of raw records are launch requirements. Conclusions
+  are limited to observed usability and decision behavior — not superiority, not
+  general reproducibility, not causal effectiveness.
+
+### Changed — narrowed practitioner prescriptions
+
+- **`docs/thesis/how-to-map-the-work.md`** §3 rewritten. The earlier text made
+  one-factor-at-a-time variation, a numeric prediction, and "maximize what it
+  teaches" the *defining* properties of a probe. One-factor-at-a-time cannot
+  detect interactions (NIST/SEMATECH e-Handbook, Ch. 5), which is a poor mandate
+  for a method whose central interest is relational structure. Replaced with a
+  design rule (discriminate the relevant explanations; predeclare a checkable
+  prediction; preserve the objective and its correctness conditions; justify the
+  cost) plus an admissible-design catalog. §2 now also requires a second
+  candidate description and its divergence case; §4 adds the
+  no-retrospective-re-description rule; a new closing section names the three
+  things the page deliberately does not settle.
+- **`docs/thesis/when-to-map-the-work.md`** gains an allocation rule: map or
+  probe when a named uncertainty would change the next action, under a declared
+  spending limit with a stated stopping condition; otherwise act. Marked a
+  declared default, not a result. "Stop generating and map" is now explicitly a
+  bounded spend, and "next probes" is work that would change a decision rather
+  than work that maximally clarifies the map.
+- **`docs/theory/00-paper-claims.md`** adds `H-MC`: the contract's `heuristic`
+  instructions are not claims of the registry, and the registry's scope over the
+  book lane is stated (same claims, one extra constraint — prescriptions carry
+  tiers).
+
 ### Fixed — per-evaluation admission visibility (v45, review finding F-1)
 
 Remediates F-1 of the 2026-09-12 C1–C8 review run (reproduced admission

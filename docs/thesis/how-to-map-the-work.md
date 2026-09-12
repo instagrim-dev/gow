@@ -17,6 +17,14 @@ wrong:
 4. **Update the map without overstating the evidence** so the record stays
    honest as it grows.
 
+> **Authority note (2026-09-12).** Parts 1, 2, and 4 are the stable core of the
+> discipline. Part 3's *design* choices are declared defaults, not definitions:
+> they were narrowed on 2026-09-12 after review found the earlier text
+> presenting one particular experiment design as what a probe *is*. The
+> governing rule for prescriptions and their tiers is the
+> [method contract](../book/method-contract.md); where this page and the
+> contract disagree, the contract wins and this page is a defect.
+
 ---
 
 ## 1. Record attempts
@@ -83,42 +91,106 @@ Commonality      "every attempt kept the global gate; every attempt took 40 tick
 Explanation      "ticks = the largest number of updates sharing one gate scope"
 ```
 
-The explanation form earns its status by being quantitative and by making
-predictions in *both directions*: where the intervention should help (and by
-how much) and where it should not help at all. A restatement that only
-predicts "changing the common thing will help" is not yet an explanation — it
-is the commonality wearing a lab coat.
+The explanation form earns its status by making predictions in *both
+directions* — where the intervention should help (and by how much, if the
+domain has numbers) and where it should not help at all — in a form some
+outcome could contradict. Quantitative form is the strongest version of that
+where quantities exist; a categorical or structural prediction ("no
+configuration in this family will cross the threshold") is a real explanation
+in a domain with no natural metric. A restatement that only predicts "changing
+the common thing will help" is not yet an explanation — it is the commonality
+wearing a lab coat.
+
+One further discipline belongs here, and it is the one most often skipped:
+**write down a second plausible description of the same attempts** — different
+granularity, or different vocabulary, not a strawman — and find the case where
+the two would recommend *different* next actions. If they never diverge, the
+choice was immaterial and you keep the cheaper one. If they diverge, you have
+found your probe (§3). A single description nobody compared against an
+alternative is a choice pretending to be an observation; the full selection
+procedure is
+[method contract §3](../book/method-contract.md#3-representation-selection-procedure).
 
 ---
 
 ## 3. Design a discriminating probe
 
-The next attempt should be chosen to **maximize what it teaches**, not to
-maximize its chance of success. Those are different objectives, and conflating
-them is the default failure mode of "just try again."
+The next attempt should be chosen so that **its outcome distinguishes the
+explanations you are actually entertaining**. That is a different objective
+from maximizing the chance of success, and conflating them is the default
+failure mode of "just try again." It is also not the same as maximizing
+learning in the abstract: a probe that would teach you a great deal about
+something no decision depends on is a hobby, not a probe.
 
-A discriminating probe has three properties:
+The design rule:
 
-- **It varies the suspected factor and nothing else.** The worked example's
-  intervention changes only the gate's scope. Workers, scheduling, update
-  count, and stream structure are all held at previously-measured values, so
-  any outcome change is attributable.
-- **It comes with a numeric prediction made before running.** Not "should be
-  faster" but "should be 10 ticks." A prediction stated after the result is
-  narration.
-- **It is paired with a control that should remove the effect.** The
-  single-stream control predicts the intervention's gain vanishes when the
-  load cannot divide across scopes. A probe without a control can confirm an
-  explanation but cannot discriminate it from its neighbors ("per-stream
-  gates are just faster somehow").
+> **Choose a design that distinguishes the relevant explanations; predeclare a
+> checkable prediction; preserve the original objective and its correctness
+> conditions; and justify the design's cost against the decision it informs.**
 
-And one property of the probe's *evaluation*:
+### Choose a design that discriminates
+
+Several designs satisfy the rule, and the right one depends on the domain:
+
+| Design | Suits |
+|---|---|
+| Single-factor control | One suspected factor; cheap runs; interactions implausible or already bounded |
+| Factorial / fractional factorial | Two or more factors that may interact |
+| Ablation | Removing a component to test whether it carries the effect |
+| Formal counterexample search | Claims stated as universal properties |
+| Categorical or set-membership prediction | Outcomes that are not numeric |
+| Natural comparison inside the record | The discriminating pair was already run and nobody compared them |
+
+The worked example uses a **single-factor control**: the intervention changes
+only the gate's scope, so any outcome change is attributable. That is a good
+choice *there* — one suspected factor, cheap runs — and it is not a definition.
+Varying one factor at a time cannot detect interactions among factors; the
+NIST/SEMATECH *e-Handbook of Statistical Methods* states that limitation
+explicitly in its design-of-experiments material
+([Ch. 5](https://www.itl.nist.gov/div898/handbook/pri/pri.htm)). A method whose
+central interest is relational structure must not mandate a design that can
+hide it.
+
+**Failure mode of this step:** a design that discriminates nothing, because both
+explanations predict the same result, wearing a control as a badge of rigor.
+
+### Predeclare a prediction that could fail
+
+State the prediction before running, in a form whose failure you would
+recognize. Where the outcome is numeric, make it numeric: not "should be
+faster" but "should be 10 ticks." Where it is not numeric, a categorical,
+ordinal, set-membership, or existence-of-counterexample prediction is a real
+prediction — do not invent a metric to satisfy a ritual.
+
+A prediction stated after the result is narration. A prediction no outcome
+could contradict is decoration.
+
+### Pair it with something that should remove the effect
+
+Where a control is available, use it. The single-stream control predicts the
+intervention's gain vanishes when the load cannot divide across scopes, which
+is what separates the explanation from its neighbors ("per-stream gates are
+just faster somehow"). Where a control is not available — some domains do not
+offer one — say so, and accept the weaker discrimination rather than pretending
+the design had one.
+
+### Check the thing you actually wanted
 
 - **Correctness is checked, not assumed.** An intervention that hits the
   predicted number by breaking the invariant the restriction was protecting
   (here: per-stream ordering) is not a success; it is an undetected regression
-  with good marketing. Every probe run must re-verify the original
-  correctness conditions.
+  with good marketing. Every probe run must re-verify the original correctness
+  conditions.
+- **A passed check does not attribute the outcome to your mechanism.** The
+  result establishes what was measured. That the mechanism you proposed is what
+  produced it is a further claim, needing its own support — see
+  [warrant boundaries](../book/warrant-boundaries.md).
+
+### Justify the cost
+
+State what the design costs and which decision its result changes. Count the
+cost you actually pay: construction, analysis, and attention, not only the
+cheap unit you happen to be able to tally. If no decision changes, act instead.
 
 If the probe's outcome matches the prediction in both the intervention and the
 control, the explanation survives. If it doesn't, that is not a wasted run —
@@ -154,6 +226,9 @@ Three rules keep the record honest:
   surviving hypothesis, not an established law. It earns further status only
   from further probes it could have failed — ideally probes designed by
   someone trying to break it.
+- **Do not re-describe the past to fit the survivor.** Corrections append and
+  are marked; the original wording stays. A record edited after the outcome
+  cannot support the prediction it now appears to have made.
 
 Then the loop closes: the probe itself is a new attempt, recorded with the
 same schema as the originals, and the next comparison starts from a richer
@@ -162,6 +237,25 @@ table.
 ```text
 record → compare → explain → probe (with control) → update → record …
 ```
+
+---
+
+## What this page does not tell you
+
+Three things, deliberately, because the honest answers are still versioned
+rather than settled:
+
+- **When mapping is worth more than another attempt.** The trigger and the
+  spending limit are declared defaults:
+  [method contract §2](../book/method-contract.md#2-the-mapping-trigger-and-the-allocation-rule),
+  summarized for practitioners in the
+  [field guide](when-to-map-the-work.md#allocating-effort-map-probe-act-or-stop).
+- **What to do when two reasonable descriptions recommend different actions.**
+  Prefer the affordable design that separates them; otherwise act on the
+  cheaper failure and record the divergence as unresolved
+  ([contract A5](../book/method-contract.md#a5--when-two-maps-recommend-different-actions)).
+- **When to stop.** Seven recorded conditions, and what each licenses:
+  [contract §6](../book/method-contract.md#6-stopping-conditions).
 
 ---
 

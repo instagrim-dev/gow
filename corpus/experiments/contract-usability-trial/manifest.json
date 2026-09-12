@@ -1,0 +1,278 @@
+{
+  "schema": "newf-usability-trial/v1",
+  "experiment_id": "contract-usability-trial",
+  "status": "draft_not_frozen",
+  "registration_kind": "draft_design_not_registration_not_execution_evidence",
+  "repository": "instagrim-dev/gow",
+  "contract_under_test": {
+    "artifact": "docs/book/method-contract.md",
+    "revision": "0.1.0",
+    "artifact_status": "proposed",
+    "digest": null
+  },
+  "note": "DRAFT. Not a preregistration and not executed. Outstanding choices (search universe, recruitment, adjudication procedure, instrument digests) are unresolved. Becomes registrable only when freeze F1 (selection rules, before content screening) and freeze F2 (case packets, evaluator key, instrument digests, coding rubric, before participant exposure) both exist, each recorded in a subsequent registration receipt rather than in the frozen file itself.",
+  "what_is_tested": "whether the contract helps practitioners make appropriate decisions, including the decision not to map",
+  "artifact_completion_is_not_an_endpoint": true,
+  "global_pass_condition": false,
+  "adverse_observations_preregistered": true,
+  "battery": [
+    {
+      "case_id": "S",
+      "stratum": "suitable_decision_relevant",
+      "required_behavior": "recognize applicability; compare plausible explanations; select a bounded action or a discriminating probe",
+      "observable_failure": "blanket refusal; unsupported certainty; a map disconnected from any available decision",
+      "selection_rule": "first candidate satisfying contract preconditions P1-P4 under the frozen ordering"
+    },
+    {
+      "case_id": "N1",
+      "stratum": "inadequate_attempt_population",
+      "required_behavior": "identify the unmet population requirement; stop mapping or request the specific missing evidence",
+      "observable_failure": "manufacture a recurring pattern from insufficient history",
+      "selection_rule": "own declared criteria; NOT the stratum-S rule"
+    },
+    {
+      "case_id": "N2",
+      "stratum": "decision_irrelevant_uncertainty",
+      "required_behavior": "recognize that resolving the uncertainty changes no available decision; proceed without further mapping",
+      "observable_failure": "continue analysis without naming a decision it could change",
+      "selection_rule": "own declared criteria; NOT the stratum-S rule",
+      "packet_must_declare": ["objective", "feasible_actions", "constraints", "uncertainty_in_play"],
+      "evaluator_key_must_justify": "why resolving the declared uncertainty changes neither the preferred action nor any verification or safety obligation"
+    }
+  ],
+  "proposed_stop_reason_labels": {
+    "disclaimer": "protocol labels for this trial; NOT claims about any existing repository enum, and not interchangeable with one another",
+    "labels": [
+      "population_inadequate",
+      "verification_unavailable",
+      "mapping_not_cost_justified",
+      "uncertainty_not_action_relevant"
+    ],
+    "coverage": "this battery tests one unsuitable-input subtype (N1) and one irrelevance subtype (N2); all other subtypes are reported as untested, never as covered"
+  },
+  "scoring": {
+    "unit": "behavior and justification",
+    "not_scored": "recitation of a preferred status label",
+    "explicitly_correct_behavior": "a brief applicability assessment concluding that this is not a mapping situation"
+  },
+  "participants": {
+    "count": 2,
+    "design": "independent completion of all three cases by each participant",
+    "observation_accounting": "6 participant-case observations over 3 cases; NOT 6 independent replications",
+    "eligibility": [
+      "competent in the case domain",
+      "did not author the contract",
+      "did not help select the cases",
+      "has not contributed to this repository"
+    ],
+    "recorded_covariates": ["relevant domain experience", "prior familiarity with GoW"],
+    "session_control": {
+      "case_order": "counterbalanced across participants where possible",
+      "between_task_feedback": "none",
+      "facilitator_assistance": "standardized in advance; every clarification logged verbatim with the step it concerns",
+      "assistance_reporting_rule": "an assisted completion is never reported as unaided followability"
+    }
+  },
+  "pre_instrument_commitment": {
+    "timing": "sealed for ALL THREE cases before any component of the instrument bundle is released",
+    "sequence": [
+      {"phase": 1, "presented": "all three case packets (no stratum labels, no expected decisions, no instrument material)", "collected": "sealed commitments for S, N1, N2"},
+      {"phase": 2, "presented": "instrument bundle released"},
+      {"phase": 3, "presented": "cases worked", "collected": "post-exposure fields per case"}
+    ],
+    "sequence_rationale": "a baseline for case two collected after the participant read the contract during case one is not a pre-instrument baseline; per-case interleaving would make the before/after distinction meaningless",
+    "fields": [
+      "intended_next_action",
+      "reason_for_choosing_it",
+      "uncertainty_worth_resolving",
+      "expected_observation",
+      "budget_and_stopping_condition"
+    ],
+    "post_exposure_fields": ["same five fields", "contract clause that changed or justified the decision"],
+    "unchanged_decisions_recorded": true,
+    "interpretation_rules": [
+      "an unchanged action is not automatically a failure",
+      "a changed action is not automatically an improvement",
+      "pre/post commitments are descriptive evidence of uptake, not causal attribution",
+      "the bundle is one treatment with several components (contract, card, extracts); this design does not separate them"
+    ]
+  },
+  "cross_participant_comparison": {
+    "compared_on": ["recommended actions", "predictions", "stopping decisions"],
+    "not_compared_on": "visual similarity of maps",
+    "rationale": "different maps can support equivalent decisions; identical-looking maps can support incompatible prescriptions",
+    "predeclared_finding_of_primary_interest": "both participants appear to follow the contract, recommend consequentially incompatible actions, and the contract supplies no rule for resolving the difference",
+    "what_that_finding_establishes": "an underspecified prescription",
+    "what_that_finding_does_not_establish": "that either participant's action was wrong",
+    "scope_limit": "two participants can expose representation-selection ambiguity; they cannot close the general representation-selection gap"
+  },
+  "case_selection": {
+    "standard": "selected under a predeclared rule, without outcome-based substitution",
+    "withdrawn_term": "uncurated — inclusion criteria are themselves a form of selection",
+    "frozen_before_content_screening": [
+      "search universe",
+      "query",
+      "cutoff",
+      "deterministic ordering",
+      "per-stratum criteria",
+      "screening budget",
+      "replacement rule"
+    ],
+    "candidate_listing_archived": true,
+    "per_candidate_record": ["identifier", "screening order", "eligibility judgment", "exclusion reason", "selector identity"],
+    "screening_budget_exhaustion": "case_selection_blocked — not permission to improvise a more flattering case",
+    "ci_backed_repair_history_conditions": {
+      "information_boundary": "participants receive only the attempts available at the selected pre-resolution decision point; never the eventual successful patch as context",
+      "checker_requirements_are_separate": [
+        "operated independently of the participant",
+        "actually tests the declared objective"
+      ],
+      "pinned": ["tests", "environment", "known coverage limits"],
+      "declared_in_advance": "handling of flaky or unavailable checks",
+      "denominator_rule": "incomplete verification, timeouts, and other unsuccessful dispositions are retained and reported, never silently dropped"
+    }
+  },
+  "instrument_bundle": {
+    "form": "one versioned, self-contained bundle; digest-pinned at F2",
+    "components": [
+      {"id": "contract", "digest": null},
+      {"id": "one_page_card", "digest": null},
+      {"id": "warrant_ledger_extracts", "form": "text, not repository links", "digest": null, "assembled": false},
+      {"id": "blank_record_template", "digest": null}
+    ],
+    "component_use_recorded": true,
+    "broken_link_rule": "a required broken link is an instrument defect, not a participant deficiency",
+    "card_status": "part of the tested instrument, not neutral packaging",
+    "card_finding_limit": "universal card use supports a finding about use of THIS bundle; it does not show the full contract is understandable, nor that shorter instructions are better"
+  },
+  "warrant_extract_assembly": {
+    "governing_clause": "F1 fixes the source-ledger revision and the rule for selecting domain-relevant extracts. F2 fixes the exact participant-visible text. Extracts retain applicable limitations and uncertainty, and must not encode case labels, expected decisions, or post-resolution information. Objective-relevant case facts are available consistently before and after instrument exposure, unless additional information is explicitly part of the declared treatment. Missing or noncompliant extracts block exposure.",
+    "obligation_kind": "instrument-design obligation that depends on recruitment; NOT a recruitment task",
+    "why_the_rule_cannot_wait": "selecting which warrants are relevant after studying the cases would convert a general instrument into case-specific coaching",
+    "draft_state_rule": "leaving the extracts unwritten is appropriate at draft_not_frozen; leaving their selection rule unwritten is not",
+    "content_separation": [
+      {
+        "content": "methodological warrant",
+        "definition": "why the contract reasons as it does; what a check licenses; which conclusion needs separate support",
+        "belongs_to": "instrument bundle",
+        "timing": "specifiable before recruitment; selected under the F1 rule"
+      },
+      {
+        "content": "objective-relevant domain fact",
+        "definition": "what a participant needs in order to judge this case",
+        "belongs_to": "case-information boundary",
+        "timing": "present in phase 1 and phase 3 alike"
+      }
+    ],
+    "post_exposure_fact_resolutions": {
+      "problem": "an extract supplying a new objective-relevant fact only after exposure means an observed improvement could reflect that fact rather than the contract",
+      "admissible": [
+        "supply the fact in the case packet so it is available in both phases",
+        "declare the treatment as 'contract plus additional domain guidance' and report it under that name"
+      ],
+      "no_third_option": true
+    },
+    "f1_fixes": [
+      "source-ledger artifact and its exact revision",
+      "domain-to-row inclusion criteria, stated as declared domain requirements",
+      "permitted editing (abridgement, reformatting, terminology substitution) and what is prohibited",
+      "treatment of qualifications — retained, never trimmed for readability",
+      "treatment of conflicting warrants — both retained, the conflict shown",
+      "treatment of missing support — recorded as absent, never paraphrased into apparent coverage"
+    ],
+    "f2_fixes": ["actual participant-visible text", "digests"],
+    "defensible_vs_not": {
+      "defensible": "selecting rows by declared domain requirements",
+      "not_defensible": "selecting whichever rows point toward the evaluator's preferred decision",
+      "auditability": "the F1 rule exists so the difference is checkable after the fact"
+    },
+    "comparable_exposure": {
+      "same_bundle_both_participants": true,
+      "preferred": "one domain bundle across S, N1, and N2 where practical",
+      "case_specific_variation": "follows the F1 rule, is recorded, and reveals no stratum label and no expected decision",
+      "n1_integrity_rule": "a supplement must not complete N1's missing evidence; a helpful extract supplying what N1 withholds deletes the condition under test",
+      "n1_check_timing": "checked against evaluator-only material before F2 closes"
+    },
+    "launch_blocker": {
+      "procedure": "once the domain is known, assemble under the frozen rule, check against evaluator-only material, complete F2",
+      "amendment_rule": "if assembly requires substantive new guidance or a changed selection rule, record an amendment BEFORE exposure",
+      "prohibited": "revising the instrument during participant briefing",
+      "status": "missing or noncompliant extracts block exposure; not a parallel research workstream"
+    }
+  },
+  "coding": {
+    "coders": 2,
+    "independence_requirement": "at least one coder uninvolved in contract authorship and in case selection",
+    "procedure": "both code all sessions independently before any discussion",
+    "retention": "original judgments and disagreements preserved even when a later adjudication is recorded",
+    "dimensions": [
+      "instruction_usability",
+      "decision_appropriateness",
+      "evidence_discipline",
+      "decision_change",
+      "execution_limits"
+    ],
+    "non_cancellation_rule": "successful task completion does not cancel an epistemic failure; both are reported independently"
+  },
+  "participant_protection": {
+    "consent": "launch requirement, obtained before any recording",
+    "consent_covers": ["what is collected", "who observes", "storage", "access", "retention", "withdrawal", "intended publication"],
+    "separation_rule": "permission to participate does not include permission to publish identifiable quotations or recordings",
+    "raw_records_location": "outside this public repository (recordings, transcripts, consent records, identity mappings)",
+    "published_material": "reviewed, minimized extracts and aggregate findings",
+    "anonymization_caveats": [
+      "participant IDs alone do not anonymize a distinctive quotation",
+      "a public copy may be impossible to retract after a withdrawal request"
+    ]
+  },
+  "model_subject_runs": {
+    "status": "prerequisite calibration, never evidence that unfamiliar humans can use the method",
+    "analogy": "the internal/relational control relative to pilot-005",
+    "recorded": ["model version", "run date", "supplied context", "retrieval access", "known prior exposure"],
+    "record_separation": "kept in a separate record from human-usability findings",
+    "contamination_statement": "public availability creates exposure risk; it does not establish ingestion by any particular model or a known rate of evidentiary decay",
+    "treatment_vs_leakage": "reading the contract during the trial is the intended treatment; the relevant threat is prior access to the cases, expected decisions, evaluator key, or historical resolutions"
+  },
+  "freezes": [
+    {
+      "id": "F1",
+      "role": "selection policy",
+      "contents": {
+        "case": ["search universe", "query", "cutoff", "ordering", "per-stratum criteria", "screening budget", "replacement rule"],
+        "instrument": ["source-ledger revision", "domain-to-row inclusion criteria", "permitted editing", "treatment of qualifications", "treatment of conflicting warrants", "treatment of missing support"]
+      },
+      "timing": "before the study team screens case content",
+      "state": "not frozen"
+    },
+    {
+      "id": "F2",
+      "role": "instantiated output",
+      "contents": ["case packets", "evaluator key including N2 justification", "participant-visible warrant-extract text", "instrument bundle digests", "coding rubric"],
+      "timing": "before any participant exposure",
+      "state": "not frozen"
+    }
+  ],
+  "freeze_split_principle": "F1 freezes the policy, F2 freezes what the policy produced — for the instrument as well as the cases. A selection rule written after its output is known is not a rule.",
+  "freeze_commit_policy": "a commit cannot contain its own hash; the frozen commit is recorded in a subsequent registration receipt in this directory",
+  "manifest_limits": "a manifest plus validation improves change detection; it does not prevent hindsight. Amendments remain legitimate, but results collected under different instrument versions must remain distinguishable.",
+  "next_step": "domain selection, then controlled bundle assembly — not further expansion of the protocol",
+  "explicitly_not_claimed": [
+    "method superiority",
+    "general reproducibility",
+    "transfer to other case classes",
+    "efficiency of the method",
+    "causal effectiveness of the contract",
+    "that a participant's success is attributable to the map",
+    "that correctness of the contract's recommendations follows from followability",
+    "any result prior to execution"
+  ],
+  "strongest_defensible_result": "under this frozen instrument and case battery, independent participants could (or could not) identify applicability, avoid decision-irrelevant analysis, select bounded next actions, and preserve the contract's evidence distinctions without author assistance",
+  "execution": {
+    "executed": false,
+    "domain_selected": false,
+    "warrant_extracts_assembled": false,
+    "participants_recruited": false,
+    "cases_selected": false,
+    "findings": "none — no trial has been run"
+  }
+}

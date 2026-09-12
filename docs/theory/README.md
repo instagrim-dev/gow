@@ -11,6 +11,8 @@ The separation is the point:
   allowed to believe about them.
 - **[Findings](../findings/)** — what experiments have actually shown.
 - **[Thesis](../thesis/why-solve-by-shape.md)** — why any sane person should care.
+- **[Book lane](../book/)** — what a practitioner is instructed to *do*, and the
+  ceiling on how strongly it may be instructed.
 
 The theory is derived rigorously from what the implementation has taught us; the
 thesis is the authored, project-level statement of the move itself; the
@@ -51,8 +53,23 @@ authored position pieces:
 |---|---|---|
 | [Why Map the Work?](../thesis/why-map-the-work.md) | Introduction | What does examining prior attempts teach that another attempt would not? |
 | [Why Solve by Shape?](../thesis/why-solve-by-shape.md) | Thesis | Why is any of this worth building? |
-| [When to Map the Work](../thesis/when-to-map-the-work.md) | Field guide | When should a practitioner reach for GoW, and how? |
+| [When to Map the Work](../thesis/when-to-map-the-work.md) | Field guide | When should a practitioner reach for GoW, and how much should they spend on it? |
 | [How to Map the Work](../thesis/how-to-map-the-work.md) | Method | How to record attempts so the move is repeatable? |
+
+The [book lane](../book/) is a third surface, opened 2026-09-12: the authored
+book **The Shape of Trying**, written against a versioned
+[method contract](../book/method-contract.md) rather than against settled
+doctrine. Two constraints belong to the whole project, not just the book:
+
+| Document | Role |
+|---|---|
+| [Book lane charter](../book/README.md) | What may be drafted now, drafted conditionally, or only posed as a research question |
+| [Method contract](../book/method-contract.md) | The authoritative form of every practitioner prescription, each tagged `derived` / `heuristic` / `conditional-evidence` with its preconditions, discretion, and failure mode |
+| [Warrant boundaries](../book/warrant-boundaries.md) | What a successful check licenses, and the further conclusion that still needs its own support |
+
+Where a thesis guide and the method contract disagree, the contract wins and
+the guide is a defect. The contract is `proposed`, not adopted; opening the lane
+does not freeze GoW as a validated prescriptive discipline.
 
 ## The governing principle
 
