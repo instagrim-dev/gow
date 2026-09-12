@@ -146,3 +146,83 @@ proposals out of ten, so any move toward concrete-witness generation
 would be a strictly new capability rather than a bias adjustment to an
 existing signal). This observation is non-decisive about the domain
 goal and does not alter any admission rule.
+
+---
+
+## Clarification appended 2026-09-12 after concurrent-writer discovery
+
+At the time of authoring this scope check, I could not locate the
+reviewer's "C7" and "C8" labels against any documented obligation set
+(the paper-space challenge protocol has only C1–C7 as probe kinds).
+The scope check was authored assuming "witness-occurrence attribution"
+referred to F2 gate exercise on M7 proposal content specifically.
+
+A concurrent writer's uncommitted-at-time-of-scoping additions to the
+tree now surface a **different, code-owned C1–C8 framework**:
+
+- `internal/pipeline/review.go` (new)
+- `internal/pipeline/review_coverage.go` (new)
+- `internal/pipeline/review_c1c8_disposable_test.go` (disposable test
+  documenting cases C1–C8 for obligation `current-assessment-authority`
+  under policy `P1`, per recipe
+  `docs/reviews/prompts/recipes/assessment-admission-decision.md`).
+
+Under that framework:
+
+- **C1** = baseline assessment under P1/D0.
+- **C2** = withheld control — model-only failure stays out of the
+  population.
+- **C3** = independently checked observation enters through real
+  admission (witness path integration at the assessment-population
+  boundary).
+- **C4** = relevant change — eligibility not inherited from A0.
+- **C5** = unrelated write must not stale.
+- **C6** = reassessment against A1 under the pinned policy.
+- **C7** = **historical replay must not displace compatible current
+  context** (NOT the paper-space "correlation vs causal" probe).
+- **C8** = **derived coverage projection** — previously a recorded
+  gap; the concurrent writer's `review_coverage.go` appears to close
+  it in code.
+
+Under this reading, the reviewer's "C7 obligation, witness-occurrence
+attribution obligation, C8 obligation" refers to review-INTEGRATION
+obligations at the pipeline↔review boundary, NOT to paper-space
+challenge probes and NOT to M7 proposal witness-content provisioning.
+
+## What this scope check DOES establish (unchanged, still valid)
+
+The SGO on M7's proposal corpus stands: 0/10 proposals carry an
+in-content `(n, x, y, z)` claim, 0/3 evaluations use the witness path.
+This is factual observation about the corpus, independent of what the
+reviewer's terminology maps to.
+
+## What this scope check DOES NOT establish (corrected)
+
+- **Discharge of the C7 obligation** (review-recipe sense): the
+  scope check does not address historical-replay-versus-current-authority
+  staleness gates. The concurrent writer's C7 case-under-test
+  in `review_c1c8_disposable_test.go` is where that obligation is
+  being exercised.
+- **Discharge of the C8 obligation** (review-recipe sense): the
+  scope check does not address the derived-coverage-projection gap.
+  The concurrent writer's `review_coverage.go` and the `GenerateReviewCoverage`
+  App method appear to be filling that gap in code.
+- **Discharge of the witness-occurrence attribution obligation**
+  (review-recipe C3 integration sense): the scope check confirms
+  the M7 corpus has no in-content witness claims, which is orthogonal
+  to whether the F2 attribution machinery integrates correctly with
+  the assessment-population and coverage projection when it IS
+  invoked. Case C3 in the concurrent writer's disposable test
+  exercises that integration directly.
+
+## Correct scope of this record's contribution
+
+- **Bounded, valid SGO** on M7's proposal-content witness-obligation
+  distribution.
+- **Corroborates** the design-space observation about the
+  generator↔verifier mismatch surfaced in (g-scoped) and (o-closed).
+- **Does not discharge** any of the three obligations the reviewer
+  identified; those are review-INTEGRATION obligations that a
+  concurrent writer's in-flight code changes appear to be addressing.
+- **Does not conflict with** the concurrent writer's work; the two
+  investigations are targeting adjacent but distinct questions.
