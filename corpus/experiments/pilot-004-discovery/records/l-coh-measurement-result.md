@@ -130,6 +130,18 @@ Concrete corrections applied:
    `fPrev - sPrev = 0.5` fixed. Both predeclared conditions plus
    Delta/Evidence structure hold. See
    `records/l-coh-mechanism-test-result.md`.
+
+   **Live real-data cross-check** added 2026-09-12 by
+   `(m7-emission-nondivergence)`. M7's (a‴-B) run persisted **both**
+   posture-axis candidates from the emission-eligible set:
+   `equals(locality, local)` (sPrev = 0) reached **surviving** with
+   `success-preserving: unconfirmed` ("all 5 eligible success-side
+   member(s) decisively checked; none preserves"); `equals(construction,
+   constructive)` (sPrev = 0.2) reached **weaken** with
+   `success-preserving: confirmed` ("1 success-preserving
+   family(ies)"). Same corpus, same campaign, same probes; the sole
+   differentiating signal is sPrev. See
+   `records/m7-emission-nondivergence-result.md`.
 8. **Attribution correction on the numerical minimum.** The
    earlier record attributed pvnp's `minSuccessPrev = 0.286` to
    `equals(uncertainty, probabilistic)`. That candidate fails
@@ -163,23 +175,29 @@ Concrete corrections applied:
 
 Verified 2026-09-12 by `(l-population-validation)`; population is the
 miner's actual eligible-family set (see
-`records/l-population-validation-result.md`).
+`records/l-population-validation-result.md`). All persisted (a‴-B)
+outcomes verified 2026-09-12 by `(m7-emission-nondivergence)` — both
+M7 posture-axis candidates were emitted, challenged, and reached
+their designed final states (see
+`records/m7-emission-nondivergence-result.md`).
 
-| Corpus | Candidate (emission-eligible) | sPrev | Persisted at (l)? |
-|---|---|---:|---|
-| M7 | `equals(construction, constructive)` | 0.200 | (not present in the final `candidate_invariants` table; see M7 clarification below) |
-| M7 | `equals(locality, local)` | **0.000** | **YES, → `surviving`** |
-| pvnp | `equals(construction, existential)` | **0.286** | YES, → `weaken` |
-| pvnp | `equals(locality, global)` | 0.429 | YES, → `weaken` |
-| pvnp | `equals(uncertainty, deterministic)` | 0.714 | YES, → `weaken` |
+| Corpus | Candidate (emission-eligible) | sPrev | Persisted at (l)? | Final state |
+|---|---|---:|---|---|
+| M7 | `equals(construction, constructive)` | 0.200 | **YES** (Rev-2 ord 4) | **weaken** (1 success-preserving family) |
+| M7 | `equals(locality, local)` | **0.000** | **YES** (Rev-2 ord 2) | **surviving** (0 preserving successes; all 5 decisively checked) |
+| pvnp | `equals(construction, existential)` | **0.286** | YES | weaken |
+| pvnp | `equals(locality, global)` | 0.429 | YES | weaken |
+| pvnp | `equals(uncertainty, deterministic)` | 0.714 | YES | weaken |
 
-**M7 clarification**: `equals(construction, constructive)` is
-emission-eligible (fc = 3, fPrev > sPrev), but the (a‴-B) M7 run
-persisted only `equals(locality, local)` at `surviving`. This
-divergence between "would-be-eligible" and "actually persisted"
-belongs in the campaign-run investigation (why only one of two
-eligible candidates survived to persistence at that HEAD), not in
-(l-coh)'s scope. The eligibility semantics themselves are verified.
+**Note**: the M7 (a‴-B) miner's two posture-axis candidates were both
+persisted with `contrast_observed` association status. Their divergent
+final states — surviving on the sPrev=0 candidate, weaken on the
+sPrev=0.2 candidate — are a **live real-data instance** of correction
+7's CMA statement. On both, the `known-counterexample` and
+`bias-critique` probes return `unconfirmed`; the differentiating
+signal is `success-preserving` (`completedNegative` on sPrev=0,
+`Confirmed` on sPrev>0), driving the surviving-vs-weaken transition
+exactly as the code predicts.
 
 ## Reviewer's message preserved verbatim
 
