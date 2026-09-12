@@ -1109,11 +1109,14 @@ section is traceable to a specific file and row in those artifacts.
   exp/.style={draw, rounded corners=2pt, minimum width=28mm,
               minimum height=14mm, align=center, fill=gowteal!8},
   negexp/.style={exp, fill=gowaccent!8},
-  posexp/.style={exp, fill=gowteal!12},
   mixexp/.style={exp, fill=gowsand!16},
   ->,>={Stealth[length=2mm]}, thick,
 ]
 \node[negexp] (A) {\textbf{A. Negative controls}\\ \scriptsize empty failure pop.\\ \scriptsize M7 Stage 1 (pristine)\\[1pt] \tiny \emph{inconclusive}};
+% Legend: oxblood = negative/abstention (negexp); sand = mixed/incomplete-coverage
+% (mixexp). No node in this figure uses the "clean positive" teal tint (posexp
+% is intentionally not defined here) because no experiment in this progression
+% reached a clean-positive disposition; see the caption.
 \node[mixexp, right=8mm of A] (B) {\textbf{B. Curated features}\\ \scriptsize Pilot-003 B0/B3\\ \scriptsize target withheld\\[1pt] \tiny \emph{rule: inconclusive}\\ \tiny \emph{review: 1 recovery (B3)}};
 \node[mixexp, right=8mm of B] (C) {\textbf{C. Shape discovery}\\ \scriptsize Pilot-004 (23 entries)\\ \scriptsize reference withheld\\[1pt] \tiny \emph{aggregate criterion:}\\ \tiny \emph{not met}\\ \tiny \emph{10 defensible novel}};
 \node[mixexp, right=8mm of C] (D) {\textbf{D. Novel challenge}\\ \scriptsize N2a: 7-part challenge\\ \scriptsize reference-absent\\[1pt] \tiny \emph{refinement proposed}\\ \tiny \emph{coverage incomplete}};
@@ -1133,10 +1136,12 @@ section is traceable to a specific file and row in those artifacts.
 \end{tikzpicture}
 \caption{Pilot progression. Each experiment addresses a different constituent
 capability, cumulatively supporting Claim~C4 without any single experiment
-being asked to establish it alone. Negative-outcome experiments (A, C's
-predeclared aggregate endpoint) are as informative as positive-outcome and
-mixed-outcome experiments (B's blinded review, D's recorded seven-part
-challenge with incomplete coverage).}
+being asked to establish it alone. Fill color marks disposition: oxblood =
+negative/abstention, sand = mixed/incomplete-coverage; no node uses a
+clean-positive tint, because no experiment in this progression reached one.
+Negative-outcome experiments (A, C's predeclared aggregate endpoint) are as
+informative as mixed-outcome experiments (B's blinded review, D's recorded
+seven-part challenge with incomplete coverage).}
 \label{fig:progression}
 \end{figure}
 
@@ -1398,6 +1403,11 @@ challenge.
 % ── 9. Conditional Superiority ───────────────────────────────────────
 \section{Conditional Superiority: When Shape-Guided Concentration Wins}
 \label{sec:superiority}
+
+\noindent{\small\scshape\color{gowaccent}Status: theoretical --- no empirical
+claim.} This section proves a conditional theorem and specifies a
+preregistered test; it reports no measured result about GoW or the pilots
+above (\cref{rem:superiority-status}).
 
 The experiments above are exploratory and establish no statistical effect
 (\cref{sec:limitations}). This section is a separate, \emph{theoretical}
@@ -1860,7 +1870,7 @@ type-consistent combinations of the vocabulary's canonical labels. This is a
 theoretical open problem that must be addressed before complement geometry can
 be operationalized.
 
-% ── 10. Related Work ─────────────────────────────────────────────────
+% ── 11. Related Work ─────────────────────────────────────────────────
 \section{Related Work}
 \label{sec:related}
 
@@ -2020,7 +2030,7 @@ use of a \emph{population} of heterogeneous work as the primary object,
 with representation itself allowed to move --- is the claim GoW makes on the
 literature. It is a narrow claim, and it is the claim we hold.
 
-% ── 11. Limitations and Threats to Validity ──────────────────────────
+% ── 12. Limitations and Threats to Validity ──────────────────────────
 \section{Limitations and Threats to Validity}
 \label{sec:limitations}
 
@@ -2091,7 +2101,7 @@ that challenge produces stable boundaries, or that repeated application of the
 loop improves the proposal quality in any measurable sense. These are research
 questions, not established properties.
 
-% ── 12. Future Work ──────────────────────────────────────────────────
+% ── 13. Future Work ──────────────────────────────────────────────────
 \section{Future Work}
 \label{sec:future}
 
@@ -2142,7 +2152,7 @@ implemented but not yet evaluated. Measuring whether policy-driven search
 outperforms static context supply over multiple rounds would test whether the
 geometry's feedback loop is productive.
 
-% ── 13. Conclusion ───────────────────────────────────────────────────
+% ── 14. Conclusion ───────────────────────────────────────────────────
 \section{Conclusion}
 \label{sec:conclusion}
 
@@ -2205,8 +2215,10 @@ protocol that surfaced the N2a and N5 boundary refinements, and from repeated
 adversarial review passes that identified specific evidence-laundering risks
 in the earlier drafts of this manuscript. Large-language-model providers used
 for generation and adjudication are recorded per-invocation in the frozen
-experiment artifacts cited in \cref{app:claims}; specific provider identities
-are not load-bearing for any claim in this paper.
+experiment artifacts cited in \cref{app:claims}. Provider identity is not
+load-bearing for the paper's \emph{conceptual} framework, but it is
+load-bearing for the empirical external-validity claims (\cref{sec:limitations});
+see the Generative-AI Use Disclosure below for the full statement.
 
 \paragraph{Provenance (author-reported inception).} The line of inquiry that
 developed into Geometry of Work began on September 10, 2026, at 03:49 PDT
@@ -2303,14 +2315,22 @@ cited records. We distinguish ``traceable internally'' from ``auditable by the
 reader'' and do not conflate them.
 
 To make the cited evidence reader-accessible without releasing unrelated
-working material, the intended arrangement is a limited, immutable evidence
-supplement containing the specific frozen records the paper depends on --- the
-negative-control experiment, the Pilot-003 and Pilot-004 record directories
-(including \path{RESULT.md}, \path{CLOSURE-SCORECARD.md}, and the independent
-review results), the N2a/N5 challenge records, and the M7 blinded-run
-artifacts --- deposited in a citable archive. Until such a supplement is
-posted, the methods and results in the manuscript are intended to be
-self-contained enough to evaluate the framework's epistemic behavior, and
+working material, we have selected, hashed, and frozen the specific records
+the paper depends on --- the M7 blinded-run artifacts, the Pilot-003 and
+Pilot-004 record directories (including \path{RESULT.md},
+\path{CLOSURE-SCORECARD.md}, and the independent review results), and the
+N2a/N5 challenge records --- into a manifest with a SHA-256 hash per file and
+a reading guide mapping each row of \cref{app:claims} to its source file
+(\path{corpus/evidence-supplement/manifest.json},
+\path{corpus/evidence-supplement/README.md}). This selection is complete and
+verifiable against the working repository, but \textbf{it is not yet publicly
+deposited}: a public host (e.g.\ Zenodo, OSF, or a read-only mirror
+repository) has not yet been chosen, and no redaction pass over
+release-sensitive material has been requested or performed (a first-pass
+automated sweep of the selection for common secret patterns found none, but
+this is not represented as an exhaustive security review). Until a public
+deposit is posted, the methods and results in the manuscript are intended to
+be self-contained enough to evaluate the framework's epistemic behavior, and
 access to the underlying records is available on request subject to the
 stated restrictions.
 

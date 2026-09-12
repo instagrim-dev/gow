@@ -33,6 +33,7 @@ below. The progression is the record; the origin point alone is not.
 | Experiments (pilot-001 STOP through N5 vocabulary admission) | 2026-09-10 22:43 – 2026-09-11 11:22 | Commit-anchored | `a868dec`…`9af3376` |
 | Broader GoW formulation (theory series, thesis documents, manuscript) | 2026-09-11 10:26–12:47 | Commit-anchored | `259c593`…`bde6d88` |
 | External source-faithfulness review + reconciliation | 2026-09-11 ~12:46–14:29 | Review record + commits | `docs/reviews/2026-09-11-manuscript-source-faithfulness.md`; `23fcc64`, `39ba88d`, `1780933` |
+| Second adversarial review pass + reconciliation | 2026-09-11 17:38–17:57 | Commit-anchored | `635e6d8`, `50b23ec`, `2bd5336` |
 | Software release (`newf` substrate only) | 2026-09-11 16:44 — tag `v1.0.0` | Commit-anchored | `a70c5f1`; scope split per `CHANGELOG.md` § Versioning |
 | Public release (arXiv freeze) | **Pending** — blocked on external re-review | Gate | `paper/PUBLICATION-PLAN.md` stage 10 |
 
@@ -46,6 +47,7 @@ below. The progression is the record; the origin point alone is not.
 | External source-faithfulness review received | 2026-09-11 ~12:46 (+32h 57m) |
 | R1–R5 reconciliation committed (`23fcc64`) | 2026-09-11 13:35 (+33h 46m) |
 | Software tag `v1.0.0` (substrate only) | 2026-09-11 16:44 (+36h 55m) |
+| Second adversarial review pass committed (`635e6d8`) | 2026-09-11 17:38 (+37h 49m) |
 | Public release (arXiv manuscript) | pending |
 | Total commits at reviewed SHA | 132 |
 
@@ -99,6 +101,8 @@ below. The progression is the record; the origin point alone is not.
 | 13:41–14:29 | +33.9h | Source-fidelity residue sweep; v1.0.0 gap analysis; QC correction pass (endpoint reporting, claim strength) | `39ba88d`, `4e38ecb`, `1780933` |
 | 16:44 | +36.9h | **Software tag `v1.0.0`** — versions the `newf` substrate only; the arXiv manuscript is versioned separately and remains gated | `a70c5f1` |
 | 17:19–17:20 | +37.5h | CHANGELOG corrections (quorum count 23; canonical repo URL after rename to `instagrim-dev/gow`) | `7ec89dc`, `9895dc0` |
+| 17:38–17:39 | +37.8h | **Second adversarial review pass** (per issue #16's Purpose section, the project's adversarial review process, not an independent outside-peer review) found 3 of 4 open findings still unresolved after `1780933`: ATP/CEGAR related-work overclaim (fixed against `an2024trialmaster`), Experiment D/N2a claim-strength drift across 5 locations, and the AI-disclosure contract wording conflating Pilot-003's `recovery-rule/v1` with Pilot-004's separate discovery-wire contract; all corrected and the publication tracker re-synced | `635e6d8`, `50b23ec` |
+| 17:57 | +38.1h | Conditional-superiority theorem, finite-sample certificate, and superiority preregistration added as an explicitly labeled theoretical section (§9) with no empirical claim; empirical premise recorded as open hypothesis `H-SUP` | `2bd5336` |
 
 ## What this timeline is evidence for
 
