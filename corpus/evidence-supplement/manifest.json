@@ -1,346 +1,365 @@
 {
-  "schema": "newf-evidence-supplement/v1",
-  "status": "selected_and_hashed_not_yet_deposited",
-  "purpose": "Frozen source-record selection backing the empirical claims in paper/geometry-of-work.tex. This manifest freezes WHICH files and their byte content; it is not itself a public deposit.",
-  "basis_commit": "2bd5336ad22f3e83fe339eff66f0a0586b489351",
-  "selection_scope": "The three frozen experiment corpora the manuscript's empirical sections and Appendix claims ledger (app:claims) depend on: m7-blinded-run (negative controls), pilot-003 (curated-feature guided search), pilot-004-discovery (shape discovery + N2a/N5 challenge).",
-  "explicit_exclusions": [
-    "This is not the full newf repository or its source code.",
-    "Working/scratch material outside the three named corpora is excluded.",
-    "No API keys, tokens, or credentials were found in the selection during a first-pass grep sweep for common secret patterns and email addresses; this is not an exhaustive security review."
-  ],
-  "open_blockers": [
-    "Public deposit host not yet chosen (candidates: Zenodo, OSF, a read-only GitHub mirror) -- an author decision, not a mechanical step.",
-    "No redaction pass has been requested or performed; if one is, redacted copies must use a distinguishable filename/suffix and never edit an original file in place.",
-    "pre-capture.db is a binary SQLite file; its contents were not individually reviewed row-by-row for release sensitivity beyond the automated grep sweep above."
-  ],
-  "file_count": 65,
-  "total_bytes": 1933244,
-  "files": [
-    {
-      "path": "corpus/experiments/m7-blinded-run/RESULT.md",
-      "sha256": "22176748e06be9fdc3caf198e5a9f46fd79e463198895af29a7a952d0fbe1cad",
-      "bytes": 7971
-    },
-    {
-      "path": "corpus/experiments/m7-blinded-run/records/compare-b0-b3.json",
-      "sha256": "3efad8e21c3369dbe7a1310a4271feba356ed6e4bcf286bde826c25d9e085094",
-      "bytes": 3353
-    },
-    {
-      "path": "corpus/experiments/m7-blinded-run/records/experiment.json",
-      "sha256": "669ce84d53e4bbce8755b686caf37bdce9229a9d7479c8984f707270f25cb5d0",
-      "bytes": 7018
-    },
-    {
-      "path": "corpus/experiments/m7-blinded-run/records/ids.txt",
-      "sha256": "eba8c62c9eb9b9bc074f2c03f7f69dc7c8738c1fde8a5c69d5d37619de7f04bb",
-      "bytes": 224
-    },
-    {
-      "path": "corpus/experiments/m7-blinded-run/records/readiness.json",
-      "sha256": "5057e1619003dca23b91062e15d849a2dc70228e38511fd474613aca3e8c7f92",
-      "bytes": 2272
-    },
-    {
-      "path": "corpus/experiments/m7-blinded-run/run.sh",
-      "sha256": "79438821dbeb9a3a09a7a56f4d9598f1914b613af2abd619ce13dfa0230ef208",
-      "bytes": 5368
-    },
-    {
-      "path": "corpus/experiments/m7-blinded-run/target-attested/es-target-affine-lattice-linear-forms.attested.md",
-      "sha256": "fd0dd43d7f5210041776cc2dd07ade16ea18e8e1f77b48148de88611b02619c4",
-      "bytes": 7372
-    },
-    {
-      "path": "corpus/experiments/pilot-003/PROTOCOL-REVISION.md",
-      "sha256": "15a6f0e1657c0ea23f650304b41e4319ca75fa044ebeb9a2fed99ea55f316da7",
-      "bytes": 2631
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/CLOSURE.md",
-      "sha256": "67bca5c23a05a036147f1553e20f203de14041e371160b2836760d2e7abeae19",
-      "bytes": 4717
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/EXECUTION-RESULT.md",
-      "sha256": "39e3087e85ba29b2ead1b738197840e037d1cf2771ee47753243f1c5c93ee3a2",
-      "bytes": 4841
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/INDEPENDENT-REVIEW-RESULT.md",
-      "sha256": "083999aadebbb3d27368b686614d6d5f0a9fa22e09607ad3cab8918193389649",
-      "bytes": 6099
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/README.md",
-      "sha256": "81de2543a567de88176e165f6258379466fefb9fc73b0cabe66b7114db60a6a0",
-      "bytes": 3641
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/SECOND-ADJUDICATION-RESULT.md",
-      "sha256": "245d3529c57c1ae2234d2493401ed51f1014a1670ccc7f7581122d4306a62ef3",
-      "bytes": 3983
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/challenges.json",
-      "sha256": "61598135c61d6fcce9a3c49d22768a4f52606fb6fd736d2481a5681678cffac7",
-      "bytes": 4782
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/clusters.json",
-      "sha256": "d2eb704970245df586b9ef1bd808125f867a306a25a4d66a7ec8a4c1abe85a5c",
-      "bytes": 21294
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/compare-b0-b3.json",
-      "sha256": "a5c47fcad6b76626f2529e50f80f4d549f33a90b3f1426439e90d55bb4a55ce9",
-      "bytes": 4799
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/executable-commit.txt",
-      "sha256": "71082fdc9791e3a7b6ab5ac6975538459c2d50f999b715d7cb0d8edc8d82f62e",
-      "bytes": 41
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/executions.json",
-      "sha256": "85be8ab4908b0af8ad9d51e75c5758f5fd10ed2f2de6cdbbe0f588091625a8a0",
-      "bytes": 867
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/experiment.json",
-      "sha256": "a649ac805eca4907aca10ce7639ecdde8877497121e5d382396029134062919d",
-      "bytes": 5595
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/failure-space.json",
-      "sha256": "7d22787cab89256633d41b4ead708273891f9bdb94fe6e59629d354af3ef69a7",
-      "bytes": 1892
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/holdout.json",
-      "sha256": "2c1a375871d49cb7d7b0369f54d934e2ee2ac5a10252a204e3a7bf49ae2c416b",
-      "bytes": 443
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/independent-assessment.json",
-      "sha256": "188df607124bb286e39afe1123b54936b711f547afbe76f0b167fd81b627c831",
-      "bytes": 15210
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/ingest-target.json",
-      "sha256": "f46dd33d5b5c2e0b8f47fc3569120c30b17a609c7b203172a8dbbcdd6e1e2e45",
-      "bytes": 736
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/ingest-train.json",
-      "sha256": "694f7084b0357bc2b069378572e90439f8e91f06c10f4c921898a9d64774045f",
-      "bytes": 5608
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/init-target.json",
-      "sha256": "6f5e3aaa2a7b599b66eaa3eb4f9089b3207cbb01b2b7022a7946223e613aa774",
-      "bytes": 260
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/init-train.json",
-      "sha256": "dfaa4a6d15940a897ae27953e710b907cff08d8278b6b548a9ccd4a8810ef80a",
-      "bytes": 259
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/interpretations.json",
-      "sha256": "f9920e5cac303167876a1ab800f145d78c3bb17d21c20693b7270486ea668e4f",
-      "bytes": 5074
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/mechanisms-train.json",
-      "sha256": "0c28b6ce090660338c29db106875fb8fcacc9859755b0245c013a8b8650ee018",
-      "bytes": 4756
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/mining.json",
-      "sha256": "a1291c030e38f42acfb2b7fa173105f661b9674ed749706a0896e3b8d6696230",
-      "bytes": 14221
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/normalize-target.json",
-      "sha256": "4227ce75af7265de986fc8888354257903168b2dc346a2d0c03ef7b42542f95e",
-      "bytes": 703
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/normalize-train.json",
-      "sha256": "e3069f527049b3c71177f7d1baee6fa9ebcda09e9fd17729a8dee189a2b5314f",
-      "bytes": 5356
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/pre-capture.db",
-      "sha256": "a50638d48c1fdb91f4447a28f686c3e2e77c38a2f5e3b62baefe07555c10c8aa",
-      "bytes": 1228800
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/readiness.json",
-      "sha256": "a93612649c5bf1dbd11b0d1f8547a61aac225b160738c9d09a34099af25f1e1b",
-      "bytes": 2310
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/reassessment-v2/README.md",
-      "sha256": "ff0fa32ebad1e6b6a97c04057f864d91cf23c1b4865d31641005bfc4eb6d8a3c",
-      "bytes": 1556
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/reassessment-v2/executable-commit.txt",
-      "sha256": "9106c6f3730b57abd5c415d213239d839d23abe351b5d36b47878cd2671c694f",
-      "bytes": 41
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/reassessment-v2/experiment.json",
-      "sha256": "41fa5abbfe1ae8a559029de6039231309d45b910e9d0593900327fc2c3f0107a",
-      "bytes": 5557
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/recovery-facts.json",
-      "sha256": "5b9ac3e8f0a9fa3385e588422ced3469c6ded4d9545d0cbf1839e85ee65f6f4e",
-      "bytes": 1826
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/review-key.json",
-      "sha256": "ff717c509a8fd0e5ca98a58315d29afaa7c46a07644e2de10e14e32d79d5380b",
-      "bytes": 1386
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/runtime.json",
-      "sha256": "b309c0dfc33b47d4e9b8541b60596a7bf9c9b99a00ddb23f2d21fd15186fd048",
-      "bytes": 4264
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/second-adjudication.json",
-      "sha256": "e01ae153852504fa6f4c9eccda30f58281f73fe89802d620995aa5276358d417",
-      "bytes": 24164
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/signatures-target.json",
-      "sha256": "731ec7eb4fdcb916b80d85a3425c81a1e3c057e9f3334371cc6e4c87e61bbb3c",
-      "bytes": 428
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/signatures-train.json",
-      "sha256": "b1ec163281372d80ef25e3ba49935a1fd2fc4f268acffc990ab18ab1b6c155dc",
-      "bytes": 3090
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/survivors.json",
-      "sha256": "e08d42fe29607804f224ca49f962110e54a018d0206a65f070ab5ad1f2b82491",
-      "bytes": 1545
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/target-self-comparison.json",
-      "sha256": "030e058c42da0a3eed4c284a90d454e0f56101c22a999d711103793eda3c4d87",
-      "bytes": 1956
-    },
-    {
-      "path": "corpus/experiments/pilot-003/records/worktree-status.txt",
-      "sha256": "f802b7e1c6ad6a62c1d0fffe2cdf64c24fbf86feecb40507d68c25a5792b731c",
-      "bytes": 47
-    },
-    {
-      "path": "corpus/experiments/pilot-003/review-derivative/REVIEWER-INSTRUCTIONS.md",
-      "sha256": "4abe1060c719b81085035ace3c2e7e7c8a696733225dc5c2bcce6ea508068307",
-      "bytes": 1956
-    },
-    {
-      "path": "corpus/experiments/pilot-003/review-derivative/derivation-record.json",
-      "sha256": "edfcdbe26ec975930e7063b252250777145278936dd3ac0626a44a8a3af36c50",
-      "bytes": 7148
-    },
-    {
-      "path": "corpus/experiments/pilot-003/review-derivative/external-review-packet.json",
-      "sha256": "c0be4931bdb84a24952b93a1b457d8cfc484a3f663ee7b4e9617c6ebaa9c421e",
-      "bytes": 34033
-    },
-    {
-      "path": "corpus/experiments/pilot-003/review-packet.json",
-      "sha256": "090edb896211d623cb99e2b7316a18eae0fa34772a23731676e242163556674f",
-      "bytes": 35030
-    },
-    {
-      "path": "corpus/experiments/pilot-004-discovery/FREEZE.md",
-      "sha256": "c0b8a265ac2dcc31c41ab03aef27170b688d53e81b8c439300dcab720563d228",
-      "bytes": 2184
-    },
-    {
-      "path": "corpus/experiments/pilot-004-discovery/PROTOCOL-DRAFT.md",
-      "sha256": "b02a19ea19b295966cc99e674f81edaa20ce4932c819cb6c422363e941f6dd7e",
-      "bytes": 8020
-    },
-    {
-      "path": "corpus/experiments/pilot-004-discovery/WIRE.md",
-      "sha256": "abda7e032f095af8e86dea4de2940e8a0c6382bf80c5a9dde0f852f55203a397",
-      "bytes": 1634
-    },
-    {
-      "path": "corpus/experiments/pilot-004-discovery/adjudication-ledger.json",
-      "sha256": "8d1f0a7bcee9d635f856c90fcc662c6275a475c520e4be33c6f556edb1217851",
-      "bytes": 56350
-    },
-    {
-      "path": "corpus/experiments/pilot-004-discovery/decision-handoff-packet.json",
-      "sha256": "4b5cbc4bc3d8dc446d31b96bf130f4be5b4ed11e28a22b8fd34ed135cfbc8662",
-      "bytes": 3426
-    },
-    {
-      "path": "corpus/experiments/pilot-004-discovery/quorum-adjudication-packet.json",
-      "sha256": "de41d3926a4cd7775a87fbc4db5cdc854ef4db3de277aa1c2c95db8c210e8d02",
-      "bytes": 112922
-    },
-    {
-      "path": "corpus/experiments/pilot-004-discovery/quorum-lane-A-votes.json",
-      "sha256": "719b6ec870b561a1b83a7ac7e3f7cb65f78160ac1697da94e2bae5898535ce69",
-      "bytes": 15334
-    },
-    {
-      "path": "corpus/experiments/pilot-004-discovery/quorum-lane-B-votes.json",
-      "sha256": "9c5bb5cfb9f17e87aa9254f2d8258f8753e8e4f8b9bc9e03f9143a1dbf5fc38b",
-      "bytes": 14808
-    },
-    {
-      "path": "corpus/experiments/pilot-004-discovery/quorum-lane-C-votes.json",
-      "sha256": "b6311fad2812d3320f3a66fabd6f176f1bb61ac01c217adf7df7d43c43d63f86",
-      "bytes": 9710
-    },
-    {
-      "path": "corpus/experiments/pilot-004-discovery/quorum-lane-brief.json",
-      "sha256": "51e13b024a4fa93610177c664caefa9c50722532ba536f03b2ed432dd42293cc",
-      "bytes": 79318
-    },
-    {
-      "path": "corpus/experiments/pilot-004-discovery/quorum-result.json",
-      "sha256": "d86dda450812e1b849d70416751540fc83e8db7c301ab7eda4cb65fd5fa2b28c",
-      "bytes": 43216
-    },
-    {
-      "path": "corpus/experiments/pilot-004-discovery/records/CLOSURE-SCORECARD.md",
-      "sha256": "a457cf7f7bcc2f17f885c9d0e30435704d5900beaf9579547f6159a08c4cef98",
-      "bytes": 14663
-    },
-    {
-      "path": "corpus/experiments/pilot-004-discovery/records/INTERPRETATION-NOTES.md",
-      "sha256": "8036cd61ca49b4446462a03f6fe9e1da46334cc311d83305dc63ef2198682281",
-      "bytes": 1853
-    },
-    {
-      "path": "corpus/experiments/pilot-004-discovery/records/N2a-challenge.md",
-      "sha256": "10538d6103c553d722fa771e3621e51d229f8322cab5f834fa82ef973cca6cac",
-      "bytes": 20630
-    },
-    {
-      "path": "corpus/experiments/pilot-004-discovery/records/N5-challenge.md",
-      "sha256": "8a8f824ad08b7401d717683befa1279396f088f3bb284f48a15632af87e56fe3",
-      "bytes": 20180
-    },
-    {
-      "path": "corpus/experiments/pilot-004-discovery/records/RESULT.md",
-      "sha256": "faf6c5464f09feba18afe373df38219272642f82a77d3135e95806c37ebe1495",
-      "bytes": 22473
-    }
-  ]
+ "schema": "newf-evidence-supplement/v1",
+ "status": "selected_and_hashed_not_yet_deposited",
+ "purpose": "Frozen source-record selection backing the empirical claims in paper/geometry-of-work.tex. This manifest freezes WHICH files and their byte content; it is not itself a public deposit.",
+ "basis_commit": "7c7d289394cc1a8653e8f1ac6e69212d3806f84b",
+ "selection_scope": "The three frozen experiment corpora the manuscript's empirical sections and Appendix claims ledger (app:claims) depend on: m7-blinded-run (negative controls), pilot-003 (curated-feature guided search), pilot-004-discovery (shape discovery + N2a/N5 challenge).",
+ "explicit_exclusions": [
+  "This is not the full newf repository or its source code.",
+  "Working/scratch material outside the three named corpora is excluded.",
+  "No API keys, tokens, or credentials were found in the selection during a first-pass grep sweep for common secret patterns and email addresses; this is not an exhaustive security review."
+ ],
+ "open_blockers": [
+  "Public deposit host not yet chosen (candidates: Zenodo, OSF, a read-only GitHub mirror) -- an author decision, not a mechanical step.",
+  "No redaction pass has been requested or performed; if one is, redacted copies must use a distinguishable filename/suffix and never edit an original file in place.",
+  "pre-capture.db is a binary SQLite file; its contents were not individually reviewed row-by-row for release sensitivity beyond the automated grep sweep above."
+ ],
+ "file_count": 66,
+ "total_bytes": 1972049,
+ "files": [
+  {
+   "path": "corpus/experiments/m7-blinded-run/RESULT.md",
+   "sha256": "22176748e06be9fdc3caf198e5a9f46fd79e463198895af29a7a952d0fbe1cad",
+   "bytes": 7971
+  },
+  {
+   "path": "corpus/experiments/m7-blinded-run/records/compare-b0-b3.json",
+   "sha256": "3efad8e21c3369dbe7a1310a4271feba356ed6e4bcf286bde826c25d9e085094",
+   "bytes": 3353
+  },
+  {
+   "path": "corpus/experiments/m7-blinded-run/records/experiment.json",
+   "sha256": "669ce84d53e4bbce8755b686caf37bdce9229a9d7479c8984f707270f25cb5d0",
+   "bytes": 7018
+  },
+  {
+   "path": "corpus/experiments/m7-blinded-run/records/ids.txt",
+   "sha256": "eba8c62c9eb9b9bc074f2c03f7f69dc7c8738c1fde8a5c69d5d37619de7f04bb",
+   "bytes": 224
+  },
+  {
+   "path": "corpus/experiments/m7-blinded-run/records/readiness.json",
+   "sha256": "5057e1619003dca23b91062e15d849a2dc70228e38511fd474613aca3e8c7f92",
+   "bytes": 2272
+  },
+  {
+   "path": "corpus/experiments/m7-blinded-run/run.sh",
+   "sha256": "79438821dbeb9a3a09a7a56f4d9598f1914b613af2abd619ce13dfa0230ef208",
+   "bytes": 5368
+  },
+  {
+   "path": "corpus/experiments/m7-blinded-run/target-attested/es-target-affine-lattice-linear-forms.attested.md",
+   "sha256": "fd0dd43d7f5210041776cc2dd07ade16ea18e8e1f77b48148de88611b02619c4",
+   "bytes": 7372
+  },
+  {
+   "path": "corpus/experiments/pilot-003/PROTOCOL-REVISION.md",
+   "sha256": "15a6f0e1657c0ea23f650304b41e4319ca75fa044ebeb9a2fed99ea55f316da7",
+   "bytes": 2631
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/CLOSURE.md",
+   "sha256": "67bca5c23a05a036147f1553e20f203de14041e371160b2836760d2e7abeae19",
+   "bytes": 4717
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/EXECUTION-RESULT.md",
+   "sha256": "39e3087e85ba29b2ead1b738197840e037d1cf2771ee47753243f1c5c93ee3a2",
+   "bytes": 4841
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/INDEPENDENT-REVIEW-RESULT.md",
+   "sha256": "083999aadebbb3d27368b686614d6d5f0a9fa22e09607ad3cab8918193389649",
+   "bytes": 6099
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/README.md",
+   "sha256": "81de2543a567de88176e165f6258379466fefb9fc73b0cabe66b7114db60a6a0",
+   "bytes": 3641
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/SECOND-ADJUDICATION-RESULT.md",
+   "sha256": "245d3529c57c1ae2234d2493401ed51f1014a1670ccc7f7581122d4306a62ef3",
+   "bytes": 3983
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/challenges.json",
+   "sha256": "61598135c61d6fcce9a3c49d22768a4f52606fb6fd736d2481a5681678cffac7",
+   "bytes": 4782
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/clusters.json",
+   "sha256": "d2eb704970245df586b9ef1bd808125f867a306a25a4d66a7ec8a4c1abe85a5c",
+   "bytes": 21294
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/compare-b0-b3.json",
+   "sha256": "a5c47fcad6b76626f2529e50f80f4d549f33a90b3f1426439e90d55bb4a55ce9",
+   "bytes": 4799
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/executable-commit.txt",
+   "sha256": "71082fdc9791e3a7b6ab5ac6975538459c2d50f999b715d7cb0d8edc8d82f62e",
+   "bytes": 41
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/executions.json",
+   "sha256": "85be8ab4908b0af8ad9d51e75c5758f5fd10ed2f2de6cdbbe0f588091625a8a0",
+   "bytes": 867
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/experiment.json",
+   "sha256": "a649ac805eca4907aca10ce7639ecdde8877497121e5d382396029134062919d",
+   "bytes": 5595
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/failure-space.json",
+   "sha256": "7d22787cab89256633d41b4ead708273891f9bdb94fe6e59629d354af3ef69a7",
+   "bytes": 1892
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/holdout.json",
+   "sha256": "2c1a375871d49cb7d7b0369f54d934e2ee2ac5a10252a204e3a7bf49ae2c416b",
+   "bytes": 443
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/independent-assessment.json",
+   "sha256": "188df607124bb286e39afe1123b54936b711f547afbe76f0b167fd81b627c831",
+   "bytes": 15210
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/ingest-target.json",
+   "sha256": "f46dd33d5b5c2e0b8f47fc3569120c30b17a609c7b203172a8dbbcdd6e1e2e45",
+   "bytes": 736
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/ingest-train.json",
+   "sha256": "694f7084b0357bc2b069378572e90439f8e91f06c10f4c921898a9d64774045f",
+   "bytes": 5608
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/init-target.json",
+   "sha256": "6f5e3aaa2a7b599b66eaa3eb4f9089b3207cbb01b2b7022a7946223e613aa774",
+   "bytes": 260
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/init-train.json",
+   "sha256": "dfaa4a6d15940a897ae27953e710b907cff08d8278b6b548a9ccd4a8810ef80a",
+   "bytes": 259
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/interpretations.json",
+   "sha256": "f9920e5cac303167876a1ab800f145d78c3bb17d21c20693b7270486ea668e4f",
+   "bytes": 5074
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/mechanisms-train.json",
+   "sha256": "0c28b6ce090660338c29db106875fb8fcacc9859755b0245c013a8b8650ee018",
+   "bytes": 4756
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/mining.json",
+   "sha256": "a1291c030e38f42acfb2b7fa173105f661b9674ed749706a0896e3b8d6696230",
+   "bytes": 14221
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/normalize-target.json",
+   "sha256": "4227ce75af7265de986fc8888354257903168b2dc346a2d0c03ef7b42542f95e",
+   "bytes": 703
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/normalize-train.json",
+   "sha256": "e3069f527049b3c71177f7d1baee6fa9ebcda09e9fd17729a8dee189a2b5314f",
+   "bytes": 5356
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/pre-capture.db",
+   "sha256": "a50638d48c1fdb91f4447a28f686c3e2e77c38a2f5e3b62baefe07555c10c8aa",
+   "bytes": 1228800
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/readiness.json",
+   "sha256": "a93612649c5bf1dbd11b0d1f8547a61aac225b160738c9d09a34099af25f1e1b",
+   "bytes": 2310
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/reassessment-v2/README.md",
+   "sha256": "ff0fa32ebad1e6b6a97c04057f864d91cf23c1b4865d31641005bfc4eb6d8a3c",
+   "bytes": 1556
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/reassessment-v2/executable-commit.txt",
+   "sha256": "9106c6f3730b57abd5c415d213239d839d23abe351b5d36b47878cd2671c694f",
+   "bytes": 41
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/reassessment-v2/experiment.json",
+   "sha256": "41fa5abbfe1ae8a559029de6039231309d45b910e9d0593900327fc2c3f0107a",
+   "bytes": 5557
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/recovery-facts.json",
+   "sha256": "5b9ac3e8f0a9fa3385e588422ced3469c6ded4d9545d0cbf1839e85ee65f6f4e",
+   "bytes": 1826
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/review-key.json",
+   "sha256": "ff717c509a8fd0e5ca98a58315d29afaa7c46a07644e2de10e14e32d79d5380b",
+   "bytes": 1386
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/runtime.json",
+   "sha256": "b309c0dfc33b47d4e9b8541b60596a7bf9c9b99a00ddb23f2d21fd15186fd048",
+   "bytes": 4264
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/second-adjudication.json",
+   "sha256": "e01ae153852504fa6f4c9eccda30f58281f73fe89802d620995aa5276358d417",
+   "bytes": 24164
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/signatures-target.json",
+   "sha256": "731ec7eb4fdcb916b80d85a3425c81a1e3c057e9f3334371cc6e4c87e61bbb3c",
+   "bytes": 428
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/signatures-train.json",
+   "sha256": "b1ec163281372d80ef25e3ba49935a1fd2fc4f268acffc990ab18ab1b6c155dc",
+   "bytes": 3090
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/survivors.json",
+   "sha256": "e08d42fe29607804f224ca49f962110e54a018d0206a65f070ab5ad1f2b82491",
+   "bytes": 1545
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/target-self-comparison.json",
+   "sha256": "030e058c42da0a3eed4c284a90d454e0f56101c22a999d711103793eda3c4d87",
+   "bytes": 1956
+  },
+  {
+   "path": "corpus/experiments/pilot-003/records/worktree-status.txt",
+   "sha256": "f802b7e1c6ad6a62c1d0fffe2cdf64c24fbf86feecb40507d68c25a5792b731c",
+   "bytes": 47
+  },
+  {
+   "path": "corpus/experiments/pilot-003/review-derivative/REVIEWER-INSTRUCTIONS.md",
+   "sha256": "4abe1060c719b81085035ace3c2e7e7c8a696733225dc5c2bcce6ea508068307",
+   "bytes": 1956
+  },
+  {
+   "path": "corpus/experiments/pilot-003/review-derivative/derivation-record.json",
+   "sha256": "edfcdbe26ec975930e7063b252250777145278936dd3ac0626a44a8a3af36c50",
+   "bytes": 7148
+  },
+  {
+   "path": "corpus/experiments/pilot-003/review-derivative/external-review-packet.json",
+   "sha256": "c0be4931bdb84a24952b93a1b457d8cfc484a3f663ee7b4e9617c6ebaa9c421e",
+   "bytes": 34033
+  },
+  {
+   "path": "corpus/experiments/pilot-003/review-packet.json",
+   "sha256": "090edb896211d623cb99e2b7316a18eae0fa34772a23731676e242163556674f",
+   "bytes": 35030
+  },
+  {
+   "path": "corpus/experiments/pilot-004-discovery/FREEZE.md",
+   "sha256": "c0b8a265ac2dcc31c41ab03aef27170b688d53e81b8c439300dcab720563d228",
+   "bytes": 2184
+  },
+  {
+   "path": "corpus/experiments/pilot-004-discovery/PROTOCOL-DRAFT.md",
+   "sha256": "b02a19ea19b295966cc99e674f81edaa20ce4932c819cb6c422363e941f6dd7e",
+   "bytes": 8020
+  },
+  {
+   "path": "corpus/experiments/pilot-004-discovery/WIRE.md",
+   "sha256": "abda7e032f095af8e86dea4de2940e8a0c6382bf80c5a9dde0f852f55203a397",
+   "bytes": 1634
+  },
+  {
+   "path": "corpus/experiments/pilot-004-discovery/adjudication-ledger.json",
+   "sha256": "8d1f0a7bcee9d635f856c90fcc662c6275a475c520e4be33c6f556edb1217851",
+   "bytes": 56350
+  },
+  {
+   "path": "corpus/experiments/pilot-004-discovery/decision-handoff-packet.json",
+   "sha256": "4b5cbc4bc3d8dc446d31b96bf130f4be5b4ed11e28a22b8fd34ed135cfbc8662",
+   "bytes": 3426
+  },
+  {
+   "path": "corpus/experiments/pilot-004-discovery/quorum-adjudication-packet.json",
+   "sha256": "de41d3926a4cd7775a87fbc4db5cdc854ef4db3de277aa1c2c95db8c210e8d02",
+   "bytes": 112922
+  },
+  {
+   "path": "corpus/experiments/pilot-004-discovery/quorum-lane-A-votes.json",
+   "sha256": "719b6ec870b561a1b83a7ac7e3f7cb65f78160ac1697da94e2bae5898535ce69",
+   "bytes": 15334
+  },
+  {
+   "path": "corpus/experiments/pilot-004-discovery/quorum-lane-B-votes.json",
+   "sha256": "9c5bb5cfb9f17e87aa9254f2d8258f8753e8e4f8b9bc9e03f9143a1dbf5fc38b",
+   "bytes": 14808
+  },
+  {
+   "path": "corpus/experiments/pilot-004-discovery/quorum-lane-C-votes.json",
+   "sha256": "b6311fad2812d3320f3a66fabd6f176f1bb61ac01c217adf7df7d43c43d63f86",
+   "bytes": 9710
+  },
+  {
+   "path": "corpus/experiments/pilot-004-discovery/quorum-lane-brief.json",
+   "sha256": "51e13b024a4fa93610177c664caefa9c50722532ba536f03b2ed432dd42293cc",
+   "bytes": 79318
+  },
+  {
+   "path": "corpus/experiments/pilot-004-discovery/quorum-result.json",
+   "sha256": "d86dda450812e1b849d70416751540fc83e8db7c301ab7eda4cb65fd5fa2b28c",
+   "bytes": 43216
+  },
+  {
+   "path": "corpus/experiments/pilot-004-discovery/records/CLOSURE-SCORECARD.md",
+   "sha256": "e4396c8542b7adef792cad044aa9ebc681f030911867a03148b2e1c218c7cc7b",
+   "bytes": 44812
+  },
+  {
+   "path": "corpus/experiments/pilot-004-discovery/records/CURRENT-CLAIMS.md",
+   "sha256": "dd32b56d7207ab477ff5930e9759ed55e7352a23b811e5208294ed70417b2661",
+   "bytes": 7180
+  },
+  {
+   "path": "corpus/experiments/pilot-004-discovery/records/INTERPRETATION-NOTES.md",
+   "sha256": "8036cd61ca49b4446462a03f6fe9e1da46334cc311d83305dc63ef2198682281",
+   "bytes": 1853
+  },
+  {
+   "path": "corpus/experiments/pilot-004-discovery/records/N2a-challenge.md",
+   "sha256": "5995cbea686bf7e531215e42fb44c3b5d778d756bdd59bc6ad9f763dde3c4d9e",
+   "bytes": 21377
+  },
+  {
+   "path": "corpus/experiments/pilot-004-discovery/records/N5-challenge.md",
+   "sha256": "649e08df05ea09cd75ba6b8160fa90137704b4203aa1bc9bf421ed05b5738b44",
+   "bytes": 20909
+  },
+  {
+   "path": "corpus/experiments/pilot-004-discovery/records/RESULT.md",
+   "sha256": "faf6c5464f09feba18afe373df38219272642f82a77d3135e95806c37ebe1495",
+   "bytes": 22473
+  }
+ ],
+ "amendments": [
+  {
+   "date": "2026-09-12",
+   "reason": "Supersession views (faff2a6): N2a/N5 challenge records and the closure scorecard received additive, attributed current-claim banners/annotations per the 2026-09-12 review's propagation finding; rehashed. Added records/CURRENT-CLAIMS.md -- the authoritative current-claim view that governs the N2a/N5 rows; depositing the selection without it would publish the superseded strength the review objected to.",
+   "rehashed": [
+    "corpus/experiments/pilot-004-discovery/records/CLOSURE-SCORECARD.md",
+    "corpus/experiments/pilot-004-discovery/records/N2a-challenge.md",
+    "corpus/experiments/pilot-004-discovery/records/N5-challenge.md"
+   ],
+   "added": [
+    "corpus/experiments/pilot-004-discovery/records/CURRENT-CLAIMS.md"
+   ]
+  }
+ ]
 }
