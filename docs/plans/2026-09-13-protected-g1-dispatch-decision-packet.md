@@ -1,8 +1,10 @@
 # Protected G1 dispatch decision packet
 
-**Status: proposed, not authorized.** This packet is the minimum operator
-decision surface for a protected G1 dispatch. A blank, ambiguous, or unverified
-field blocks dispatch. Completing this document does not create authority.
+**Status: partially recorded, not dispatch-authorized.** This packet is the
+minimum operator decision surface for a protected G1 dispatch. A blank,
+ambiguous, or unverified field blocks dispatch. Completing this document does
+not create authority. The recorded-decision section below captures actual
+operator selections; the open rows are the remaining blockers.
 
 ## Fixed engineering contract
 
@@ -28,6 +30,54 @@ always `PREPARED_NOT_AUTHORIZED`.
 | Resource ceiling | Per-command assignment/instance/submission reservations; storage limits; wall-clock limit; provider-call and spend ceilings; cancellation handling | Existing development ceilings do not authorize this new vector. |
 | Dispatch authority | Operator approval reference, effective date, permitted commands, permitted outputs, and named outcome recipient | An `approval_ref` in metadata does not establish this decision. |
 | Acceptance criteria | The applicable row(s) from the missing `ACCEPTANCE_MATRIX.md`, including treatment of blocked, invalid, and incomplete cases | The observed 23-of-24 progression criterion is not a substitute for an approval. |
+
+## Recorded operator decisions (2026-09-13, operator session)
+
+Recorded from an explicit operator selection in the working session on
+2026-09-13. Scope of the approval: **record these rows**; it did not grant
+dispatch authority.
+
+### Release identity — RECORDED
+
+| Field | Recorded value |
+|---|---|
+| Committed revision | `0cd7284c6b418a3d3c17f9387e894492a5a2f690` (published `main`, clean tree, CI passed) |
+| Build command | `CGO_ENABLED=0 go build -trimpath -o newf ./cmd/newf` with Go 1.26.6 (`go 1.25.0` module floor) |
+| Executable SHA-256 | `5d052272922483cd03bcbb1186d05e59b5f2da9aa11d9fbc1927c701e9d72690` (byte-identical across two independent builds) |
+| Public interface SHA-256 | `e3a2ada6582d047b064b6dbd76f1c769bb9403a2b82478cdb976b1df920e2c59` (`CUSTODIAN_PUBLIC_INTERFACE.md`) |
+| Interface brief SHA-256 | `dc8fb24e1abf18039f4122d3264bbd8f44462efe632ae29ac77213c231425c4e` (`CUSTODIAN_INTERFACE_BRIEF.md`) |
+
+### Resource ceiling — RECORDED
+
+Zero-spend development-class vector, chosen explicitly as a new vector (no
+carry-over from D3a-class ceilings):
+
+- offline execution; **zero provider calls and zero provider spend**;
+- at most **4096 reserved assignments per check command** (the fixed
+  four-bit, 1–3-variable domain bound);
+- at most **48 cases** (the fixed `g1-pack/3` composition);
+- **15-minute wall clock** for the authoring/checking batch;
+- cooperative cancellation required; an interrupted check is retained as
+  blocked, never as false.
+
+### Custodian runtime — RECORDED
+
+A **fresh cloud agent on its own VM and branch**, receiving only the two-file
+packet (`CUSTODIAN_INTERFACE_BRIEF.md`, `CUSTODIAN_PUBLIC_INTERFACE.md`) plus
+the pinned executable identified above. The observed boundary (runtime
+identifier, access controls, storage locators, access log) must still be
+recorded **at launch time**; this row names the chosen mechanism, not yet an
+observed isolation fact.
+
+### Still open — blocks dispatch
+
+| Row | Why it remains open |
+|---|---|
+| Dispatch authority | The recorded approval scope was "record rows", explicitly not dispatch. Needs approval reference, effective date, permitted commands/outputs, and named outcome recipient. |
+| Content boundary | Protected task/answer storage locations and access-log location do not exist yet; they are created at launch and recorded then. |
+| Case plan provenance format | The 24/16/8 strata and route mix are fixed by `g1-pack/3`; the source/provenance and exposure-record format for custodian-authored cases still needs an operator-accepted format. |
+| Acceptance criteria | `ACCEPTANCE_MATRIX.md` was never supplied; its applicable rows (including blocked/invalid/incomplete case treatment) remain unprovided. |
+| Custodian isolation (observed) | Recorded mechanism above; the actual observed boundary is recordable only when the custodian context starts. |
 
 ## Required pre-dispatch artifacts
 

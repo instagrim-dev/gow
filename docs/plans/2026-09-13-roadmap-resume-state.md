@@ -392,11 +392,16 @@ artifacts; later roadmap stages are not marked complete by these engineering
 repairs.
 
 **Next action:** with the data-only pack input delivered, no further
-engineering is runnable on this path without an operator decision. The next
-concrete step is resolving the immutable release
-identity live and recording it in the release-identity row of the dispatch
-decision packet, then completing the remaining packet rows. This does not
-authorize G1 dispatch. To re-exercise delivered paths meanwhile:
+engineering is runnable on this path without an operator decision. The
+release identity (revision `0cd7284`, reproducible executable
+`5d052272…9d72690`), a zero-spend resource ceiling, and the cloud-agent
+custodian mechanism are now recorded in the
+[dispatch decision packet](2026-09-13-protected-g1-dispatch-decision-packet.md);
+that recording explicitly did not grant dispatch authority. The remaining
+blockers are the packet's open rows: dispatch authority, acceptance criteria
+(the never-supplied `ACCEPTANCE_MATRIX.md` rows), the case-provenance format,
+and the launch-time content boundary and observed isolation. To re-exercise
+delivered paths meanwhile:
 `go build -o /tmp/newf ./cmd/newf && /tmp/newf --db <fresh.sqlite> review check-finite --input docs/plans/artifacts/2026-09-13-finite-claim-path/holds-input.json --policy <id> --obligation <id> --case <label> --executor <name> --max-assignments 64`.
 Operator-authored development packs can also run without editing Go, under the
 [shaping pack input contract](../shaping-pack-contract.md):
