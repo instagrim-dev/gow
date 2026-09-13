@@ -55,11 +55,11 @@ Untouched. Downstream of D1–D4 + sealed execution; listed only so the chain of
 
 ## Trigger ledger
 
-| Decision | Trigger that closes it |
-|---|---|
-| D1 | Operator names the custodian option (and person, for (a)/(c)) |
-| D2 | Operator names the review lane; (a) requires a named external reviewer |
-| D3a | Operator approves or revises the ceilings above |
-| D3b | D1 + D2 + D4 + D6 + D14 exist; separate request then |
-| D4 | Follows D1; dev dry run proceeds implementer-authored + labeled |
-| D18 | Sealed screen results exist; operator decides under the roadmap's rule |
+| Decision | Trigger that closes it | Status (2026-09-12) |
+|---|---|---|
+| D1 | Operator names the custodian option (and person, for (a)/(c)) | **CLOSED: option (c)+(a)** — operator holds custody mechanics now; an unexposed human is recruited for task authorship before any sealed claim. Operator exposure history (this workstream's dev cases and registry internals) rides on anything the operator authors |
+| D2 | Operator names the review lane; (a) requires a named external reviewer | **CLOSED: (b) now + (a) before sealing** — a labeled model review lane runs immediately as a defect-finder (first pass dispatched against the E0 handoff and oracle contract; recorded with the same-model-family limitation); a named external human is required before sealing |
+| D3a | Operator approves or revises the ceilings above | **CLOSED: approved as proposed** — executed as `internal/dryrun` (committed test; see [`2026-09-12-016`](2026-09-12-016-d3a-development-dry-run-record.md)) |
+| D3b | D1 + D2 + D4 + D6 + D14 exist; separate request then | Open |
+| D4 | Follows D1; dev dry run proceeds implementer-authored + labeled | **CLOSED by D1**: the custodian (operator now, human for sealed work) reviews H1 before any sealing; dry-run arms are implementer-authored and labeled |
+| D18 | Sealed screen results exist; operator decides under the roadmap's rule | Open |
