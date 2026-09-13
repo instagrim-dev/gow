@@ -14,7 +14,7 @@ import (
 // exports can tell "the records changed" from "the generator changed". A
 // document that cannot name its generator cannot be audited against the
 // generator's known behavior at that time.
-const GeneratorVersion = "coverage-generator/3"
+const GeneratorVersion = "coverage-generator/4"
 
 // generatedAtPrefix marks the one line in the document that is permitted to be
 // nondeterministic. Callers comparing two generations for substantive equality
@@ -142,6 +142,10 @@ func RenderCoverage(p Projection, generatedAt time.Time) string {
 				a.ID, a.Outcome, a.SubjectRef, a.ContextRef, orNone(a.Assessor))
 			fmt.Fprintf(&b, "  - argument: %s\n", orNone(a.Argument))
 			fmt.Fprintf(&b, "  - manifest: `%s`\n", a.ManifestID)
+			if referenceScopeOf(a) == AssessmentReferenceScopeInvalid {
+				fmt.Fprintf(&b, "  - invalid assessment reference: %s (retained as history; excluded from current authority and contradiction selection)\n",
+					orNone(a.ReferenceScopeReason))
+			}
 			if a.ProjectRevision != "" {
 				fmt.Fprintf(&b, "  - project revision: `%s`\n", a.ProjectRevision)
 			}
@@ -222,6 +226,8 @@ func RenderCoverage(p Projection, generatedAt time.Time) string {
 	b.WriteString("- `not_applicable` requires an authorized applicability decision with a rationale.\n")
 	b.WriteString("  Missing implementation never lands here.\n")
 	b.WriteString("- A stale assessment keeps its historical outcome and loses current authority.\n")
+	b.WriteString("- An assessment with an invalid applicability or manifest reference remains visible as\n")
+	b.WriteString("  history, but cannot govern a current decision or create a contradiction.\n")
 	b.WriteString("- An assessment whose declared current dependencies were not supplied to the\n")
 	b.WriteString("  generator is `compatibility unknown`: the historical outcome stands as history\n")
 	b.WriteString("  and does not grant a current decision. Supply the missing current values and\n")

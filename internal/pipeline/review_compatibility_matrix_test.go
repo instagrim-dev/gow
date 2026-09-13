@@ -2,11 +2,14 @@ package pipeline
 
 import (
 	"context"
+	"database/sql"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/instagrim-dev/newf/internal/domain"
 	"github.com/instagrim-dev/newf/internal/review"
+	"github.com/instagrim-dev/newf/internal/store"
 )
 
 // TestReviewCoverageCompatibilityMatrix is the committed pipeline-level
@@ -371,6 +374,252 @@ func TestReviewCoverageSubjectScopeDoesNotCombineSubjects(t *testing.T) {
 	}
 	if !containsString(covC.Reasons, review.ReasonUnexamined) {
 		t.Fatalf("C reasons = %v, want %s", covC.Reasons, review.ReasonUnexamined)
+	}
+}
+
+// TestReviewCoverageRetainsInvalidLegacyAssessmentReferences is the migration
+// regression for v47. It reproduces immutable historical rows inserted before
+// the scope trigger existed, restores the trigger, and then proves the current
+// projection treats those rows as history rather than authority.
+func TestReviewCoverageRetainsInvalidLegacyAssessmentReferences(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 9, 13, 13, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+
+	policy, err := app.DefineReviewPolicy(ctx, ReviewPolicyDefineInput{
+		DBPath: dbPath, Key: "legacy-assessment-reference", Revision: 1,
+		DecisionName:       "whether this exact subject has usable review support",
+		Owner:              "repository-maintainer",
+		AuthoritySource:    reviewContractRef,
+		ScopeJustification: "v47 legacy assessment-reference migration regression",
+		Obligations: []ReviewObligationSpec{{
+			Key:                "legacy-reference-scope",
+			SemanticRevision:   1,
+			Requirement:        "current authority requires an assessment with exact cited scope",
+			AcceptanceCriteria: "a malformed historical assessment is retained but cannot govern or contradict an exact-scope-valid assessment",
+			ApplicabilityRule:  "applies to the exact review subject",
+			PrimaryOwner:       "repository-maintainer",
+			Mandatory:          true,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("define policy: %v", err)
+	}
+	obligationID := policy.ObligationIDs["legacy-reference-scope@1"]
+	const subject = "legacy-reference:subject"
+	targetApplicability, err := app.DecideReviewApplicability(ctx, ReviewApplicabilityInput{
+		DBPath: dbPath, PolicyID: policy.PolicyID, ObligationID: obligationID,
+		SubjectRef: subject, Decision: review.Applies,
+		Rationale: "the named subject is in scope", Authorizer: "repository-maintainer",
+	})
+	if err != nil {
+		t.Fatalf("target applicability: %v", err)
+	}
+	otherApplicability, err := app.DecideReviewApplicability(ctx, ReviewApplicabilityInput{
+		DBPath: dbPath, PolicyID: policy.PolicyID, ObligationID: obligationID,
+		SubjectRef: "legacy-reference:other", Decision: review.Applies,
+		Rationale: "a separate subject is independently in scope", Authorizer: "repository-maintainer",
+	})
+	if err != nil {
+		t.Fatalf("other-subject applicability: %v", err)
+	}
+
+	// Seed two manifest references. One belongs to the target obligation; the
+	// other belongs to an unbound helper obligation and is therefore an invalid
+	// cited manifest for the target assessment.
+	repo := openTestStore(t, ctx, dbPath)
+	helperObligation := store.ReviewObligationRow{
+		ID:                 domain.NewReviewObligationID(now.Add(time.Second)),
+		ObligationKey:      "legacy-reference-helper",
+		SemanticRevision:   1,
+		Requirement:        "helper manifest target",
+		AcceptanceCriteria: "used only to form a malformed legacy reference",
+		ApplicabilityRule:  "not a current policy obligation",
+		PrimaryOwner:       "repository-maintainer",
+		CreatedAt:          now.Format(time.RFC3339),
+	}
+	if _, err := repo.PersistReviewObligation(ctx, helperObligation); err != nil {
+		repo.Close()
+		t.Fatalf("helper obligation: %v", err)
+	}
+	targetManifest := store.ReviewDependencyManifestRow{
+		ID:              domain.NewReviewDependencyManifestID(now.Add(2 * time.Second)),
+		PolicyID:        policy.PolicyID,
+		ObligationID:    obligationID,
+		ProjectRevision: "legacy-reference-fixture",
+		CreatedAt:       now.Format(time.RFC3339),
+		Dependencies: []store.ReviewManifestDependencyRow{{
+			DependencyKind: depKindCandidateContent,
+			DependencyRef:  subject,
+			WhyRelevant:    "the target content identifies the assessment subject",
+		}},
+	}
+	if _, err := repo.PersistReviewDependencyManifest(ctx, targetManifest); err != nil {
+		repo.Close()
+		t.Fatalf("target manifest: %v", err)
+	}
+	helperManifest := store.ReviewDependencyManifestRow{
+		ID:              domain.NewReviewDependencyManifestID(now.Add(3 * time.Second)),
+		PolicyID:        policy.PolicyID,
+		ObligationID:    helperObligation.ID,
+		ProjectRevision: "legacy-reference-fixture",
+		CreatedAt:       now.Format(time.RFC3339),
+		Dependencies: []store.ReviewManifestDependencyRow{{
+			DependencyKind: depKindCandidateContent,
+			DependencyRef:  subject,
+			WhyRelevant:    "the target content identifies the malformed row's claimed subject",
+		}},
+	}
+	if _, err := repo.PersistReviewDependencyManifest(ctx, helperManifest); err != nil {
+		repo.Close()
+		t.Fatalf("helper manifest: %v", err)
+	}
+	if err := repo.Close(); err != nil {
+		t.Fatalf("close setup store: %v", err)
+	}
+
+	badApplicabilityID := domain.NewReviewAssessmentID(now.Add(-2 * time.Second))
+	badManifestID := domain.NewReviewAssessmentID(now.Add(-time.Second))
+	raw, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open raw migration-era store: %v", err)
+	}
+	raw.SetMaxOpenConns(1)
+	if _, err := raw.ExecContext(ctx, `DROP TRIGGER review_assessments_reference_scope`); err != nil {
+		raw.Close()
+		t.Fatalf("disable v47 trigger: %v", err)
+	}
+	insertLegacy := func(id, applicabilityID, manifestID, outcome string) {
+		t.Helper()
+		if _, err := raw.ExecContext(ctx, `
+INSERT INTO review_assessments(id, obligation_id, policy_id, applicability_decision_id, manifest_id, subject_ref, context_ref, outcome, argument, assessor, created_at)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, id, obligationID, policy.PolicyID, applicabilityID, manifestID, subject, "legacy-import", outcome,
+			"raw immutable legacy assessment inserted before v47", "legacy-importer", now.Add(-time.Hour).Format(time.RFC3339)); err != nil {
+			t.Fatalf("raw-insert legacy assessment %s: %v", id, err)
+		}
+	}
+	insertLegacy(badApplicabilityID, otherApplicability.ID, targetManifest.ID, review.Nonconforms)
+	insertLegacy(badManifestID, targetApplicability.ID, helperManifest.ID, review.Conforms)
+	if _, err := raw.ExecContext(ctx, `DELETE FROM schema_migrations WHERE version = 47`); err != nil {
+		raw.Close()
+		t.Fatalf("mark v47 unapplied for trigger restoration: %v", err)
+	}
+	if err := raw.Close(); err != nil {
+		t.Fatalf("close raw migration-era store: %v", err)
+	}
+
+	// Re-running the exact migration restores the write-time trigger without
+	// rewriting the malformed immutable history we need the reader to classify.
+	repo = openTestStore(t, ctx, dbPath)
+	if err := repo.Close(); err != nil {
+		t.Fatalf("close restored store: %v", err)
+	}
+	raw, err = sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open restored raw store: %v", err)
+	}
+	if _, err := raw.ExecContext(ctx, `
+INSERT INTO review_assessments(id, obligation_id, policy_id, applicability_decision_id, manifest_id, subject_ref, context_ref, outcome, argument, assessor, created_at)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, domain.NewReviewAssessmentID(now.Add(4*time.Second)), obligationID, policy.PolicyID,
+		otherApplicability.ID, targetManifest.ID, subject, "post-v47", review.Inconclusive,
+		"a post-v47 malformed row must be refused", "legacy-importer", now.Format(time.RFC3339)); err == nil || !strings.Contains(err.Error(), "applicability decision scope does not match assessment") {
+		raw.Close()
+		t.Fatalf("restored v47 trigger must reject new malformed rows, got %v", err)
+	}
+	if err := raw.Close(); err != nil {
+		t.Fatalf("close restored raw store: %v", err)
+	}
+
+	legacyOnly, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
+		DBPath: dbPath, PolicyID: policy.PolicyID, SubjectRef: subject,
+		CurrentDependencies: map[string]string{depKindCandidateContent: subject},
+	})
+	if err != nil {
+		t.Fatalf("generate legacy-only coverage: %v", err)
+	}
+	if legacyOnly.Decision != string(review.DecisionUndetermined) || len(legacyOnly.Obligations) != 1 || legacyOnly.Obligations[0].State != string(review.StateInconclusive) {
+		t.Fatalf("legacy-only coverage must remain inconclusive, got decision=%s obligations=%+v", legacyOnly.Decision, legacyOnly.Obligations)
+	}
+	if legacyOnly.Obligations[0].GoverningAssessmentID != "" || legacyOnly.Obligations[0].Contradiction {
+		t.Fatalf("invalid legacy rows must neither govern nor create a contradiction: %+v", legacyOnly.Obligations[0])
+	}
+	if !containsString(legacyOnly.Reasons, review.ReasonInvalidAssessmentReference) {
+		t.Fatalf("legacy-only reasons = %v, want %s", legacyOnly.Reasons, review.ReasonInvalidAssessmentReference)
+	}
+	for _, want := range []string{badApplicabilityID, badManifestID, "invalid assessment reference"} {
+		if !strings.Contains(legacyOnly.Document, want) {
+			t.Fatalf("legacy-only export must retain and label %q:\n%s", want, legacyOnly.Document)
+		}
+	}
+
+	check, err := app.RecordReviewCheck(ctx, ReviewCheckInput{
+		DBPath: dbPath, PolicyID: policy.PolicyID, ObligationID: obligationID,
+		CaseLabel: "exact-scope-valid", ProcedureRef: "legacy-reference-control",
+		ProcedureRevision: reviewRecipeRevision, InputsRef: "broader-subject-relevance-argument",
+		Executor: reviewAssessor, Environment: "go test ./internal/pipeline",
+		Mode: review.ModeExecuted, Outcome: review.CheckCompleted,
+	})
+	if err != nil {
+		t.Fatalf("record valid check: %v", err)
+	}
+	valid, err := app.RecordReviewAssessment(ctx, ReviewAssessInput{
+		DBPath: dbPath, PolicyID: policy.PolicyID, ObligationID: obligationID,
+		ApplicabilityDecisionID: targetApplicability.ID,
+		SubjectRef:              subject,
+		ContextRef:              "exact-scope-valid",
+		Outcome:                 review.Conforms,
+		Argument:                "the exact-scope-valid assessment has completed executed support",
+		Assessor:                reviewAssessor,
+		ProjectRevision:         "legacy-reference-fixture",
+		Dependencies: []ReviewDependencySpec{{
+			Kind:        depKindCandidateContent,
+			Ref:         subject,
+			WhyRelevant: "the target content identifies the assessment subject",
+		}},
+		CheckAttemptIDs: []string{check.ID},
+	})
+	if err != nil {
+		t.Fatalf("record valid assessment: %v", err)
+	}
+	withValid, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
+		DBPath: dbPath, PolicyID: policy.PolicyID, SubjectRef: subject,
+		CurrentDependencies: map[string]string{depKindCandidateContent: subject},
+	})
+	if err != nil {
+		t.Fatalf("generate coverage with exact-scope-valid assessment: %v", err)
+	}
+	if withValid.Decision != string(review.DecisionEligible) || len(withValid.Obligations) != 1 || withValid.Obligations[0].State != string(review.StateConforms) {
+		t.Fatalf("a valid assessment must remain usable despite malformed history: decision=%s obligations=%+v", withValid.Decision, withValid.Obligations)
+	}
+	if withValid.Obligations[0].GoverningAssessmentID != valid.Assessment.ID || withValid.Obligations[0].Contradiction {
+		t.Fatalf("only the exact-scope-valid row may govern or enter contradiction selection: %+v", withValid.Obligations[0])
+	}
+	for _, want := range []string{badApplicabilityID, badManifestID, valid.Assessment.ID, "invalid assessment reference"} {
+		if !strings.Contains(withValid.Document, want) {
+			t.Fatalf("coverage with valid support must still retain and label %q:\n%s", want, withValid.Document)
+		}
+	}
+
+	repo = openTestStore(t, ctx, dbPath)
+	defer repo.Close()
+	persisted, err := repo.LoadReviewCoverageForSubject(ctx, policy.PolicyID, subject)
+	if err != nil {
+		t.Fatalf("load persisted coverage: %v", err)
+	}
+	seen := map[string]store.ReviewAssessmentReferenceScope{}
+	for _, assessment := range persisted.Obligations[0].Assessments {
+		seen[assessment.ID] = assessment.ReferenceScope
+	}
+	for _, id := range []string{badApplicabilityID, badManifestID} {
+		if seen[id] != store.ReviewAssessmentReferenceScopeInvalid {
+			t.Fatalf("legacy assessment %s reference scope = %q, want invalid", id, seen[id])
+		}
+	}
+	if seen[valid.Assessment.ID] != store.ReviewAssessmentReferenceScopeExactValid {
+		t.Fatalf("valid assessment reference scope = %q, want exact_scope_valid", seen[valid.Assessment.ID])
 	}
 }
 

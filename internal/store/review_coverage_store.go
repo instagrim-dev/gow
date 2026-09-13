@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 )
@@ -202,13 +203,42 @@ ORDER BY created_at, id
 			return err
 		}
 		c.Assessments[i].CheckAttemptIDs = ids
-		manifest, err := s.getReviewDependencyManifest(ctx, c.Assessments[i].ManifestID)
+		applicability, applicationFound, err := s.getReviewApplicabilityDecision(ctx, c.Assessments[i].ApplicabilityDecisionID)
 		if err != nil {
 			return err
 		}
-		c.Manifests[manifest.ID] = manifest
+		manifest, manifestFound, err := s.getReviewDependencyManifest(ctx, c.Assessments[i].ManifestID)
+		if err != nil {
+			return err
+		}
+		var appPtr *ReviewApplicabilityDecisionRow
+		if applicationFound {
+			appPtr = &applicability
+		}
+		var manifestPtr *ReviewDependencyManifestRow
+		if manifestFound {
+			manifestPtr = &manifest
+			c.Manifests[manifest.ID] = manifest
+		}
+		c.Assessments[i].ReferenceScope, c.Assessments[i].ReferenceScopeReason = classifyReviewAssessmentReferenceScope(c.Assessments[i], appPtr, manifestPtr)
 	}
 	return nil
+}
+
+func (s *Store) getReviewApplicabilityDecision(ctx context.Context, id string) (ReviewApplicabilityDecisionRow, bool, error) {
+	var d ReviewApplicabilityDecisionRow
+	err := s.db.QueryRowContext(ctx, `
+SELECT id, obligation_id, policy_id, subject_ref, decision, rationale, authorizer, created_at
+FROM review_applicability_decisions
+WHERE id = ?
+`, id).Scan(&d.ID, &d.ObligationID, &d.PolicyID, &d.SubjectRef, &d.Decision, &d.Rationale, &d.Authorizer, &d.CreatedAt)
+	if err == nil {
+		return d, true, nil
+	}
+	if err == sql.ErrNoRows {
+		return ReviewApplicabilityDecisionRow{}, false, nil
+	}
+	return ReviewApplicabilityDecisionRow{}, false, err
 }
 
 func (s *Store) reviewAssessmentCheckIDs(ctx context.Context, assessmentID string) ([]string, error) {
@@ -230,28 +260,34 @@ SELECT check_attempt_id FROM review_assessment_checks WHERE assessment_id = ? OR
 	return out, rows.Err()
 }
 
-func (s *Store) getReviewDependencyManifest(ctx context.Context, id string) (ReviewDependencyManifestRow, error) {
+func (s *Store) getReviewDependencyManifest(ctx context.Context, id string) (ReviewDependencyManifestRow, bool, error) {
 	var m ReviewDependencyManifestRow
 	if err := s.db.QueryRowContext(ctx, `
 SELECT id, policy_id, obligation_id, project_revision, contract_hash, recipe_hash, evidence_cutoff, created_at
 FROM review_dependency_manifests WHERE id = ?
-`, id).Scan(&m.ID, &m.PolicyID, &m.ObligationID, &m.ProjectRevision, &m.ContractHash, &m.RecipeHash, &m.EvidenceCutoff, &m.CreatedAt); err != nil {
-		return ReviewDependencyManifestRow{}, fmt.Errorf("dependency manifest %s: %w", id, err)
+	`, id).Scan(&m.ID, &m.PolicyID, &m.ObligationID, &m.ProjectRevision, &m.ContractHash, &m.RecipeHash, &m.EvidenceCutoff, &m.CreatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return ReviewDependencyManifestRow{}, false, nil
+		}
+		return ReviewDependencyManifestRow{}, false, fmt.Errorf("dependency manifest %s: %w", id, err)
 	}
 	rows, err := s.db.QueryContext(ctx, `
 SELECT ordinal, dependency_kind, dependency_ref, why_relevant
 FROM review_manifest_dependencies WHERE manifest_id = ? ORDER BY ordinal
-`, id)
+	`, id)
 	if err != nil {
-		return ReviewDependencyManifestRow{}, err
+		return ReviewDependencyManifestRow{}, false, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var d ReviewManifestDependencyRow
 		if err := rows.Scan(&d.Ordinal, &d.DependencyKind, &d.DependencyRef, &d.WhyRelevant); err != nil {
-			return ReviewDependencyManifestRow{}, err
+			return ReviewDependencyManifestRow{}, false, err
 		}
 		m.Dependencies = append(m.Dependencies, d)
 	}
-	return m, rows.Err()
+	if err := rows.Err(); err != nil {
+		return ReviewDependencyManifestRow{}, false, err
+	}
+	return m, true, nil
 }

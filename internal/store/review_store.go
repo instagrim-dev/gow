@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/instagrim-dev/newf/internal/domain"
 )
@@ -142,7 +143,25 @@ type ReviewAssessmentRow struct {
 	Assessor                string
 	CreatedAt               string
 	CheckAttemptIDs         []string
+	// ReferenceScope is derived when historical assessments are read. It is
+	// never persisted: immutable legacy rows may predate v47's insert trigger,
+	// so their cited applicability and manifest must be classified on every
+	// read before they can influence a current decision.
+	ReferenceScope       ReviewAssessmentReferenceScope
+	ReferenceScopeReason string
 }
+
+// ReviewAssessmentReferenceScope reports whether an assessment's cited
+// applicability decision and dependency manifest bind the exact
+// policy/obligation/subject the assessment claims. v47 prevents invalid new
+// rows; this read-side result keeps pre-v47 rows inspectable without granting
+// them authority.
+type ReviewAssessmentReferenceScope string
+
+const (
+	ReviewAssessmentReferenceScopeExactValid ReviewAssessmentReferenceScope = "exact_scope_valid"
+	ReviewAssessmentReferenceScopeInvalid    ReviewAssessmentReferenceScope = "invalid"
+)
 
 // PersistReviewPolicy writes a decision policy and its pinned obligation
 // revisions in one transaction. A policy without its obligation bindings would
@@ -279,38 +298,34 @@ func (s *Store) PersistReviewAssessment(ctx context.Context, a ReviewAssessmentR
 		return ReviewAssessmentRow{}, err
 	}
 	defer tx.Rollback()
-	var appPolicy, appObligation, appSubject string
+	var app ReviewApplicabilityDecisionRow
 	err = tx.QueryRowContext(ctx, `
-SELECT policy_id, obligation_id, subject_ref
+SELECT id, obligation_id, policy_id, subject_ref, decision, rationale, authorizer, created_at
 FROM review_applicability_decisions
 WHERE id = ?
-`, a.ApplicabilityDecisionID).Scan(&appPolicy, &appObligation, &appSubject)
+`, a.ApplicabilityDecisionID).Scan(&app.ID, &app.ObligationID, &app.PolicyID, &app.SubjectRef,
+		&app.Decision, &app.Rationale, &app.Authorizer, &app.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ReviewAssessmentRow{}, fmt.Errorf("assessment %s: applicability decision %s not found", a.ID, a.ApplicabilityDecisionID)
 	}
 	if err != nil {
 		return ReviewAssessmentRow{}, err
 	}
-	if appPolicy != a.PolicyID || appObligation != a.ObligationID || appSubject != a.SubjectRef {
-		return ReviewAssessmentRow{}, fmt.Errorf("assessment %s: applicability decision %s binds policy %s obligation %s subject %s, not assessment policy %s obligation %s subject %s",
-			a.ID, a.ApplicabilityDecisionID, appPolicy, appObligation, appSubject, a.PolicyID, a.ObligationID, a.SubjectRef)
-	}
-
-	var manifestPolicy, manifestObligation string
+	var manifest ReviewDependencyManifestRow
 	err = tx.QueryRowContext(ctx, `
-SELECT policy_id, obligation_id
+SELECT id, policy_id, obligation_id, project_revision, contract_hash, recipe_hash, evidence_cutoff, created_at
 FROM review_dependency_manifests
 WHERE id = ?
-`, a.ManifestID).Scan(&manifestPolicy, &manifestObligation)
+`, a.ManifestID).Scan(&manifest.ID, &manifest.PolicyID, &manifest.ObligationID, &manifest.ProjectRevision,
+		&manifest.ContractHash, &manifest.RecipeHash, &manifest.EvidenceCutoff, &manifest.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ReviewAssessmentRow{}, fmt.Errorf("assessment %s: dependency manifest %s not found", a.ID, a.ManifestID)
 	}
 	if err != nil {
 		return ReviewAssessmentRow{}, err
 	}
-	if manifestPolicy != a.PolicyID || manifestObligation != a.ObligationID {
-		return ReviewAssessmentRow{}, fmt.Errorf("assessment %s: dependency manifest %s binds policy %s obligation %s, not assessment policy %s obligation %s",
-			a.ID, a.ManifestID, manifestPolicy, manifestObligation, a.PolicyID, a.ObligationID)
+	if scope, reason := classifyReviewAssessmentReferenceScope(a, &app, &manifest); scope != ReviewAssessmentReferenceScopeExactValid {
+		return ReviewAssessmentRow{}, fmt.Errorf("assessment %s: %s", a.ID, reason)
 	}
 
 	if _, err := tx.ExecContext(ctx, `
@@ -330,6 +345,30 @@ INSERT INTO review_assessment_checks(assessment_id, check_attempt_id) VALUES(?, 
 		return ReviewAssessmentRow{}, err
 	}
 	return a, nil
+}
+
+// classifyReviewAssessmentReferenceScope is the one scope rule used at both
+// the write boundary and while replaying immutable history. Deliberately absent:
+// no check InputsRef == subject rule. A broader subject may rely on an explicit
+// relevance argument in its assessment and manifest.
+func classifyReviewAssessmentReferenceScope(a ReviewAssessmentRow, app *ReviewApplicabilityDecisionRow, manifest *ReviewDependencyManifestRow) (ReviewAssessmentReferenceScope, string) {
+	var defects []string
+	if app == nil {
+		defects = append(defects, fmt.Sprintf("applicability decision %s is missing", a.ApplicabilityDecisionID))
+	} else if app.PolicyID != a.PolicyID || app.ObligationID != a.ObligationID || app.SubjectRef != a.SubjectRef {
+		defects = append(defects, fmt.Sprintf("applicability decision %s binds policy %s obligation %s subject %s, not assessment policy %s obligation %s subject %s",
+			app.ID, app.PolicyID, app.ObligationID, app.SubjectRef, a.PolicyID, a.ObligationID, a.SubjectRef))
+	}
+	if manifest == nil {
+		defects = append(defects, fmt.Sprintf("dependency manifest %s is missing", a.ManifestID))
+	} else if manifest.PolicyID != a.PolicyID || manifest.ObligationID != a.ObligationID {
+		defects = append(defects, fmt.Sprintf("dependency manifest %s binds policy %s obligation %s, not assessment policy %s obligation %s",
+			manifest.ID, manifest.PolicyID, manifest.ObligationID, a.PolicyID, a.ObligationID))
+	}
+	if len(defects) == 0 {
+		return ReviewAssessmentReferenceScopeExactValid, ""
+	}
+	return ReviewAssessmentReferenceScopeInvalid, strings.Join(defects, "; ")
 }
 
 // LatestReviewPolicy resolves the highest revision of a policy key.

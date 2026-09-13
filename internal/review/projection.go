@@ -50,6 +50,12 @@ type AssessmentRecord struct {
 	ManifestID      string
 	CheckAttemptIDs []string
 	CreatedAt       string
+	// ReferenceScope is assigned by the persisted-record adapter. Its empty
+	// value remains exact-scope-valid for pure unit inputs that predate this
+	// read-side classification; persisted coverage always carries an explicit
+	// classification.
+	ReferenceScope       AssessmentReferenceScope
+	ReferenceScopeReason string
 	// Compatibility is the caller-supplied three-state judgment about whether
 	// this assessment's declared dependencies match the current request's
 	// context.
@@ -274,10 +280,29 @@ func projectObligation(o ObligationRecords) ObligationProjection {
 		return p
 	}
 
-	// Contradiction detection runs over ALL assessments before any selection,
-	// so a disagreement can never be hidden by picking one.
-	outcomes := map[string]bool{}
+	validAssessments := make([]AssessmentRecord, 0, len(o.Assessments))
 	for _, a := range o.Assessments {
+		if referenceScopeOf(a) == AssessmentReferenceScopeInvalid {
+			p.Notes = append(p.Notes, "invalid assessment reference: "+a.ID+": "+a.ReferenceScopeReason)
+			continue
+		}
+		validAssessments = append(validAssessments, a)
+	}
+	if len(validAssessments) == 0 {
+		// The subject was examined, but every historical assessment cited the
+		// wrong applicability decision or manifest. Keep the rows visible; do
+		// not let malformed history become either an unexamined gap or current
+		// authority.
+		p.State = StateInconclusive
+		p.Reasons = append(p.Reasons, ReasonInvalidAssessmentReference)
+		return p
+	}
+
+	// Contradiction detection runs only over exact-scope-valid assessments
+	// before selection. A malformed historical row is retained for export but
+	// cannot create a current contradiction or hide a valid governing record.
+	outcomes := map[string]bool{}
+	for _, a := range validAssessments {
 		outcomes[a.Outcome] = true
 	}
 	p.Contradiction = len(outcomes) > 1
@@ -293,7 +318,7 @@ func projectObligation(o ObligationRecords) ObligationProjection {
 	// stale nonconformance — an assessment whose current relevance is not
 	// established cannot supply a current-decision outcome in either
 	// direction.
-	for _, a := range o.Assessments {
+	for _, a := range validAssessments {
 		if a.Outcome == Nonconforms && compatibilityOf(a) == CompatibilityCompatible {
 			p.State = StateNonconforms
 			p.GoverningAssessmentID = a.ID
@@ -309,10 +334,10 @@ func projectObligation(o ObligationRecords) ObligationProjection {
 	var governing *AssessmentRecord
 	hadStale := false
 	hadUnknown := false
-	for i := len(o.Assessments) - 1; i >= 0; i-- {
-		switch compatibilityOf(o.Assessments[i]) {
+	for i := len(validAssessments) - 1; i >= 0; i-- {
+		switch compatibilityOf(validAssessments[i]) {
 		case CompatibilityCompatible:
-			governing = &o.Assessments[i]
+			governing = &validAssessments[i]
 		case CompatibilityStale:
 			hadStale = true
 		case CompatibilityUnknown:
@@ -336,7 +361,7 @@ func projectObligation(o ObligationRecords) ObligationProjection {
 			// the obligation was assessed and passed.
 			p.Reasons = append(p.Reasons, ReasonInconclusive)
 		}
-		for _, a := range o.Assessments {
+		for _, a := range validAssessments {
 			if a.CompatibilityReason != "" {
 				p.Notes = append(p.Notes, string(compatibilityOf(a))+": "+a.ID+": "+a.CompatibilityReason)
 			}
@@ -378,6 +403,13 @@ func projectObligation(o ObligationRecords) ObligationProjection {
 		p.Reasons = append(p.Reasons, ReasonInconclusive)
 	}
 	return p
+}
+
+func referenceScopeOf(a AssessmentRecord) AssessmentReferenceScope {
+	if a.ReferenceScope == "" {
+		return AssessmentReferenceScopeExactValid
+	}
+	return a.ReferenceScope
 }
 
 // compatibilityOf reads the caller-supplied compatibility state, defaulting to

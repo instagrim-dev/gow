@@ -78,10 +78,12 @@ func FromStore(cov store.ReviewCoverage, compat CompatibilityFn) PolicyRecords {
 				ID: a.ID, SubjectRef: a.SubjectRef, ContextRef: a.ContextRef,
 				Outcome: a.Outcome, Argument: a.Argument, Assessor: a.Assessor,
 				ManifestID: a.ManifestID, CheckAttemptIDs: a.CheckAttemptIDs, CreatedAt: a.CreatedAt,
-				ProjectRevision: manifest.ProjectRevision,
-				ContractHash:    manifest.ContractHash,
-				RecipeHash:      manifest.RecipeHash,
-				EvidenceCutoff:  manifest.EvidenceCutoff,
+				ProjectRevision:      manifest.ProjectRevision,
+				ContractHash:         manifest.ContractHash,
+				RecipeHash:           manifest.RecipeHash,
+				EvidenceCutoff:       manifest.EvidenceCutoff,
+				ReferenceScope:       AssessmentReferenceScope(a.ReferenceScope),
+				ReferenceScopeReason: a.ReferenceScopeReason,
 			}
 			// H3 (2026-09-12 GOW-R3): dependency-manifest contents carried
 			// through so the export can name the exact dependencies the

@@ -47,12 +47,27 @@ const (
 	ReasonInconclusive                = "inconclusive"
 	ReasonExecutionBlocked            = "execution_blocked"
 	ReasonStaleDependency             = "stale_dependency"
+	// ReasonInvalidAssessmentReference means historical assessments exist, but
+	// none cites applicability and a manifest for its exact scope. Their rows
+	// remain exported as immutable history while current authority is withheld.
+	ReasonInvalidAssessmentReference = "invalid_assessment_reference"
 	// ReasonCompatibilityUnknown: a declared current dependency was not
 	// supplied when the coverage was requested. The historical assessment is
 	// retained; current permission is undetermined because compatibility with
 	// the current context has not been established. Preserving historical
 	// validity does not grant current permission to advance.
 	ReasonCompatibilityUnknown = "compatibility_unknown"
+)
+
+// AssessmentReferenceScope is the replay-time classification of an
+// assessment's cited applicability decision and dependency manifest. Fresh
+// writes are blocked structurally by v47; historical rows can still be invalid
+// and must not be selected as authority or contradiction evidence.
+type AssessmentReferenceScope string
+
+const (
+	AssessmentReferenceScopeExactValid AssessmentReferenceScope = "exact_scope_valid"
+	AssessmentReferenceScopeInvalid    AssessmentReferenceScope = "invalid"
 )
 
 // Applicability outcomes.

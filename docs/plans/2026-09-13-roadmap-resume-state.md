@@ -1,9 +1,10 @@
 # Shaping and typed-claim delivery status
 
-Review base: `ecb1c668f79784ed372a40ffce56774996ea60c4`. The delivery head
+Historical review base: `ecb1c668f79784ed372a40ffce56774996ea60c4`. The
+historical published checkpoint
 `59f4a20a26abf92e6eec148e8c39bbbc45ae5e67` was published to remote `main`
 on 2026-09-13 as a fast-forward of five commits and confirmed against the
-fetched remote ref:
+then-fetched remote ref:
 
 - `46d4afadc6ffca56a041f679935dcf7c7d84ef50` — executable shaping and typed G1 paths.
 - `0a007f7c933c2ff868efb3ab6895ef02dbf0fb8f` — clean-room dispatch preparation.
@@ -11,9 +12,11 @@ fetched remote ref:
 - `79457162cab6f4a421a6315df1169e5b7d4bbd88` — subject-scoped review assessment and coverage repair.
 - `59f4a20a26abf92e6eec148e8c39bbbc45ae5e67` — retained subject-scoped review evidence.
 
-Publication makes these commits an immutable committed revision candidate for
-the dispatch packet's release-identity decision; it does not itself record
-that decision. Reverify the current local `HEAD` before any release action.
+This publication record is historical evidence only. It is neither the current
+head nor a dispatch identity. At dispatch, the operator must resolve and record
+the immutable committed revision, executable SHA-256, build command and
+public-interface SHA-256 live in the release-identity row; this document cannot
+substitute `59f4a20` for that record.
 The delivered scope is the six shaping review boundaries, a runnable
 development resource diagnostic, typed finite-equivalence, finite-instance and
 observation claim paths through scoped assessment, and subject-isolated review
@@ -31,7 +34,7 @@ grant publication, protected-batch, or next-tranche authority.
 | R4: diagnostic units | `Outcome.Controls` distinguishes episode-aggregate wins/losses from paired episode/repetition wins/losses. The frozen net condition is unchanged. | `internal/screen/paired_test.go`: within-episode reversal, order independence, net reconciliation and r=1 agreement |
 | R5: shared resources | The new four-arm development diagnostic shares each arm's rule/candidate allowance between probes and search, reserves endpoint checking, bounds history input and records setup separately. | `internal/sealedrun/resources_test.go`: a probe consumes capacity otherwise available to search; incomplete probes retain costs and block totals |
 | R6: retained failures | Legacy and new runners retain declared cells, incurred costs, decisions, checked endpoints and reasons when scoring or execution is blocked. | `receipt_test.go`, `resources_test.go`, `cmd/newf/shaping_test.go`: partial execution, blocked score, cancellation, cold inspection and non-overwriting publication |
-| R7: subject-isolated review records | Assessments must cite an applicability decision with the same policy, obligation and exact subject; coverage can project one subject at a time, while whole-policy export remains historical. | `internal/store/review_store_test.go`, `internal/pipeline/review_compatibility_matrix_test.go`, `cmd/newf/review_cli_test.go`: mismatched references rejected by store and trigger; A/B/C subject projections stay independent |
+| R7: subject-isolated review records | Assessments must cite an applicability decision with the same policy, obligation and exact subject; v47 rejects new malformed references. Coverage can project one subject at a time, while whole-policy export remains historical and revalidates retained reference scope. | `internal/store/review_store_test.go`, `internal/pipeline/review_compatibility_matrix_test.go`, `cmd/newf/review_cli_test.go`: mismatched references rejected by store and trigger; malformed immutable rows remain historical and cannot govern current coverage; A/B/C subject projections stay independent |
 
 The old eager 21-versus-1 undercount was already repaired at the base commit.
 Streaming may now construct zero or one candidate before a state stop.
@@ -269,10 +272,15 @@ The subject-isolation repair closes the later review packet against the
 normative review layer. `RecordReviewAssessment`/`PersistReviewAssessment` now
 reject an assessment whose cited applicability decision names a different
 policy, obligation or subject, and migration v47 installs the same guard as a
-SQLite trigger for raw inserts. Coverage generation accepts an exact
-`--subject` selector for current decisions, so unrelated applicability and
-assessment records for other subjects cannot contradict or satisfy the named
-subject.
+SQLite trigger for raw inserts. v47 blocks new malformed assessment references;
+it does not mutate immutable historical rows. Coverage readers revalidate
+historical cited applicability and manifest scope: a malformed row remains
+visible as history with `invalid_assessment_reference`, but cannot govern a
+current decision. A subject whose sole potential governing assessment has an
+invalid reference is `inconclusive` for that named reason. Coverage generation
+accepts an exact `--subject` selector for current decisions. Unrelated
+applicability and assessment records for other subjects cannot contradict or
+satisfy the named subject.
 
 The integrated C1-C8 test now passes the exact subject through coverage
 projection, asserts exact population-set equality after evidence admission, and
@@ -338,7 +346,7 @@ export run `NEWF_REVIEW_COVERAGE_OUT=/Users/jmh/dev/gh/newf/docs/reviews/evidenc
 | Workstream | Engineering status | Evidence status | Authority / next dependency |
 |---|---|---|---|
 | G0 | Repository gates pass for this repair | Instrument regressions and smoke only | Ordinary local engineering |
-| G1 | Finite equivalence, finite-instance evidence, observed-rate comparison, solved-set retention and probability refusal reach explicit subject-scoped assessment through typed CLI inputs and saved receipts; semantic discovery remains intentionally absent | Engineering positive/refusal/failure paths verified, including subject-isolation regressions and retained C1-C8 coverage export; no new protected usefulness gate | Define and approve the intended G1 pack, custody boundary and progression criteria before evaluating it |
+| G1 | Finite equivalence, finite-instance evidence, observed-rate comparison, solved-set retention and probability refusal reach explicit subject-scoped assessment through typed CLI inputs and saved receipts; semantic discovery remains intentionally absent | Engineering positive/refusal/failure paths verified, including subject-isolation regressions and retained C1-C8 coverage export; no new protected usefulness gate | Define the intended G1 pack and custody boundary; separately approve acceptance and dispatch criteria before evaluating it |
 | T0 | Scoped admission, independent endpoint checking and refusal boundaries tested | Finite-domain evidence only | Actual e-graph withdrawal remains G2 work |
 | P0 | Versioned decisions, task/catalog/budget identities survive process exit in receipts | No fresh controller freeze attested | Freeze the evaluated implementation and all arm identities before authoring protected tasks |
 | E0 | D19 permits agent-native custody; a two-file clean-room brief and data-only interface are prepared | No new isolated pack or answer manifest produced here | Operator-supplied pinned executable, actual isolation/provenance records, protected storage and approved execution ceiling |
@@ -362,22 +370,24 @@ reference files. The current clean-room preparation is
 data-only and excludes development examples, review records, tests and protected
 content. It does not establish isolation or authorize a dispatch. The concrete
 operator inputs still needed for that boundary are listed in
-[`2026-09-13-protected-g1-dispatch-decision-packet.md`](2026-09-13-protected-g1-dispatch-decision-packet.md);
-the published head `59f4a20` is now an eligible immutable revision, but it is not a protected-dispatch release identity until the operator chooses and records it as one.
+[`2026-09-13-protected-g1-dispatch-decision-packet.md`](2026-09-13-protected-g1-dispatch-decision-packet.md).
+The `59f4a20` record above is a historical published checkpoint only. Before a
+dispatch, the operator must resolve and record the then-current immutable
+release identity live; no prior checkpoint in this document supplies it.
 
 The local engineering path for the seed tools and subject-scoped review
-projection is complete at the published delivery head. The next research
-dispatch requires an approved G1 pack, custody boundary and progression criteria;
+projection is recorded as delivered. The next research dispatch requires an
+approved G1 pack, custody boundary, acceptance criteria and dispatch authority;
 existing paths can be rerun with retained input JSON using the operator contract.
 The next research dispatch requires a concrete approved design and fresh custody
 artifacts; later roadmap stages are not marked complete by these engineering
 repairs.
 
 **Next action:** no further engineering is runnable on this path without an
-operator decision. The next concrete step is the operator completing the
-release-identity row of the dispatch decision packet against published
-`59f4a20` (or a successor), then the remaining packet rows. To re-exercise
-delivered paths meanwhile:
+operator decision. The next concrete step is resolving the immutable release
+identity live and recording it in the release-identity row of the dispatch
+decision packet, then completing the remaining packet rows. This does not
+authorize G1 dispatch. To re-exercise delivered paths meanwhile:
 `go build -o /tmp/newf ./cmd/newf && /tmp/newf --db <fresh.sqlite> review check-finite --input docs/plans/artifacts/2026-09-13-finite-claim-path/holds-input.json --policy <id> --obligation <id> --case <label> --executor <name> --max-assignments 64`.
 
 ### G1 pack metadata preparation
@@ -385,7 +395,8 @@ delivered paths meanwhile:
 The local CLI now accepts and seals a strict, content-free `g1-pack/3` metadata
 record: `newf g1 pack validate --input <metadata.json>` and `newf g1 pack seal
 --input <metadata.json> --out <new-seal.json>`. It fixes the public G1 case
-composition, exact observed-case progression criteria, separate task/answer
+composition, the metadata-enforced observed-case progression threshold,
+separate task/answer
 manifest identities, all five exercised tool routes (including probabilistic
 out-of-scope routing), current procedure/checker versions, and resource
 ceilings. It also binds the full selected registry entry for each route, so
@@ -394,6 +405,10 @@ unchanged checker version. It refuses ambiguous JSON, altered thresholds, and
 stale tool bindings.
 Outcome strata and claim-kind coverage are separate fields: the required
 24/16/8 acceptance mix does not silently dictate the custodian's claim-kind mix.
+The observed-case progression threshold is an enforced metadata constraint. It
+is separate from the operator's approval of the acceptance criteria and dispatch
+criteria, including treatment of blocked, invalid and incomplete cases. Metadata
+validation cannot establish either approval.
 
 This is not protected evaluation execution. The record intentionally contains no
 task, answer, raw-output, or transcript content; a successful validation or seal

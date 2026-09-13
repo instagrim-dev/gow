@@ -1,8 +1,8 @@
 # Normative review records
 
 This document describes the **normative review ledger** (`internal/review`,
-`internal/store/review_store.go`, migration `v44`) and how coverage is generated
-from it.
+`internal/store/review_store.go`, migration `v44` with the `v47` reference-scope
+guard) and how coverage is generated from it.
 
 It exists because of a specific failure: a review run could reach cases C1–C8 of
 `docs/reviews/prompts/recipes/assessment-admission-decision.md`, find no place to
@@ -64,7 +64,24 @@ A's assessment merely because both share a policy and obligation. Omitting
 
 An assessment's cited applicability decision must match the assessment's policy,
 obligation and subject. The store checks this before insert and the schema
-trigger enforces it for direct SQL writes.
+trigger enforces it for direct SQL writes. Migration `v47` blocks new malformed
+assessment references, including a cited applicability decision or dependency
+manifest whose scope does not match the assessment.
+
+### Historical reference validity
+
+The ledger is immutable, so `v47` does not rewrite a malformed row that was
+already retained before the guard existed. Coverage readers re-validate cited
+applicability and manifest scope whenever they project the records. The malformed
+row remains visible in a historical export with its recorded outcome and an
+`invalid_assessment_reference` label; it cannot govern a current decision.
+
+A subject whose sole potential governing assessment has an invalid reference is
+`inconclusive` for the named reason `invalid_assessment_reference`. A separate
+assessment may govern only when its own cited references are scope-clean and it
+satisfies the ordinary current-authority checks. The historical record is
+retained as evidence of what was recorded, never repaired into authority by the
+coverage reader.
 
 ### Derived decisions
 
