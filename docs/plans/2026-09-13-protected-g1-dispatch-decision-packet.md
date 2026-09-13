@@ -69,6 +69,15 @@ identifier, access controls, storage locators, access log) must still be
 recorded **at launch time**; this row names the chosen mechanism, not yet an
 observed isolation fact.
 
+### Acceptance criteria — RECORDED
+
+The [G1 acceptance matrix](2026-09-13-proposed-g1-acceptance-matrix.md) was
+approved as drafted by explicit operator selection on 2026-09-13: case states,
+stratum rows identical to the `g1-pack/3` progression gate, four batch
+verdicts with `invalid` > `inconclusive-incomplete` > `pass`/
+`evaluated-negative` precedence, a single infrastructure-only retry rule,
+validity preconditions, and the `agent-sealed/v1` grade ceiling.
+
 ### Still open — blocks dispatch
 
 | Row | Why it remains open |
@@ -76,7 +85,6 @@ observed isolation fact.
 | Dispatch authority | The recorded approval scope was "record rows", explicitly not dispatch. Needs approval reference, effective date, permitted commands/outputs, and named outcome recipient. |
 | Content boundary | Protected task/answer storage locations and access-log location do not exist yet; they are created at launch and recorded then. |
 | Case plan provenance format | The 24/16/8 strata and route mix are fixed by `g1-pack/3`; the source/provenance and exposure-record format for custodian-authored cases still needs an operator-accepted format. |
-| Acceptance criteria | `ACCEPTANCE_MATRIX.md` was never supplied. A complete proposal now exists: [proposed G1 acceptance matrix](2026-09-13-proposed-g1-acceptance-matrix.md) (case states, stratum rows, batch verdicts, blocked/invalid/incomplete treatment, validity preconditions). It remains **proposed**; operator approval of that document fills this row. |
 | Custodian isolation (observed) | Recorded mechanism above; the actual observed boundary is recordable only when the custodian context starts. |
 
 ## Required pre-dispatch artifacts

@@ -1,19 +1,21 @@
 ---
-artifact_kind: proposed-acceptance-matrix
-status: proposed_awaiting_operator_approval
+artifact_kind: acceptance-matrix
+status: operator_approved_2026-09-13
 prepared_date_utc: '2026-09-13'
 scope: protected G1 dispatch under the recorded decision-packet rows
-authorizes: nothing; approval of this matrix fills one packet row only
+authorizes: nothing beyond the acceptance-criteria row; dispatch authority remains separate
 ---
 
-# Proposed acceptance matrix: protected G1 dispatch
+# Acceptance matrix: protected G1 dispatch
 
-This drafts the acceptance rows the decision packet names as missing. It is
-**proposed, not approved**. Operator approval of this document supplies the
-packet's acceptance-criteria row; it does not supply dispatch authority or any
-other open row. Thresholds below are the roadmap's designed-pack progression
-rules, identical to the metadata-enforced `progression` gate in `g1-pack/3`;
-they are a bounded engineering gate, not population error-rate estimates.
+These are the acceptance rows the decision packet named as missing, drafted
+2026-09-13 and **approved as drafted by the operator in the same working
+session** (explicit selection; retry rule included). Approval of this document
+fills the packet's acceptance-criteria row only; it does not supply dispatch
+authority or any other open row. Thresholds below are the roadmap's
+designed-pack progression rules, identical to the metadata-enforced
+`progression` gate in `g1-pack/3`; they are a bounded engineering gate, not
+population error-rate estimates.
 
 ## Case-level outcomes
 
