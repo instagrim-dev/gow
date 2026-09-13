@@ -279,6 +279,40 @@ func (s *Store) PersistReviewAssessment(ctx context.Context, a ReviewAssessmentR
 		return ReviewAssessmentRow{}, err
 	}
 	defer tx.Rollback()
+	var appPolicy, appObligation, appSubject string
+	err = tx.QueryRowContext(ctx, `
+SELECT policy_id, obligation_id, subject_ref
+FROM review_applicability_decisions
+WHERE id = ?
+`, a.ApplicabilityDecisionID).Scan(&appPolicy, &appObligation, &appSubject)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ReviewAssessmentRow{}, fmt.Errorf("assessment %s: applicability decision %s not found", a.ID, a.ApplicabilityDecisionID)
+	}
+	if err != nil {
+		return ReviewAssessmentRow{}, err
+	}
+	if appPolicy != a.PolicyID || appObligation != a.ObligationID || appSubject != a.SubjectRef {
+		return ReviewAssessmentRow{}, fmt.Errorf("assessment %s: applicability decision %s binds policy %s obligation %s subject %s, not assessment policy %s obligation %s subject %s",
+			a.ID, a.ApplicabilityDecisionID, appPolicy, appObligation, appSubject, a.PolicyID, a.ObligationID, a.SubjectRef)
+	}
+
+	var manifestPolicy, manifestObligation string
+	err = tx.QueryRowContext(ctx, `
+SELECT policy_id, obligation_id
+FROM review_dependency_manifests
+WHERE id = ?
+`, a.ManifestID).Scan(&manifestPolicy, &manifestObligation)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ReviewAssessmentRow{}, fmt.Errorf("assessment %s: dependency manifest %s not found", a.ID, a.ManifestID)
+	}
+	if err != nil {
+		return ReviewAssessmentRow{}, err
+	}
+	if manifestPolicy != a.PolicyID || manifestObligation != a.ObligationID {
+		return ReviewAssessmentRow{}, fmt.Errorf("assessment %s: dependency manifest %s binds policy %s obligation %s, not assessment policy %s obligation %s",
+			a.ID, a.ManifestID, manifestPolicy, manifestObligation, a.PolicyID, a.ObligationID)
+	}
+
 	if _, err := tx.ExecContext(ctx, `
 INSERT INTO review_assessments(id, obligation_id, policy_id, applicability_decision_id, manifest_id, subject_ref, context_ref, outcome, argument, assessor, created_at)
 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

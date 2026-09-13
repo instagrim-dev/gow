@@ -123,6 +123,26 @@ func TestCLIOnlyReviewLedgerReachesEligibility(t *testing.T) {
 
 	// 4) ASSESSMENT + dependency manifest. The manifest is what makes staleness
 	// decidable at all, so each dependency carries its own why-relevant reason.
+	mismatchOut := &bytes.Buffer{}
+	mismatchErr := &bytes.Buffer{}
+	if code := execute(context.Background(), []string{
+		"--db", dbPath, "--json", "review", "assess",
+		"--policy", policyID, "--obligation", obligationID,
+		"--applicability", applicabilityID,
+		"--subject", "surface:cmd/newf/review.go#other",
+		"--context", "mismatched applicability control",
+		"--outcome", "conforms",
+		"--argument", "this deliberately tries to cite applicability for another subject",
+		"--assessor", "repository-gate:cli-test",
+		"--project-revision", "cli-acceptance-fixture-1",
+		"--depends", "project_revision=cli-acceptance-fixture-1=the obligation is about this surface's behavior",
+		"--check", checkID,
+	}, mismatchOut, mismatchErr); code == 0 ||
+		!strings.Contains(mismatchOut.String()+mismatchErr.String(), "not assessment policy") {
+		t.Fatalf("mismatched assessment applicability must be refused, code=%d stdout=%s stderr=%s",
+			code, mismatchOut.String(), mismatchErr.String())
+	}
+
 	assessment := runCLIJSON(t, []string{
 		"--db", dbPath, "--json", "review", "assess",
 		"--policy", policyID, "--obligation", obligationID,
@@ -147,11 +167,15 @@ func TestCLIOnlyReviewLedgerReachesEligibility(t *testing.T) {
 	// current value supplied.
 	final := runCLIJSON(t, []string{
 		"--db", dbPath, "--json", "review", "coverage", "--policy", policyID,
+		"--subject", "surface:cmd/newf/review.go",
 		"--current", "project_revision=cli-acceptance-fixture-1",
 	})
 	if final["decision"] != "ELIGIBLE_TO_ADVANCE" {
 		t.Fatalf("CLI-only sequence decision = %v (reasons %v), want ELIGIBLE_TO_ADVANCE",
 			final["decision"], final["reasons"])
+	}
+	if final["subject_ref"] != "surface:cmd/newf/review.go" {
+		t.Fatalf("coverage must report its scoped subject, got %+v", final)
 	}
 	document := final["document"].(string)
 	// Provenance (F4-2): the export must identify its own generator and inputs.
@@ -231,6 +255,7 @@ func TestCLIProjectRevisionIsAConsultableDependency(t *testing.T) {
 	// Same revision: compatible, so the assessment carries current authority.
 	same := runCLIJSON(t, []string{
 		"--db", dbPath, "--json", "review", "coverage", "--policy", policyID,
+		"--subject", "code:internal/store",
 		"--current", "project_revision=R1",
 	})
 	if same["decision"] != "ELIGIBLE_TO_ADVANCE" {
@@ -242,6 +267,7 @@ func TestCLIProjectRevisionIsAConsultableDependency(t *testing.T) {
 	// the fix, because nothing consulted the project revision at all.
 	moved := runCLIJSON(t, []string{
 		"--db", dbPath, "--json", "review", "coverage", "--policy", policyID,
+		"--subject", "code:internal/store",
 		"--current", "project_revision=R2",
 	})
 	if moved["decision"] != "UNDETERMINED" {
@@ -255,6 +281,7 @@ func TestCLIProjectRevisionIsAConsultableDependency(t *testing.T) {
 	// has to survive the fix, or "relevant change" degenerates into "HEAD moved".
 	unrelated := runCLIJSON(t, []string{
 		"--db", dbPath, "--json", "review", "coverage", "--policy", policyID,
+		"--subject", "code:internal/store",
 		"--current", "project_revision=R1",
 		"--current", "some_other_document=moved-to-rev99",
 	})

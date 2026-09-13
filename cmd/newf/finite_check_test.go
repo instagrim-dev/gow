@@ -112,12 +112,12 @@ func TestCLIFiniteCheckRealLedgerAndScopedAssessment(t *testing.T) {
 				}
 			}
 			runCLIJSON(t, w.assessArgs(r.SubjectRef, result.Check.ID, applicability, tc.assessment))
-			coverage := runCLIJSON(t, []string{"--db", w.db, "--json", "review", "coverage", "--policy", w.policy, "--current", "candidate_content=" + r.SubjectRef})
+			coverage := runCLIJSON(t, []string{"--db", w.db, "--json", "review", "coverage", "--policy", w.policy, "--subject", r.SubjectRef, "--current", "candidate_content=" + r.SubjectRef})
 			if coverage["decision"] != tc.decision {
 				t.Fatalf("decision %v, want %s; %v", coverage["decision"], tc.decision, coverage["reasons"])
 			}
 			if tc.assessment == "conforms" {
-				stale := runCLIJSON(t, []string{"--db", w.db, "--json", "review", "coverage", "--policy", w.policy, "--current", "candidate_content=changed"})
+				stale := runCLIJSON(t, []string{"--db", w.db, "--json", "review", "coverage", "--policy", w.policy, "--subject", r.SubjectRef, "--current", "candidate_content=changed"})
 				if stale["decision"] != "UNDETERMINED" {
 					t.Fatal("changed input retained eligibility")
 				}

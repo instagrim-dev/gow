@@ -43,14 +43,28 @@ Two supporting records carry the weight that makes the above checkable:
 
 ## Coverage is generated, never stored
 
-There is no coverage-status column and no `review set-status` command. The only
-reader is `Store.LoadReviewCoverage`, and the only writer of a document is
-`review.RenderCoverage`. To change what coverage says you must record the
-applicability decision, check attempt, or assessment that justifies it.
+There is no coverage-status column and no `review set-status` command. The
+readers are `Store.LoadReviewCoverage` for a whole-policy historical export and
+`Store.LoadReviewCoverageForSubject` for one exact subject; the only writer of a
+document is `review.RenderCoverage`. To change what coverage says you must
+record the applicability decision, check attempt, or assessment that justifies
+it.
 
-`RenderCoverage` emits no generation timestamp. Repeated generation from
-identical records is byte-identical, so a regenerated file differs only when the
-records or the declared current dependency values differ.
+`RenderCoverage` emits a generated-at line as non-semantic metadata. Repeated
+generation from identical records preserves every substantive byte, so a
+regenerated file differs meaningfully only when the records or the declared
+current dependency values differ.
+
+A current decision about a subject must use the subject-scoped path
+(`newf review coverage --subject <exact-ref>`). That projection includes only
+applicability decisions and assessments for the named subject, so a legitimate
+`does_not_apply` decision for B cannot make A unresolved, and B cannot inherit
+A's assessment merely because both share a policy and obligation. Omitting
+`--subject` is a historical whole-policy export, not a per-subject decision.
+
+An assessment's cited applicability decision must match the assessment's policy,
+obligation and subject. The store checks this before insert and the schema
+trigger enforces it for direct SQL writes.
 
 ### Derived decisions
 
@@ -129,7 +143,7 @@ newf review check --policy rpol_... --obligation robl_... --case C1 \
   --environment <where> --mode executed --outcome completed --output <ref>
 
 newf review coverage --policy-key assessment-admission-decision \
-  --current assessment_population=clr_... --out COVERAGE.md
+  --subject <exact-ref> --current assessment_population=clr_... --out COVERAGE.md
 ```
 
 ## Execute a typed finite claim
@@ -205,7 +219,8 @@ The original JSON can be submitted again for a new check attempt.
 The returned `subject_ref` is `finite-claim:sha256:<exact-input-hash>`. Use it in
 `review applicability` and `review assess`, cite the returned check ID and
 declare `--depends 'candidate_content=<subject_ref>=exact input defines the target'`.
-Supply `--current candidate_content=<subject_ref>` when generating coverage.
+Supply `--subject <subject_ref>` and
+`--current candidate_content=<subject_ref>` when generating current coverage.
 Changing the exact input invalidates current authority under that dependency.
 A direct `finite-claim:` assessment cannot cite this command's receipt for
 different input bytes. Broader subjects still require an explicit relevance
@@ -277,7 +292,8 @@ unmeasured; provider calls are zero.
 The receipt's subject is `finite-instance-claim:sha256:<exact-input-hash>`.
 Use that exact value for applicability, assessment and a
 `candidate_content` dependency. A direct typed assessment cannot cite a check
-for different bytes. `INSTANCE_EVIDENCE_ONLY` may support an explicitly scoped
+for different bytes. Pass the same value to `review coverage --subject` when
+deriving current coverage. `INSTANCE_EVIDENCE_ONLY` may support an explicitly scoped
 obligation about these exact points, but it must not be described as evidence of
 domain equality. Assessment, policy mutation and rule admission remain separate
 operator actions. `finite.VerifyRuleWarrant` rejects this verdict by design.
@@ -381,7 +397,9 @@ Use the returned `observation-claim:sha256:<exact-input-hash>` subject reference
 for applicability, assessment and the `candidate_content` dependency. Direct
 typed-claim assessments reject receipts for different input bytes. Saved
 refusals return exit zero with `persisted: true`; a failed insert returns the
-unpersisted result with a nonzero exit. Inspect the certificate and check outcome.
+unpersisted result with a nonzero exit. Pass the same value to
+`review coverage --subject` for current coverage. Inspect the certificate and
+check outcome.
 
 Cancellation is checked before and after the bounded synchronous assessor,
 not within every trace traversal. A canceled attempt retains an unresolved

@@ -9,7 +9,38 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 46
+const currentSchemaVersion = 47
+
+// reviewAssessmentReferenceScopeSQL closes the review-ledger subject-binding
+// gap for existing stores. Fresh stores also get this trigger from v44's
+// reviewLedgerSQL definition below.
+const reviewAssessmentReferenceScopeSQL = `
+CREATE TRIGGER IF NOT EXISTS review_assessments_reference_scope
+BEFORE INSERT ON review_assessments
+BEGIN
+  SELECT CASE
+    WHEN NOT EXISTS (
+      SELECT 1
+      FROM review_applicability_decisions d
+      WHERE d.id = NEW.applicability_decision_id
+        AND d.policy_id = NEW.policy_id
+        AND d.obligation_id = NEW.obligation_id
+        AND d.subject_ref = NEW.subject_ref
+    )
+    THEN RAISE(ABORT, 'review assessment applicability decision scope does not match assessment')
+  END;
+  SELECT CASE
+    WHEN NOT EXISTS (
+      SELECT 1
+      FROM review_dependency_manifests m
+      WHERE m.id = NEW.manifest_id
+        AND m.policy_id = NEW.policy_id
+        AND m.obligation_id = NEW.obligation_id
+    )
+    THEN RAISE(ABORT, 'review assessment dependency manifest scope does not match assessment')
+  END;
+END;
+`
 
 // witnessAttemptBindingSQL is the additive DDL for migration v46: one
 // checkable attempt→output binding per witness-backed evaluation (see the v46
@@ -1267,6 +1298,17 @@ END;
 		// the recorded attribution gap for operator-supplied tuples, never
 		// faked.
 		sql: witnessAttemptBindingSQL,
+	},
+	{
+		version: 47,
+		// v47 (2026-09-13 review remediation): assessment scope is enforced at
+		// the consuming write boundary. Foreign keys prove cited rows exist, but
+		// not that the applicability decision and manifest belong to the same
+		// policy/obligation/subject the assessment claims. The trigger refuses a
+		// cross-subject applicability citation and a cross-policy/obligation
+		// manifest citation; the Go store performs the same check to return a
+		// clear error before SQLite aborts the insert.
+		sql: reviewAssessmentReferenceScopeSQL,
 	},
 }
 
@@ -4430,6 +4472,8 @@ BEFORE DELETE ON review_assessments
 BEGIN
   SELECT RAISE(ABORT, 'review assessments are immutable; reassessment is a new assessment');
 END;
+
+` + reviewAssessmentReferenceScopeSQL + `
 
 -- A blocked check attempt cannot be the basis of a CONFORMS assessment: an
 -- execution blocker leaves examination unresolved, which is inconclusive at

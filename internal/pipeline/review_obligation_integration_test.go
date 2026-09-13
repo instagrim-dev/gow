@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -72,7 +73,8 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	app.modelVerifierFn = provider.NewFixtureModelVerifier(verify.VerdictFailure, "high")
 
 	problemID, invID, _ := mineOneCandidate(t, ctx, app, dbPath)
-	ledger := instantiateReviewObligation(t, ctx, app, dbPath, "invariant:"+invID)
+	subjectRef := "invariant:" + invID
+	ledger := instantiateReviewObligation(t, ctx, app, dbPath, subjectRef)
 	// ---- C1: baseline. Assess the candidate under P1 and the discovery
 	// population D0, then derive the decision from records only.
 	first, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID})
@@ -105,7 +107,7 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	a0, err := app.RecordReviewAssessment(ctx, ReviewAssessInput{
 		DBPath: dbPath, PolicyID: ledger.policyID, ObligationID: ledger.obligationID,
 		ApplicabilityDecisionID: ledger.applicability,
-		SubjectRef:              "invariant:" + invID,
+		SubjectRef:              subjectRef,
 		ContextRef:              "cluster_run:" + d0 + "; generation:" + genBase.Generation.ID,
 		Outcome:                 review.Conforms,
 		Argument: "the campaign that produced the current state assessed cluster run " + d0 +
@@ -135,7 +137,7 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	// Coverage is DERIVED. Under the baseline population the mandatory
 	// obligation has current, check-supported conformance.
 	cov1, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
-		DBPath: dbPath, PolicyID: ledger.policyID,
+		DBPath: dbPath, PolicyID: ledger.policyID, SubjectRef: subjectRef,
 		CurrentDependencies: gateCurrentContext(d0, invID, gateProjectRevision),
 	})
 	if err != nil {
@@ -192,7 +194,7 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	// The withheld observation changed nothing about C1's evidence basis: same
 	// records, same derived decision.
 	cov2, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
-		DBPath: dbPath, PolicyID: ledger.policyID,
+		DBPath: dbPath, PolicyID: ledger.policyID, SubjectRef: subjectRef,
 		CurrentDependencies: gateCurrentContext(d0, invID, gateProjectRevision),
 	})
 	if err != nil {
@@ -277,10 +279,13 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	if a1 == d0 {
 		t.Fatal("C3: the admitted observation must produce a NEW population A1")
 	}
-	if a1Run.ClusterRun.SignatureCount != popBefore.ClusterRun.SignatureCount+1 {
-		t.Fatalf("C3: exactly the admitted content may enter A1: %d -> %d",
-			popBefore.ClusterRun.SignatureCount, a1Run.ClusterRun.SignatureCount)
+	beforeMembers := clusterSignatureSet(popBefore.ClusterRun)
+	if beforeMembers[adm.SignatureID] {
+		t.Fatalf("C3: admitted signature %s was already in the population before admission", adm.SignatureID)
 	}
+	wantMembers := copyStringSet(beforeMembers)
+	wantMembers[adm.SignatureID] = true
+	assertStringSetEqual(t, clusterSignatureSet(a1Run.ClusterRun), wantMembers)
 	c3 := ledger.recordCase(t, ctx, app, dbPath, "C3",
 		"app.WitnessCheck(--procedure equal-denominator) + app.AdmitEvidence (rule) + app.BuildClustering",
 		"proposal="+c3Proposal+"; procedure=equal-denominator; params=n=7", review.CheckCompleted,
@@ -293,7 +298,7 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	// dependency, so it is stale for a CURRENT request — and eligibility is not
 	// inherited from A0.
 	cov4, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
-		DBPath: dbPath, PolicyID: ledger.policyID,
+		DBPath: dbPath, PolicyID: ledger.policyID, SubjectRef: subjectRef,
 		CurrentDependencies: gateCurrentContext(a1, invID, gateProjectRevision),
 	})
 	if err != nil {
@@ -314,7 +319,7 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	// graph changes. A still-compatible assessment must not become stale merely
 	// because something moved in the repository.
 	cov5, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
-		DBPath: dbPath, PolicyID: ledger.policyID,
+		DBPath: dbPath, PolicyID: ledger.policyID, SubjectRef: subjectRef,
 		CurrentDependencies: withUnrelatedChange(gateCurrentContext(d0, invID, gateProjectRevision),
 			// Declared by nobody in this manifest: an unrelated document moved.
 			"unrelated_document", "docs/projection.md@rev99"),
@@ -356,7 +361,7 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	a1Assessment, err := app.RecordReviewAssessment(ctx, ReviewAssessInput{
 		DBPath: dbPath, PolicyID: ledger.policyID, ObligationID: ledger.obligationID,
 		ApplicabilityDecisionID: ledger.applicability,
-		SubjectRef:              "invariant:" + invID,
+		SubjectRef:              subjectRef,
 		ContextRef:              "cluster_run:" + a1 + "; generation:" + genC6.Generation.ID,
 		Outcome:                 review.Conforms,
 		Argument: "reassessment under the current population " + a1 + " produced campaign " + rr.RunID +
@@ -389,7 +394,7 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	// Under A1 the mandatory obligation is supported again — and the path back
 	// was reassessment, not inheritance. The C4 gate is therefore not a dead end.
 	cov6, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
-		DBPath: dbPath, PolicyID: ledger.policyID,
+		DBPath: dbPath, PolicyID: ledger.policyID, SubjectRef: subjectRef,
 		CurrentDependencies: gateCurrentContext(a1, invID, gateProjectRevision),
 	})
 	if err != nil {
@@ -450,8 +455,13 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	if err != nil || len(invocs) == 0 {
 		t.Fatalf("C7: load post-replay invocation: %v (n=%d)", err, len(invocs))
 	}
-	if !strings.Contains(invocs[0].RequestPayload, invID) {
-		t.Fatalf("C7: the post-replay generation request must still target %s via the compatible current authority", invID)
+	var request provider.GenerationRequest
+	if err := json.Unmarshal([]byte(invocs[0].RequestPayload), &request); err != nil {
+		t.Fatalf("C7: decode post-replay generation request: %v\n%s", err, invocs[0].RequestPayload)
+	}
+	if !generationTargetsContain(request.Targets, invID) {
+		t.Fatalf("C7: the post-replay generation request targets %v, want %s via the compatible current authority",
+			request.Targets, invID)
 	}
 	c7 := ledger.recordCase(t, ctx, app, dbPath, "C7", "app.ChallengeInvariants(population=discovery) + app.GenerateFrontier",
 		"invariant="+invID+"; population="+d0, review.CheckCompleted,
@@ -479,11 +489,11 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	// unexamined/blocked must stay distinguishable from each other and from a
 	// pass. No manual status patch exists to reach for.
 	currentA1 := gateCurrentContext(a1, invID, gateProjectRevision)
-	genA, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{DBPath: dbPath, PolicyID: ledger.policyID, CurrentDependencies: currentA1})
+	genA, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{DBPath: dbPath, PolicyID: ledger.policyID, SubjectRef: subjectRef, CurrentDependencies: currentA1})
 	if err != nil {
 		t.Fatalf("C8 first generation: %v", err)
 	}
-	genB, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{DBPath: dbPath, PolicyID: ledger.policyID, CurrentDependencies: currentA1})
+	genB, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{DBPath: dbPath, PolicyID: ledger.policyID, SubjectRef: subjectRef, CurrentDependencies: currentA1})
 	if err != nil {
 		t.Fatalf("C8 second generation: %v", err)
 	}
@@ -513,7 +523,7 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	// current assessment — and nothing else. Under D0 the A1 assessment is the
 	// stale one, so the decision flips while every record still appears.
 	genShifted, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
-		DBPath: dbPath, PolicyID: ledger.policyID,
+		DBPath: dbPath, PolicyID: ledger.policyID, SubjectRef: subjectRef,
 		CurrentDependencies: gateCurrentContext(d0, invID, gateProjectRevision),
 	})
 	if err != nil {
@@ -537,7 +547,7 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	// source of truth.
 	outPath := t.TempDir() + "/COVERAGE.md"
 	written, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
-		DBPath: dbPath, PolicyID: ledger.policyID, CurrentDependencies: currentA1, OutPath: outPath,
+		DBPath: dbPath, PolicyID: ledger.policyID, SubjectRef: subjectRef, CurrentDependencies: currentA1, OutPath: outPath,
 	})
 	if err != nil {
 		t.Fatalf("C8 write: %v", err)
@@ -777,6 +787,47 @@ func withUnrelatedChange(current map[string]string, kind, ref string) map[string
 	}
 	out[kind] = ref
 	return out
+}
+
+func clusterSignatureSet(run ClusterRunView) map[string]bool {
+	out := map[string]bool{}
+	for _, c := range run.Clusters {
+		for _, m := range c.Members {
+			out[m.SignatureID] = true
+		}
+	}
+	return out
+}
+
+func copyStringSet(in map[string]bool) map[string]bool {
+	out := make(map[string]bool, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
+}
+
+func assertStringSetEqual(t *testing.T, got, want map[string]bool) {
+	t.Helper()
+	for k := range want {
+		if !got[k] {
+			t.Fatalf("C3: population missing signature %s; got=%v want=%v", k, got, want)
+		}
+	}
+	for k := range got {
+		if !want[k] {
+			t.Fatalf("C3: population has unexpected signature %s; got=%v want=%v", k, got, want)
+		}
+	}
+}
+
+func generationTargetsContain(targets []provider.GenerationTarget, invariantID string) bool {
+	for _, target := range targets {
+		if target.InvariantID == invariantID {
+			return true
+		}
+	}
+	return false
 }
 
 // containsString reports membership without pulling in a helper dependency.

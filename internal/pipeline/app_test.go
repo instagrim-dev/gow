@@ -532,6 +532,10 @@ func (f *fakeProblemStore) LoadReviewCoverage(context.Context, string) (store.Re
 	return store.ReviewCoverage{}, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) LoadReviewCoverageForSubject(context.Context, string, string) (store.ReviewCoverage, error) {
+	return store.ReviewCoverage{}, errors.New("unexpected call")
+}
+
 func (f *fakeProblemStore) GetReviewCheckAttempt(context.Context, string) (store.ReviewCheckAttemptRow, error) {
 	return store.ReviewCheckAttemptRow{}, errors.New("unexpected call")
 }

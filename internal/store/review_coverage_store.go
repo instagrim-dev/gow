@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 // This file is the READ side of the normative review ledger: the single
@@ -46,6 +47,22 @@ type ReviewCoverage struct {
 // an id tiebreak) so repeated generation from identical inputs is byte-identical
 // apart from explicitly non-semantic metadata.
 func (s *Store) LoadReviewCoverage(ctx context.Context, policyID string) (ReviewCoverage, error) {
+	return s.loadReviewCoverage(ctx, policyID, "")
+}
+
+// LoadReviewCoverageForSubject assembles the coverage projection for one exact
+// subject. Applicability decisions and assessments for other subjects stay out
+// of the projection, so legitimate records for B cannot make A unresolved or
+// make B inherit A's assessment.
+func (s *Store) LoadReviewCoverageForSubject(ctx context.Context, policyID, subjectRef string) (ReviewCoverage, error) {
+	subjectRef = strings.TrimSpace(subjectRef)
+	if subjectRef == "" {
+		return s.LoadReviewCoverage(ctx, policyID)
+	}
+	return s.loadReviewCoverage(ctx, policyID, subjectRef)
+}
+
+func (s *Store) loadReviewCoverage(ctx context.Context, policyID, subjectRef string) (ReviewCoverage, error) {
 	policy, err := s.GetReviewPolicy(ctx, policyID)
 	if err != nil {
 		return ReviewCoverage{}, err
@@ -81,26 +98,34 @@ ORDER BY o.obligation_key, o.semantic_revision, o.id
 
 	for i := range out.Obligations {
 		obligationID := out.Obligations[i].Obligation.ID
-		if err := s.loadReviewApplicability(ctx, policyID, obligationID, &out.Obligations[i]); err != nil {
+		if err := s.loadReviewApplicability(ctx, policyID, obligationID, subjectRef, &out.Obligations[i]); err != nil {
+			return ReviewCoverage{}, err
+		}
+		if err := s.loadReviewAssessments(ctx, policyID, obligationID, subjectRef, &out.Obligations[i]); err != nil {
 			return ReviewCoverage{}, err
 		}
 		if err := s.loadReviewChecks(ctx, policyID, obligationID, &out.Obligations[i]); err != nil {
-			return ReviewCoverage{}, err
-		}
-		if err := s.loadReviewAssessments(ctx, policyID, obligationID, &out.Obligations[i]); err != nil {
 			return ReviewCoverage{}, err
 		}
 	}
 	return out, nil
 }
 
-func (s *Store) loadReviewApplicability(ctx context.Context, policyID, obligationID string, c *ReviewObligationCoverage) error {
-	rows, err := s.db.QueryContext(ctx, `
+func (s *Store) loadReviewApplicability(ctx context.Context, policyID, obligationID, subjectRef string, c *ReviewObligationCoverage) error {
+	query := `
 SELECT id, obligation_id, policy_id, subject_ref, decision, rationale, authorizer, created_at
 FROM review_applicability_decisions
 WHERE policy_id = ? AND obligation_id = ?
+`
+	args := []any{policyID, obligationID}
+	if subjectRef != "" {
+		query += ` AND subject_ref = ?`
+		args = append(args, subjectRef)
+	}
+	query += `
 ORDER BY created_at, id
-`, policyID, obligationID)
+`
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -139,13 +164,21 @@ ORDER BY case_label, created_at, id
 	return rows.Err()
 }
 
-func (s *Store) loadReviewAssessments(ctx context.Context, policyID, obligationID string, c *ReviewObligationCoverage) error {
-	rows, err := s.db.QueryContext(ctx, `
+func (s *Store) loadReviewAssessments(ctx context.Context, policyID, obligationID, subjectRef string, c *ReviewObligationCoverage) error {
+	query := `
 SELECT id, obligation_id, policy_id, applicability_decision_id, manifest_id, subject_ref, context_ref, outcome, argument, assessor, created_at
 FROM review_assessments
 WHERE policy_id = ? AND obligation_id = ?
+`
+	args := []any{policyID, obligationID}
+	if subjectRef != "" {
+		query += ` AND subject_ref = ?`
+		args = append(args, subjectRef)
+	}
+	query += `
 ORDER BY created_at, id
-`, policyID, obligationID)
+`
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}

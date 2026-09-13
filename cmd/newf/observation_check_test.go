@@ -174,7 +174,7 @@ func TestCLIObservationCheckScopedLedger(t *testing.T) {
 				}
 			}
 			runCLIJSON(t, w.assess(r.SubjectRef, result.Check.ID, app, outcome))
-			coverage := runCLIJSON(t, []string{"--db", w.db, "--json", "review", "coverage", "--policy", w.policy, "--current", "candidate_content=" + r.SubjectRef})
+			coverage := runCLIJSON(t, []string{"--db", w.db, "--json", "review", "coverage", "--policy", w.policy, "--subject", r.SubjectRef, "--current", "candidate_content=" + r.SubjectRef})
 			if coverage["decision"] != decision {
 				t.Fatalf("projection: %v expected %s", coverage["decision"], decision)
 			}
@@ -200,7 +200,7 @@ func TestCLIObservationCheckScopedLedger(t *testing.T) {
 				t.Fatal("resource refusal lost the declared binding")
 			}
 			if outcome == "conforms" {
-				stale := runCLIJSON(t, []string{"--db", w.db, "--json", "review", "coverage", "--policy", w.policy, "--current", "candidate_content=changed"})
+				stale := runCLIJSON(t, []string{"--db", w.db, "--json", "review", "coverage", "--policy", w.policy, "--subject", r.SubjectRef, "--current", "candidate_content=changed"})
 				if stale["decision"] != "UNDETERMINED" {
 					t.Fatal("changed target inherited authority")
 				}

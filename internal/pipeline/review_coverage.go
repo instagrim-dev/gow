@@ -148,6 +148,11 @@ type ReviewCoverageInput struct {
 	PolicyID string
 	// PolicyKey resolves the highest revision when PolicyID is empty.
 	PolicyKey string
+	// SubjectRef restricts applicability decisions and assessments to one exact
+	// subject. Omit it only for a historical whole-policy export; a current
+	// decision about a subject should supply it so records for another subject
+	// cannot be combined with this one.
+	SubjectRef string
 	// CurrentDependencies maps a dependency KIND to its CURRENT ref value (for
 	// example `assessment_population` -> the current cluster run id). An
 	// assessment is stale when it declared that kind with a different ref.
@@ -166,6 +171,7 @@ type ReviewCoverageInput struct {
 // ReviewCoverageResponse carries the derived decision and rendered document.
 type ReviewCoverageResponse struct {
 	PolicyID    string   `json:"policy_id"`
+	SubjectRef  string   `json:"subject_ref,omitempty"`
 	Decision    string   `json:"decision"`
 	Reasons     []string `json:"reasons,omitempty"`
 	Blockers    []string `json:"blockers,omitempty"`
@@ -217,7 +223,13 @@ func (a *App) GenerateReviewCoverage(ctx context.Context, in ReviewCoverageInput
 		policyID = p.ID
 	}
 
-	cov, err := repoStore.LoadReviewCoverage(ctx, policyID)
+	subjectRef := strings.TrimSpace(in.SubjectRef)
+	var cov store.ReviewCoverage
+	if subjectRef == "" {
+		cov, err = repoStore.LoadReviewCoverage(ctx, policyID)
+	} else {
+		cov, err = repoStore.LoadReviewCoverageForSubject(ctx, policyID, subjectRef)
+	}
 	if err != nil {
 		return ReviewCoverageResponse{}, err
 	}
@@ -226,7 +238,7 @@ func (a *App) GenerateReviewCoverage(ctx context.Context, in ReviewCoverageInput
 	doc := review.RenderCoverage(projection, a.now())
 
 	resp := ReviewCoverageResponse{
-		PolicyID: policyID, Decision: string(projection.Decision),
+		PolicyID: policyID, SubjectRef: subjectRef, Decision: string(projection.Decision),
 		Reasons: projection.Reasons, Blockers: projection.Blockers,
 		Vacuous: projection.Vacuous, Document: doc,
 	}

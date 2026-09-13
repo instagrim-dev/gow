@@ -211,7 +211,8 @@ func TestReviewCoverageCompatibilityMatrix(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			cov, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
-				DBPath: dbPath, PolicyID: policy.PolicyID, CurrentDependencies: tc.current,
+				DBPath: dbPath, PolicyID: policy.PolicyID, SubjectRef: "matrix:control-subject",
+				CurrentDependencies: tc.current,
 			})
 			if err != nil {
 				t.Fatalf("generate coverage: %v", err)
@@ -243,6 +244,133 @@ func TestReviewCoverageCompatibilityMatrix(t *testing.T) {
 				t.Fatalf("historical assessment %s must survive into every export:\n%s", historicalAssessmentID, cov.Document)
 			}
 		})
+	}
+}
+
+func TestReviewCoverageSubjectScopeDoesNotCombineSubjects(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 9, 13, 12, 0, 0, 0, time.UTC)
+	app, dbPath := newRealStoreApp(t, now)
+
+	policy, err := app.DefineReviewPolicy(ctx, ReviewPolicyDefineInput{
+		DBPath: dbPath, Key: "subject-scope-control", Revision: 1,
+		DecisionName:       "whether the selected subject may advance",
+		Owner:              "repository-maintainer",
+		AuthoritySource:    reviewContractRef,
+		ScopeJustification: "subject-scope regression control only",
+		Obligations: []ReviewObligationSpec{{
+			Key:                "subject-scoped-obligation",
+			SemanticRevision:   1,
+			Requirement:        "coverage must derive the state for one exact subject",
+			AcceptanceCriteria: "A's applicability and assessment are not combined with B or C",
+			ApplicabilityRule:  "applies per exact subject",
+			PrimaryOwner:       "repository-maintainer",
+			Mandatory:          true,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("define policy: %v", err)
+	}
+	obligationID := policy.ObligationIDs["subject-scoped-obligation@1"]
+
+	apA, err := app.DecideReviewApplicability(ctx, ReviewApplicabilityInput{
+		DBPath: dbPath, PolicyID: policy.PolicyID, ObligationID: obligationID,
+		SubjectRef: "subject:A", Decision: review.Applies,
+		Rationale: "A is in scope", Authorizer: "repository-maintainer",
+	})
+	if err != nil {
+		t.Fatalf("A applicability: %v", err)
+	}
+	if _, err := app.DecideReviewApplicability(ctx, ReviewApplicabilityInput{
+		DBPath: dbPath, PolicyID: policy.PolicyID, ObligationID: obligationID,
+		SubjectRef: "subject:B", Decision: review.DoesNotApply,
+		Rationale: "B is out of scope under this obligation", Authorizer: "repository-maintainer",
+	}); err != nil {
+		t.Fatalf("B applicability: %v", err)
+	}
+	if _, err := app.DecideReviewApplicability(ctx, ReviewApplicabilityInput{
+		DBPath: dbPath, PolicyID: policy.PolicyID, ObligationID: obligationID,
+		SubjectRef: "subject:C", Decision: review.Applies,
+		Rationale: "C is in scope but deliberately unassessed", Authorizer: "repository-maintainer",
+	}); err != nil {
+		t.Fatalf("C applicability: %v", err)
+	}
+	check, err := app.RecordReviewCheck(ctx, ReviewCheckInput{
+		DBPath: dbPath, PolicyID: policy.PolicyID, ObligationID: obligationID,
+		CaseLabel: "subject-A", ProcedureRef: "subject-scope-control",
+		ProcedureRevision: reviewRecipeRevision, InputsRef: "subject:A",
+		Executor: reviewAssessor, Environment: "go test ./internal/pipeline",
+		Mode: review.ModeExecuted, Outcome: review.CheckCompleted,
+	})
+	if err != nil {
+		t.Fatalf("record check: %v", err)
+	}
+	asmA, err := app.RecordReviewAssessment(ctx, ReviewAssessInput{
+		DBPath: dbPath, PolicyID: policy.PolicyID, ObligationID: obligationID,
+		ApplicabilityDecisionID: apA.ID,
+		SubjectRef:              "subject:A",
+		ContextRef:              "subject-scope:A",
+		Outcome:                 review.Conforms,
+		Argument:                "A has an executed check and matching applicability",
+		Assessor:                reviewAssessor,
+		ProjectRevision:         "subject-scope-fixture",
+		Dependencies: []ReviewDependencySpec{{
+			Kind:        depKindCandidateContent,
+			Ref:         "subject:A",
+			WhyRelevant: "different content is a different subject",
+		}},
+		CheckAttemptIDs: []string{check.ID},
+	})
+	if err != nil {
+		t.Fatalf("record assessment: %v", err)
+	}
+
+	covA, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
+		DBPath: dbPath, PolicyID: policy.PolicyID, SubjectRef: "subject:A",
+		CurrentDependencies: map[string]string{depKindCandidateContent: "subject:A"},
+	})
+	if err != nil {
+		t.Fatalf("generate coverage for A: %v", err)
+	}
+	if covA.SubjectRef != "subject:A" || covA.Decision != string(review.DecisionEligible) {
+		t.Fatalf("A decision = %s subject=%q reasons=%v, want scoped eligibility", covA.Decision, covA.SubjectRef, covA.Reasons)
+	}
+	if len(covA.Obligations) != 1 || covA.Obligations[0].State != string(review.StateConforms) {
+		t.Fatalf("A must be governed by A's conforming assessment only: %+v", covA.Obligations)
+	}
+	if strings.Contains(covA.Document, "subject:B") || strings.Contains(covA.Document, "subject:C") {
+		t.Fatalf("A-scoped export must not include other subjects:\n%s", covA.Document)
+	}
+
+	covB, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
+		DBPath: dbPath, PolicyID: policy.PolicyID, SubjectRef: "subject:B",
+		CurrentDependencies: map[string]string{depKindCandidateContent: "subject:B"},
+	})
+	if err != nil {
+		t.Fatalf("generate coverage for B: %v", err)
+	}
+	if covB.Decision != string(review.DecisionEligible) || covB.Obligations[0].State != string(review.StateNotApplicable) {
+		t.Fatalf("B should resolve through B's inapplicability only: decision=%s obligations=%+v",
+			covB.Decision, covB.Obligations)
+	}
+	if strings.Contains(covB.Document, apA.ID) || strings.Contains(covB.Document, asmA.Assessment.ID) {
+		t.Fatalf("B-scoped export must not inherit A's applicability or assessment:\n%s", covB.Document)
+	}
+
+	covC, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
+		DBPath: dbPath, PolicyID: policy.PolicyID, SubjectRef: "subject:C",
+		CurrentDependencies: map[string]string{depKindCandidateContent: "subject:C"},
+	})
+	if err != nil {
+		t.Fatalf("generate coverage for C: %v", err)
+	}
+	if covC.Decision != string(review.DecisionUndetermined) || covC.Obligations[0].State != string(review.StateUnexamined) {
+		t.Fatalf("C should remain unexamined rather than inheriting A: decision=%s obligations=%+v",
+			covC.Decision, covC.Obligations)
+	}
+	if !containsString(covC.Reasons, review.ReasonUnexamined) {
+		t.Fatalf("C reasons = %v, want %s", covC.Reasons, review.ReasonUnexamined)
 	}
 }
 
@@ -394,7 +522,7 @@ func TestReviewCoverageExportCarriesCheckerAndDependencyProvenance(t *testing.T)
 		t.Fatalf("record assessment: %v", err)
 	}
 	cov, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
-		DBPath: dbPath, PolicyID: policy.PolicyID,
+		DBPath: dbPath, PolicyID: policy.PolicyID, SubjectRef: "provenance:control-subject",
 		CurrentDependencies: map[string]string{depKindAssessmentPopulation: declaredPop},
 	})
 	if err != nil {

@@ -113,12 +113,12 @@ func TestCLIFiniteInstanceCheckLedgerAndScopedAssessment(t *testing.T) {
 				}
 			}
 			runCLIJSON(t, w.assess(receipt.SubjectRef, r.Check.ID, app, tc.outcome))
-			coverage := runCLIJSON(t, []string{"--db", w.db, "--json", "review", "coverage", "--policy", w.policy, "--current", "candidate_content=" + receipt.SubjectRef})
+			coverage := runCLIJSON(t, []string{"--db", w.db, "--json", "review", "coverage", "--policy", w.policy, "--subject", receipt.SubjectRef, "--current", "candidate_content=" + receipt.SubjectRef})
 			if coverage["decision"] != tc.decision {
 				t.Fatalf("coverage=%v want %s", coverage["decision"], tc.decision)
 			}
 			if tc.outcome == "conforms" {
-				stale := runCLIJSON(t, []string{"--db", w.db, "--json", "review", "coverage", "--policy", w.policy, "--current", "candidate_content=changed"})
+				stale := runCLIJSON(t, []string{"--db", w.db, "--json", "review", "coverage", "--policy", w.policy, "--subject", receipt.SubjectRef, "--current", "candidate_content=changed"})
 				if stale["decision"] != "UNDETERMINED" {
 					t.Fatal("changed listed input inherited authority")
 				}

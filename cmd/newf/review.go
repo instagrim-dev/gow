@@ -422,6 +422,7 @@ func newReviewCoverageCommand(stdout io.Writer, app *pipeline.App, opts *rootOpt
 	var (
 		policyID  string
 		policyKey string
+		subject   string
 		outPath   string
 		current   []string
 	)
@@ -430,9 +431,11 @@ func newReviewCoverageCommand(stdout io.Writer, app *pipeline.App, opts *rootOpt
 		Short: "Generate coverage from the review records",
 		Long: "Derive the decision and render COVERAGE.md from the recorded policy,\n" +
 			"applicability decisions, check attempts and assessments.\n\n" +
-			"Repeated generation from identical records is byte-identical: there is no\n" +
-			"generation timestamp in the document, so a regenerated file only differs\n" +
-			"when the records or the current dependency values differ.\n\n" +
+			"Use --subject for a current decision about one exact subject. Without it,\n" +
+			"coverage is a whole-policy historical export and includes every subject's\n" +
+			"records under that policy.\n\n" +
+			"Repeated generation from identical records preserves substantive content;\n" +
+			"the generated-at line is non-semantic metadata.\n\n" +
 			"Use --current KIND=REF to declare CURRENT dependency values. An assessment\n" +
 			"goes stale only when a dependency kind it DECLARED (with a stated reason)\n" +
 			"now has a different ref. A change to anything the assessment never named\n" +
@@ -450,7 +453,7 @@ func newReviewCoverageCommand(stdout io.Writer, app *pipeline.App, opts *rootOpt
 			}
 			result, err := app.GenerateReviewCoverage(cmd.Context(), pipeline.ReviewCoverageInput{
 				DBPath: opts.dbPath, PolicyID: policyID, PolicyKey: policyKey,
-				CurrentDependencies: deps, OutPath: outPath,
+				SubjectRef: subject, CurrentDependencies: deps, OutPath: outPath,
 			})
 			if err != nil {
 				return wrapCommandError("review coverage", err)
@@ -459,6 +462,9 @@ func newReviewCoverageCommand(stdout io.Writer, app *pipeline.App, opts *rootOpt
 				return writeJSON(stdout, result)
 			}
 			fmt.Fprintf(stdout, "decision: %s\n", result.Decision)
+			if result.SubjectRef != "" {
+				fmt.Fprintf(stdout, "subject:  %s\n", result.SubjectRef)
+			}
 			for _, b := range result.Blockers {
 				fmt.Fprintf(stdout, "  blocker: %s\n", b)
 			}
@@ -487,6 +493,7 @@ func newReviewCoverageCommand(stdout io.Writer, app *pipeline.App, opts *rootOpt
 	}
 	cmd.Flags().StringVar(&policyID, "policy", "", "Decision policy ID (rpol_...)")
 	cmd.Flags().StringVar(&policyKey, "policy-key", "", "Resolve the highest revision of this policy key")
+	cmd.Flags().StringVar(&subject, "subject", "", "Restrict coverage to one exact subject reference")
 	cmd.Flags().StringVar(&outPath, "out", "", "Write the generated document to this path")
 	cmd.Flags().StringArrayVar(&current, "current", nil, "Current dependency value as KIND=REF (repeatable)")
 	return cmd
