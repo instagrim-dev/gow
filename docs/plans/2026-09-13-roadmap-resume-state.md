@@ -1,7 +1,11 @@
 # Shaping and typed-claim delivery status
 
 Base and observed remote `main`: `ecb1c668f79784ed372a40ffce56774996ea60c4`.
-These changes are in the current checkout, uncommitted and unpublished.
+The executable tranche is committed locally as
+`46d4afadc6ffca56a041f679935dcf7c7d84ef50`; clean-room dispatch preparation
+is committed locally as `0a007f7c933c2ff868efb3ab6895ef02dbf0fb8f`. Neither
+commit has been published. The current local `HEAD` remains the delivery state
+to verify before any release action.
 The delivered scope is the six review boundaries, a runnable development
 resource diagnostic and typed finite-equivalence, finite-instance and
 observation claim paths through scoped assessment.
@@ -278,6 +282,10 @@ metadata-only G1 artifact validated and its seal inspected as `MATCH`, with
 `PREPARED_NOT_AUTHORIZED`, custody unverified, and protected execution
 unauthorized. These are current engineering checks; they create no protected
 evaluation evidence or spending authority.
+The same full gate and local smoke/seal inspection were rerun after the two
+delivery commits. The smoke receipt reassessed as
+`completed-development-diagnostic`; G1 inspection reported `MATCH` and
+`PREPARED_NOT_AUTHORIZED`. The repository worktree was clean at that checkpoint.
 The finite-claim slice reruns the required repository gates and adds focused
 race checks for `internal/toolreg`, `internal/pipeline` and `cmd/newf`; its exact
 results are in the
