@@ -82,15 +82,23 @@ func scopeGuards(d Domain) []string {
 
 // AssessEquivalence decides whether left and right agree on every
 // assignment of the declared finite domain, by enumeration. The first
-// counterexample in canonical order is recorded exactly.
+// counterexample in canonical order is recorded exactly. Structure is a
+// checked premise: a nil or malformed expression is an applicability
+// refusal, never a panic.
 func AssessEquivalence(b Binding, left, right Expr) Certificate {
 	cert := Certificate{
 		Binding:     b,
-		Left:        left.render(),
-		Right:       right.render(),
 		Question:    "Do the two expressions evaluate identically on every assignment of the declared finite domain?",
 		NotAssessed: scopeGuards(b.Domain),
 	}
+	if defects := append(structureDefects("left", left), structureDefects("right", right)...); len(defects) > 0 {
+		cert.PremiseFailures = defects
+		cert.Verdict = VerdictInapplicable
+		cert.Reason = "a premise failed before evaluation: " + strings.Join(defects, "; ")
+		return cert
+	}
+	cert.Left = left.render()
+	cert.Right = right.render()
 	if b.Domain.Width < MinWidth || b.Domain.Width > MaxWidth {
 		cert.Verdict = VerdictInapplicable
 		cert.Reason = fmt.Sprintf("declared width %d is outside the supported range [%d,%d]", b.Domain.Width, MinWidth, MaxWidth)
@@ -130,21 +138,31 @@ func AssessEquivalence(b Binding, left, right Expr) Certificate {
 
 // AssessInstances checks agreement on the supplied assignments only. The
 // strongest available outcome is INSTANCE_EVIDENCE_ONLY: by construction
-// this function cannot produce a domain-level verdict, which is the T0
-// instance-to-universal rejection enforced as a type of outcome.
+// this function cannot produce a domain-level equivalence, which is the T0
+// instance-to-universal rejection enforced as a type of outcome. The
+// asymmetry is preserved exactly: agreeing instances decide nothing about
+// the domain, but one admissible counterexample DOES refute the universal
+// claim over that domain.
 func AssessInstances(b Binding, left, right Expr, instances []Assignment) Certificate {
 	cert := Certificate{
 		Binding:     b,
-		Left:        left.render(),
-		Right:       right.render(),
 		Question:    "Do the two expressions evaluate identically on the supplied assignments (and only those)?",
-		NotAssessed: append(scopeGuards(b.Domain), "Equivalence over the declared domain: NOT ASSESSED (agreeing instances are instance evidence, never a domain certificate)"),
+		NotAssessed: scopeGuards(b.Domain),
 	}
+	if defects := append(structureDefects("left", left), structureDefects("right", right)...); len(defects) > 0 {
+		cert.PremiseFailures = defects
+		cert.Verdict = VerdictInapplicable
+		cert.Reason = "a premise failed before evaluation: " + strings.Join(defects, "; ")
+		return cert
+	}
+	cert.Left = left.render()
+	cert.Right = right.render()
 	if b.Domain.Width < MinWidth || b.Domain.Width > MaxWidth {
 		cert.Verdict = VerdictInapplicable
 		cert.Reason = fmt.Sprintf("declared width %d is outside the supported range [%d,%d]", b.Domain.Width, MinWidth, MaxWidth)
 		return cert
 	}
+	cert.DomainSize = b.Domain.Size()
 	cert.PremiseFailures = append(validate(left, b.Domain), validate(right, b.Domain)...)
 	if len(cert.PremiseFailures) > 0 {
 		cert.Verdict = VerdictInapplicable
@@ -176,12 +194,17 @@ func AssessInstances(b Binding, left, right Expr, instances []Assignment) Certif
 		if l != r {
 			cert.Counterexample = &Counterexample{Assignment: a.render(), Left: l, Right: r}
 			cert.Verdict = VerdictRefuted
-			cert.Reason = fmt.Sprintf("exact counterexample at {%s}: left evaluates to %d, right to %d (a single admissible counterexample refutes the domain claim)", a.render(), l, r)
+			// A counterexample decides the universal claim over the
+			// domain negatively; no "domain NOT ASSESSED" guard is
+			// attached here, because the domain claim WAS assessed —
+			// and refuted.
+			cert.Reason = fmt.Sprintf("exact counterexample at {%s}: left evaluates to %d, right to %d (a single admissible counterexample refutes the universal claim over the declared domain)", a.render(), l, r)
 			return cert
 		}
 	}
 	cert.Verdict = VerdictInstanceOnly
-	cert.Reason = fmt.Sprintf("the %d supplied assignments agree; this is instance evidence and decides nothing about the %d-assignment domain", cert.AssignmentsChecked, b.Domain.Size())
+	cert.NotAssessed = append(cert.NotAssessed, "Equivalence over the declared domain: NOT ASSESSED (agreeing instances are instance evidence, never a domain certificate)")
+	cert.Reason = fmt.Sprintf("the %d supplied assignments agree; this is instance evidence and decides nothing about the %d-assignment domain", cert.AssignmentsChecked, cert.DomainSize)
 	return cert
 }
 

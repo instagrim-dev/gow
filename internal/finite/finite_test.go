@@ -159,6 +159,94 @@ func TestOutOfDomainInstanceIsInapplicable(t *testing.T) {
 	}
 }
 
+// Structurally invalid expressions are applicability refusals, never
+// panics: nil expressions, nil children, foreign node types, and
+// unbounded nesting are all rejected before rendering or traversal.
+func TestMalformedExpressionsRefusedNotPanicked(t *testing.T) {
+	d := dom4("x")
+
+	if cert := AssessEquivalence(binding("nil left", d), nil, Var{"x"}); cert.Verdict != VerdictInapplicable {
+		t.Fatalf("nil expression must be INAPPLICABLE, got %s", cert.Verdict)
+	}
+	if cert := AssessEquivalence(binding("nil unary child", d), Unary{Op: OpNot, X: nil}, Var{"x"}); cert.Verdict != VerdictInapplicable {
+		t.Fatalf("nil unary child must be INAPPLICABLE, got %s", cert.Verdict)
+	}
+	if cert := AssessEquivalence(binding("nil binary child", d), Binary{Op: OpAdd, X: Var{"x"}, Y: nil}, Var{"x"}); cert.Verdict != VerdictInapplicable {
+		t.Fatalf("nil binary child must be INAPPLICABLE, got %s", cert.Verdict)
+	}
+	if cert := AssessInstances(binding("nil in instances", d), nil, Var{"x"}, []Assignment{{"x": 1}}); cert.Verdict != VerdictInapplicable {
+		t.Fatalf("nil expression must be INAPPLICABLE in instance checks, got %s", cert.Verdict)
+	}
+
+	deep := Expr(Var{"x"})
+	for i := 0; i <= MaxExprDepth; i++ {
+		deep = Unary{Op: OpNot, X: deep}
+	}
+	cert := AssessEquivalence(binding("too deep", d), deep, Var{"x"})
+	if cert.Verdict != VerdictInapplicable {
+		t.Fatalf("over-deep expression must be INAPPLICABLE, got %s", cert.Verdict)
+	}
+	if !strings.Contains(cert.Reason, "maximum depth") {
+		t.Fatalf("refusal must name the depth bound: %s", cert.Reason)
+	}
+
+	// The warrant boundary is guarded the same way.
+	good := AssessEquivalence(binding("reflexivity", d), Var{"x"}, Var{"x"})
+	if defects := VerifyRuleWarrant(good, Unary{Op: OpNot, X: nil}, Var{"x"}, d); len(defects) == 0 {
+		t.Fatal("a malformed rule expression must be a warrant defect, not a panic")
+	}
+}
+
+// Instance certificates account for coverage consistently: the domain size
+// is populated, exhaustiveness stays false, and rendering shows N of the
+// real domain, never "N of 0".
+func TestInstanceCertificateCoverageAccounting(t *testing.T) {
+	d := dom4("x")
+	cert := AssessInstances(binding("one instance", d), Var{"x"}, Var{"x"}, []Assignment{{"x": 5}})
+	if cert.Verdict != VerdictInstanceOnly {
+		t.Fatalf("verdict %s: %s", cert.Verdict, cert.Reason)
+	}
+	if cert.DomainSize != 16 || cert.AssignmentsChecked != 1 || cert.Exhaustive {
+		t.Fatalf("coverage accounting wrong: %d of %d, exhaustive=%v", cert.AssignmentsChecked, cert.DomainSize, cert.Exhaustive)
+	}
+	if !strings.Contains(cert.Render(), "Assignments checked: 1 of 16") {
+		t.Fatalf("render must show real coverage: %s", cert.Render())
+	}
+}
+
+// A refuting instance decides the universal claim over the domain
+// negatively — so the "domain NOT ASSESSED" guard must not appear on a
+// REFUTED instance certificate, while it must appear on an agreeing one.
+func TestInstanceScopeGuardFollowsOutcome(t *testing.T) {
+	d := dom4("x")
+	left := Unary{Op: OpShr, X: Unary{Op: OpShl, X: Var{"x"}}}
+	right := Var{"x"}
+
+	refuted := AssessInstances(binding("refuting point", d), left, right, []Assignment{{"x": 12}})
+	if refuted.Verdict != VerdictRefuted {
+		t.Fatalf("verdict %s", refuted.Verdict)
+	}
+	for _, n := range refuted.NotAssessed {
+		if strings.Contains(n, "never a domain certificate") {
+			t.Fatalf("a refutation DID assess the domain claim; the contradictory guard must be absent: %v", refuted.NotAssessed)
+		}
+	}
+
+	agreeing := AssessInstances(binding("agreeing points", d), left, right, []Assignment{{"x": 1}})
+	if agreeing.Verdict != VerdictInstanceOnly {
+		t.Fatalf("verdict %s", agreeing.Verdict)
+	}
+	guard := false
+	for _, n := range agreeing.NotAssessed {
+		if strings.Contains(n, "never a domain certificate") {
+			guard = true
+		}
+	}
+	if !guard {
+		t.Fatalf("agreeing instances must carry the domain scope guard: %v", agreeing.NotAssessed)
+	}
+}
+
 // Refusals adapt to blocked check records; decisions adapt to completed
 // ones — a refusal to assess must not read as an executed check.
 func TestCheckRecordOutcomeSeparatesRefusalFromDecision(t *testing.T) {

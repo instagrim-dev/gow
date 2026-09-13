@@ -30,6 +30,12 @@ import (
 func VerifyRuleWarrant(cert Certificate, left, right Expr, d Domain) []string {
 	var defects []string
 
+	// Structure first: the presented rule's expressions are external
+	// input and must be traversable before anything is rendered.
+	if sd := append(structureDefects("rule left", left), structureDefects("rule right", right)...); len(sd) > 0 {
+		return append(defects, sd...)
+	}
+
 	// Layer 1: structural meaning of the presented certificate.
 	if cert.Verdict != VerdictHoldsOnDomain {
 		defects = append(defects, fmt.Sprintf("verdict %q does not warrant a domain equality; only %q does (instance agreement, refutation, refusal, and unresolved outcomes admit nothing)", cert.Verdict, VerdictHoldsOnDomain))

@@ -198,6 +198,53 @@ var (
 	knownBinary = map[BinaryOp]bool{OpAnd: true, OpOr: true, OpXor: true, OpAdd: true, OpSub: true, OpMul: true}
 )
 
+// MaxExprDepth bounds expression nesting before an externally constructed
+// expression is accepted for traversal, so structural validation itself
+// runs in bounded work.
+const MaxExprDepth = 64
+
+// structureDefects rejects structurally invalid expressions before any
+// rendering or traversal: the exported node structs allow nil children and
+// foreign node types, so structure is a checked premise, not an assumption.
+// A structurally invalid expression is an applicability refusal, never a
+// panic.
+func structureDefects(label string, e Expr) []string {
+	return structureWalk(label, e, 0)
+}
+
+func structureWalk(label string, e Expr, depth int) []string {
+	if e == nil {
+		return []string{fmt.Sprintf("%s: expression node is nil", label)}
+	}
+	if depth > MaxExprDepth {
+		return []string{fmt.Sprintf("%s: expression exceeds the maximum depth %d; refusing unbounded traversal", label, MaxExprDepth)}
+	}
+	switch t := e.(type) {
+	case Var:
+		if t.Name == "" {
+			return []string{fmt.Sprintf("%s: variable node has an empty name", label)}
+		}
+		return nil
+	case Const:
+		return nil
+	case Unary:
+		var defects []string
+		if !knownUnary[t.Op] {
+			defects = append(defects, fmt.Sprintf("%s: unknown unary operator %q", label, t.Op))
+		}
+		return append(defects, structureWalk(label, t.X, depth+1)...)
+	case Binary:
+		var defects []string
+		if !knownBinary[t.Op] {
+			defects = append(defects, fmt.Sprintf("%s: unknown binary operator %q", label, t.Op))
+		}
+		defects = append(defects, structureWalk(label, t.X, depth+1)...)
+		return append(defects, structureWalk(label, t.Y, depth+1)...)
+	default:
+		return []string{fmt.Sprintf("%s: expression node %T is outside the seed language", label, e)}
+	}
+}
+
 // validate rejects expressions outside the declared language before any
 // evaluation: unknown operators and undeclared free variables are premise
 // failures, not runtime surprises.
