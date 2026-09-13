@@ -38,6 +38,28 @@ Episode-level signal (full traces in the committed test log): informative fam-ne
 3. **What survives:** HG > H1 (+1) is a weak, single-family signal that gating helps relative to ungated use of the same bytes — direction consistent with the development A/B, far below investment thresholds, at a grade that cannot fund anything.
 4. **Protocol lesson promoted:** calibration is not optional. Any future pack runs calibration *before* sealing (handoff §7 already requires it; the runner now carries the arm-blind calibration function).
 
+## Run 3 — v1 diagnostic on the same pack (adaptation reuse; development diagnosis, never confirmation)
+
+Option (a) executed: `shape-selector/1` ("trust, then verify against the task") — a history claim earns preference only if the credited rule can strictly reduce the current task by one application (`rewrite.CanStrictlyReduce`); success claims that can't are demoted as distrusted; failure claims against demonstrably-reducing rules are distrusted and stay neutral. v0 remains frozen. v1's remaining lie surface is credit allocation among probe-passing rules — proven still-misleadable by construction in its tests, so measuring it stays meaningful.
+
+**Label enforced in code:** `…+v1-adaptation-reuse-diagnostic` — v1 was designed after seeing this pack's failures; this run can diagnose the repair, never confirm value. Confirmation requires a pack authored after v1 froze.
+
+| Arm | Run 2 (v0) | Run 3 (v1) |
+|---|---|---|
+| H0 | 14 | 14 |
+| H1 | 12 | 12 |
+| HG | 13 | **16** |
+
+| Condition | Run 2 | Run 3 |
+|---|---|---|
+| (b) HG ≥ H1+3 | fail (+1) | **pass (+4)** |
+| (c) control loss ≤ 1 | pass (0) | pass (**−3**: HG now *gains* on control strata — mis-01/02 recovered, exactly the targeted defect) |
+| (d) ≥ 2 informative families | fail (1) | **fail (1)** — wins still concentrated in fam-negsub |
+| (e) H0 guard | **fail** | **pass** (16 ≥ 14; history net-positive) |
+| Rule | not satisfied | **not satisfied** ((d) alone) |
+
+**Dispositions:** the targeted defect (lying histories passing the similarity gate) is repaired at diagnostic grade — the H0 guard cleared and the misleading stratum flipped from HG's worst to HG's best. The rule still fails on (d): family diversification. That is the honest open question for a *fresh* pack: whether v1's advantage generalizes beyond the neg-sub construction family or is an artifact of this pack's composition. No tranche is funded; the next admissible measurement is a post-v1-freeze pack (agent-sealed when infrastructure permits, or a second implementer pack under the same pre-commitment discipline, with the adaptation-reuse taint recorded).
+
 ## Upgrade path unchanged
 
 Agent-sealed/v1 re-authoring by a clean-room custodian when agent infrastructure recovers; human tiers per the `018` packets. This pack then becomes development material.

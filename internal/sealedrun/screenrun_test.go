@@ -67,6 +67,17 @@ func TestImplementerAuthoredV1ScreenRun(t *testing.T) {
 	}
 	t.Logf("calibrated budget (median of blind-H0 minimums) = %d", budget)
 	logRun(t, "run-2 (calibrated)", out2, traces2)
+
+	// Run 3: v1 diagnostic on the SAME pack — adaptation reuse, labeled;
+	// development diagnosis of the v1 repair, never confirmation.
+	out3, traces3, err := RunDiagnosticV1(pack, budget)
+	if err != nil {
+		t.Fatalf("v1 diagnostic: %v", err)
+	}
+	if out3.GateEligible {
+		t.Fatal("gate eligibility must be unreachable regardless of outcome")
+	}
+	logRun(t, "run-3 (v1 diagnostic, adaptation reuse)", out3, traces3)
 }
 
 func logRun(t *testing.T, name string, out screen.Outcome, traces []EpisodeTrace) {
