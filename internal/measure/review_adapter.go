@@ -23,18 +23,23 @@ func (c Certificate) ToCheckRecord(id, caseLabel, executor, inputsRef, environme
 	if err != nil {
 		return review.CheckRecord{}, fmt.Errorf("marshal certificate: %w", err)
 	}
-	outcome := "completed"
+	outcome := review.CheckCompleted
+	blocker := ""
 	if c.Verdict == VerdictNotAssessed {
 		// A refusal to assess is not an executed decision on the claim; it
-		// must not read as a completed check of that claim.
-		outcome = "blocked"
+		// must not read as a completed check of that claim. The refusal
+		// reason is the blocker: the persistence gate rejects a blocked
+		// record with no recorded blocker.
+		outcome = review.CheckBlocked
+		blocker = c.Reason
 	}
 	rec := review.CheckRecord{
 		ID:                id,
 		CaseLabel:         caseLabel,
 		ProcedureRef:      "internal/measure claim-aware measurement checker",
-		Mode:              "execution",
+		Mode:              review.ModeExecuted,
 		Outcome:           outcome,
+		Blocker:           blocker,
 		Executor:          executor,
 		OutputRef:         string(payload),
 		StartedAt:         started.UTC().Format(time.RFC3339),
