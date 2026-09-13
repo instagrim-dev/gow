@@ -6,6 +6,7 @@ package screen
 
 import (
 	"fmt"
+	"math"
 	"strings"
 	"testing"
 )
@@ -102,12 +103,15 @@ func TestExactlyOnThresholdsSatisfiesRuleButNotGate(t *testing.T) {
 	if !out.RuleSatisfied {
 		t.Fatal("rule should be satisfied exactly on thresholds")
 	}
+	if !out.PopulationConforms {
+		t.Fatalf("the 12/6/6 population conforms: %v", out.PopulationDefects)
+	}
 	if out.GateEligible {
-		t.Fatal("a development-labeled outcome must never be gate-eligible")
+		t.Fatal("no outcome from this package is ever gate-eligible")
 	}
 	found := false
 	for _, n := range out.Notes {
-		if strings.Contains(n, "cannot satisfy the investment gate") {
+		if strings.Contains(n, "gate eligibility cannot be produced here") {
 			found = true
 		}
 	}
@@ -264,26 +268,83 @@ func TestCapabilityPassWithUnaffordableCustody(t *testing.T) {
 	}
 }
 
-// Even a sealed-protected label cannot be minted here: the constant
-// exists, but this test suite may only ever hand in development labels —
-// asserted by checking the label routing both ways.
-func TestGateEligibilityFollowsLabelOnly(t *testing.T) {
+// The review's source-derived counterexample: three informative episodes
+// spanning two families, one repetition, HG completing everything, a
+// favorable label. The arithmetic passes — and the outcome must still
+// refuse both the spending rule (population nonconforming) and gate
+// eligibility (unconditionally).
+func TestReviewCounterexampleThreeEpisodesCannotSatisfyRule(t *testing.T) {
+	eps := []Episode{
+		{ID: "inf-01", Stratum: StratumInformative, Family: "fam-A"},
+		{ID: "inf-02", Stratum: StratumInformative, Family: "fam-A"},
+		{ID: "inf-03", Stratum: StratumInformative, Family: "fam-B"},
+	}
+	var execs []Execution
+	for _, arm := range []Arm{ArmH0, ArmH1, ArmHG} {
+		for _, ep := range eps {
+			execs = append(execs, Execution{
+				Arm: arm, EpisodeID: ep.ID, Run: 1,
+				Completed: arm == ArmHG, TaskCost: 1,
+			})
+		}
+	}
+	out, err := Evaluate(Design{Episodes: eps, RunsPerCell: 1, EvidenceLabel: "protected-sealed"}, execs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !out.ArithmeticSatisfied {
+		t.Fatalf("the arithmetic itself passes in this construction: %+v", out.Conditions)
+	}
+	if out.PopulationConforms {
+		t.Fatal("three episodes with no control strata must not conform to the roadmap population")
+	}
+	if out.RuleSatisfied {
+		t.Fatal("the spending rule is defined over the roadmap population; a nonconforming batch cannot satisfy it")
+	}
+	if out.GateEligible {
+		t.Fatal("no label can mint gate eligibility from this package")
+	}
+	if len(out.PopulationDefects) == 0 {
+		t.Fatal("population defects must be named")
+	}
+}
+
+// A negative charge is rejected: it would reduce reported expenditure.
+func TestNegativeCostIsRejected(t *testing.T) {
 	execs := grid(episodes24(), baseCounts(), 0)
-	dev, err := Evaluate(devDesign(), execs)
-	if err != nil {
-		t.Fatal(err)
+	execs[0].TaskCost = -1
+	if _, err := Evaluate(devDesign(), execs); err == nil {
+		t.Fatal("a negative cost must be an error")
+	} else if !strings.Contains(err.Error(), "negative cost") {
+		t.Fatalf("error must name the negative charge: %v", err)
 	}
-	if dev.GateEligible {
-		t.Fatal("development label must not be gate-eligible")
+}
+
+// Cost accumulation refuses int64 overflow instead of wrapping.
+func TestCostOverflowIsRejected(t *testing.T) {
+	execs := grid(episodes24(), baseCounts(), 0)
+	execs[0].TaskCost = math.MaxInt64
+	execs[1].TaskCost = math.MaxInt64
+	if _, err := Evaluate(devDesign(), execs); err == nil {
+		t.Fatal("overflowing cost totals must be an error")
+	} else if !strings.Contains(err.Error(), "overflow") {
+		t.Fatalf("error must name the overflow: %v", err)
 	}
-	// The routing itself: only the exact sealed label flips the flag.
-	d := devDesign()
-	d.EvidenceLabel = "protected" // near miss, still ineligible
-	near, err := Evaluate(d, execs)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if near.GateEligible {
-		t.Fatal("a near-miss label must not be gate-eligible")
+}
+
+// No evidence label — including the sealed-sounding one — flips
+// eligibility: the field is constitutionally false here.
+func TestGateEligibilityIsUnconditionallyFalse(t *testing.T) {
+	execs := grid(episodes24(), baseCounts(), 0)
+	for _, label := range []string{"development", "protected", "protected-sealed"} {
+		d := devDesign()
+		d.EvidenceLabel = label
+		out, err := Evaluate(d, execs)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if out.GateEligible {
+			t.Fatalf("label %q must not produce gate eligibility", label)
+		}
 	}
 }

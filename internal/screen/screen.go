@@ -31,6 +31,7 @@ package screen
 
 import (
 	"fmt"
+	"math"
 	"sort"
 )
 
@@ -65,16 +66,22 @@ type Episode struct {
 type Design struct {
 	Episodes    []Episode
 	RunsPerCell int
-	// EvidenceLabel is applied by whoever supplied the records. Only
-	// LabelProtectedSealed can make an outcome gate-eligible, and this
-	// package has no way to verify the label — it echoes custody's
-	// assertion and enforces only that everything else is ineligible.
+	// EvidenceLabel describes where the records came from. It is echoed
+	// on the Outcome for the reader; it grants nothing. This package has
+	// no way to verify custody, and therefore never produces an eligible
+	// outcome regardless of label.
 	EvidenceLabel string
 }
 
-// LabelProtectedSealed is the one evidence label that custody machinery
-// may apply to a sealed protected batch. Anything else is development.
-const LabelProtectedSealed = "protected-sealed"
+// Roadmap population shape (revision 0.3.0 §4 G4-lite). The spending rule
+// is DEFINED over this population; arithmetic on any other shape is a
+// development calculation, not the screen.
+const (
+	RequiredInformative     = 12
+	RequiredLowValue        = 6
+	RequiredMisleading      = 6
+	RequiredInformativeFams = 2 // condition (d) is unsatisfiable below this
+)
 
 // Roadmap thresholds (proposed investment judgments, fixed in revision
 // 0.3.0; changing them without a new roadmap revision is tuning).
@@ -84,7 +91,10 @@ const (
 	MinFamilies           = 2 // (d): successful differences in at least this many construction families
 )
 
-// Execution is one arm×episode×run cell's recorded result.
+// Execution is one arm×episode×run cell's recorded result. Costs are
+// unit-agnostic nonnegative integer units, consistent within a batch; a
+// future runtime adapter must represent an unavailable measurement as
+// unavailable, never as a measured zero.
 type Execution struct {
 	Arm              Arm
 	EpisodeID        string
@@ -114,18 +124,33 @@ type ArmReport struct {
 	FullCost    int64
 }
 
-// Outcome is the decision-arithmetic result. RuleSatisfied is a statement
-// about the arithmetic of the supplied records only.
+// Outcome is the decision-arithmetic result. ArithmeticSatisfied is a
+// statement about the supplied records only; RuleSatisfied is the spending
+// rule as defined, which additionally requires the roadmap population.
 type Outcome struct {
 	EvidenceLabel string
-	// GateEligible is false for every label except LabelProtectedSealed.
-	// A synthetic or development outcome that satisfies the rule is a
-	// test of the procedure, not an earned tranche.
-	GateEligible     bool
-	Conditions       []Condition
+	// GateEligible is ALWAYS false from this package. Eligibility for the
+	// investment gate requires custodian-sealed protected episodes, a
+	// validated custody chain, frozen arm snapshots, and execution
+	// authorization — bindings this package cannot verify and that do not
+	// yet exist. When they do, eligibility will be established by the
+	// custody machinery that owns them, not by relabeling this
+	// calculator's output.
+	GateEligible bool
+	Conditions   []Condition
+	// ArithmeticSatisfied: conditions (a)–(e) all hold on the supplied
+	// grid, whatever its shape. A development calculation can earn this.
+	ArithmeticSatisfied bool
+	// PopulationConforms: the episode population matches the roadmap
+	// shape the spending rule is defined over (12/6/6, at least 2
+	// construction families among informative episodes).
+	PopulationConforms bool
+	PopulationDefects  []string
+	// RuleSatisfied = ArithmeticSatisfied && PopulationConforms: the
+	// spending rule as written. It is still not the gate (GateEligible).
 	RuleSatisfied    bool
 	Arms             map[Arm]ArmReport
-	CustodyDominates bool // total custody exceeds total task-directed cost; reported, never netted away
+	CustodyDominates bool // total custody exceeds total task-directed cost; a diagnostic, not an affordability decision
 	Notes            []string
 }
 
@@ -189,7 +214,9 @@ func Evaluate(d Design, execs []Execution) (Outcome, error) {
 		return Outcome{}, fmt.Errorf("incomplete grid: %d executions supplied, %d arms × %d episodes × %d runs = %d required; an incomplete batch yields no decision", len(execs), len(allArms), len(episodes), d.RunsPerCell, want)
 	}
 
-	// Tallies.
+	// Tallies. Costs are validated nonnegative and accumulated with
+	// overflow checks: a negative charge would reduce reported
+	// expenditure, and a wrapped total would misstate it silently.
 	r := int64(d.RunsPerCell)
 	sums := map[Arm]int64{}
 	lowMisSums := map[Arm]int64{}
@@ -197,9 +224,17 @@ func Evaluate(d Design, execs []Execution) (Outcome, error) {
 	reports := map[Arm]ArmReport{}
 	invalidCount := int64(0)
 	for _, e := range execs {
+		if e.TaskCost < 0 || e.CustodyCost < 0 {
+			return Outcome{}, fmt.Errorf("execution %s/%s run %d carries a negative cost (task %d, custody %d); charges are nonnegative and an unavailable measurement must be represented as unavailable, not negative or zero", e.Arm, e.EpisodeID, e.Run, e.TaskCost, e.CustodyCost)
+		}
 		rep := reports[e.Arm]
-		rep.TaskCost += e.TaskCost
-		rep.CustodyCost += e.CustodyCost
+		var err error
+		if rep.TaskCost, err = addChecked(rep.TaskCost, e.TaskCost); err != nil {
+			return Outcome{}, fmt.Errorf("arm %s task-cost ledger: %w", e.Arm, err)
+		}
+		if rep.CustodyCost, err = addChecked(rep.CustodyCost, e.CustodyCost); err != nil {
+			return Outcome{}, fmt.Errorf("arm %s custody-cost ledger: %w", e.Arm, err)
+		}
 		if e.Completed {
 			rep.Completions++
 			sums[e.Arm]++
@@ -216,11 +251,44 @@ func Evaluate(d Design, execs []Execution) (Outcome, error) {
 	}
 	var taskTotal, custodyTotal int64
 	for a, rep := range reports {
-		rep.FullCost = rep.TaskCost + rep.CustodyCost
+		var err error
+		if rep.FullCost, err = addChecked(rep.TaskCost, rep.CustodyCost); err != nil {
+			return Outcome{}, fmt.Errorf("arm %s full-cost ledger: %w", a, err)
+		}
 		reports[a] = rep
-		taskTotal += rep.TaskCost
-		custodyTotal += rep.CustodyCost
+		if taskTotal, err = addChecked(taskTotal, rep.TaskCost); err != nil {
+			return Outcome{}, fmt.Errorf("cross-arm task total: %w", err)
+		}
+		if custodyTotal, err = addChecked(custodyTotal, rep.CustodyCost); err != nil {
+			return Outcome{}, fmt.Errorf("cross-arm custody total: %w", err)
+		}
 	}
+
+	// Population conformance: the spending rule is defined over the
+	// roadmap population. Arithmetic on any other shape stays a
+	// development calculation and cannot satisfy the rule.
+	var popDefects []string
+	stratumCounts := map[Stratum]int{}
+	infFams := map[string]bool{}
+	for _, ep := range episodes {
+		stratumCounts[ep.Stratum]++
+		if ep.Stratum == StratumInformative {
+			infFams[ep.Family] = true
+		}
+	}
+	if got := stratumCounts[StratumInformative]; got != RequiredInformative {
+		popDefects = append(popDefects, fmt.Sprintf("%d informative episodes, roadmap population requires %d", got, RequiredInformative))
+	}
+	if got := stratumCounts[StratumLowValue]; got != RequiredLowValue {
+		popDefects = append(popDefects, fmt.Sprintf("%d low-value episodes, roadmap population requires %d", got, RequiredLowValue))
+	}
+	if got := stratumCounts[StratumMisleading]; got != RequiredMisleading {
+		popDefects = append(popDefects, fmt.Sprintf("%d misleading episodes, roadmap population requires %d", got, RequiredMisleading))
+	}
+	if len(infFams) < RequiredInformativeFams {
+		popDefects = append(popDefects, fmt.Sprintf("%d construction families among informative episodes, roadmap population requires at least %d (condition (d) is unsatisfiable below that)", len(infFams), RequiredInformativeFams))
+	}
+	populationConforms := len(popDefects) == 0
 
 	// (d): construction families containing an episode where HG's summed
 	// completions strictly exceed H1's.
@@ -273,26 +341,39 @@ func Evaluate(d Design, execs []Execution) (Outcome, error) {
 			Detail:    fmt.Sprintf("HG %d vs H0 %d", sums[ArmHG], sums[ArmH0]),
 		},
 	}
-	ruleSatisfied := true
+	arithmeticSatisfied := true
 	for _, c := range conds {
 		if !c.Satisfied {
-			ruleSatisfied = false
+			arithmeticSatisfied = false
 		}
 	}
 
 	out := Outcome{
-		EvidenceLabel:    d.EvidenceLabel,
-		GateEligible:     d.EvidenceLabel == LabelProtectedSealed,
-		Conditions:       conds,
-		RuleSatisfied:    ruleSatisfied,
-		Arms:             reports,
-		CustodyDominates: custodyTotal > taskTotal,
+		EvidenceLabel:       d.EvidenceLabel,
+		GateEligible:        false, // constitutionally: see Outcome.GateEligible
+		Conditions:          conds,
+		ArithmeticSatisfied: arithmeticSatisfied,
+		PopulationConforms:  populationConforms,
+		PopulationDefects:   popDefects,
+		RuleSatisfied:       arithmeticSatisfied && populationConforms,
+		Arms:                reports,
+		CustodyDominates:    custodyTotal > taskTotal,
 	}
-	if !out.GateEligible {
-		out.Notes = append(out.Notes, fmt.Sprintf("evidence label %q is not %q: this outcome exercises the decision arithmetic and cannot satisfy the investment gate", d.EvidenceLabel, LabelProtectedSealed))
+	out.Notes = append(out.Notes, "gate eligibility cannot be produced here: it requires custodian-sealed protected episodes, a validated custody chain, frozen arm snapshots, and execution authorization — none of which this arithmetic can verify or supply")
+	if !populationConforms {
+		out.Notes = append(out.Notes, "the episode population does not match the roadmap shape the spending rule is defined over; this evaluation is a development calculation, not the screen")
 	}
 	if out.CustodyDominates {
 		out.Notes = append(out.Notes, fmt.Sprintf("custody cost (%d) exceeds task-directed cost (%d): a capability pass does not make the discipline affordable; report both figures to the spending decision", custodyTotal, taskTotal))
 	}
 	return out, nil
+}
+
+// addChecked adds two nonnegative int64 values, refusing overflow rather
+// than wrapping a cost total.
+func addChecked(a, b int64) (int64, error) {
+	if a > math.MaxInt64-b {
+		return 0, fmt.Errorf("cost accumulation overflows int64 (%d + %d)", a, b)
+	}
+	return a + b, nil
 }
