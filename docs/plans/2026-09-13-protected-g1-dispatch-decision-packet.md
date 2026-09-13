@@ -141,6 +141,28 @@ acceptance matrix these limitations cap the grade at `agent-sealed/v1`
 |---|---|
 | Custodian isolation (observed) | The custodian records the actually observed runtime boundary in its custody/exposure record at launch; graded when the return packet is read. |
 
+### Launch record
+
+- **2026-09-13, attempt 1 (cloud, session-default model):** infrastructure
+  failure before any custodian context was created — the cloud environment
+  rejected the model ("The AI model you selected isn't available", cloud
+  subagent `bc-74952bfe-d1ba-4283-a1e4-e47baba19e76`, server request
+  `78935238-d60b-452d-b8f7-18a3e7688a5c`). No protected material was created
+  or exposed; the clean-room branch was untouched.
+- **2026-09-13, attempt 2 (cloud, `composer-2.5-fast`):** same infrastructure
+  failure (cloud subagent `bc-9ad0d862-e868-4bb3-b5cc-f12a2545cf70`, server
+  request `aa7d071c-fe98-46c0-95fe-5847c8e345de`). No custodian context was
+  created.
+
+Per the operative handoff, a failed isolated-agent launch is preserved as an
+infrastructure failure; it does not make implementer-authored cases
+independent, and development-grade authoring must not be described as the
+completed agent-sealed task. The recorded cloud-agent custodian mechanism
+cannot currently be realized; substituting a different mechanism (for
+example, a local subagent sharing the implementer host, with strictly weaker
+observable isolation) is a new operator decision, not a repair this lane may
+make silently.
+
 ## Required pre-dispatch artifacts
 
 The operator retains or verifies these before authoring cases:
