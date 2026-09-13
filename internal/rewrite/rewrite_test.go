@@ -58,6 +58,19 @@ func TestSearchFindsCheaperEquivalentAndReplaysEndpoint(t *testing.T) {
 	if len(res.Steps) == 0 {
 		t.Fatal("the outcome must be attributed: a named rule path is required")
 	}
+	// Chain integrity (adversarial review finding 8): the steps form an
+	// unbroken path from Original to Best.
+	if res.Steps[0].Before != res.Original {
+		t.Fatalf("path must start at the original: %q vs %q", res.Steps[0].Before, res.Original)
+	}
+	for i := 0; i+1 < len(res.Steps); i++ {
+		if res.Steps[i].After != res.Steps[i+1].Before {
+			t.Fatalf("broken chain at step %d: %q -> %q", i, res.Steps[i].After, res.Steps[i+1].Before)
+		}
+	}
+	if res.Steps[len(res.Steps)-1].After != res.Best {
+		t.Fatalf("path must end at the best: %q vs %q", res.Steps[len(res.Steps)-1].After, res.Best)
+	}
 	for _, s := range res.Steps {
 		if s.Rule == "" {
 			t.Fatalf("unattributed step: %+v", s)

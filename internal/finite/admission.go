@@ -2,6 +2,7 @@ package finite
 
 import (
 	"fmt"
+	"sort"
 )
 
 // VerifyRuleWarrant decides whether a presented certificate is sufficient
@@ -58,7 +59,10 @@ func VerifyRuleWarrant(cert Certificate, left, right Expr, d Domain) []string {
 	if cert.Binding.Domain.Width != d.Width {
 		defects = append(defects, fmt.Sprintf("domain width mismatch: certificate is for %d-bit words, rule admission requests %d-bit", cert.Binding.Domain.Width, d.Width))
 	}
-	if cert.Binding.Domain.String() != d.String() {
+	if !sameVars(cert.Binding.Domain.Vars, d.Vars) {
+		// Structural comparison, not formatted-string comparison: a
+		// pathological variable name could make two different domains
+		// render identically (adversarial review finding 6).
 		defects = append(defects, fmt.Sprintf("domain mismatch: certificate covers (%s), rule admission requests (%s)", cert.Binding.Domain, d))
 	}
 	if cert.Left != left.render() {
@@ -82,4 +86,21 @@ func VerifyRuleWarrant(cert Certificate, left, right Expr, d Domain) []string {
 		defects = append(defects, fmt.Sprintf("replay coverage differs: %d assignments on replay vs %d recorded", replay.AssignmentsChecked, cert.AssignmentsChecked))
 	}
 	return defects
+}
+
+// sameVars compares variable sets structurally, order-insensitively.
+func sameVars(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	as := append([]string(nil), a...)
+	bs := append([]string(nil), b...)
+	sort.Strings(as)
+	sort.Strings(bs)
+	for i := range as {
+		if as[i] != bs[i] {
+			return false
+		}
+	}
+	return true
 }

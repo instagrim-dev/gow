@@ -7,6 +7,41 @@ import (
 
 func catalog() []string { return []string{"double-not", "add-zero", "xor-self-zero"} }
 
+// Frozen v0 convention (adversarial review finding 3): an operator-free
+// task has a zero multiset, the 0/0 Jaccard case returns 0, and ALL
+// history is gated out — even a byte-identical prior attempt.
+func TestOperatorFreeTaskGatesAllHistory(t *testing.T) {
+	dec := Select(Input{
+		TaskStart: "x",
+		Target:    1,
+		Catalog:   catalog(),
+		History:   History{{Start: "x", RulesApplied: []string{"double-not"}, Completed: true}},
+	})
+	if len(dec.RelevantAttempts) != 0 || len(dec.Preferences) != 0 {
+		t.Fatalf("operator-free tasks must gate out all history under the frozen 0/0 convention: %+v", dec)
+	}
+}
+
+// Duplicate catalog names are deduped on entry (adversarial review
+// finding 4): every rule appears exactly once, first occurrence wins.
+func TestDuplicateCatalogDeduped(t *testing.T) {
+	dec := Select(Input{
+		TaskStart: "not(not(x))",
+		Target:    1,
+		Catalog:   []string{"double-not", "double-not", "add-zero"},
+	})
+	if len(dec.EnabledRules) != 2 {
+		t.Fatalf("duplicates must collapse: %v", dec.EnabledRules)
+	}
+	seen := map[string]int{}
+	for _, r := range dec.EnabledRules {
+		seen[r]++
+	}
+	if seen["double-not"] != 1 || seen["add-zero"] != 1 {
+		t.Fatalf("each rule exactly once: %v", dec.EnabledRules)
+	}
+}
+
 // A history-free input yields the catalog order unchanged: no evidence,
 // no reordering, deterministic hashes present.
 func TestNoHistoryYieldsCatalogOrder(t *testing.T) {

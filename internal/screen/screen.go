@@ -20,9 +20,11 @@
 //   - the execution grid must be complete: arms × episodes × runs, each
 //     cell exactly once, or there is no decision at all (an incomplete
 //     batch is malformed input, not a partial result);
-//   - every stratum contributes to its declared endpoint: informative
-//     episodes carry (b) and (d); low-value and misleading episodes carry
-//     (c); every episode carries (a), (e), and the totals;
+//   - every stratum contributes to its declared endpoint: conditions (b)
+//     and (e) sum completions over ALL episodes (matching the roadmap's
+//     "3 more of the 24 tasks"); condition (d)'s family-diversity guard
+//     counts informative episodes only; low-value and misleading episodes
+//     additionally carry (c); every episode carries (a) and the totals;
 //   - costs are recorded per execution in two ledgers (task-directed and
 //     custody) and reported per arm in both, plus their sum; a
 //     capability pass with dominating custody stays a capability pass —
@@ -290,10 +292,17 @@ func Evaluate(d Design, execs []Execution) (Outcome, error) {
 	}
 	populationConforms := len(popDefects) == 0
 
-	// (d): construction families containing an episode where HG's summed
-	// completions strictly exceed H1's.
+	// (d): construction families containing an INFORMATIVE episode where
+	// HG's summed completions strictly exceed H1's. Control strata
+	// (low-value, misleading) are deliberately excluded: (d) is the
+	// diversification guard on where shaping value comes from, and a
+	// control-stratum fluke must not substitute for a second informative
+	// family (adversarial review finding 2).
 	famSet := map[string]bool{}
 	for id, ep := range episodes {
+		if ep.Stratum != StratumInformative {
+			continue
+		}
 		if perEpisode[ArmHG][id] > perEpisode[ArmH1][id] {
 			famSet[ep.Family] = true
 		}
@@ -331,7 +340,7 @@ func Evaluate(d Design, execs []Execution) (Outcome, error) {
 			Statement: fmt.Sprintf("successful differences occur in at least %d construction families", MinFamilies),
 			Left:      int64(len(families)), Op: ">=", Right: MinFamilies,
 			Satisfied: len(families) >= MinFamilies,
-			Detail:    fmt.Sprintf("families with an episode where HG > H1: %v", families),
+			Detail:    fmt.Sprintf("informative-stratum families with an episode where HG > H1: %v", families),
 		},
 		{
 			Name:      "e",

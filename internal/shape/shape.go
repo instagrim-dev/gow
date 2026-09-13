@@ -141,7 +141,11 @@ func countToken(s, op string) int {
 }
 
 // similarity computes the Jaccard overlap of two operator multisets in
-// hundredths (0..100), exact integer arithmetic.
+// hundredths (0..100), exact integer arithmetic. Frozen v0 convention:
+// the 0/0 case (both expressions operator-free, e.g. bare variables)
+// returns 0, so operator-free tasks gate out ALL history including
+// identical attempts — conservative by design; changing this is a new
+// controller version (adversarial review finding 3).
 func similarity(a, b map[string]int) int {
 	inter, union := 0, 0
 	for op, ca := range a {

@@ -309,6 +309,24 @@ func TestReviewCounterexampleThreeEpisodesCannotSatisfyRule(t *testing.T) {
 	}
 }
 
+// Condition (d) is the diversification guard on informative shaping
+// value: differences confined to control strata must not satisfy it
+// (adversarial review finding 2).
+func TestControlStrataCannotSatisfyD(t *testing.T) {
+	counts := map[Arm]map[string]int64{
+		ArmH0: {},
+		ArmH1: {},
+		ArmHG: {"low-01": 1, "mis-01": 1}, // HG > H1 only in fam-C and fam-D
+	}
+	out, err := Evaluate(devDesign(), grid(episodes24(), counts, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d := condition(t, out, "d"); d.Satisfied || d.Left != 0 {
+		t.Fatalf("(d) must count informative families only; control-strata flukes satisfied it: %+v", d)
+	}
+}
+
 // A negative charge is rejected: it would reduce reported expenditure.
 func TestNegativeCostIsRejected(t *testing.T) {
 	execs := grid(episodes24(), baseCounts(), 0)

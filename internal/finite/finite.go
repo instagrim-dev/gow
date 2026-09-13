@@ -57,7 +57,9 @@ type Domain struct {
 func (d Domain) mask() uint64 { return (1 << uint(d.Width)) - 1 }
 
 // Size returns the number of assignments (2^Width)^len(Vars), or -1 when
-// the declaration is invalid.
+// the declaration is invalid. Above the exhaustiveness cap the count
+// saturates early and is a lower bound, not an exact figure; callers
+// phrase it as "at least" (adversarial review finding 5).
 func (d Domain) Size() int64 {
 	if d.Width < MinWidth || d.Width > MaxWidth {
 		return -1
@@ -224,6 +226,13 @@ func structureWalk(label string, e Expr, depth int) []string {
 		if t.Name == "" {
 			return []string{fmt.Sprintf("%s: variable node has an empty name", label)}
 		}
+		if !identifierName(t.Name) {
+			// Render must be injective over admissible expressions: a
+			// name like "not(x)" would render identically to the real
+			// expression not(x), corrupting matching and visited-set
+			// keying in every consumer that compares renderings.
+			return []string{fmt.Sprintf("%s: variable name %q is not a plain identifier (letters, digits, underscore; not starting with a digit)", label, t.Name)}
+		}
 		return nil
 	case Const:
 		return nil
@@ -307,6 +316,22 @@ func ValidateExpr(e Expr, d Domain) []string {
 		return defects
 	}
 	return validate(e, d)
+}
+
+// identifierName reports whether a variable name is a plain identifier,
+// keeping Render injective over admissible expressions.
+func identifierName(s string) bool {
+	for i, r := range s {
+		alpha := r == '_' || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
+		digit := r >= '0' && r <= '9'
+		if i == 0 && !alpha {
+			return false
+		}
+		if !alpha && !digit {
+			return false
+		}
+	}
+	return true
 }
 
 // enumerate walks every assignment of the domain in canonical order

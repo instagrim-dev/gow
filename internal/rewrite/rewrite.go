@@ -211,11 +211,14 @@ func Search(start finite.Expr, d finite.Domain, rules []Rule, cost CostModel, ma
 }
 
 // applyEverywhere returns every expression obtained by applying the rule
-// at exactly one position of e, in deterministic order.
+// at exactly one position of e, in deterministic order. Results have
+// their constants normalized to the search width so semantically
+// identical states share one visited-set key and one rendering
+// (adversarial review finding 10).
 func applyEverywhere(e finite.Expr, r Rule, d finite.Domain) []finite.Expr {
 	var out []finite.Expr
 	if b, ok := match(r.lhs, e, d, map[string]finite.Expr{}); ok {
-		out = append(out, subst(r.rhs, b))
+		out = append(out, normalizeConsts(subst(r.rhs, b), d))
 	}
 	switch t := e.(type) {
 	case finite.Unary:
@@ -291,6 +294,22 @@ func subst(rhs finite.Expr, bindings map[string]finite.Expr) finite.Expr {
 		return finite.Binary{Op: t.Op, X: subst(t.X, bindings), Y: subst(t.Y, bindings)}
 	}
 	return rhs
+}
+
+// normalizeConsts masks constant values to the search width, matching
+// evaluation semantics, so renderings of semantically identical states
+// coincide.
+func normalizeConsts(e finite.Expr, d finite.Domain) finite.Expr {
+	mask := uint64(1)<<uint(d.Width) - 1
+	switch t := e.(type) {
+	case finite.Const:
+		return finite.Const{Value: t.Value & mask}
+	case finite.Unary:
+		return finite.Unary{Op: t.Op, X: normalizeConsts(t.X, d)}
+	case finite.Binary:
+		return finite.Binary{Op: t.Op, X: normalizeConsts(t.X, d), Y: normalizeConsts(t.Y, d)}
+	}
+	return e
 }
 
 func freeVars(e finite.Expr) map[string]bool {

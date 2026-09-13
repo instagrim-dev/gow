@@ -159,6 +159,26 @@ func TestOutOfDomainInstanceIsInapplicable(t *testing.T) {
 	}
 }
 
+// Render injectivity (adversarial review finding 1): a variable named
+// like an expression rendering would corrupt matching and visited-set
+// keying in every consumer that compares renderings, so non-identifier
+// names are premise failures.
+func TestNonIdentifierVariableNameRefused(t *testing.T) {
+	d := Domain{Width: 4, Vars: []string{"not(x)"}}
+	cert := AssessEquivalence(binding("render forgery", d), Var{"not(x)"}, Unary{Op: OpNot, X: Var{"x"}})
+	if cert.Verdict != VerdictInapplicable {
+		t.Fatalf("a non-identifier variable name must be INAPPLICABLE, got %s: %s", cert.Verdict, cert.Reason)
+	}
+	if !strings.Contains(cert.Reason, "not a plain identifier") {
+		t.Fatalf("refusal must name the identifier rule: %s", cert.Reason)
+	}
+	// The warrant boundary refuses the same forgery.
+	good := AssessEquivalence(binding("reflexivity", dom4("x")), Var{"x"}, Var{"x"})
+	if defects := VerifyRuleWarrant(good, Var{"not(x)"}, Var{"x"}, d); len(defects) == 0 {
+		t.Fatal("the warrant boundary must refuse non-identifier names")
+	}
+}
+
 // Structurally invalid expressions are applicability refusals, never
 // panics: nil expressions, nil children, foreign node types, and
 // unbounded nesting are all rejected before rendering or traversal.

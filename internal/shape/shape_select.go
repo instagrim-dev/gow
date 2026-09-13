@@ -12,6 +12,19 @@ import (
 // is ordering, not censorship, so the search stays complete under an
 // unlimited budget and the selector's effect exists only under scarcity.
 func Select(in Input) Decision {
+	// Dedupe the catalog on entry, first occurrence wins: duplicate
+	// names would double preferences and the enabled ordering
+	// (adversarial review finding 4).
+	seenName := map[string]bool{}
+	catalog := make([]string, 0, len(in.Catalog))
+	for _, r := range in.Catalog {
+		if !seenName[r] {
+			seenName[r] = true
+			catalog = append(catalog, r)
+		}
+	}
+	in.Catalog = catalog
+
 	dec := Decision{
 		ControllerVersion: ControllerVersion,
 		SnapshotHash:      SnapshotHash(),

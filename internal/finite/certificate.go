@@ -113,7 +113,7 @@ func AssessEquivalence(b Binding, left, right Expr) Certificate {
 	cert.DomainSize = b.Domain.Size()
 	if cert.DomainSize > ExhaustiveCap {
 		cert.Verdict = VerdictUnresolved
-		cert.Reason = fmt.Sprintf("declared domain has %d assignments, above the exhaustiveness cap %d; this tool does not substitute sampling for enumeration, so the claim stays undecided here", cert.DomainSize, int64(ExhaustiveCap))
+		cert.Reason = fmt.Sprintf("declared domain has at least %d assignments, above the exhaustiveness cap %d; this tool does not substitute sampling for enumeration, so the claim stays undecided here", cert.DomainSize, int64(ExhaustiveCap))
 		return cert
 	}
 	enumerate(b.Domain, func(a Assignment) bool {

@@ -23,15 +23,23 @@ func (c Certificate) ToCheckRecord(id, caseLabel, executor, inputsRef, environme
 	if err != nil {
 		return review.CheckRecord{}, fmt.Errorf("marshal certificate: %w", err)
 	}
-	outcome := review.CheckCompleted
+	outcome := ""
 	blocker := ""
-	if c.Verdict == VerdictUnresolved || c.Verdict == VerdictInapplicable {
+	switch c.Verdict {
+	case VerdictHoldsOnDomain, VerdictRefuted, VerdictInstanceOnly:
+		outcome = review.CheckCompleted
+	case VerdictUnresolved, VerdictInapplicable:
 		// A refusal (premise failure, exhaustiveness cap) is not an
 		// executed decision on the claim; it must not read as one. The
 		// refusal reason is the blocker: the persistence gate rejects a
 		// blocked record with no recorded blocker.
 		outcome = review.CheckBlocked
 		blocker = c.Reason
+	default:
+		// Whitelist, not blacklist: an unknown or zero-value verdict is
+		// not evidence of anything and must not record as a completed
+		// executed check (adversarial review finding 7).
+		return review.CheckRecord{}, fmt.Errorf("certificate verdict %q is not in this adapter's vocabulary; refusing to record it", c.Verdict)
 	}
 	rec := review.CheckRecord{
 		ID:                id,
