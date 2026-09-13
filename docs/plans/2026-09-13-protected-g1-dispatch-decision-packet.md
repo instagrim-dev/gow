@@ -171,6 +171,21 @@ acceptance matrix these limitations cap the grade at `agent-sealed/v1`
   clean-room branch `g1-custodian-cleanroom` is retained for a future cloud
   retry.
 
+- **2026-09-13, attempt 3 (local fresh-context subagent, launched):**
+  infrastructure failure at the first model request — the provider blocked
+  the request under its usage policy before the custodian produced a single
+  action (subagent `f69c37e5-9ca2-4d58-b0fb-45831b92c3c8`). The workspace
+  was untouched afterward (the five staged files only; no protected
+  material was created) and the transcript contains only the dispatched
+  prompt. Assessed cause: the prompt's confidentiality-heavy phrasing
+  pattern-matched a provider policy filter; the underlying task (authoring
+  held-out JSON test cases for a local offline checker) is benign.
+- **2026-09-13, attempt 4 (local fresh-context subagent, replanned
+  prompt):** same mechanism and identical frozen documents; the dispatch
+  prompt was rewritten in plain language describing the held-out test-set
+  task directly, with the same workspace-only boundary and summary
+  restrictions. No contract value changed.
+
 Per the operative handoff, a failed isolated-agent launch is preserved as an
 infrastructure failure; it does not make implementer-authored cases
 independent, and development-grade authoring must not be described as the
