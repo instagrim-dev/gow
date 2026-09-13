@@ -89,6 +89,17 @@ func newReviewPolicyCommand(stdout io.Writer, app *pipeline.App, opts *rootOptio
 			"--supersedes with --supersede-rationale so the old basis is retained.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// The pairing the long help promises is enforced, not
+			// advisory: a supersession without a recorded rationale is
+			// an unexplained authority change in an immutable ledger,
+			// and a rationale without a superseded policy explains
+			// nothing.
+			if supersedes != "" && strings.TrimSpace(supersedeWhy) == "" {
+				return wrapCommandError("review policy", fmt.Errorf("--supersedes requires --supersede-rationale: an authority change must record why the old basis changed"))
+			}
+			if supersedes == "" && supersedeWhy != "" {
+				return wrapCommandError("review policy", fmt.Errorf("--supersede-rationale requires --supersedes: a rationale must name the policy it explains"))
+			}
 			specs, err := parseObligationSpecs(obligations)
 			if err != nil {
 				return wrapCommandError("review policy", err)

@@ -536,7 +536,7 @@ command families with their own docs: `witness check`
 ([`docs/evaluation.md`](docs/evaluation.md)), `projection
 propose`/`discharge`/`list` ([`docs/projection.md`](docs/projection.md)),
 `evidence admit`/`list`, `episode …` ([`docs/episode.md`](docs/episode.md)),
-`review applicability`/`check`/`coverage`
+`review policy`/`assess`/`applicability`/`check`/`coverage`
 ([`docs/normative-review-records.md`](docs/normative-review-records.md)),
 `invariant claim`, `source lineage-diff`, and `mechanism list`.
 

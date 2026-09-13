@@ -29,6 +29,34 @@ import (
 // because "eligibility is reachable" and "eligibility is not reachable by
 // skipping a record" are the same claim from opposite sides: a surface that only
 // ever says ELIGIBLE_TO_ADVANCE would satisfy the first and betray the contract.
+// TestCLIReviewPolicySupersedeRequiresPairedRationale pins the pairing the
+// long help promises: a supersession without a recorded rationale is an
+// unexplained authority change in an immutable ledger, and a rationale
+// without a superseded policy explains nothing. Both directions refuse
+// before any write (Bugbot finding on PR #24).
+func TestCLIReviewPolicySupersedeRequiresPairedRationale(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "workspace", "newf.db")
+	runCLIJSON(t, []string{"--db", dbPath, "--json", "init", "Erdős-Straus conjecture"})
+
+	base := []string{
+		"--db", dbPath, "--json", "review", "policy",
+		"--key", "supersede-pairing", "--revision", "2",
+		"--decision-name", "d", "--owner", "o", "--authority", "a", "--scope", "s",
+		"--obligation", "key=k;revision=1;requirement=r;acceptance=c;applicability=p;owner=o;mandatory=true",
+	}
+
+	stdout := &bytes.Buffer{}
+	if code := execute(context.Background(), append(append([]string{}, base...), "--supersedes", "rpol_missing"), stdout, &bytes.Buffer{}); code == 0 {
+		t.Fatal("--supersedes without --supersede-rationale must be refused")
+	}
+	stdout.Reset()
+	if code := execute(context.Background(), append(append([]string{}, base...), "--supersede-rationale", "why"), stdout, &bytes.Buffer{}); code == 0 {
+		t.Fatal("--supersede-rationale without --supersedes must be refused")
+	}
+}
+
 func TestCLIOnlyReviewLedgerReachesEligibility(t *testing.T) {
 	t.Parallel()
 
