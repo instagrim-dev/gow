@@ -1,6 +1,6 @@
 # E0 custodian handoff: public interface for protected task authoring (revision 2)
 
-- **Status:** prepared handoff; the custodian role's task-authoring half is unstaffed and nothing here authorizes execution
+- **Status:** retained remediation handoff; not the custodian-delivery surface. The custodian receives only `CUSTODIAN_INTERFACE_BRIEF.md` and `CUSTODIAN_PUBLIC_INTERFACE.md`. Nothing here authorizes execution.
 - **Revision 2 (2026-09-13):** remediates the D2 model review lane's findings (3 P1, 7 P2, 5 P3; recorded in [`015`](2026-09-12-015-custody-staffing-authorization-memo.md)). Review label: model-judgment defect-finder, same-model-family; not the external human review E0's exit requires
 - **Roadmap:** [`v0.3.0`](../research/gow-shaping-maturity-roadmap-v0.3.0.md) §2 (E0), §4 (G1 gate, G4-lite) — normative for strata and arm definitions
 - **Deliberate exclusions:** no worked examples, development-case content, known-failure identities, prompt text, or rule-specific test cases. The review lane confirmed this boundary holds
