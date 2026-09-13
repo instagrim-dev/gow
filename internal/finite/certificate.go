@@ -1,0 +1,209 @@
+package finite
+
+import (
+	"fmt"
+	"strings"
+)
+
+// Verdict states for the single question a certificate answers. The
+// vocabulary deliberately has no state readable as "equivalent in
+// general": the strongest verdict names the domain it exhausted.
+const (
+	// VerdictHoldsOnDomain: every assignment of the declared finite domain
+	// was enumerated and the two expressions agreed on all of them. This
+	// supports exactly the declared domain.
+	VerdictHoldsOnDomain = "HOLDS_ON_DECLARED_DOMAIN"
+	// VerdictRefuted: an exact counterexample assignment is recorded.
+	VerdictRefuted = "REFUTED"
+	// VerdictInstanceOnly: the supplied assignments agreed, and that is
+	// all this outcome states. It is not an equivalence over any domain
+	// and must not be consumed as one (T0: instance success remains
+	// instance evidence).
+	VerdictInstanceOnly = "INSTANCE_EVIDENCE_ONLY"
+	// VerdictInapplicable: a premise failed (undeclared variable, unknown
+	// operator, invalid width); the identified failure is recorded.
+	VerdictInapplicable = "INAPPLICABLE"
+	// VerdictUnresolved: the declared domain exceeds the exhaustiveness
+	// cap; this tool refuses to substitute sampling for enumeration.
+	VerdictUnresolved = "UNRESOLVED"
+)
+
+// Binding records the exact equivalence claim under assessment, so the
+// certificate cannot drift from the sentence it decides.
+type Binding struct {
+	Sentence string // exact sentence or rule statement from the source record
+	Domain   Domain // the declared finite semantics the claim quantifies over
+}
+
+// Counterexample is one exact refuting assignment with both evaluations.
+type Counterexample struct {
+	Assignment string // canonical rendering, e.g. "x=8, y=0"
+	Left       uint64
+	Right      uint64
+}
+
+// Certificate is the machine-readable outcome plus a fixed-template
+// explanation. It answers exactly the bound claim; the NotAssessed lines
+// are scope guards preventing a certificate answering one question from
+// being consumed as an answer to another.
+type Certificate struct {
+	Binding Binding
+	Left    string // rendered expressions, fixed at assessment time
+	Right   string
+
+	// Applicability
+	PremiseFailures []string
+
+	// Coverage accounting.
+	DomainSize         int64
+	AssignmentsChecked int64
+	Exhaustive         bool
+
+	// The one answered question.
+	Question string
+	Verdict  string
+	Reason   string
+
+	Counterexample *Counterexample
+
+	// Scope guards.
+	NotAssessed []string
+}
+
+func scopeGuards(d Domain) []string {
+	return []string{
+		fmt.Sprintf("Equivalence outside the declared domain (%s): NOT ASSESSED (an exhaustive finite certificate supports exactly its domain)", d),
+		"Equivalence at other word widths: NOT ASSESSED (a width-4 identity need not hold at width 8, and conversely)",
+		"Real or unbounded-integer identity: NOT ASSESSED (machine-word semantics do not inherit real-number identities)",
+		"Cost, performance, or preferability: NOT ASSESSED (semantic equality is not improvement)",
+		"General rewrite-rule admission: NOT ASSESSED (admission is a review decision citing this certificate, not a property of it)",
+	}
+}
+
+// AssessEquivalence decides whether left and right agree on every
+// assignment of the declared finite domain, by enumeration. The first
+// counterexample in canonical order is recorded exactly.
+func AssessEquivalence(b Binding, left, right Expr) Certificate {
+	cert := Certificate{
+		Binding:     b,
+		Left:        left.render(),
+		Right:       right.render(),
+		Question:    "Do the two expressions evaluate identically on every assignment of the declared finite domain?",
+		NotAssessed: scopeGuards(b.Domain),
+	}
+	if b.Domain.Width < MinWidth || b.Domain.Width > MaxWidth {
+		cert.Verdict = VerdictInapplicable
+		cert.Reason = fmt.Sprintf("declared width %d is outside the supported range [%d,%d]", b.Domain.Width, MinWidth, MaxWidth)
+		return cert
+	}
+	cert.PremiseFailures = append(validate(left, b.Domain), validate(right, b.Domain)...)
+	if len(cert.PremiseFailures) > 0 {
+		cert.Verdict = VerdictInapplicable
+		cert.Reason = "a premise failed before evaluation: " + strings.Join(cert.PremiseFailures, "; ")
+		return cert
+	}
+	cert.DomainSize = b.Domain.Size()
+	if cert.DomainSize > ExhaustiveCap {
+		cert.Verdict = VerdictUnresolved
+		cert.Reason = fmt.Sprintf("declared domain has %d assignments, above the exhaustiveness cap %d; this tool does not substitute sampling for enumeration, so the claim stays undecided here", cert.DomainSize, int64(ExhaustiveCap))
+		return cert
+	}
+	enumerate(b.Domain, func(a Assignment) bool {
+		cert.AssignmentsChecked++
+		l, r := left.eval(b.Domain, a), right.eval(b.Domain, a)
+		if l != r {
+			cert.Counterexample = &Counterexample{Assignment: a.render(), Left: l, Right: r}
+			return false
+		}
+		return true
+	})
+	if cert.Counterexample != nil {
+		cert.Verdict = VerdictRefuted
+		cert.Reason = fmt.Sprintf("exact counterexample at {%s}: left evaluates to %d, right to %d", cert.Counterexample.Assignment, cert.Counterexample.Left, cert.Counterexample.Right)
+		return cert
+	}
+	cert.Exhaustive = true
+	cert.Verdict = VerdictHoldsOnDomain
+	cert.Reason = fmt.Sprintf("all %d assignments of the declared domain were enumerated and agree; this supports the declared domain only", cert.AssignmentsChecked)
+	return cert
+}
+
+// AssessInstances checks agreement on the supplied assignments only. The
+// strongest available outcome is INSTANCE_EVIDENCE_ONLY: by construction
+// this function cannot produce a domain-level verdict, which is the T0
+// instance-to-universal rejection enforced as a type of outcome.
+func AssessInstances(b Binding, left, right Expr, instances []Assignment) Certificate {
+	cert := Certificate{
+		Binding:     b,
+		Left:        left.render(),
+		Right:       right.render(),
+		Question:    "Do the two expressions evaluate identically on the supplied assignments (and only those)?",
+		NotAssessed: append(scopeGuards(b.Domain), "Equivalence over the declared domain: NOT ASSESSED (agreeing instances are instance evidence, never a domain certificate)"),
+	}
+	if b.Domain.Width < MinWidth || b.Domain.Width > MaxWidth {
+		cert.Verdict = VerdictInapplicable
+		cert.Reason = fmt.Sprintf("declared width %d is outside the supported range [%d,%d]", b.Domain.Width, MinWidth, MaxWidth)
+		return cert
+	}
+	cert.PremiseFailures = append(validate(left, b.Domain), validate(right, b.Domain)...)
+	if len(cert.PremiseFailures) > 0 {
+		cert.Verdict = VerdictInapplicable
+		cert.Reason = "a premise failed before evaluation: " + strings.Join(cert.PremiseFailures, "; ")
+		return cert
+	}
+	if len(instances) == 0 {
+		cert.Verdict = VerdictUnresolved
+		cert.Reason = "no instances supplied; nothing was checked"
+		return cert
+	}
+	mask := b.Domain.mask()
+	for _, a := range instances {
+		for _, v := range b.Domain.Vars {
+			val, ok := a[v]
+			if !ok {
+				cert.Verdict = VerdictInapplicable
+				cert.Reason = fmt.Sprintf("instance {%s} does not assign declared variable %q", a.render(), v)
+				return cert
+			}
+			if val > mask {
+				cert.Verdict = VerdictInapplicable
+				cert.Reason = fmt.Sprintf("instance {%s} assigns %q a value outside the %d-bit domain", a.render(), v, b.Domain.Width)
+				return cert
+			}
+		}
+		cert.AssignmentsChecked++
+		l, r := left.eval(b.Domain, a), right.eval(b.Domain, a)
+		if l != r {
+			cert.Counterexample = &Counterexample{Assignment: a.render(), Left: l, Right: r}
+			cert.Verdict = VerdictRefuted
+			cert.Reason = fmt.Sprintf("exact counterexample at {%s}: left evaluates to %d, right to %d (a single admissible counterexample refutes the domain claim)", a.render(), l, r)
+			return cert
+		}
+	}
+	cert.Verdict = VerdictInstanceOnly
+	cert.Reason = fmt.Sprintf("the %d supplied assignments agree; this is instance evidence and decides nothing about the %d-assignment domain", cert.AssignmentsChecked, b.Domain.Size())
+	return cert
+}
+
+// Render produces the fixed-template human-readable explanation.
+func (c Certificate) Render() string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Claim: %s\n", c.Binding.Sentence)
+	fmt.Fprintf(&sb, "Domain: %s\n", c.Binding.Domain)
+	fmt.Fprintf(&sb, "Left:  %s\n", c.Left)
+	fmt.Fprintf(&sb, "Right: %s\n", c.Right)
+	for _, p := range c.PremiseFailures {
+		fmt.Fprintf(&sb, "Premise failure: %s\n", p)
+	}
+	fmt.Fprintf(&sb, "Assignments checked: %d of %d (exhaustive: %v)\n", c.AssignmentsChecked, c.DomainSize, c.Exhaustive)
+	if c.Counterexample != nil {
+		fmt.Fprintf(&sb, "Counterexample: {%s} -> left %d, right %d\n", c.Counterexample.Assignment, c.Counterexample.Left, c.Counterexample.Right)
+	}
+	fmt.Fprintf(&sb, "\nQuestion: %s\n", c.Question)
+	fmt.Fprintf(&sb, "Verdict: %s\n", c.Verdict)
+	fmt.Fprintf(&sb, "Reason: %s\n\n", c.Reason)
+	for _, n := range c.NotAssessed {
+		fmt.Fprintf(&sb, "%s\n", n)
+	}
+	return sb.String()
+}
