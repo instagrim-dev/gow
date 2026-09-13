@@ -646,10 +646,16 @@ func (a *App) executeArmsAndPersist(ctx context.Context, repoStore problemStore,
 	for _, ar := range armRows {
 		fileHash := ""
 		if path := armProposalFiles[ar.Arm]; path != "" {
-			if raw, rerr := os.ReadFile(path); rerr == nil {
-				sum := sha256.Sum256(raw)
-				fileHash = hex.EncodeToString(sum[:])
+			// The capture file was already consumed by this execution; a
+			// read failure here must not silently record an empty hash —
+			// that is exactly the capture-identity loss this table exists
+			// to prevent.
+			raw, rerr := os.ReadFile(path)
+			if rerr != nil {
+				return ExperimentView{}, false, fmt.Errorf("hash %s capture file %s for execution attribution: %w", ar.Arm, path, rerr)
 			}
+			sum := sha256.Sum256(raw)
+			fileHash = hex.EncodeToString(sum[:])
 		}
 		execRows = append(execRows, store.ExperimentExecutionRow{
 			RunID: runID, Arm: ar.Arm, ProblemID: hs.ProblemID,

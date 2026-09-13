@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -37,12 +38,47 @@ func WithAfterProblemInsert(fn func() error) Option {
 	}
 }
 
+// sqliteDSN builds the driver DSN for a database path.
+//
+// Foreign-key enforcement must be a property of every CONNECTION, not of one
+// statement. SQLite's `foreign_keys` setting is connection-local, so
+// establishing it with a single post-open `Exec` only configures whichever
+// pooled connection served that call: a replacement connection silently starts
+// with enforcement OFF, and an orphan row then inserts successfully instead of
+// being refused (E3-1, docs/reviews/2026-09-12-e3-w2-migration-run.md). Putting
+// the pragma in the DSN makes the driver apply it per connection.
+//
+// The path is made absolute and URI-escaped rather than concatenated, because
+// naive concatenation is silently wrong rather than loudly broken:
+//
+//   - a `#` in the path truncates as a URI fragment, so the database is created
+//     at a DIFFERENT path than the caller asked for;
+//   - a relative path in url.URL.Path renders as `file://first-segment/...`,
+//     making the first segment a URI HOST and failing to open at all.
+//
+// RawQuery is set literally so the parentheses in `foreign_keys(1)` are not
+// percent-escaped.
+func sqliteDSN(path string) string {
+	// An in-memory database cannot outlive its connection at all, so a
+	// replacement connection is a lost database rather than a lost pragma.
+	// Leave that case to the plain form instead of implying it is protected.
+	if path == ":memory:" || strings.HasPrefix(path, "file::memory:") {
+		return path
+	}
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		abs = path
+	}
+	u := url.URL{Scheme: "file", Path: abs, RawQuery: "_pragma=foreign_keys(1)"}
+	return u.String()
+}
+
 func Open(path string, opts ...Option) (*Store, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, err
 	}
 
-	db, err := sql.Open("sqlite", path)
+	db, err := sql.Open("sqlite", sqliteDSN(path))
 	if err != nil {
 		return nil, err
 	}
@@ -53,9 +89,17 @@ func Open(path string, opts ...Option) (*Store, error) {
 		opt(store)
 	}
 
-	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+	// Verify rather than assume the DSN took effect: a driver that silently
+	// ignored the pragma would otherwise leave every write unprotected with no
+	// signal at all. This is a read-back, not a second place that sets the rule.
+	var enforcing int
+	if err := db.QueryRow(`PRAGMA foreign_keys`).Scan(&enforcing); err != nil {
 		_ = db.Close()
 		return nil, err
+	}
+	if enforcing != 1 && path != ":memory:" && !strings.HasPrefix(path, "file::memory:") {
+		_ = db.Close()
+		return nil, fmt.Errorf("%w: foreign-key enforcement not established for %s", ErrCorruptStore, path)
 	}
 
 	return store, nil

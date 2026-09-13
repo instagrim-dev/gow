@@ -7,10 +7,33 @@ import (
 	"testing"
 	"time"
 
+	"github.com/instagrim-dev/newf/internal/canon"
+	"github.com/instagrim-dev/newf/internal/domain"
 	"github.com/instagrim-dev/newf/internal/provider"
 	"github.com/instagrim-dev/newf/internal/review"
 	"github.com/instagrim-dev/newf/internal/verify"
 )
+
+// gateLocalSignature is pcSignature with LOCAL posture: it PRESERVES the mined
+// claim `locality == local`, so admitting its member does not weaken the
+// candidate and C6's counterexample search over A1 can still reach `surviving`.
+func gateLocalSignature(preservesID string) canon.MechanismSignature {
+	sig := pcSignature(preservesID, "", true)
+	sig.Posture.Locality = domain.LocalityLocal
+	return sig
+}
+
+// gateUnknownLocalitySignature is pcSignature with UNKNOWN locality, which is
+// what C2's withholding control requires: the structural break claim against
+// `locality == local` is UNDECIDABLE, so the evaluation escalates to the model
+// tier and produces the single-model-judgment failure that must be withheld. A
+// LOCAL-posture proposal would instead be refuted deterministically and never
+// reach the model tier at all.
+func gateUnknownLocalitySignature(preservesID string) canon.MechanismSignature {
+	sig := pcSignature(preservesID, "", true)
+	sig.Posture.Locality = domain.LocalityUnknown
+	return sig
+}
 
 // TestIntegrationCurrentAssessmentAuthorityObligation is the integrated gate G1
 // of the 2026-09-12 review-flow run: ONE normative obligation
@@ -27,12 +50,14 @@ import (
 //
 //	C1 baseline    exact record ids explain the selected action
 //	C2 withheld    a model-only failure stays auditable but out of the population
-//	C3 admission   only admitted exact content enters the next population A1
+//	C3 admission   only INDEPENDENTLY CHECKED exact content enters A1
 //	C4 relevant    a declared-dependency change makes the assessment stale;
 //	               eligibility is NOT inherited from A0
 //	C5 unrelated   an off-manifest change does NOT make it stale
 //	C6 reassess    a distinct assessment drives the next decision; A0 reproducible
-//	C7 replay      history replays without restoring current authority
+//	C7 replay      history replays without restoring obsolete current authority,
+//	               without displacing COMPATIBLE current authority, and without
+//	               depending on clock order to tell those apart
 //	C8 projection  coverage is deterministic; unexamined/blocked stay distinct
 //
 // The obligation is a NORM. The mined candidate is its SUBJECT. Nothing here
@@ -48,7 +73,6 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 
 	problemID, invID, _ := mineOneCandidate(t, ctx, app, dbPath)
 	ledger := instantiateReviewObligation(t, ctx, app, dbPath, "invariant:"+invID)
-
 	// ---- C1: baseline. Assess the candidate under P1 and the discovery
 	// population D0, then derive the decision from records only.
 	first, err := app.ChallengeInvariants(ctx, ChallengeInput{DBPath: dbPath, InvariantID: invID})
@@ -88,7 +112,7 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 			", which is the current compatible population; the generation therefore selected the candidate " +
 			"without a stale-authority exclusion",
 		Assessor:        reviewAssessor,
-		ProjectRevision: "32228f4",
+		ProjectRevision: gateProjectRevision,
 		ContractHash:    reviewContractRef,
 		RecipeHash:      reviewRecipeRevision,
 		EvidenceCutoff:  "2026-09-12T12:00:00Z",
@@ -99,6 +123,8 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 				WhyRelevant: "a semantically relevant policy revision changes the applicable acceptance criteria"},
 			{Kind: depKindCandidateContent, Ref: invID,
 				WhyRelevant: "the assessment is about this exact candidate; different content is a different subject"},
+			{Kind: depKindProjectRevision, Ref: gateProjectRevision,
+				WhyRelevant: "the obligation is about behavior of the authority-selection code; a different checkout can decide the next action differently"},
 		},
 		CheckAttemptIDs: []string{c1},
 	})
@@ -110,7 +136,7 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	// obligation has current, check-supported conformance.
 	cov1, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
 		DBPath: dbPath, PolicyID: ledger.policyID,
-		CurrentDependencies: map[string]string{depKindAssessmentPopulation: d0},
+		CurrentDependencies: gateCurrentContext(d0, invID, gateProjectRevision),
 	})
 	if err != nil {
 		t.Fatalf("generate coverage (C1): %v", err)
@@ -167,7 +193,7 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	// records, same derived decision.
 	cov2, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
 		DBPath: dbPath, PolicyID: ledger.policyID,
-		CurrentDependencies: map[string]string{depKindAssessmentPopulation: d0},
+		CurrentDependencies: gateCurrentContext(d0, invID, gateProjectRevision),
 	})
 	if err != nil {
 		t.Fatalf("generate coverage (C2): %v", err)
@@ -176,22 +202,69 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 		t.Fatalf("C2: a withheld model judgment must not change the derived decision: %s -> %s", cov1.Decision, cov2.Decision)
 	}
 
-	// ---- C3: checked admission. Operator attestation admits the EXACT assessed
-	// content, which then enters the next population A1. The observation keeps
-	// its subject, strength and lineage: it stays labeled model-judged.
-	admitted, err := app.AdmitEvidence(ctx, AdmitEvidenceInput{
-		DBPath: dbPath, ProblemID: problemID, EvaluationID: ev.ID, Attest: true,
-		Note: "reviewed the fixture transcript; the failure mechanism is real for this input",
+	// ---- C3: INDEPENDENTLY CHECKED admission. The recipe requires a checked,
+	// scope-matched, candidate-specific observation whose checker inputs and
+	// outputs are retained — and explicitly forbids substituting an
+	// operator-attested model judgment when the adapter cannot reach it.
+	//
+	// So the observation admitted here is produced by an EXECUTED bounded
+	// attempt: `equal-denominator` at n=7 emits the tuple that IS the checked
+	// claim, and admission re-derives the procedure over the recorded params
+	// before naming the binding in its basis. A fixture checker still only
+	// exercises the software contract — it establishes no research claim — but
+	// the attribution from attempt to output is machine-rechecked rather than
+	// asserted.
+	//
+	// The proposal minted here carries LOCAL posture, required by a LATER case
+	// rather than this one: an unknown-locality member in A1 leaves C6's
+	// counterexample search inconclusive (`challenged` instead of `surviving`),
+	// as run-3 attempt 3.2 demonstrated. C2's proposal stays on the default
+	// deriving generator, whose structural claim is undecidable and therefore
+	// escalates to the model tier that the withholding control needs.
+	app.generatorFn = pcGenerator{signatures: []canon.MechanismSignature{
+		gateLocalSignature(pcResidueLocality),
+	}}
+	genMint, err := app.GenerateFrontier(ctx, FrontierGenerateInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil || len(genMint.Generation.Proposals) == 0 {
+		t.Fatalf("C3 mint proposal: %v (proposals=%d)", err, len(genMint.Generation.Proposals))
+	}
+	app.generatorFn = nil
+	c3Proposal := genMint.Generation.Proposals[0].ID
+
+	wit, err := app.WitnessCheck(ctx, WitnessCheckInput{
+		DBPath: dbPath, ProposalID: c3Proposal,
+		Procedure: "equal-denominator", Params: map[string]string{"n": "7"},
 	})
 	if err != nil {
-		t.Fatalf("admit (attested): %v", err)
+		t.Fatalf("C3 witness check: %v", err)
+	}
+	if wit.WitnessVerdict != "witness-invalid" {
+		t.Fatalf("C3: equal-denominator at n=7 must fail its own check, got %q", wit.WitnessVerdict)
+	}
+	if wit.AttemptBinding == nil || wit.AttemptBinding.TupleCanonical != wit.CanonicalClaim {
+		t.Fatalf("C3: the bound tuple must BE the checked claim: %+v vs %q", wit.AttemptBinding, wit.CanonicalClaim)
+	}
+	admitted, err := app.AdmitEvidence(ctx, AdmitEvidenceInput{DBPath: dbPath, ProblemID: problemID})
+	if err != nil {
+		t.Fatalf("admit (checked): %v", err)
 	}
 	if len(admitted.Admitted) != 1 {
-		t.Fatalf("C3: attestation must admit exactly one observation: %+v", admitted)
+		t.Fatalf("C3: the rule pass must admit exactly the checked observation: %+v", admitted)
 	}
 	adm := admitted.Admitted[0]
-	if adm.ObservationKind != ObservationModelJudgedFailure || adm.AdmittedBy != "operator" {
-		t.Fatalf("C3: admission must preserve strength and lineage: %+v", adm)
+	// The recipe's distinction: this is a DOMAIN-CHECKED failure admitted by
+	// RULE, not a model judgment admitted by an operator. Asserting
+	// `AdmittedBy != "operator"` is what keeps the forbidden substitution from
+	// silently returning.
+	if adm.ObservationKind != ObservationDomainCheckedFailure || adm.AdmittedBy != "rule" {
+		t.Fatalf("C3: admission must be an independently checked domain observation admitted by rule, got kind=%q by=%q",
+			adm.ObservationKind, adm.AdmittedBy)
+	}
+	if adm.EvaluationID != wit.Evaluation.ID || adm.ProposalID != c3Proposal {
+		t.Fatalf("C3: admission must reference the witness evaluation of the bound proposal: %+v", adm)
+	}
+	if !strings.Contains(adm.Basis, "attempt→output binding verified by recomputation: equal-denominator@") {
+		t.Fatalf("C3: the admission basis must name the recomputation-verified binding: %q", adm.Basis)
 	}
 	if adm.ContentHash == "" || adm.SignatureID == "" {
 		t.Fatalf("C3: admission must materialize the exact assessed content: %+v", adm)
@@ -208,9 +281,12 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 		t.Fatalf("C3: exactly the admitted content may enter A1: %d -> %d",
 			popBefore.ClusterRun.SignatureCount, a1Run.ClusterRun.SignatureCount)
 	}
-	c3 := ledger.recordCase(t, ctx, app, dbPath, "C3", "app.AdmitEvidence (operator attestation) + app.BuildClustering",
-		"evaluation="+ev.ID+"; attested=true", review.CheckCompleted,
-		"admitted_signature="+adm.SignatureID+"; content_hash="+adm.ContentHash+"; population_a1="+a1, "")
+	c3 := ledger.recordCase(t, ctx, app, dbPath, "C3",
+		"app.WitnessCheck(--procedure equal-denominator) + app.AdmitEvidence (rule) + app.BuildClustering",
+		"proposal="+c3Proposal+"; procedure=equal-denominator; params=n=7", review.CheckCompleted,
+		"admitted_signature="+adm.SignatureID+"; content_hash="+adm.ContentHash+
+			"; observation_kind="+adm.ObservationKind+"; admitted_by="+adm.AdmittedBy+
+			"; attempt_binding_verified_by_recomputation=true; population_a1="+a1, "")
 
 	// ---- C4: relevant change. A1 is now current while the candidate is
 	// unchanged. The assessment declared the population as a why-relevant
@@ -218,7 +294,7 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	// inherited from A0.
 	cov4, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
 		DBPath: dbPath, PolicyID: ledger.policyID,
-		CurrentDependencies: map[string]string{depKindAssessmentPopulation: a1},
+		CurrentDependencies: gateCurrentContext(a1, invID, gateProjectRevision),
 	})
 	if err != nil {
 		t.Fatalf("generate coverage (C4): %v", err)
@@ -239,11 +315,9 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	// because something moved in the repository.
 	cov5, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
 		DBPath: dbPath, PolicyID: ledger.policyID,
-		CurrentDependencies: map[string]string{
-			depKindAssessmentPopulation: d0,
+		CurrentDependencies: withUnrelatedChange(gateCurrentContext(d0, invID, gateProjectRevision),
 			// Declared by nobody in this manifest: an unrelated document moved.
-			"unrelated_document": "docs/projection.md@rev99",
-		},
+			"unrelated_document", "docs/projection.md@rev99"),
 	})
 	if err != nil {
 		t.Fatalf("generate coverage (C5): %v", err)
@@ -289,7 +363,7 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 			", so the state that governs the next decision was earned against the population that decision uses; " +
 			"the A0 assessment is retained unchanged as history",
 		Assessor:        reviewAssessor,
-		ProjectRevision: "32228f4",
+		ProjectRevision: gateProjectRevision,
 		ContractHash:    reviewContractRef,
 		RecipeHash:      reviewRecipeRevision,
 		EvidenceCutoff:  "2026-09-12T12:00:00Z",
@@ -300,6 +374,8 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 				WhyRelevant: "a semantically relevant policy revision changes the applicable acceptance criteria"},
 			{Kind: depKindCandidateContent, Ref: invID,
 				WhyRelevant: "the assessment is about this exact candidate"},
+			{Kind: depKindProjectRevision, Ref: gateProjectRevision,
+				WhyRelevant: "the obligation is about behavior of the authority-selection code; a different checkout can decide the next action differently"},
 		},
 		CheckAttemptIDs: []string{c6},
 	})
@@ -314,7 +390,7 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	// was reassessment, not inheritance. The C4 gate is therefore not a dead end.
 	cov6, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
 		DBPath: dbPath, PolicyID: ledger.policyID,
-		CurrentDependencies: map[string]string{depKindAssessmentPopulation: a1},
+		CurrentDependencies: gateCurrentContext(a1, invID, gateProjectRevision),
 	})
 	if err != nil {
 		t.Fatalf("generate coverage (C6): %v", err)
@@ -381,12 +457,28 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 		"invariant="+invID+"; population="+d0, review.CheckCompleted,
 		"replay_run="+pr.RunID+"; replay_state="+pr.StateAfter+"; compatible_current_authority_preserved=true; historical_row_durable=true", "")
 
+	// ---- C7 stress: equal clock, order-dependent outcome.
+	//
+	// Every row above was written by a FIXED clock, so C6's reassessment and
+	// C7's replay carry identical `created_at` values. That makes this scenario
+	// the equal-clock case the recipe asks for — but only if the assertion is
+	// made explicitly, because an implementation that silently ordered by
+	// timestamp would pass everything above by luck of insertion order while
+	// being one `ORDER BY created_at` away from resolving a tie arbitrarily.
+	//
+	// The requirement: authority selection must be decided by a total order the
+	// store controls (`transition_seq`), not by a wall clock that can tie. So
+	// with A1's reassessment and the D0 replay recorded at the SAME instant, the
+	// compatible campaign must still be identified, and the replay's transition
+	// must still be the strictly later one.
+	assertEqualClockAuthorityOrdering(t, ctx, dbPath, invID, a1, d0, rr.RunID, pr.RunID)
+
 	// ---- C8: derived projection. Generate twice from identical records, then
 	// regenerate after the relevant update. Substantive output must be
 	// deterministic, only affected assessments may change, and
 	// unexamined/blocked must stay distinguishable from each other and from a
 	// pass. No manual status patch exists to reach for.
-	currentA1 := map[string]string{depKindAssessmentPopulation: a1}
+	currentA1 := gateCurrentContext(a1, invID, gateProjectRevision)
 	genA, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{DBPath: dbPath, PolicyID: ledger.policyID, CurrentDependencies: currentA1})
 	if err != nil {
 		t.Fatalf("C8 first generation: %v", err)
@@ -395,8 +487,24 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("C8 second generation: %v", err)
 	}
-	if genA.Document != genB.Document {
-		t.Fatalf("C8: repeated generation from identical records must be byte-identical")
+	// C8's determinism requirement now applies to SUBSTANTIVE content. The
+	// export names its generation time (the contract requires it) and classifies
+	// that line as non-semantic (the contract says so explicitly), so equality
+	// is checked with that line stripped rather than by deleting the field.
+	if review.StripNonSemantic(genA.Document) != review.StripNonSemantic(genB.Document) {
+		t.Fatalf("C8: repeated generation from identical records must preserve substantive content")
+	}
+	// Provenance must actually be present: an export that cannot name its
+	// generator or its inputs cannot be checked for compatibility later.
+	if !strings.Contains(genA.Document, review.GeneratorVersion) {
+		t.Fatalf("C8: the export must name its generator version:\n%s", genA.Document)
+	}
+	if !strings.Contains(genA.Document, "**generated at**") {
+		t.Fatalf("C8: the export must name its generation time:\n%s", genA.Document)
+	}
+	if !strings.Contains(genA.Document, gateProjectRevision) {
+		t.Fatalf("C8: the export must name the governing assessment's project revision %q:\n%s",
+			gateProjectRevision, genA.Document)
 	}
 	if genA.Decision != genB.Decision {
 		t.Fatalf("C8: repeated generation changed the decision: %s -> %s", genA.Decision, genB.Decision)
@@ -406,7 +514,7 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 	// stale one, so the decision flips while every record still appears.
 	genShifted, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
 		DBPath: dbPath, PolicyID: ledger.policyID,
-		CurrentDependencies: map[string]string{depKindAssessmentPopulation: d0},
+		CurrentDependencies: gateCurrentContext(d0, invID, gateProjectRevision),
 	})
 	if err != nil {
 		t.Fatalf("C8 shifted generation: %v", err)
@@ -533,7 +641,7 @@ func assertUnexaminedAndBlockedRemainDistinct(t *testing.T, ctx context.Context,
 		Argument: "the check could not execute, so no conclusion about the requirement is available; " +
 			"the blocker is retained rather than converted into support",
 		Assessor:        reviewAssessor,
-		ProjectRevision: "32228f4", ContractHash: reviewContractRef, RecipeHash: reviewRecipeRevision,
+		ProjectRevision: gateProjectRevision, ContractHash: reviewContractRef, RecipeHash: reviewRecipeRevision,
 		Dependencies: []ReviewDependencySpec{{Kind: "verifier_availability", Ref: "unavailable-verifier",
 			WhyRelevant: "the requirement can only be established by executing this verifier"}},
 		CheckAttemptIDs: []string{blockedCheck.ID},
@@ -541,7 +649,15 @@ func assertUnexaminedAndBlockedRemainDistinct(t *testing.T, ctx context.Context,
 		t.Fatalf("control blocked assessment: %v", err)
 	}
 
-	cov, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{DBPath: dbPath, PolicyID: policy.PolicyID})
+	// The control supplies its declared dependency's CURRENT value so the
+	// examination states it is testing are what the projection reports. Omitting
+	// it would make both obligations `compatibility_unknown` — a true statement
+	// about an underspecified request, but it would mask the very distinction
+	// this control exists to pin (never-examined versus examined-and-blocked).
+	cov, err := app.GenerateReviewCoverage(ctx, ReviewCoverageInput{
+		DBPath: dbPath, PolicyID: policy.PolicyID,
+		CurrentDependencies: map[string]string{"verifier_availability": "unavailable-verifier"},
+	})
 	if err != nil {
 		t.Fatalf("control coverage: %v", err)
 	}
@@ -570,6 +686,97 @@ func assertUnexaminedAndBlockedRemainDistinct(t *testing.T, ctx context.Context,
 	if !strings.Contains(cov.Document, "the required independent verifier is unavailable") {
 		t.Fatalf("the blocker text must survive into the export:\n%s", cov.Document)
 	}
+}
+
+// assertEqualClockAuthorityOrdering pins C7's equal-clock/order stress
+// requirement.
+//
+// Runs 1-3 never executed this branch: run 2 deliberately used a strictly
+// monotonic clock, which is the one configuration where a timestamp-ordered
+// implementation and a sequence-ordered one behave identically. Under the gate's
+// FIXED clock the two campaigns tie, so this is where the distinction is
+// observable.
+//
+// What must hold: the compatible campaign is found by population match (not by
+// being newest), the replay's transition is strictly later in the store's own
+// total order, and the compatible authority is NOT the replay — the exact F-2
+// displacement, now checked at the ordering layer rather than only through the
+// frontier decision.
+func assertEqualClockAuthorityOrdering(t *testing.T, ctx context.Context, dbPath, invID, a1, d0, reassessRun, replayRun string) {
+	t.Helper()
+	repo := openTestStore(t, ctx, dbPath)
+	defer repo.Close()
+
+	reassessPop, found, err := repo.GetChallengeAssessmentPopulation(ctx, reassessRun, invID)
+	if err != nil || !found {
+		t.Fatalf("C7 stress: load reassessment population: %v (found=%v)", err, found)
+	}
+	replayPop, found, err := repo.GetChallengeAssessmentPopulation(ctx, replayRun, invID)
+	if err != nil || !found {
+		t.Fatalf("C7 stress: load replay population: %v (found=%v)", err, found)
+	}
+	// The equal-clock precondition. If this ever stops holding, the branch below
+	// silently degenerates into the monotonic case runs 1-3 already covered, so
+	// the precondition is asserted rather than assumed.
+	if reassessPop.CreatedAt != replayPop.CreatedAt {
+		t.Fatalf("C7 stress: this branch requires an equal clock, got reassess=%q replay=%q",
+			reassessPop.CreatedAt, replayPop.CreatedAt)
+	}
+
+	current, found, err := repo.GetLatestCompatibleAuthority(ctx, invID, a1)
+	if err != nil || !found {
+		t.Fatalf("C7 stress: the campaign that assessed current population %s must remain findable: %v (found=%v)", a1, err, found)
+	}
+	historical, found, err := repo.GetLatestCompatibleAuthority(ctx, invID, d0)
+	if err != nil || !found {
+		t.Fatalf("C7 stress: the historical population %s must stay reproducible: %v (found=%v)", d0, err, found)
+	}
+
+	if current.RunID != reassessRun {
+		t.Fatalf("C7 stress: current authority for %s must be the reassessment campaign %s, got %s",
+			a1, reassessRun, current.RunID)
+	}
+	// The replay really is the later execution: without this, "the compatible
+	// campaign was selected" could be true merely because nothing newer existed,
+	// and the test would prove nothing about displacement.
+	if historical.TransitionSeq <= current.TransitionSeq {
+		t.Fatalf("C7 stress: the replay must be strictly later in the store's total order "+
+			"(replay seq=%d, compatible seq=%d); otherwise this case cannot demonstrate that "+
+			"recency was rejected in favor of compatibility",
+			historical.TransitionSeq, current.TransitionSeq)
+	}
+	if current.RunID == replayRun {
+		t.Fatal("C7 stress: the replay must not become the compatible current authority (F-2)")
+	}
+}
+
+// gateCurrentContext builds a COMPLETE current-dependency context for the
+// scenario's assessments, varying only the population.
+//
+// Completeness matters: a declared dependency with no supplied current value is
+// `compatibility_unknown`, not compatible. That is deliberate — an incompletely
+// specified request must not inherit a historical pass — so a case that means to
+// test staleness has to supply every other kind, or it would measure the
+// caller's omission instead of the dependency's movement.
+func gateCurrentContext(population, invID, projectRevision string) map[string]string {
+	return map[string]string{
+		depKindAssessmentPopulation: population,
+		depKindPolicyRevision:       reviewPolicyKey + "@1",
+		depKindCandidateContent:     invID,
+		depKindProjectRevision:      projectRevision,
+	}
+}
+
+// withUnrelatedChange copies a current context and adds one dependency kind the
+// assessments never declared. Copying keeps C5 from mutating the shared context
+// other cases rely on.
+func withUnrelatedChange(current map[string]string, kind, ref string) map[string]string {
+	out := make(map[string]string, len(current)+1)
+	for k, v := range current {
+		out[k] = v
+	}
+	out[kind] = ref
+	return out
 }
 
 // containsString reports membership without pulling in a helper dependency.

@@ -257,8 +257,17 @@ func (s *Store) RunLeakageCheck(ctx context.Context, holdoutSetID, runID, checkI
 		return LeakageCheckRecord{}, err
 	}
 
+	// One transaction for the four reads plus the audit insert: the persisted
+	// leak counts must be snapshot-consistent with each other, not four reads
+	// spread across interleaved writers.
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return LeakageCheckRecord{}, err
+	}
+	defer tx.Rollback()
+
 	// Withheld content identity: every sha256 of every snapshot of a withheld source.
-	shaRows, err := s.db.QueryContext(ctx, `
+	shaRows, err := tx.QueryContext(ctx, `
 SELECT DISTINCT ss.sha256
 FROM holdout_set_sources hss
 JOIN source_snapshots ss ON ss.source_id = hss.source_id
@@ -295,21 +304,21 @@ WHERE hss.holdout_set_id = ?
 			}
 			return out
 		}
-		if err := s.db.QueryRowContext(ctx, `
+		if err := tx.QueryRowContext(ctx, `
 SELECT COUNT(*) FROM source_snapshots ss
 JOIN sources s ON s.id = ss.source_id
 WHERE s.problem_id = ? AND ss.sha256 IN (`+placeholders+`)
 `, args(hs.ProblemID)...).Scan(&rec.SnapshotLeaks); err != nil {
 			return LeakageCheckRecord{}, err
 		}
-		if err := s.db.QueryRowContext(ctx, `
+		if err := tx.QueryRowContext(ctx, `
 SELECT COUNT(*) FROM normalization_revisions nr
 JOIN source_snapshots ss ON ss.id = nr.snapshot_id
 WHERE nr.problem_id = ? AND ss.sha256 IN (`+placeholders+`)
 `, args(hs.ProblemID)...).Scan(&rec.NormalizationLeaks); err != nil {
 			return LeakageCheckRecord{}, err
 		}
-		if err := s.db.QueryRowContext(ctx, `
+		if err := tx.QueryRowContext(ctx, `
 SELECT COUNT(*) FROM mechanism_signatures ms
 JOIN mechanisms m ON m.id = ms.mechanism_id
 JOIN approach_revisions ar ON ar.id = m.approach_revision_id
@@ -322,10 +331,13 @@ WHERE nr.problem_id = ? AND ss.sha256 IN (`+placeholders+`)
 	}
 	rec.Passed = rec.SnapshotLeaks == 0 && rec.NormalizationLeaks == 0 && rec.SignatureLeaks == 0
 
-	if _, err := s.db.ExecContext(ctx, `
+	if _, err := tx.ExecContext(ctx, `
 INSERT INTO leakage_checks(id, holdout_set_id, run_id, checker_version, snapshot_leaks, normalization_leaks, signature_leaks, passed, created_at)
 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
 `, rec.ID, rec.HoldoutSetID, rec.RunID, rec.CheckerVersion, rec.SnapshotLeaks, rec.NormalizationLeaks, rec.SignatureLeaks, boolToInt(rec.Passed), rec.CreatedAt); err != nil {
+		return LeakageCheckRecord{}, err
+	}
+	if err := tx.Commit(); err != nil {
 		return LeakageCheckRecord{}, err
 	}
 	return rec, nil
@@ -769,15 +781,22 @@ type ExperimentExecutionRow struct {
 // existing experiment artifact, so reuse never obscures which capture was
 // assessed. Idempotent per (run, arm).
 func (s *Store) RecordExperimentExecutions(ctx context.Context, rows []ExperimentExecutionRow) error {
+	// One transaction for the whole attribution set: a mid-loop failure must
+	// not leave partial execution attribution (multi-record provenance write).
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 	for _, r := range rows {
-		if _, err := s.db.ExecContext(ctx, `
+		if _, err := tx.ExecContext(ctx, `
 INSERT OR IGNORE INTO experiment_executions(run_id, arm, problem_id, experiment_id, frontier_generation_run_id, proposals_file_sha256, created_at)
 VALUES(?, ?, ?, ?, ?, ?, ?)
 `, r.RunID, r.Arm, r.ProblemID, r.ExperimentID, r.FrontierGenerationRun, r.ProposalsFileSHA256, r.CreatedAt); err != nil {
 			return err
 		}
 	}
-	return nil
+	return tx.Commit()
 }
 
 // ListExperimentExecutions returns a problem's execution-attribution history

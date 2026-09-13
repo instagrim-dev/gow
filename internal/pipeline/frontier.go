@@ -348,7 +348,10 @@ func (a *App) generateFrontierWith(ctx context.Context, input FrontierGenerateIn
 		}
 	}
 
-	record := frontierGenerationRecord(input.ProblemID, clusterRun.ID, run.ID, count, req.Fingerprint(), resp, candidates, now, opts.role)
+	record, err := frontierGenerationRecord(input.ProblemID, clusterRun.ID, run.ID, count, req.Fingerprint(), resp, candidates, now, opts.role)
+	if err != nil {
+		return FrontierGenerateResponse{}, store.PersistFrontierGenerationResult{}, err
+	}
 	// v29: persist the admission audit — what the untrusted-proposal boundary
 	// changed this generation (all zero for trusted code-derived generators).
 	record.AdmissionCorrected = admCorrected
@@ -837,7 +840,7 @@ func frontierGenerationView(rec store.FrontierGenerationRecord) FrontierGenerati
 	}
 	return view
 }
-func frontierGenerationRecord(problemID, clusterRunID, runID string, count int, requestHash string, resp provider.GenerationResponse, candidates []frontier.Candidate, now time.Time, role string) store.FrontierGenerationRecord {
+func frontierGenerationRecord(problemID, clusterRunID, runID string, count int, requestHash string, resp provider.GenerationResponse, candidates []frontier.Candidate, now time.Time, role string) (store.FrontierGenerationRecord, error) {
 	rec := store.FrontierGenerationRecord{
 		ID:               domain.NewFrontierGenerationRunID(now),
 		ProblemID:        problemID,
@@ -861,11 +864,17 @@ func frontierGenerationRecord(problemID, clusterRunID, runID string, count int, 
 		},
 	}
 	for i, c := range candidates {
-		sigJSON, canonFP := "", ""
-		if raw, err := json.Marshal(c.ProposedSignature); err == nil {
-			sigJSON = string(raw)
-			canonFP = canon.Fingerprint(c.ProposedSignature)
+		// A signature that cannot be serialized must fail the generation
+		// rather than persist a proposal with empty signature/fingerprint
+		// content: downstream consumers would misread that row as a
+		// pre-v17 content gap, fabricating a provenance hole with no
+		// recorded cause.
+		raw, err := json.Marshal(c.ProposedSignature)
+		if err != nil {
+			return store.FrontierGenerationRecord{}, fmt.Errorf("marshal proposed signature for proposal %d (hash %s): %w", i, c.ProposalHash, err)
 		}
+		sigJSON := string(raw)
+		canonFP := canon.Fingerprint(c.ProposedSignature)
 		row := store.FrontierProposalRow{
 			ID:                        domain.NewFrontierProposalID(now),
 			ProposalHash:              c.ProposalHash,
@@ -896,5 +905,5 @@ func frontierGenerationRecord(problemID, clusterRunID, runID string, count int, 
 		}
 		rec.Proposals = append(rec.Proposals, row)
 	}
-	return rec
+	return rec, nil
 }

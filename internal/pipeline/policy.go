@@ -168,7 +168,11 @@ func (a *App) buildPolicyEvidence(ctx context.Context, repoStore problemStore, p
 	}
 
 	// Coverage gaps + repeated failures from the latest cluster run + atlas.
-	if latest, found, lerr := repoStore.LatestClusterRun(ctx, problemID); lerr == nil && found {
+	latest, found, lerr := repoStore.LatestClusterRun(ctx, problemID)
+	if lerr != nil {
+		return policy.Evidence{}, resolvableEvidence{}, lerr
+	}
+	if found {
 		clusterRun, gerr := repoStore.GetClusterRun(ctx, latest)
 		if gerr != nil {
 			return policy.Evidence{}, resolvableEvidence{}, gerr
@@ -191,11 +195,16 @@ func (a *App) buildPolicyEvidence(ctx context.Context, repoStore problemStore, p
 
 	// Redundant directed attacks: keys seen on >= 2 distinct persisted proposals.
 	// A mechanism repeatedly attacked the same way earns a penalize directive.
-	if keys, lerr := repoStore.RedundantAttackKeys(ctx, problemID, 2); lerr == nil {
-		for _, k := range keys {
-			ev.RedundantAttacks = append(ev.RedundantAttacks, k)
-			rv.redundant[k] = true
-		}
+	// A read failure must fail derivation: silently deriving a policy without
+	// its redundancy directives would mutate search behavior with no recorded
+	// cause.
+	keys, lerr := repoStore.RedundantAttackKeys(ctx, problemID, 2)
+	if lerr != nil {
+		return policy.Evidence{}, resolvableEvidence{}, lerr
+	}
+	for _, k := range keys {
+		ev.RedundantAttacks = append(ev.RedundantAttacks, k)
+		rv.redundant[k] = true
 	}
 
 	// Refuted boundaries (v43, D5): confirmed challenges' boundary deltas. The
