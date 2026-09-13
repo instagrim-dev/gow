@@ -94,10 +94,19 @@ type EpisodeTrace struct {
 	Explored  map[screen.Arm]int
 }
 
-// Run executes the pack against the three frozen arms and scores it.
-// Deterministic; r=1 is disclosed via the runner's design (deterministic
-// arms have structurally zero run variance).
+// Run executes the pack under the default ceiling. See RunWithBudget.
 func Run(p Pack) (screen.Outcome, []EpisodeTrace, error) {
+	return RunWithBudget(p, ExpansionBudget)
+}
+
+// RunWithBudget executes the pack against the three frozen arms under
+// the given per-cell expansion budget and scores it. Deterministic; r=1
+// is disclosed via the runner's design (deterministic arms have
+// structurally zero run variance). The budget is a measurement
+// parameter: choosing it requires an arm-blind calibration rule stated
+// before computation (see CalibrateH0MinBudgets), because a budget tuned
+// after observing inter-arm outcomes would be tuning the screen.
+func RunWithBudget(p Pack, budget int) (screen.Outcome, []EpisodeTrace, error) {
 	if len(p.Episodes) == 0 {
 		return screen.Outcome{}, nil, fmt.Errorf("empty pack")
 	}
@@ -152,7 +161,7 @@ func Run(p Pack) (screen.Outcome, []EpisodeTrace, error) {
 			for _, n := range orders[arm] {
 				ordered = append(ordered, pool[n])
 			}
-			res, err := rewrite.Search(ep.Start, domain, ordered, rewrite.NodeCount, ExpansionBudget)
+			res, err := rewrite.Search(ep.Start, domain, ordered, rewrite.NodeCount, budget)
 			if err != nil {
 				return screen.Outcome{}, nil, fmt.Errorf("episode %s arm %s: %w", ep.Decl.ID, arm, err)
 			}
