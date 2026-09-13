@@ -55,7 +55,7 @@ The admissible cost vocabulary is the runner's: `rewrite.CostModel`, default `re
 
 ## 8. Pack shapes and per-case record (P2-8, P3-12/13)
 
-G1 pack: 48 = 24 applicable / 16 inapplicable / 8 underspecified. G4-lite pack: 24 episodes = 12 informative / 6 low-value / 6 misleading (strata defined in roadmap §4, normative). **Every episode of every stratum carries a construction-family ID** — `screen.Evaluate` refuses empty families, and condition (d) counts differing families across all strata. ≥2 families among informative episodes or (d) is unsatisfiable.
+G1 pack: 48 = 24 applicable / 16 inapplicable / 8 underspecified. G4-lite pack: 24 episodes = 12 informative / 6 low-value / 6 misleading (strata defined in roadmap §4, normative). **Every episode of every stratum carries a construction-family ID** — `screen.Evaluate` refuses empty families. Condition (d)'s family-diversity guard counts **informative episodes only** (control-stratum differences cannot satisfy it; superseded revision-2's earlier all-strata description after the tranche adversarial review, finding 2). ≥2 families among informative episodes or (d) is unsatisfiable.
 
 Each case records (full roadmap E0 list): exact objective; **admissible semantics**; source lineage; expected answer or oracle outcome — **plus, for instance-level cases, the assignment set**; **permitted references**; history construction; **author/model provenance**; **exposure history**; family ID.
 

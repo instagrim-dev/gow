@@ -99,3 +99,15 @@ An operator review of the branch at `e98d8ed` (source/test inspection; not an ex
 | Instance certificates rendered "N of 0" and kept a contradictory scope guard on REFUTED | P2 | `DomainSize` populated; the guard follows the outcome — a counterexample refutes the universal domain claim and says so (`87db374`) |
 
 The reviewer's affirmations retained unchanged: `VerifyRuleWarrant`'s consumption checks, the screen's run-summed margins and H0 guard, and the E0 handoff's outstanding-ownership framing. The spending decision remains untouched; no experiment was dispatched.
+
+## Addendum: pre-merge tranche adversarial review — 10 findings, remediated
+
+A second labeled model review lane examined all six tranche packages in full (suspected defects confirmed by execution via overlay probes; repo untouched). Result: 2 P2, 8 P3, and explicit no-findings in the classes that matter most — no authority leaks, no determinism violations, no BFS/path-reconstruction defects, no decision-path arithmetic errors, no overflow. The lane's manufactured unsoundness (render-ambiguous variable names) was caught by the always-on endpoint replay before it could over-claim — the layered-verification design worked as intended.
+
+| Finding | Disposition |
+|---|---|
+| P2-1: `Var{Name:"not(x)"}` renders identically to `not(x)`, corrupting rewrite matching and visited-set keys behind the (honest) replay flag | Non-identifier variable names are now premise failures in `structureDefects`, making `Render` injective; refused at assessors and the warrant boundary, both tested |
+| P2-2: condition (d) satisfiable from control strata alone, contradicting its own stated design | Family set now filtered to informative episodes; regression test pins that control-stratum flukes cannot satisfy (d); handoff §8 supersession recorded |
+| P3s 3–10 | Frozen 0/0-similarity convention documented + tested; duplicate catalogs deduped + tested; oversized `Size` phrased as a lower bound ("at least"); warrant domain comparison made structural (width + sorted vars) instead of formatted-string; both certificate adapters converted to verdict whitelists (unknown/zero verdicts now error instead of recording as completed executed checks); step-path chain integrity asserted end-to-end; screen package doc corrected ((b)/(e) range over all episodes); rewrite candidates normalize constants to the search width |
+
+The adapter-whitelist fix was applied to `internal/measure` as well (same finding class at the same boundary; its existing verdict→outcome mappings preserved).
