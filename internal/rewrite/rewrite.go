@@ -210,6 +210,24 @@ func Search(start finite.Expr, d finite.Domain, rules []Rule, cost CostModel, ma
 	return res, nil
 }
 
+// CanStrictlyReduce reports whether a single application of the rule at
+// any position of e strictly reduces the cost. It is the task-grounding
+// probe for history claims (shape-selector/1): deterministic, computable
+// by any arm from the task and admitted rules alone, and independent of
+// any history content.
+func CanStrictlyReduce(e finite.Expr, r Rule, d finite.Domain, cost CostModel) bool {
+	if cost == nil {
+		cost = NodeCount
+	}
+	base := cost(e)
+	for _, next := range applyEverywhere(e, r, d) {
+		if cost(next) < base {
+			return true
+		}
+	}
+	return false
+}
+
 // applyEverywhere returns every expression obtained by applying the rule
 // at exactly one position of e, in deterministic order. Results have
 // their constants normalized to the search width so semantically
