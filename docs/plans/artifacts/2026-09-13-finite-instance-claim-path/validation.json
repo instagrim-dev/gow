@@ -1,0 +1,41 @@
+{
+  "scope": "Current dirty checkout, including the prior shaping, finite-equivalence and observation-claim repairs plus the finite-instance path.",
+  "go_version": "go1.26.6 darwin/arm64",
+  "checks": [
+    {
+      "command": "go build ./...",
+      "result": "PASS"
+    },
+    {
+      "command": "go vet ./...",
+      "result": "PASS"
+    },
+    {
+      "command": "go test ./...",
+      "result": "PASS"
+    },
+    {
+      "command": "go test -race ./internal/toolreg ./internal/pipeline ./cmd/newf -run 'TestFiniteInstance|TestCLIFiniteInstance|TestFiniteClaim|TestCLIFiniteCheck|TestObservationClaim|TestCLIObservationCheck' -count=1",
+      "result": "PASS",
+      "note": "The focused race run completed in 87.119 seconds for cmd/newf; internal/pipeline had no matching test names."
+    },
+    {
+      "command": "gofmt -l .",
+      "result": "PASS",
+      "output": ""
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    },
+    {
+      "command": "reconcile retained input SHA-256 values against each run-record subject_ref",
+      "result": "PASS"
+    },
+    {
+      "command": "go run ./cmd/newf review check-finite-instance --help",
+      "result": "PASS",
+      "note": "Final command help renders its paragraph breaks normally."
+    }
+  ]
+}

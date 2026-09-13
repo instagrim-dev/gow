@@ -31,6 +31,7 @@ package rewrite
 
 import (
 	"fmt"
+	"reflect"
 	"sort"
 
 	"github.com/instagrim-dev/newf/internal/finite"
@@ -46,6 +47,30 @@ type Rule struct {
 
 // Name returns the rule's admission name.
 func (r Rule) Name() string { return r.name }
+
+// ValidateForDomain checks the admission boundary before rendering,
+// matching, or hashing a rule. Pattern variables are metavariables and
+// need not share the subject's names; the admitted word width must match.
+func (r Rule) ValidateForDomain(d finite.Domain) error {
+	if r.name == "" {
+		return fmt.Errorf("an unadmitted zero-value rule was supplied; rules exist only via AdmitRule")
+	}
+	if defects := finite.ValidateDomain(d); len(defects) > 0 {
+		return fmt.Errorf("invalid rule application domain: %v", defects)
+	}
+	if r.domain.Width != d.Width {
+		return fmt.Errorf("rule %q was admitted at width %d and cannot be applied at width %d; a certificate warrants exactly its domain", r.name, r.domain.Width, d.Width)
+	}
+	for _, side := range []struct {
+		name string
+		expr finite.Expr
+	}{{"left", r.lhs}, {"right", r.rhs}} {
+		if defects := finite.ValidateExpr(side.expr, r.domain); len(defects) > 0 {
+			return fmt.Errorf("rule %q has an invalid %s side in its admitted domain: %v", r.name, side.name, defects)
+		}
+	}
+	return nil
+}
 
 // AdmitRule constructs a Rule from a certificate presented as warrant for
 // "lhs == rhs on domain d". It returns the complete defect list when the
@@ -106,14 +131,18 @@ type Result struct {
 	BestCost     int64
 	Steps        []Step // rewrite path from Original to Best
 	Explored     int    // expressions expanded
-	// Generated counts candidate rewrites the search materialized
-	// (successors produced by rule application, before dedup). It is
+	// Generated counts matched candidate positions whose size preflight
+	// began, including rejected terms and before deduplication. It is
 	// the same unit of work a selector probe performs per candidate, so
 	// callers can charge search and pre-search probe work on one ledger
 	// (2026-09-13 external review finding 1). Explored (expansions)
 	// remains the budget unit; the two are different measures and must
 	// not be conflated.
 	Generated int
+	// RuleApplications counts rule traversals begun, including no-match traversals.
+	RuleApplications int
+	// ResourceBudgetExhausted is a stop under the caller's shared operational allowance.
+	ResourceBudgetExhausted bool
 	// BudgetExhausted: the expansion budget stopped the search. Best is
 	// best-found under the budget — not a claim of optimality and not
 	// saturation.
@@ -124,8 +153,8 @@ type Result struct {
 	// bound memory). Best is best-found under the ceiling — a resource
 	// stop, never a semantic judgment.
 	StateBounded bool
-	// TermSizeBounded: at least one successor exceeded the rendered-size
-	// ceiling and was not enqueued. The reachable set was truncated by a
+	// TermSizeBounded: at least one successor exceeded the node/depth
+	// ceiling and was not constructed. The reachable set was truncated by a
 	// resource bound, not by rule semantics.
 	TermSizeBounded bool
 	// Cancelled: the caller's cancellation channel closed mid-search.
@@ -144,7 +173,9 @@ type Result struct {
 // so bounded and unbounded runs coincide on all retained results.
 type Limits struct {
 	// MaxStates caps the visited-set size (generated, deduplicated
-	// states). Exceeding it stops the search with StateBounded.
+	// states). A reachable set that fits the cap exactly completes
+	// normally; exceeding it — refusing a new unseen successor because
+	// the set is full — stops the search with StateBounded.
 	MaxStates int
 	// MaxTermNodes caps a successor's TREE SIZE, checked before the
 	// successor is rendered. Larger successors are skipped and
@@ -155,6 +186,9 @@ type Limits struct {
 	MaxTermNodes int
 	// Cancel, when non-nil and closed, stops the search with Cancelled.
 	Cancel <-chan struct{}
+	// Work, when supplied, is shared by probes and search. A zero cap is a
+	// zero allowance; nil retains the legacy expansion-only allowance.
+	Work *WorkBudget
 }
 
 // Default work ceilings. MaxTermNodes matches finite.MaxExprNodes: a
@@ -176,6 +210,9 @@ func Search(start finite.Expr, d finite.Domain, rules []Rule, cost CostModel, ma
 
 // SearchBounded is Search with explicit work ceilings and cancellation.
 func SearchBounded(start finite.Expr, d finite.Domain, rules []Rule, cost CostModel, maxExpansions int, lim Limits) (Result, error) {
+	if err := lim.Validate(); err != nil {
+		return Result{}, err
+	}
 	if defects := finite.ValidateExpr(start, d); len(defects) > 0 {
 		return Result{}, fmt.Errorf("start expression is not valid in the search domain: %v", defects)
 	}
@@ -186,34 +223,38 @@ func SearchBounded(start finite.Expr, d finite.Domain, rules []Rule, cost CostMo
 		cost = NodeCount
 	}
 	for _, r := range rules {
-		if r.name == "" {
-			return Result{}, fmt.Errorf("an unadmitted zero-value rule was supplied; rules exist only via AdmitRule")
-		}
-		if r.domain.Width != d.Width {
-			return Result{}, fmt.Errorf("rule %q was admitted at width %d and cannot be applied in a width-%d search; a certificate warrants exactly its domain", r.name, r.domain.Width, d.Width)
+		if err := r.ValidateForDomain(d); err != nil {
+			return Result{}, err
 		}
 	}
-	if lim.MaxStates <= 0 {
-		lim.MaxStates = DefaultMaxStates
-	}
-	if lim.MaxTermNodes <= 0 {
-		lim.MaxTermNodes = DefaultMaxTermNodes
-	}
+	lim = lim.defaults()
 
 	type parentEdge struct {
 		parent string
 		step   Step
 	}
-	startKey := finite.Render(start)
+	// Even the initial key obeys cancellation while rendering. A cancelled
+	// partial key is never exposed as a canonical expression identity.
+	startKey, rendered := render(start, lim.Cancel)
+	if !rendered {
+		return Result{Cancelled: true}, nil
+	}
 	visited := map[string]finite.Expr{startKey: start}
 	parents := map[string]parentEdge{}
 	queue := []string{startKey}
 
+	if cancelled(lim.Cancel) && !nodeCountCost(cost) {
+		return Result{Original: startKey, Best: startKey, Cancelled: true}, fmt.Errorf("search cancelled before custom cost assessment; costs and endpoint were not assessed")
+	}
+	initialCost := NodeCount(start)
+	if !cancelled(lim.Cancel) {
+		initialCost = cost(start)
+	}
 	res := Result{
 		Original:     startKey,
 		Best:         startKey,
-		OriginalCost: cost(start),
-		BestCost:     cost(start),
+		OriginalCost: initialCost,
+		BestCost:     initialCost,
 	}
 
 	expansions := 0
@@ -238,21 +279,30 @@ search:
 		res.Explored++
 
 		for _, r := range rules {
-			successors, dropped := applyEverywhereBounded(current, r, d, lim.MaxTermNodes)
-			res.Generated += len(successors) + dropped
-			if dropped > 0 {
-				// A resource bound truncated the reachable set; the
-				// result says so rather than silently narrowing.
-				res.TermSizeBounded = true
-			}
-			for _, next := range successors {
-				nextKey := finite.Render(next)
-				if _, seen := visited[nextKey]; seen {
-					continue
+			stats := visitSuccessors(current, r, d, lim, func(next finite.Expr, dropped bool) bool {
+				if dropped {
+					res.TermSizeBounded = true
+					return true
 				}
+				if cancelled(lim.Cancel) {
+					res.Cancelled = true
+					return false
+				}
+				nextKey, ok := render(next, lim.Cancel)
+				if !ok {
+					res.Cancelled = true
+					return false
+				}
+				if _, seen := visited[nextKey]; seen {
+					return true
+				}
+				// Refusal semantics: StateBounded is set only when an
+				// UNSEEN successor is denied admission because the set
+				// is full. A reachable set that fits MaxStates exactly
+				// completes with StateBounded=false.
 				if len(visited) >= lim.MaxStates {
 					res.StateBounded = true
-					break search
+					return false
 				}
 				visited[nextKey] = next
 				parents[nextKey] = parentEdge{parent: key, step: Step{Rule: r.name, Before: key, After: nextKey}}
@@ -262,8 +312,17 @@ search:
 					res.Best = nextKey
 					res.BestCost = c
 				}
+				return !cancelled(lim.Cancel)
+			})
+			res.Generated += stats.Candidates
+			res.RuleApplications += stats.RuleApplications
+			res.Cancelled = res.Cancelled || stats.Cancelled
+			res.ResourceBudgetExhausted = stats.ResourceBudgetExhausted
+			if res.StateBounded || res.Cancelled || res.ResourceBudgetExhausted {
+				break search
 			}
 		}
+
 	}
 
 	// Reconstruct the path to the best expression.
@@ -283,57 +342,101 @@ search:
 	// Independent endpoint replay: the oracle re-decides Original == Best
 	// with no search state. A refusal is preserved, not upgraded.
 	best := visited[res.Best]
-	res.Endpoint = finite.AssessEquivalence(finite.Binding{
+	res.Endpoint = finite.AssessEquivalenceCancelled(finite.Binding{
 		Sentence: fmt.Sprintf("search endpoint: %s == %s", res.Original, res.Best),
 		Domain:   d,
-	}, start, best)
+	}, start, best, lim.Cancel)
+	res.Cancelled = res.Cancelled || cancelled(lim.Cancel)
 	res.EndpointVerified = res.Endpoint.Verdict == finite.VerdictHoldsOnDomain
 	return res, nil
 }
 
-// CanStrictlyReduce reports whether a single application of the rule at
-// any position of e strictly reduces the cost. See ProbeStrictReduction
-// for the metered form; this convenience discards the work count.
-//
-// CLAIM SCOPE: a false answer means only "no ONE-STEP strict cost
-// decrease from THIS start expression". It is not a proof that the rule
-// can never contribute — e.g. add-zero cannot one-step reduce add(0,x),
-// yet reduces it after the cost-neutral add-comm step (2026-09-13
-// external review finding 2).
+// CanStrictlyReduce is the NodeCount-only convenience for the metered probe.
+// A false answer excludes a one-step NodeCount improvement only; it says
+// nothing about later rewrites or the truth of a history claim.
 func CanStrictlyReduce(e finite.Expr, r Rule, d finite.Domain, cost CostModel) bool {
 	reduces, _ := ProbeStrictReduction(e, r, d, cost)
 	return reduces
 }
 
-// ProbeStrictReduction is the metered task-grounding probe for history
-// claims (shape.ControllerVersionV2): deterministic, computable by any arm from
-// the task and admitted rules alone, and independent of any history
-// content. It returns whether one application of the rule at any
-// position of e strictly reduces the cost, and the number of candidate
-// rewrites the probe materialized — the probe's work, which the caller
-// must charge to whatever cost ledger covers the arm that ran it
-// (2026-09-13 external review finding 1: uncharged pre-search probes).
-func ProbeStrictReduction(e finite.Expr, r Rule, d finite.Domain, cost CostModel) (reduces bool, candidates int) {
+// ProbeStrictReduction retains the original NodeCount probe API. Custom
+// costs must use ProbeStrictReductionBounded and inspect Complete: a
+// pruned larger expression may still be cheaper under a custom cost.
+// Unsupported costs and invalid premises panic explicitly rather than
+// turning an unperformed or incomplete assessment into a negative answer.
+func ProbeStrictReduction(e finite.Expr, r Rule, d finite.Domain, cost CostModel) (bool, int) {
+	if !nodeCountCost(cost) {
+		panic("custom probe cost requires ProbeStrictReductionBounded and its Complete assessment")
+	}
+	res, err := ProbeStrictReductionBounded(e, r, d, cost, Limits{})
+	if err != nil {
+		panic(err)
+	}
+	if !res.Complete {
+		panic("incomplete reduction probe requires ProbeStrictReductionBounded and its Complete assessment")
+	}
+	return res.Reduces, res.Candidates
+}
+
+// ProbeResult distinguishes a witnessed improvement from an exhaustive
+// one-step negative. Reduces remains a valid witness when Complete is
+// false; only Complete && !Reduces supports a negative assessment.
+type ProbeResult struct {
+	Reduces, Complete                                   bool
+	Candidates, RuleApplications                        int
+	TermSizeBounded, Cancelled, ResourceBudgetExhausted bool
+}
+
+// ProbeStrictReductionBounded consumes the same operational allowance as
+// SearchBounded. Candidates counts matched positions whose size preflight
+// began, including refused terms; no successor batch is constructed.
+// A custom cost callback must return promptly: cancellation is checked
+// before and after it, but Go callbacks cannot be forcibly preempted.
+func ProbeStrictReductionBounded(e finite.Expr, r Rule, d finite.Domain, cost CostModel, lim Limits) (ProbeResult, error) {
+	if err := lim.Validate(); err != nil {
+		return ProbeResult{}, err
+	}
+	if defects := finite.ValidateExpr(e, d); len(defects) > 0 {
+		return ProbeResult{}, fmt.Errorf("probe expression is invalid: %v", defects)
+	}
+	if err := r.ValidateForDomain(d); err != nil {
+		return ProbeResult{}, err
+	}
+	isNodeCount := nodeCountCost(cost)
 	if cost == nil {
 		cost = NodeCount
 	}
-	base := cost(e)
-	// The probe path carries the same successor ceiling the search path
-	// does (2026-09-13 validator finding D8: the probe used the unbounded
-	// form, so a growth rule could materialize terms the search would
-	// refuse). Dropped successors cannot change the answer — the probe
-	// asks whether some successor is CHEAPER than the base, and an
-	// oversize successor is never cheaper — so bounding costs no
-	// discrimination. Dropped candidates are still charged: the work of
-	// constructing them was performed.
-	successors, dropped := applyEverywhereBounded(e, r, d, DefaultMaxTermNodes)
-	candidates = len(successors) + dropped
-	for _, next := range successors {
-		if cost(next) < base {
-			reduces = true
-		}
+	lim = lim.defaults()
+	res := ProbeResult{Complete: true}
+	if cancelled(lim.Cancel) {
+		res.Complete, res.Cancelled = false, true
+		return res, nil
 	}
-	return reduces, candidates
+	base := cost(e)
+	stats := visitSuccessors(e, r, d, lim, func(next finite.Expr, dropped bool) bool {
+		if dropped {
+			res.TermSizeBounded = true
+			// A node bound at or above the starting node count cannot
+			// conceal a NodeCount improvement. Depth pruning still can.
+			res.Complete = false
+			return true
+		}
+		if cost(next) < base {
+			res.Reduces = true
+		}
+		return !cancelled(lim.Cancel)
+	})
+	res.Candidates, res.RuleApplications = stats.Candidates, stats.RuleApplications
+	res.Cancelled, res.ResourceBudgetExhausted = stats.Cancelled, stats.ResourceBudgetExhausted
+	if isNodeCount && !stats.DepthBounded && int64(lim.MaxTermNodes) >= base {
+		res.Complete = true
+	}
+	res.Complete = res.Complete && !res.Cancelled && !res.ResourceBudgetExhausted
+	return res, nil
+}
+
+func nodeCountCost(cost CostModel) bool {
+	return cost == nil || reflect.ValueOf(cost).Pointer() == reflect.ValueOf(NodeCount).Pointer()
 }
 
 // Identity returns a canonical content identity for the admitted rule:
@@ -343,145 +446,6 @@ func ProbeStrictReduction(e finite.Expr, r Rule, d finite.Domain, cost CostModel
 // to names only misses rule-content changes).
 func (r Rule) Identity() string {
 	return fmt.Sprintf("%s|w%d|vars=%v|%s=>%s", r.name, r.domain.Width, r.domain.Vars, finite.Render(r.lhs), finite.Render(r.rhs))
-}
-
-// applyEverywhere returns every expression obtained by applying the rule
-// at exactly one position of e, in deterministic order. Results have
-// their constants normalized to the search width so semantically
-// identical states share one visited-set key and one rendering
-// (adversarial review finding 10).
-func applyEverywhere(e finite.Expr, r Rule, d finite.Domain) []finite.Expr {
-	out, _ := applyEverywhereBounded(e, r, d, 0)
-	return out
-}
-
-// applyEverywhereBounded is applyEverywhere with an optional successor
-// tree-size ceiling (maxNodes <= 0 disables it). Oversize successors are
-// dropped at construction so the caller never renders, hashes, or
-// enqueues a term the domain would refuse to admit; dropped reports how
-// many were refused, so the caller can say the reachable set was
-// truncated instead of silently narrowing it.
-func applyEverywhereBounded(e finite.Expr, r Rule, d finite.Domain, maxNodes int) (out []finite.Expr, dropped int) {
-	keep := func(x finite.Expr) {
-		if maxNodes > 0 && treeSize(x) > maxNodes {
-			dropped++
-			return
-		}
-		out = append(out, x)
-	}
-	if b, ok := match(r.lhs, e, d, map[string]finite.Expr{}); ok {
-		keep(normalizeConsts(subst(r.rhs, b), d))
-	}
-	switch t := e.(type) {
-	case finite.Unary:
-		sub, subDropped := applyEverywhereBounded(t.X, r, d, maxNodes)
-		dropped += subDropped
-		for _, v := range sub {
-			keep(finite.Unary{Op: t.Op, X: v})
-		}
-	case finite.Binary:
-		left, leftDropped := applyEverywhereBounded(t.X, r, d, maxNodes)
-		dropped += leftDropped
-		for _, v := range left {
-			keep(finite.Binary{Op: t.Op, X: v, Y: t.Y})
-		}
-		right, rightDropped := applyEverywhereBounded(t.Y, r, d, maxNodes)
-		dropped += rightDropped
-		for _, v := range right {
-			keep(finite.Binary{Op: t.Op, X: t.X, Y: v})
-		}
-	}
-	return out, dropped
-}
-
-// treeSize counts logical nodes — the measure finite.MaxExprNodes bounds
-// at admission, and the size a canonical rendering expands to. Shared
-// subexpressions are counted once per reference, deliberately: that is
-// the cost a traversal or rendering actually pays.
-func treeSize(e finite.Expr) int {
-	switch t := e.(type) {
-	case finite.Unary:
-		return 1 + treeSize(t.X)
-	case finite.Binary:
-		return 1 + treeSize(t.X) + treeSize(t.Y)
-	}
-	return 1
-}
-
-// match binds the pattern's variables (metavariables, quantified by the
-// rule's admitted domain) to subexpressions of the subject. A repeated
-// metavariable must bind to structurally identical subexpressions.
-func match(pattern, subject finite.Expr, d finite.Domain, bindings map[string]finite.Expr) (map[string]finite.Expr, bool) {
-	switch p := pattern.(type) {
-	case finite.Var:
-		if prev, ok := bindings[p.Name]; ok {
-			if finite.Render(prev) != finite.Render(subject) {
-				return nil, false
-			}
-			return bindings, true
-		}
-		bindings[p.Name] = subject
-		return bindings, true
-	case finite.Const:
-		s, ok := subject.(finite.Const)
-		if !ok {
-			return nil, false
-		}
-		mask := uint64(1)<<uint(d.Width) - 1
-		if p.Value&mask != s.Value&mask {
-			return nil, false
-		}
-		return bindings, true
-	case finite.Unary:
-		s, ok := subject.(finite.Unary)
-		if !ok || s.Op != p.Op {
-			return nil, false
-		}
-		return match(p.X, s.X, d, bindings)
-	case finite.Binary:
-		s, ok := subject.(finite.Binary)
-		if !ok || s.Op != p.Op {
-			return nil, false
-		}
-		b, ok := match(p.X, s.X, d, bindings)
-		if !ok {
-			return nil, false
-		}
-		return match(p.Y, s.Y, d, b)
-	}
-	return nil, false
-}
-
-// subst instantiates the rule's right-hand side under the bindings. Every
-// variable is bound: AdmitRule rejected rules with unbound RHS variables.
-func subst(rhs finite.Expr, bindings map[string]finite.Expr) finite.Expr {
-	switch t := rhs.(type) {
-	case finite.Var:
-		return bindings[t.Name]
-	case finite.Const:
-		return t
-	case finite.Unary:
-		return finite.Unary{Op: t.Op, X: subst(t.X, bindings)}
-	case finite.Binary:
-		return finite.Binary{Op: t.Op, X: subst(t.X, bindings), Y: subst(t.Y, bindings)}
-	}
-	return rhs
-}
-
-// normalizeConsts masks constant values to the search width, matching
-// evaluation semantics, so renderings of semantically identical states
-// coincide.
-func normalizeConsts(e finite.Expr, d finite.Domain) finite.Expr {
-	mask := uint64(1)<<uint(d.Width) - 1
-	switch t := e.(type) {
-	case finite.Const:
-		return finite.Const{Value: t.Value & mask}
-	case finite.Unary:
-		return finite.Unary{Op: t.Op, X: normalizeConsts(t.X, d)}
-	case finite.Binary:
-		return finite.Binary{Op: t.Op, X: normalizeConsts(t.X, d), Y: normalizeConsts(t.Y, d)}
-	}
-	return e
 }
 
 func freeVars(e finite.Expr) map[string]bool {

@@ -1,0 +1,68 @@
+{
+  "scope": "Local engineering lifecycle verification. This is not protected G1 usefulness evidence and does not authenticate source correspondence or supplied assignments.",
+  "base_revision": "ecb1c668f79784ed372a40ffce56774996ea60c4",
+  "build_version": "ecb1c66+working-tree-finite-instance",
+  "binary_sha256": "769a57135d03b8be96adb87c5ffeefa6da71cc96013b85bbd0185c744064c28e",
+  "database": "/var/folders/_v/8mpf15r15fnfxnhvsd4h0fc40000gn/T/newf-finite-instance-nhwa_las/review.db",
+  "provider_calls": 0,
+  "cpu_cost": "unmeasured",
+  "custody_cost": "unmeasured",
+  "records": [
+    {
+      "label": "agreement",
+      "input_file": "instance-agreement-input.json",
+      "policy_id": "rpol_01M2DWF8RXWNBJR1QECHYC8RYY",
+      "obligation_id": "robl_01M2DWF8RXWNBJR1QECJZXNG9Y",
+      "check_id": "rchk_01M2DWF8SB065ASDQBZ3A74P17",
+      "subject_ref": "finite-instance-claim:sha256:2a9ce2fb363f5a830603b561d5fc834229f8bab67c6393b4e7733e01106c29c7",
+      "verdict": "INSTANCE_EVIDENCE_ONLY",
+      "assignments_checked": 2,
+      "assessor_invoked": true,
+      "persisted": true,
+      "cold_read_identical": true,
+      "coverage_before_assessment": "UNDETERMINED",
+      "coverage_after_assessment": "ELIGIBLE_TO_ADVANCE",
+      "scope_guard": "The resulting assessment accepts only agreement at the exact input's two listed points. It does not assert domain equivalence."
+    },
+    {
+      "label": "counterexample",
+      "input_file": "counterexample-input.json",
+      "policy_id": "rpol_01M2DWF8VR7THP1EVGX64HEWRS",
+      "obligation_id": "robl_01M2DWF8VR7THP1EVGX84BBQ6P",
+      "check_id": "rchk_01M2DWF8W5EYZSX2ECJ7K68SDF",
+      "subject_ref": "finite-instance-claim:sha256:c5685e107fd85f7a1b07928e59ef938c854502f41709156af565cf13556af3c5",
+      "verdict": "REFUTED",
+      "assignments_checked": 1,
+      "assessor_invoked": true,
+      "persisted": true,
+      "cold_read_identical": true,
+      "coverage_before_assessment": "UNDETERMINED",
+      "coverage_after_assessment": "WITHHOLD"
+    },
+    {
+      "label": "over-allowance",
+      "input_file": "over-allowance-input.json",
+      "policy_id": "rpol_01M2DWF8YHDTJGJKR63QVJY61X",
+      "obligation_id": "robl_01M2DWF8YHDTJGJKR63RXHGC5T",
+      "check_id": "rchk_01M2DWF8YZW6QEA9FXNQRB5NB1",
+      "subject_ref": "finite-instance-claim:sha256:8759f8ec511cf6984a69a89b6ed270251c579fcb5664d7ba39f82d0e6f35bae6",
+      "verdict": "UNRESOLVED",
+      "assignments_checked": 0,
+      "assessor_invoked": false,
+      "persisted": true,
+      "cold_read_identical": true,
+      "coverage_before_assessment": "UNDETERMINED",
+      "coverage_after_assessment": "UNDETERMINED",
+      "reason": "Two supplied assignments exceeded the reservation of one; no prefix was checked."
+    }
+  ],
+  "additional_tested_failures": [
+    "missing assignment field",
+    "invalid domain width",
+    "undeclared variable binding",
+    "duplicate whole assignment",
+    "zero reservation",
+    "cooperative cancellation before assessment",
+    "SQLite insert failure after computation, with unpersisted recovery result"
+  ]
+}

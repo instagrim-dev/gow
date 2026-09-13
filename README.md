@@ -26,6 +26,12 @@ generator**.
 
 ## Current executable slice
 
+The bounded shaping development path is available as `newf shaping diagnose`
+and `newf shaping inspect`. It records shared probe/search resource allowances,
+checked endpoints and blocked receipts. See the
+[operator contract and current repair status](docs/plans/2026-09-13-roadmap-resume-state.md)
+for the disclosed smoke command, persistence/replay scope and evaluation gates.
+
 The repository now ships the first provenance-heavy local CLI slice:
 
 ```text
@@ -84,6 +90,9 @@ newf experiment compare [experiment-id] [--problem <problem-id>] [--baseline <ar
 newf policy mutate --problem <problem-id> [--no-provider]
 newf policy list --problem <problem-id>
 newf policy show [policy-revision-id] [--problem <problem-id>]
+newf g1 pack validate --input <metadata.json>
+newf g1 pack seal --input <metadata.json> --out <new-seal.json>
+newf g1 pack inspect <seal.json> [--input <metadata.json>]
 ```
 
 Requires **Go 1.25 or newer**. The floor is declared once, by the `go` directive
@@ -536,7 +545,7 @@ command families with their own docs: `witness check`
 ([`docs/evaluation.md`](docs/evaluation.md)), `projection
 propose`/`discharge`/`list` ([`docs/projection.md`](docs/projection.md)),
 `evidence admit`/`list`, `episode …` ([`docs/episode.md`](docs/episode.md)),
-`review policy`/`assess`/`applicability`/`check`/`coverage`
+`review policy`/`assess`/`applicability`/`check`/`check-finite`/`check-finite-instance`/`check-observations`/`check-show`/`coverage`
 ([`docs/normative-review-records.md`](docs/normative-review-records.md)),
 `invariant claim`, `source lineage-diff`, and `mechanism list`.
 

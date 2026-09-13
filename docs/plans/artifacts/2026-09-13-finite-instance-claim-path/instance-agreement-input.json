@@ -1,0 +1,13 @@
+{
+  "schema": "finite-instance-claim/1",
+  "kind": "finite_instance",
+  "source_ref": "development:two-four-bit-points",
+  "statement": "x + 0 agrees with x at the supplied points",
+  "domain": {"width": 4, "variables": ["x"]},
+  "left": {"op": "add", "args": [{"var": "x"}, {"const": 0}]},
+  "right": {"var": "x"},
+  "assignments": [
+    {"values": [{"var": "x", "value": 0}]},
+    {"values": [{"var": "x", "value": 7}]}
+  ]
+}

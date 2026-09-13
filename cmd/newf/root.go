@@ -24,6 +24,7 @@ type rootOptions struct {
 type commandError struct {
 	Command string
 	Err     error
+	Result  any // A retained result when execution succeeded but persistence failed.
 }
 
 func (e *commandError) Error() string {
@@ -86,6 +87,8 @@ func newRootCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions, vers
 	cmd.AddCommand(newWitnessCommand(stdout, app, opts))
 	cmd.AddCommand(newPolicyCommand(stdout, app, opts))
 	cmd.AddCommand(newReviewCommand(stdout, app, opts))
+	cmd.AddCommand(newShapingCommand(stdout, opts, version))
+	cmd.AddCommand(newG1Command(stdout, opts))
 
 	return cmd
 }
@@ -123,6 +126,7 @@ func writeCommandError(stdout, stderr io.Writer, jsonOutput bool, err *commandEr
 		_ = writeJSON(stdout, pipeline.ErrorResponse{
 			OK:      false,
 			Command: err.Command,
+			Result:  err.Result,
 			Error: pipeline.ErrorDetail{
 				Code:    classifyError(err.Err),
 				Message: err.Err.Error(),
@@ -131,6 +135,9 @@ func writeCommandError(stdout, stderr io.Writer, jsonOutput bool, err *commandEr
 		return
 	}
 
+	if err.Result != nil {
+		_ = writeJSON(stdout, err.Result)
+	}
 	_, _ = fmt.Fprintf(stderr, "Error: %v\n", err.Err)
 }
 

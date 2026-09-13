@@ -86,11 +86,29 @@ func scopeGuards(d Domain) []string {
 // checked premise: a nil or malformed expression is an applicability
 // refusal, never a panic.
 func AssessEquivalence(b Binding, left, right Expr) Certificate {
+	return AssessEquivalenceCancelled(b, left, right, nil)
+}
+
+// AssessEquivalenceCancelled is independent exhaustive replay with a
+// cancellation check inside each expression evaluation. Cancellation
+// retains completed-assignment counts and never certifies exhaustiveness.
+func AssessEquivalenceCancelled(b Binding, left, right Expr, cancel <-chan struct{}) Certificate {
 	cert := Certificate{
-		Binding:     b,
-		Question:    "Do the two expressions evaluate identically on every assignment of the declared finite domain?",
-		NotAssessed: scopeGuards(b.Domain),
+		Binding:  b,
+		Question: "Do the two expressions evaluate identically on every assignment of the declared finite domain?",
 	}
+	if defects := ValidateDomain(b.Domain); len(defects) > 0 {
+		cert.PremiseFailures = defects
+		cert.Verdict = VerdictInapplicable
+		cert.Reason = "a domain premise failed before rendering: " + strings.Join(defects, "; ")
+		return cert
+	}
+	if isCancelled(cancel) {
+		cert.Verdict = VerdictUnresolved
+		cert.Reason = "independent replay cancelled before evaluation; equivalence remains unverified"
+		return cert
+	}
+	cert.NotAssessed = scopeGuards(b.Domain)
 	if defects := append(structureDefects("left", left), structureDefects("right", right)...); len(defects) > 0 {
 		cert.PremiseFailures = defects
 		cert.Verdict = VerdictInapplicable
@@ -117,8 +135,15 @@ func AssessEquivalence(b Binding, left, right Expr) Certificate {
 		return cert
 	}
 	enumerate(b.Domain, func(a Assignment) bool {
+		l, ok := evalCancelled(left, b.Domain, a, cancel)
+		if !ok {
+			return false
+		}
+		r, ok := evalCancelled(right, b.Domain, a, cancel)
+		if !ok {
+			return false
+		}
 		cert.AssignmentsChecked++
-		l, r := left.eval(b.Domain, a), right.eval(b.Domain, a)
 		if l != r {
 			cert.Counterexample = &Counterexample{Assignment: a.render(), Left: l, Right: r}
 			return false
@@ -128,6 +153,11 @@ func AssessEquivalence(b Binding, left, right Expr) Certificate {
 	if cert.Counterexample != nil {
 		cert.Verdict = VerdictRefuted
 		cert.Reason = fmt.Sprintf("exact counterexample at {%s}: left evaluates to %d, right to %d", cert.Counterexample.Assignment, cert.Counterexample.Left, cert.Counterexample.Right)
+		return cert
+	}
+	if isCancelled(cancel) {
+		cert.Verdict = VerdictUnresolved
+		cert.Reason = fmt.Sprintf("independent replay cancelled after %d complete assignments; equivalence remains unverified", cert.AssignmentsChecked)
 		return cert
 	}
 	cert.Exhaustive = true
@@ -144,6 +174,10 @@ func AssessEquivalence(b Binding, left, right Expr) Certificate {
 // the domain, but one admissible counterexample DOES refute the universal
 // claim over that domain.
 func AssessInstances(b Binding, left, right Expr, instances []Assignment) Certificate {
+	if defects := ValidateDomain(b.Domain); len(defects) > 0 {
+		return Certificate{Binding: b, PremiseFailures: defects, Verdict: VerdictInapplicable,
+			Reason: "a domain premise failed before rendering: " + strings.Join(defects, "; ")}
+	}
 	cert := Certificate{
 		Binding:     b,
 		Question:    "Do the two expressions evaluate identically on the supplied assignments (and only those)?",

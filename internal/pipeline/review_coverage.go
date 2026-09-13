@@ -86,6 +86,27 @@ func (a *App) RecordReviewAssessment(ctx context.Context, in ReviewAssessInput) 
 	}
 	defer repoStore.Close()
 
+	// Direct assessments of a typed claim cannot cite an executed
+	// typed receipt for different bytes. The lookup is global — each cited
+	// check is resolved by id regardless of the policy it was recorded
+	// under, so a cross-policy citation cannot bypass byte binding. Broader
+	// review subjects still use explicit relevance arguments; this is not a
+	// general truth classifier.
+	if (strings.HasPrefix(in.SubjectRef, "finite-claim:sha256:") || strings.HasPrefix(in.SubjectRef, "finite-instance-claim:sha256:") || strings.HasPrefix(in.SubjectRef, "observation-claim:sha256:")) && len(in.CheckAttemptIDs) > 0 {
+		for _, id := range in.CheckAttemptIDs {
+			check, err := repoStore.GetReviewCheckAttempt(ctx, id)
+			if err != nil {
+				return ReviewAssessResponse{}, fmt.Errorf("cited check attempt %s: %w", id, err)
+			}
+			if !strings.HasPrefix(check.ProcedureRevision, FiniteCheckProcedure+"+") && !strings.HasPrefix(check.ProcedureRevision, FiniteInstanceCheckProcedure+"+") && !strings.HasPrefix(check.ProcedureRevision, ObservationCheckProcedure+"+") {
+				continue
+			}
+			if check.InputsRef != in.SubjectRef {
+				return ReviewAssessResponse{}, fmt.Errorf("typed check %s binds %s, not assessment subject %s", id, check.InputsRef, in.SubjectRef)
+			}
+		}
+	}
+
 	now := a.now()
 	ts := now.Format(timeLayout)
 	// An omitted project revision is resolved from the checkout rather than left

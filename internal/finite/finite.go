@@ -54,6 +54,34 @@ type Domain struct {
 	Vars  []string // the closed set of admissible free variables
 }
 
+// ValidateDomain checks the declared semantics without imposing the
+// independent oracle's exhaustiveness cap. Search may produce an
+// unverified candidate above that cap, but cannot use unsupported widths
+// or an ambiguous variable declaration.
+func ValidateDomain(d Domain) []string {
+	var defects []string
+	if d.Width < MinWidth || d.Width > MaxWidth {
+		defects = append(defects, fmt.Sprintf("declared width %d is outside the supported range [%d,%d]", d.Width, MinWidth, MaxWidth))
+	}
+	if len(d.Vars) > MaxExprNodes {
+		return append(defects, fmt.Sprintf("declared domain exceeds %d variables; resource refusal", MaxExprNodes))
+	}
+	seen := make(map[string]bool, len(d.Vars))
+	for _, name := range d.Vars {
+		if len(name) > MaxIdentifierBytes {
+			return append(defects, fmt.Sprintf("declared variable identifier exceeds %d bytes; resource refusal", MaxIdentifierBytes))
+		}
+		if name == "" || !identifierName(name) {
+			defects = append(defects, fmt.Sprintf("declared variable %q is not a plain identifier; a nonempty plain identifier is required", name))
+		}
+		if seen[name] {
+			defects = append(defects, fmt.Sprintf("declared variable %q is duplicated", name))
+		}
+		seen[name] = true
+	}
+	return defects
+}
+
 func (d Domain) mask() uint64 { return (1 << uint(d.Width)) - 1 }
 
 // Size returns the number of assignments (2^Width)^len(Vars), or -1 when
@@ -224,12 +252,16 @@ const MaxExprDepth = 64
 //
 // Bounding tree size at ADMISSION is the shared choke point: every
 // consumer of a validated expression inherits a bounded rendering.
-// 4096 nodes is three orders of magnitude above every retained pack
-// episode (tens of nodes) and renders to roughly 25 KB.
+// The node ceiling and MaxIdentifierBytes together bound rendered bytes;
+// node count alone would not bound arbitrarily long variable names.
 //
 // Exceeding it is a RESOURCE refusal: the expression is refused for
 // admission with no semantic judgment about the expression's validity.
 const MaxExprNodes = 4096
+
+// MaxIdentifierBytes closes the rendering bound: node count alone cannot
+// bound bytes when one variable may contain an arbitrarily long name.
+const MaxIdentifierBytes = 128
 
 // structureDefects rejects structurally invalid expressions before any
 // rendering or traversal: the exported node structs allow nil children and
@@ -254,6 +286,9 @@ func structureWalk(label string, e Expr, depth int, visits *int) []string {
 	}
 	switch t := e.(type) {
 	case Var:
+		if len(t.Name) > MaxIdentifierBytes {
+			return []string{fmt.Sprintf("%s: variable identifier exceeds %d bytes; resource refusal", label, MaxIdentifierBytes)}
+		}
 		if t.Name == "" {
 			return []string{fmt.Sprintf("%s: variable node has an empty name", label)}
 		}
@@ -295,7 +330,10 @@ func structureWalk(label string, e Expr, depth int, visits *int) []string {
 // evaluation: unknown operators and undeclared free variables are premise
 // failures, not runtime surprises.
 func validate(e Expr, d Domain) []string {
-	var problems []string
+	problems := ValidateDomain(d)
+	if len(problems) > 0 {
+		return problems
+	}
 	declared := make(map[string]bool, len(d.Vars))
 	for _, v := range d.Vars {
 		declared[v] = true
@@ -345,7 +383,8 @@ func Render(e Expr) string { return e.render() }
 
 // ValidateExpr reports every structural and domain defect of an
 // expression: nil or malformed nodes, unknown operators, excessive depth,
-// and free variables outside the declared domain. An empty result means
+// unsupported widths, invalid declarations, and free variables outside
+// the declared domain. An empty result means
 // the expression is safe to traverse and evaluate within d.
 func ValidateExpr(e Expr, d Domain) []string {
 	defects := structureDefects("expression", e)

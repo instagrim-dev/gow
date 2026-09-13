@@ -1,0 +1,19 @@
+{
+  "schema": "g1-pack-seal/1",
+  "created_at": "2026-09-13T18:41:44.690777Z",
+  "manifest_sha256": "694ec0c95c73eef0077a1fd6c73c627e9fca67e872317b4a3f26f7c8178ac726",
+  "manifest_bytes": 2529,
+  "pack_id": "example-g1-metadata-only",
+  "validation": {
+    "structurally_valid": true,
+    "readiness": "PREPARED_NOT_AUTHORIZED",
+    "protected_execution_authorized": false,
+    "custody_verified": false,
+    "blockers": [
+      "protected execution is not authorized by this manifest or its seal",
+      "custody declarations are retained but not independently verified",
+      "no operator approval reference is declared"
+    ]
+  },
+  "scope": "metadata-only seal; protected execution remains unauthorized; custody remains unverified"
+}

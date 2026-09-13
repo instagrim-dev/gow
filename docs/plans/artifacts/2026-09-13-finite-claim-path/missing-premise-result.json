@@ -1,0 +1,170 @@
+{
+  "scope": "disclosed engineering verification; not protected usefulness evidence",
+  "policy": {
+    "policy_id": "rpol_01M2DSWBVGPCM3GZY82D9CNDHR",
+    "obligation_ids": {
+      "equivalence-missing-premise@1": "robl_01M2DSWBVGPCM3GZY82E0RV811"
+    }
+  },
+  "execution": {
+    "ok": true,
+    "command": "review check-finite",
+    "persisted": true,
+    "check": {
+      "ID": "rchk_01M2DSWBVZ869DJGRZMH4QC5MT",
+      "ObligationID": "robl_01M2DSWBVGPCM3GZY82E0RV811",
+      "PolicyID": "rpol_01M2DSWBVGPCM3GZY82D9CNDHR",
+      "CaseLabel": "missing-premise",
+      "ProcedureRef": "internal/toolreg finite claim binding -> internal/finite checker",
+      "ProcedureRevision": "finite-claim-check/1+finite-equivalence-checker/1",
+      "InputsRef": "finite-claim:sha256:8119a3ddb501e98fc62bcce20ec1ded86e62786a9d136efd4dbc242dcc387b74",
+      "Executor": "local-development-operator",
+      "Environment": "darwin/arm64 go1.26.6; newf ecb1c66+working-tree-finite-claim",
+      "Mode": "executed",
+      "Outcome": "blocked",
+      "OutputRef": "{\"schema\":\"finite-claim-check/1\",\"subject_ref\":\"finite-claim:sha256:8119a3ddb501e98fc62bcce20ec1ded86e62786a9d136efd4dbc242dcc387b74\",\"input_json\":\"{\\n  \\\"schema\\\": \\\"finite-claim/1\\\",\\n  \\\"kind\\\": \\\"finite_equivalence\\\",\\n  \\\"source_ref\\\": \\\"development:four-bit-add-zero\\\",\\n  \\\"statement\\\": \\\"x + 0 equals x over the declared four-bit domain\\\",\\n  \\\"domain\\\": {\\n    \\\"variables\\\": [\\n      \\\"x\\\"\\n    ]\\n  },\\n  \\\"left\\\": {\\n    \\\"op\\\": \\\"add\\\",\\n    \\\"args\\\": [\\n      {\\n        \\\"var\\\": \\\"x\\\"\\n      },\\n      {\\n        \\\"const\\\": 0\\n      }\\n    ]\\n  },\\n  \\\"right\\\": {\\n    \\\"var\\\": \\\"x\\\"\\n  }\\n}\\n\",\"input_sha256\":\"8119a3ddb501e98fc62bcce20ec1ded86e62786a9d136efd4dbc242dcc387b74\",\"source_ref\":\"development:four-bit-add-zero\",\"tool\":{\"Kind\":\"finite_equivalence\",\"Name\":\"exhaustive finite equivalence\",\"Statement\":\"enumeration of every assignment of a declared finite domain (fixed-width machine words, total operators modulo 2^width); first counterexample in canonical order\",\"Implementation\":\"internal/finite\",\"ProcedureRevision\":\"finite-equivalence-checker/1\",\"InputTypes\":[\"finite.Binding\",\"finite.Expr (left)\",\"finite.Expr (right)\"],\"Premises\":[\"width within [1,8]\",\"every free variable declared in the domain\",\"every operator in the seed language (division is absent by design)\",\"domain size within the exhaustiveness cap\"],\"Quantifier\":\"exactly the declared finite domain; never other widths, wider variable sets, or unbounded integers\",\"Outputs\":[\"HOLDS_ON_DECLARED_DOMAIN\",\"REFUTED\",\"UNRESOLVED\",\"INAPPLICABLE\"],\"Limits\":[\"refuses domains above the exhaustiveness cap rather than sampling\",\"warrant consumption is separately enforced by finite.VerifyRuleWarrant\"]},\"max_assignments\":16,\"elapsed_nanos\":541,\"certificate\":{\"Binding\":{\"Sentence\":\"x + 0 equals x over the declared four-bit domain\",\"Domain\":{\"Width\":0,\"Vars\":[\"x\"]}},\"Left\":\"\",\"Right\":\"\",\"PremiseFailures\":[\"domain.width\"],\"DomainSize\":0,\"AssignmentsChecked\":0,\"Exhaustive\":false,\"Question\":\"Do the two expressions evaluate identically on every assignment of the declared finite domain?\",\"Verdict\":\"UNRESOLVED\",\"Reason\":\"missing required premises: domain.width\",\"Counterexample\":null,\"NotAssessed\":null},\"limitations\":[\"operator-supplied typed target; correspondence to source prose is not independently assessed\",\"certificate decides only its declared finite domain; no rule admission or normative assessment is automatic\",\"CPU and custody cost unmeasured; zero provider calls\"]}",
+      "Blocker": "missing required premises: domain.width",
+      "StartedAt": "2026-09-13T16:33:50Z",
+      "EndedAt": "2026-09-13T16:33:50Z",
+      "ResourceNote": "assignment allowance=16; checked=0; elapsed_ns=541; provider_calls=0; cpu=unknown; custody=unknown",
+      "CreatedAt": "2026-09-13T16:33:50.463287Z"
+    },
+    "receipt": {
+      "schema": "finite-claim-check/1",
+      "subject_ref": "finite-claim:sha256:8119a3ddb501e98fc62bcce20ec1ded86e62786a9d136efd4dbc242dcc387b74",
+      "input_json": "{\n  \"schema\": \"finite-claim/1\",\n  \"kind\": \"finite_equivalence\",\n  \"source_ref\": \"development:four-bit-add-zero\",\n  \"statement\": \"x + 0 equals x over the declared four-bit domain\",\n  \"domain\": {\n    \"variables\": [\n      \"x\"\n    ]\n  },\n  \"left\": {\n    \"op\": \"add\",\n    \"args\": [\n      {\n        \"var\": \"x\"\n      },\n      {\n        \"const\": 0\n      }\n    ]\n  },\n  \"right\": {\n    \"var\": \"x\"\n  }\n}\n",
+      "input_sha256": "8119a3ddb501e98fc62bcce20ec1ded86e62786a9d136efd4dbc242dcc387b74",
+      "source_ref": "development:four-bit-add-zero",
+      "tool": {
+        "Kind": "finite_equivalence",
+        "Name": "exhaustive finite equivalence",
+        "Statement": "enumeration of every assignment of a declared finite domain (fixed-width machine words, total operators modulo 2^width); first counterexample in canonical order",
+        "Implementation": "internal/finite",
+        "ProcedureRevision": "finite-equivalence-checker/1",
+        "InputTypes": [
+          "finite.Binding",
+          "finite.Expr (left)",
+          "finite.Expr (right)"
+        ],
+        "Premises": [
+          "width within [1,8]",
+          "every free variable declared in the domain",
+          "every operator in the seed language (division is absent by design)",
+          "domain size within the exhaustiveness cap"
+        ],
+        "Quantifier": "exactly the declared finite domain; never other widths, wider variable sets, or unbounded integers",
+        "Outputs": [
+          "HOLDS_ON_DECLARED_DOMAIN",
+          "REFUTED",
+          "UNRESOLVED",
+          "INAPPLICABLE"
+        ],
+        "Limits": [
+          "refuses domains above the exhaustiveness cap rather than sampling",
+          "warrant consumption is separately enforced by finite.VerifyRuleWarrant"
+        ]
+      },
+      "max_assignments": 16,
+      "elapsed_nanos": 541,
+      "certificate": {
+        "Binding": {
+          "Sentence": "x + 0 equals x over the declared four-bit domain",
+          "Domain": {
+            "Width": 0,
+            "Vars": [
+              "x"
+            ]
+          }
+        },
+        "Left": "",
+        "Right": "",
+        "PremiseFailures": [
+          "domain.width"
+        ],
+        "DomainSize": 0,
+        "AssignmentsChecked": 0,
+        "Exhaustive": false,
+        "Question": "Do the two expressions evaluate identically on every assignment of the declared finite domain?",
+        "Verdict": "UNRESOLVED",
+        "Reason": "missing required premises: domain.width",
+        "Counterexample": null,
+        "NotAssessed": null
+      },
+      "limitations": [
+        "operator-supplied typed target; correspondence to source prose is not independently assessed",
+        "certificate decides only its declared finite domain; no rule admission or normative assessment is automatic",
+        "CPU and custody cost unmeasured; zero provider calls"
+      ]
+    }
+  },
+  "cold_read_identical": true,
+  "coverage_before_assessment": "UNDETERMINED",
+  "applicability": {
+    "ID": "rapp_01M2DSWBX7Q6FHWGDR7DGYF242",
+    "ObligationID": "robl_01M2DSWBVGPCM3GZY82E0RV811",
+    "PolicyID": "rpol_01M2DSWBVGPCM3GZY82D9CNDHR",
+    "SubjectRef": "finite-claim:sha256:8119a3ddb501e98fc62bcce20ec1ded86e62786a9d136efd4dbc242dcc387b74",
+    "Decision": "applies",
+    "Rationale": "criterion concerns this supplied target; a blocked check remains unresolved",
+    "Authorizer": "local-development-operator",
+    "CreatedAt": "2026-09-13T16:33:50.503797Z"
+  },
+  "assessment": {
+    "assessment": {
+      "ID": "rasm_01M2DSWBXN3XSWNRK19TWYBMJ5",
+      "ObligationID": "robl_01M2DSWBVGPCM3GZY82E0RV811",
+      "PolicyID": "rpol_01M2DSWBVGPCM3GZY82D9CNDHR",
+      "ApplicabilityDecisionID": "rapp_01M2DSWBX7Q6FHWGDR7DGYF242",
+      "ManifestID": "rdep_01M2DSWBXN3XSWNRK19RA2259K",
+      "SubjectRef": "finite-claim:sha256:8119a3ddb501e98fc62bcce20ec1ded86e62786a9d136efd4dbc242dcc387b74",
+      "ContextRef": "disclosed engineering example; exact declared domain only",
+      "Outcome": "inconclusive",
+      "Argument": "missing required premises: domain.width",
+      "Assessor": "local-development-operator",
+      "CreatedAt": "2026-09-13T16:33:50.51706Z",
+      "CheckAttemptIDs": [
+        "rchk_01M2DSWBVZ869DJGRZMH4QC5MT"
+      ]
+    },
+    "manifest": {
+      "ID": "rdep_01M2DSWBXN3XSWNRK19RA2259K",
+      "PolicyID": "rpol_01M2DSWBVGPCM3GZY82D9CNDHR",
+      "ObligationID": "robl_01M2DSWBVGPCM3GZY82E0RV811",
+      "ProjectRevision": "ecb1c66+working-tree-finite-claim",
+      "ContractHash": "",
+      "RecipeHash": "",
+      "EvidenceCutoff": "",
+      "CreatedAt": "2026-09-13T16:33:50.51706Z",
+      "Dependencies": [
+        {
+          "Ordinal": 1,
+          "DependencyKind": "candidate_content",
+          "DependencyRef": "finite-claim:sha256:8119a3ddb501e98fc62bcce20ec1ded86e62786a9d136efd4dbc242dcc387b74",
+          "WhyRelevant": "exact input bytes define the target"
+        }
+      ]
+    }
+  },
+  "coverage": {
+    "policy_id": "rpol_01M2DSWBVGPCM3GZY82D9CNDHR",
+    "decision": "UNDETERMINED",
+    "reasons": [
+      "execution_blocked",
+      "inconclusive"
+    ],
+    "document": "# COVERAGE\n\nGenerated from the normative review ledger. Do not edit by hand: this file is\nan export of records, not a status field. Change the records and regenerate.\n\n## Decision\n\n- **decision**: `UNDETERMINED`\n- **policy**: `finite-missing-premise@1` (whether this exact finite equivalence meets its criterion)\n- **policy id**: `rpol_01M2DSWBVGPCM3GZY82D9CNDHR`\n- **owner**: local-development-operator\n- **authority**: local engineering smoke only\n- **scope justification**: one disclosed typed finite claim; no research or spending decision\n- **evidence cutoff**: _none recorded_\n\n### Provenance\n\n- **generator**: `coverage-generator/3`\n- **generated at**: 2026-09-13T16:33:50Z\n- **project revision**: `ecb1c66+working-tree-finite-claim`\n- **contract**: _none recorded for the governing assessments_\n- **recipe**: _none recorded for the governing assessments_\n\nGeneration time is non-semantic metadata: repeated generation from identical\nrecords changes that line and nothing else.\n\n### Unresolved reasons\n\n- `execution_blocked`\n- `inconclusive`\n\n## Obligations\n\n| obligation | mandatory | state | governing assessment | reasons |\n| --- | --- | --- | --- | --- |\n| `equivalence-missing-premise@1` | yes | `inconclusive` | `rasm_01M2DSWBXN3XSWNRK19TWYBMJ5` | `inconclusive`, `execution_blocked` |\n\n## Records\n\n### `equivalence-missing-premise@1`\n\n- **obligation id**: `robl_01M2DSWBVGPCM3GZY82E0RV811`\n- **requirement**: expressions agree on the declared domain\n- **owner**: local-development-operator\n- **state**: `inconclusive`\n\n**Applicability**\n\n- `rapp_01M2DSWBX7Q6FHWGDR7DGYF242` subject `finite-claim:sha256:8119a3ddb501e98fc62bcce20ec1ded86e62786a9d136efd4dbc242dcc387b74` decision `applies` by local-development-operator: criterion concerns this supplied target; a blocked check remains unresolved\n\n**Assessments**\n\n- `rasm_01M2DSWBXN3XSWNRK19TWYBMJ5` outcome `inconclusive` subject `finite-claim:sha256:8119a3ddb501e98fc62bcce20ec1ded86e62786a9d136efd4dbc242dcc387b74` context `disclosed engineering example; exact declared domain only` by local-development-operator\n  - argument: missing required premises: domain.width\n  - manifest: `rdep_01M2DSWBXN3XSWNRK19RA2259K`\n  - project revision: `ecb1c66+working-tree-finite-claim`\n  - declared dependencies:\n    - `candidate_content` = `finite-claim:sha256:8119a3ddb501e98fc62bcce20ec1ded86e62786a9d136efd4dbc242dcc387b74` \u2014 exact input bytes define the target\n  - checks: `rchk_01M2DSWBVZ869DJGRZMH4QC5MT`\n\n**Check attempts**\n\n- `rchk_01M2DSWBVZ869DJGRZMH4QC5MT` case `missing-premise` mode `executed` outcome `blocked` procedure `internal/toolreg finite claim binding -> internal/finite checker` executor local-development-operator\n  - procedure revision: `finite-claim-check/1+finite-equivalence-checker/1`\n  - inputs: `finite-claim:sha256:8119a3ddb501e98fc62bcce20ec1ded86e62786a9d136efd4dbc242dcc387b74`\n  - environment: `darwin/arm64 go1.26.6; newf ecb1c66+working-tree-finite-claim`\n  - blocker: missing required premises: domain.width\n  - output: `{\"schema\":\"finite-claim-check/1\",\"subject_ref\":\"finite-claim:sha256:8119a3ddb501e98fc62bcce20ec1ded86e62786a9d136efd4dbc242dcc387b74\",\"input_json\":\"{\\n  \\\"schema\\\": \\\"finite-claim/1\\\",\\n  \\\"kind\\\": \\\"finite_equivalence\\\",\\n  \\\"source_ref\\\": \\\"development:four-bit-add-zero\\\",\\n  \\\"statement\\\": \\\"x + 0 equals x over the declared four-bit domain\\\",\\n  \\\"domain\\\": {\\n    \\\"variables\\\": [\\n      \\\"x\\\"\\n    ]\\n  },\\n  \\\"left\\\": {\\n    \\\"op\\\": \\\"add\\\",\\n    \\\"args\\\": [\\n      {\\n        \\\"var\\\": \\\"x\\\"\\n      },\\n      {\\n        \\\"const\\\": 0\\n      }\\n    ]\\n  },\\n  \\\"right\\\": {\\n    \\\"var\\\": \\\"x\\\"\\n  }\\n}\\n\",\"input_sha256\":\"8119a3ddb501e98fc62bcce20ec1ded86e62786a9d136efd4dbc242dcc387b74\",\"source_ref\":\"development:four-bit-add-zero\",\"tool\":{\"Kind\":\"finite_equivalence\",\"Name\":\"exhaustive finite equivalence\",\"Statement\":\"enumeration of every assignment of a declared finite domain (fixed-width machine words, total operators modulo 2^width); first counterexample in canonical order\",\"Implementation\":\"internal/finite\",\"ProcedureRevision\":\"finite-equivalence-checker/1\",\"InputTypes\":[\"finite.Binding\",\"finite.Expr (left)\",\"finite.Expr (right)\"],\"Premises\":[\"width within [1,8]\",\"every free variable declared in the domain\",\"every operator in the seed language (division is absent by design)\",\"domain size within the exhaustiveness cap\"],\"Quantifier\":\"exactly the declared finite domain; never other widths, wider variable sets, or unbounded integers\",\"Outputs\":[\"HOLDS_ON_DECLARED_DOMAIN\",\"REFUTED\",\"UNRESOLVED\",\"INAPPLICABLE\"],\"Limits\":[\"refuses domains above the exhaustiveness cap rather than sampling\",\"warrant consumption is separately enforced by finite.VerifyRuleWarrant\"]},\"max_assignments\":16,\"elapsed_nanos\":541,\"certificate\":{\"Binding\":{\"Sentence\":\"x + 0 equals x over the declared four-bit domain\",\"Domain\":{\"Width\":0,\"Vars\":[\"x\"]}},\"Left\":\"\",\"Right\":\"\",\"PremiseFailures\":[\"domain.width\"],\"DomainSize\":0,\"AssignmentsChecked\":0,\"Exhaustive\":false,\"Question\":\"Do the two expressions evaluate identically on every assignment of the declared finite domain?\",\"Verdict\":\"UNRESOLVED\",\"Reason\":\"missing required premises: domain.width\",\"Counterexample\":null,\"NotAssessed\":null},\"limitations\":[\"operator-supplied typed target; correspondence to source prose is not independently assessed\",\"certificate decides only its declared finite domain; no rule admission or normative assessment is automatic\",\"CPU and custody cost unmeasured; zero provider calls\"]}`\n  - resources: assignment allowance=16; checked=0; elapsed_ns=541; provider_calls=0; cpu=unknown; custody=unknown\n\n## Reading this document\n\n- `unexamined` means no assessment exists. It is not a pass and not a failure.\n- `inconclusive` means an assessment was made and reached no conclusion.\n- `blocked` means a cited check could not execute. A blocker is retained, never\n  converted into support for conformance.\n- `not_applicable` requires an authorized applicability decision with a rationale.\n  Missing implementation never lands here.\n- A stale assessment keeps its historical outcome and loses current authority.\n- An assessment whose declared current dependencies were not supplied to the\n  generator is `compatibility unknown`: the historical outcome stands as history\n  and does not grant a current decision. Supply the missing current values and\n  regenerate to advance.\n- The provenance block names the generator and the governing assessments' input\n  revisions. A snapshot never expires as history, but reusing one for a CURRENT\n  decision requires those inputs to still be compatible.\n",
+    "obligations": [
+      {
+        "key": "equivalence-missing-premise",
+        "semantic_revision": 1,
+        "mandatory": true,
+        "state": "inconclusive",
+        "governing_assessment_id": "rasm_01M2DSWBXN3XSWNRK19TWYBMJ5",
+        "reasons": [
+          "inconclusive",
+          "execution_blocked"
+        ]
+      }
+    ]
+  }
+}

@@ -109,11 +109,60 @@ type InputV2 struct {
 //
 // SelectV2 refuses inputs that violate its identity contract: a task
 // expression that does not render to Input.TaskStart, an invalid task
-// for the declared domain, or duplicate rule names carrying different
-// rule content. A refusal is an error, never a silent decision.
+// or domain, unadmitted or incompatible rules, a catalog without exactly
+// one definition per distinct name, or duplicate names carrying different
+// rule content. Exact duplicates are normalized. A refusal is an error,
+// never a decision or negative evidence about an unperformed probe.
 func SelectV2(in InputV2) (Decision, error) {
+	return selectV2(in, func(task finite.Expr, rule rewrite.Rule, domain finite.Domain) (rewrite.ProbeResult, error) {
+		return rewrite.ProbeStrictReductionBounded(task, rule, domain, rewrite.NodeCount, rewrite.Limits{})
+	}, func(in InputV2, identities []string) Decision {
+		return Decision{
+			ControllerVersion: ControllerVersionV2,
+			SnapshotHash: hashOf(struct {
+				Version   string
+				Threshold int
+				Probe     string
+			}{ControllerVersionV2, SimilarityThreshold, probeDescription}),
+			InputHash: hashOf(ruleIdentity{In: in.Input, Domain: in.Domain, Rules: identities, Version: ControllerVersionV2}),
+		}
+	}, false)
+}
+
+type selectorProbe func(finite.Expr, rewrite.Rule, finite.Domain) (rewrite.ProbeResult, error)
+type selectorIdentity func(InputV2, []string) Decision
+
+func selectV2(in InputV2, probe selectorProbe, identify selectorIdentity, taskOnly bool) (Decision, error) {
 	if defects := finite.ValidateExpr(in.Task, in.Domain); len(defects) > 0 {
 		return Decision{}, fmt.Errorf("selector task expression is not valid in the declared domain: %v", defects)
+	}
+	// Validate every rule before any rendering, including Identity's
+	// rendering of rule bodies. The zero Rule is representable despite
+	// admission being the only constructor for usable rules.
+	for _, r := range in.Rules {
+		if err := r.ValidateForDomain(in.Domain); err != nil {
+			return Decision{}, fmt.Errorf("selector rule validation: %w", err)
+		}
+	}
+	seenName := map[string]bool{}
+	catalog := make([]string, 0, len(in.Catalog))
+	for _, name := range in.Catalog {
+		if !seenName[name] {
+			seenName[name] = true
+			catalog = append(catalog, name)
+		}
+	}
+	provided := map[string]bool{}
+	for _, r := range in.Rules {
+		if !seenName[r.Name()] {
+			return Decision{}, fmt.Errorf("selector rule %q is absent from the catalog", r.Name())
+		}
+		provided[r.Name()] = true
+	}
+	for _, name := range catalog {
+		if !provided[name] {
+			return Decision{}, fmt.Errorf("selector catalog entry %q has no admitted rule definition; no probe was performed", name)
+		}
 	}
 	if got := finite.Render(in.Task); got != in.TaskStart {
 		return Decision{}, fmt.Errorf("selector identity contract violation: the task expression renders to %q but Input.TaskStart declares %q; the probe would ground history claims against a different task than the one hashed", got, in.TaskStart)
@@ -133,40 +182,43 @@ func SelectV2(in InputV2) (Decision, error) {
 	}
 	sort.Strings(ruleIdentities)
 
-	seenName := map[string]bool{}
-	catalog := make([]string, 0, len(in.Catalog))
-	for _, r := range in.Catalog {
-		if !seenName[r] {
-			seenName[r] = true
-			catalog = append(catalog, r)
-		}
-	}
 	in.Catalog = catalog
 
-	dec := Decision{
-		ControllerVersion: ControllerVersionV2,
-		SnapshotHash: hashOf(struct {
-			Version   string
-			Threshold int
-			Probe     string
-		}{ControllerVersionV2, SimilarityThreshold, probeDescription}),
-		InputHash: hashOf(ruleIdentity{In: in.Input, Domain: in.Domain, Rules: ruleIdentities, Version: ControllerVersionV2}),
-	}
+	dec := identify(in, ruleIdentities)
 
 	// Task-grounding probe per catalog rule, metered: this is search
-	// work (candidate rewrites materialized and costed) done before the
+	// work (matched candidate positions size-checked and costed) done before the
 	// budgeted search, and it must appear on the decision so the runner
 	// can charge it (2026-09-13 external review finding 1).
 	reduces := map[string]bool{}
 	for _, name := range catalog {
-		r, ok := ruleByName[name]
-		if !ok {
-			continue // no admitted rule supplied: probe cannot pass, claim stays unverifiable
+		r := ruleByName[name] // complete correspondence checked before the decision exists
+		result, err := probe(in.Task, r, in.Domain)
+		dec.ProbeRuleApplications += result.RuleApplications
+		dec.ProbeCandidates += result.Candidates
+		if err != nil {
+			return dec, fmt.Errorf("selector probe %q: %w", name, err)
 		}
-		red, candidates := rewrite.ProbeStrictReduction(in.Task, r, in.Domain, rewrite.NodeCount)
-		reduces[name] = red
-		dec.ProbeRuleApplications++
-		dec.ProbeCandidates += candidates
+		if !result.Complete {
+			return dec, fmt.Errorf("selector probe %q incomplete: term-size-bounded=%t cancelled=%t resource-budget-exhausted=%t; no rule ordering or negative rationale was issued", name, result.TermSizeBounded, result.Cancelled, result.ResourceBudgetExhausted)
+		}
+		reduces[name] = result.Reduces
+	}
+	if taskOnly {
+		// The task-only comparator has the same probe and budget channel
+		// but no history influence. Strict reducers lead in catalog order.
+		for _, name := range catalog {
+			if reduces[name] {
+				dec.EnabledRules = append(dec.EnabledRules, name)
+				dec.Preferences = append(dec.Preferences, Preference{Rule: name, Direction: "prefer", Rationale: "a single application strictly reduces this task's NodeCount; task-only probe, no history evidence"})
+			}
+		}
+		for _, name := range catalog {
+			if !reduces[name] {
+				dec.EnabledRules = append(dec.EnabledRules, name)
+			}
+		}
+		return dec, nil
 	}
 
 	taskFeatures := operatorMultiset(in.TaskStart)

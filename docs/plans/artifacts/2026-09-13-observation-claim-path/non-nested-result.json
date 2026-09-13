@@ -1,0 +1,175 @@
+{
+  "scope": "local engineering and recorded-observation evidence only",
+  "policy": {
+    "policy_id": "rpol_01M2DVX9ECSN7XVH9MEPS6FMQ0",
+    "obligation_ids": {
+      "observed-non-nested@1": "robl_01M2DVX9ECSN7XVH9MES2RYNPD"
+    }
+  },
+  "execution": {
+    "ok": true,
+    "command": "review check-observations",
+    "persisted": true,
+    "check": {
+      "ID": "rchk_01M2DVX9ESREYJXZAR0D6Q50EJ",
+      "ObligationID": "robl_01M2DVX9ECSN7XVH9MES2RYNPD",
+      "PolicyID": "rpol_01M2DVX9ECSN7XVH9MEPS6FMQ0",
+      "CaseLabel": "non-nested",
+      "ProcedureRef": "internal/toolreg observation binding -> internal/measure checker",
+      "ProcedureRevision": "observation-claim-check/1+measure-checker/1",
+      "InputsRef": "observation-claim:sha256:46d6fd0dd3395e915dd62b8be92ccf74aa80ce6aa2fd6d37669fdfd5d19ab1ab",
+      "Executor": "local-development-operator",
+      "Environment": "darwin/arm64 go1.26.6; newf ecb1c66+working-tree-observation-claim",
+      "Mode": "executed",
+      "Outcome": "blocked",
+      "OutputRef": "{\"schema\":\"observation-claim-check/1\",\"subject_ref\":\"observation-claim:sha256:46d6fd0dd3395e915dd62b8be92ccf74aa80ce6aa2fd6d37669fdfd5d19ab1ab\",\"input_json\":\"{\\n  \\\"schema\\\": \\\"observation-claim/1\\\",\\n  \\\"kind\\\": \\\"solved_monotonicity\\\",\\n  \\\"source_ref\\\": \\\"development:retained-prefix\\\",\\n  \\\"statement\\\": \\\"The larger-budget trace retains previously solved instances\\\",\\n  \\\"binding\\\": {\\n    \\\"population\\\": \\\"instance a\\\",\\n    \\\"ordering\\\": \\\"recorded order\\\",\\n    \\\"stopping_rule\\\": \\\"declared budget\\\",\\n    \\\"budget_min\\\": 1,\\n    \\\"budget_max\\\": 2\\n  },\\n  \\\"observations\\\": [\\n    {\\n      \\\"conditions\\\": {\\n        \\\"population\\\": \\\"instance a\\\",\\n        \\\"ordering\\\": \\\"recorded order\\\",\\n        \\\"stopping_rule\\\": \\\"declared budget\\\",\\n        \\\"budget\\\": 1\\n      },\\n      \\\"instances\\\": [\\n        {\\n          \\\"id\\\": \\\"a\\\",\\n          \\\"submissions\\\": [\\n            {\\n              \\\"move\\\": \\\"m1\\\",\\n              \\\"success\\\": true\\n            }\\n          ]\\n        }\\n      ]\\n    },\\n    {\\n      \\\"conditions\\\": {\\n        \\\"population\\\": \\\"instance a\\\",\\n        \\\"ordering\\\": \\\"recorded order\\\",\\n        \\\"stopping_rule\\\": \\\"declared budget\\\",\\n        \\\"budget\\\": 2\\n      },\\n      \\\"instances\\\": [\\n        {\\n          \\\"id\\\": \\\"a\\\",\\n          \\\"submissions\\\": [\\n            {\\n              \\\"move\\\": \\\"changed-move\\\",\\n              \\\"success\\\": true\\n            },\\n            {\\n              \\\"move\\\": \\\"m2\\\",\\n              \\\"success\\\": false\\n            }\\n          ]\\n        }\\n      ]\\n    }\\n  ]\\n}\\n\",\"input_sha256\":\"46d6fd0dd3395e915dd62b8be92ccf74aa80ce6aa2fd6d37669fdfd5d19ab1ab\",\"source_ref\":\"development:retained-prefix\",\"tool\":{\"Kind\":\"solved_monotonicity\",\"Name\":\"solved-set monotonicity under budget extension\",\"Statement\":\"under verified trace-prefix nesting, a larger-budget execution retains every solved instance; the precondition is checked, never assumed\",\"Implementation\":\"internal/measure\",\"ProcedureRevision\":\"measure-checker/1\",\"InputTypes\":[\"measure.Binding\",\"measure.Observation (before)\",\"measure.Observation (after)\"],\"Premises\":[\"per-instance trace-prefix extension with verdict and move retention (aggregate counts cannot establish nesting)\"],\"Quantifier\":\"the one compared before/after pair\",\"Outputs\":[\"REFUTED\",\"HOLDS_AT_COMPARED_POINTS\",\"INAPPLICABLE\"],\"Limits\":[\"a non-nested pair is INAPPLICABLE, not a failure: a budget-aware algorithm may choose differently from the start\"]},\"max_submissions\":3,\"submission_records\":3,\"assessor_invoked\":true,\"elapsed_nanos\":15667,\"certificate\":{\"Binding\":{\"Sentence\":\"The larger-budget trace retains previously solved instances\",\"MetricNumerator\":\"recorded successful submissions\",\"MetricDenom\":\"recorded submissions\",\"Population\":\"instance a\",\"Budgets\":{\"Lo\":1,\"Hi\":2,\"Unrestricted\":false},\"Ordering\":\"recorded order\",\"StoppingRule\":\"declared budget\",\"Kind\":\"solved_monotonicity\"},\"ConditionsComparable\":false,\"ConditionNotes\":null,\"TraceExtension\":\"not_nested\",\"ExtensionViolations\":[\"instance a submission 0 move changed (\\\"m1\\\" -\\u003e \\\"changed-move\\\")\"],\"Rows\":null,\"Question\":\"Did the larger-budget execution retain every instance the smaller-budget execution had solved?\",\"Verdict\":\"INAPPLICABLE\",\"Reason\":\"executions are not nested (a budget-aware algorithm may choose differently from the start); the conditional monotonicity theorem does not apply automatically\",\"NotAssessed\":[\"Statistical anomaly: NOT ASSESSED\",\"Change in underlying success probability: NOT ASSESSED (two different observed rates do not, by themselves, disprove a constant underlying probability)\",\"Change in uncertainty: NOT ASSESSED (uncertainty is a different quantity requiring its own definition and model)\"]},\"limitations\":[\"typed operator-supplied records; authenticity, source correspondence and truth of success labels not independently verified\",\"fixed metric: recorded successful submissions / recorded submissions; solved instances reported separately\",\"claims concern compared records only; no probability inference, rule admission or automatic assessment\",\"submission reservation bounds input records, not CPU instructions; CPU and custody costs unmeasured; zero provider calls\"]}",
+      "Blocker": "executions are not nested (a budget-aware algorithm may choose differently from the start); the conditional monotonicity theorem does not apply automatically",
+      "StartedAt": "2026-09-13T17:09:17Z",
+      "EndedAt": "2026-09-13T17:09:17Z",
+      "ResourceNote": "submission allowance=3; input submissions=3; assessor_invoked=true; elapsed_ns=15667; provider_calls=0; cpu=unknown; custody=unknown",
+      "CreatedAt": "2026-09-13T17:09:17.913331Z"
+    },
+    "receipt": {
+      "schema": "observation-claim-check/1",
+      "subject_ref": "observation-claim:sha256:46d6fd0dd3395e915dd62b8be92ccf74aa80ce6aa2fd6d37669fdfd5d19ab1ab",
+      "input_json": "{\n  \"schema\": \"observation-claim/1\",\n  \"kind\": \"solved_monotonicity\",\n  \"source_ref\": \"development:retained-prefix\",\n  \"statement\": \"The larger-budget trace retains previously solved instances\",\n  \"binding\": {\n    \"population\": \"instance a\",\n    \"ordering\": \"recorded order\",\n    \"stopping_rule\": \"declared budget\",\n    \"budget_min\": 1,\n    \"budget_max\": 2\n  },\n  \"observations\": [\n    {\n      \"conditions\": {\n        \"population\": \"instance a\",\n        \"ordering\": \"recorded order\",\n        \"stopping_rule\": \"declared budget\",\n        \"budget\": 1\n      },\n      \"instances\": [\n        {\n          \"id\": \"a\",\n          \"submissions\": [\n            {\n              \"move\": \"m1\",\n              \"success\": true\n            }\n          ]\n        }\n      ]\n    },\n    {\n      \"conditions\": {\n        \"population\": \"instance a\",\n        \"ordering\": \"recorded order\",\n        \"stopping_rule\": \"declared budget\",\n        \"budget\": 2\n      },\n      \"instances\": [\n        {\n          \"id\": \"a\",\n          \"submissions\": [\n            {\n              \"move\": \"changed-move\",\n              \"success\": true\n            },\n            {\n              \"move\": \"m2\",\n              \"success\": false\n            }\n          ]\n        }\n      ]\n    }\n  ]\n}\n",
+      "input_sha256": "46d6fd0dd3395e915dd62b8be92ccf74aa80ce6aa2fd6d37669fdfd5d19ab1ab",
+      "source_ref": "development:retained-prefix",
+      "tool": {
+        "Kind": "solved_monotonicity",
+        "Name": "solved-set monotonicity under budget extension",
+        "Statement": "under verified trace-prefix nesting, a larger-budget execution retains every solved instance; the precondition is checked, never assumed",
+        "Implementation": "internal/measure",
+        "ProcedureRevision": "measure-checker/1",
+        "InputTypes": [
+          "measure.Binding",
+          "measure.Observation (before)",
+          "measure.Observation (after)"
+        ],
+        "Premises": [
+          "per-instance trace-prefix extension with verdict and move retention (aggregate counts cannot establish nesting)"
+        ],
+        "Quantifier": "the one compared before/after pair",
+        "Outputs": [
+          "REFUTED",
+          "HOLDS_AT_COMPARED_POINTS",
+          "INAPPLICABLE"
+        ],
+        "Limits": [
+          "a non-nested pair is INAPPLICABLE, not a failure: a budget-aware algorithm may choose differently from the start"
+        ]
+      },
+      "max_submissions": 3,
+      "submission_records": 3,
+      "assessor_invoked": true,
+      "elapsed_nanos": 15667,
+      "certificate": {
+        "Binding": {
+          "Sentence": "The larger-budget trace retains previously solved instances",
+          "MetricNumerator": "recorded successful submissions",
+          "MetricDenom": "recorded submissions",
+          "Population": "instance a",
+          "Budgets": {
+            "Lo": 1,
+            "Hi": 2,
+            "Unrestricted": false
+          },
+          "Ordering": "recorded order",
+          "StoppingRule": "declared budget",
+          "Kind": "solved_monotonicity"
+        },
+        "ConditionsComparable": false,
+        "ConditionNotes": null,
+        "TraceExtension": "not_nested",
+        "ExtensionViolations": [
+          "instance a submission 0 move changed (\"m1\" -> \"changed-move\")"
+        ],
+        "Rows": null,
+        "Question": "Did the larger-budget execution retain every instance the smaller-budget execution had solved?",
+        "Verdict": "INAPPLICABLE",
+        "Reason": "executions are not nested (a budget-aware algorithm may choose differently from the start); the conditional monotonicity theorem does not apply automatically",
+        "NotAssessed": [
+          "Statistical anomaly: NOT ASSESSED",
+          "Change in underlying success probability: NOT ASSESSED (two different observed rates do not, by themselves, disprove a constant underlying probability)",
+          "Change in uncertainty: NOT ASSESSED (uncertainty is a different quantity requiring its own definition and model)"
+        ]
+      },
+      "limitations": [
+        "typed operator-supplied records; authenticity, source correspondence and truth of success labels not independently verified",
+        "fixed metric: recorded successful submissions / recorded submissions; solved instances reported separately",
+        "claims concern compared records only; no probability inference, rule admission or automatic assessment",
+        "submission reservation bounds input records, not CPU instructions; CPU and custody costs unmeasured; zero provider calls"
+      ]
+    }
+  },
+  "cold_read_identical": true,
+  "coverage_before_assessment": "UNDETERMINED",
+  "applicability": {
+    "ID": "rapp_01M2DVX9FY1PNWW4QZK0ZGK9Q8",
+    "ObligationID": "robl_01M2DVX9ECSN7XVH9MES2RYNPD",
+    "PolicyID": "rpol_01M2DVX9ECSN7XVH9MEPS6FMQ0",
+    "SubjectRef": "observation-claim:sha256:46d6fd0dd3395e915dd62b8be92ccf74aa80ce6aa2fd6d37669fdfd5d19ab1ab",
+    "Decision": "applies",
+    "Rationale": "criterion concerns the supplied typed observed claim",
+    "Authorizer": "local-development-operator",
+    "CreatedAt": "2026-09-13T17:09:17.950292Z"
+  },
+  "assessment": {
+    "assessment": {
+      "ID": "rasm_01M2DVX9GAEFT6ZDWAF8E1WSJP",
+      "ObligationID": "robl_01M2DVX9ECSN7XVH9MES2RYNPD",
+      "PolicyID": "rpol_01M2DVX9ECSN7XVH9MEPS6FMQ0",
+      "ApplicabilityDecisionID": "rapp_01M2DVX9FY1PNWW4QZK0ZGK9Q8",
+      "ManifestID": "rdep_01M2DVX9GAEFT6ZDWAF76H3WPE",
+      "SubjectRef": "observation-claim:sha256:46d6fd0dd3395e915dd62b8be92ccf74aa80ce6aa2fd6d37669fdfd5d19ab1ab",
+      "ContextRef": "supplied development observations only; no authenticity or probability inference",
+      "Outcome": "inconclusive",
+      "Argument": "executions are not nested (a budget-aware algorithm may choose differently from the start); the conditional monotonicity theorem does not apply automatically",
+      "Assessor": "local-development-operator",
+      "CreatedAt": "2026-09-13T17:09:17.962478Z",
+      "CheckAttemptIDs": [
+        "rchk_01M2DVX9ESREYJXZAR0D6Q50EJ"
+      ]
+    },
+    "manifest": {
+      "ID": "rdep_01M2DVX9GAEFT6ZDWAF76H3WPE",
+      "PolicyID": "rpol_01M2DVX9ECSN7XVH9MEPS6FMQ0",
+      "ObligationID": "robl_01M2DVX9ECSN7XVH9MES2RYNPD",
+      "ProjectRevision": "ecb1c66+working-tree-observation-claim",
+      "ContractHash": "",
+      "RecipeHash": "",
+      "EvidenceCutoff": "",
+      "CreatedAt": "2026-09-13T17:09:17.962478Z",
+      "Dependencies": [
+        {
+          "Ordinal": 1,
+          "DependencyKind": "candidate_content",
+          "DependencyRef": "observation-claim:sha256:46d6fd0dd3395e915dd62b8be92ccf74aa80ce6aa2fd6d37669fdfd5d19ab1ab",
+          "WhyRelevant": "exact input bytes define the target"
+        }
+      ]
+    }
+  },
+  "coverage": {
+    "policy_id": "rpol_01M2DVX9ECSN7XVH9MEPS6FMQ0",
+    "decision": "UNDETERMINED",
+    "reasons": [
+      "execution_blocked",
+      "inconclusive"
+    ],
+    "document": "# COVERAGE\n\nGenerated from the normative review ledger. Do not edit by hand: this file is\nan export of records, not a status field. Change the records and regenerate.\n\n## Decision\n\n- **decision**: `UNDETERMINED`\n- **policy**: `obs-non-nested@1` (whether the supplied observed property holds at the compared points)\n- **policy id**: `rpol_01M2DVX9ECSN7XVH9MEPS6FMQ0`\n- **owner**: local-development-operator\n- **authority**: local engineering verification\n- **scope justification**: disclosed input records only; no research or spending decision\n- **evidence cutoff**: _none recorded_\n\n### Provenance\n\n- **generator**: `coverage-generator/3`\n- **generated at**: 2026-09-13T17:09:17Z\n- **project revision**: `ecb1c66+working-tree-observation-claim`\n- **contract**: _none recorded for the governing assessments_\n- **recipe**: _none recorded for the governing assessments_\n\nGeneration time is non-semantic metadata: repeated generation from identical\nrecords changes that line and nothing else.\n\n### Unresolved reasons\n\n- `execution_blocked`\n- `inconclusive`\n\n## Obligations\n\n| obligation | mandatory | state | governing assessment | reasons |\n| --- | --- | --- | --- | --- |\n| `observed-non-nested@1` | yes | `inconclusive` | `rasm_01M2DVX9GAEFT6ZDWAF8E1WSJP` | `inconclusive`, `execution_blocked` |\n\n## Records\n\n### `observed-non-nested@1`\n\n- **obligation id**: `robl_01M2DVX9ECSN7XVH9MES2RYNPD`\n- **requirement**: the declared observed property holds\n- **owner**: local-development-operator\n- **state**: `inconclusive`\n\n**Applicability**\n\n- `rapp_01M2DVX9FY1PNWW4QZK0ZGK9Q8` subject `observation-claim:sha256:46d6fd0dd3395e915dd62b8be92ccf74aa80ce6aa2fd6d37669fdfd5d19ab1ab` decision `applies` by local-development-operator: criterion concerns the supplied typed observed claim\n\n**Assessments**\n\n- `rasm_01M2DVX9GAEFT6ZDWAF8E1WSJP` outcome `inconclusive` subject `observation-claim:sha256:46d6fd0dd3395e915dd62b8be92ccf74aa80ce6aa2fd6d37669fdfd5d19ab1ab` context `supplied development observations only; no authenticity or probability inference` by local-development-operator\n  - argument: executions are not nested (a budget-aware algorithm may choose differently from the start); the conditional monotonicity theorem does not apply automatically\n  - manifest: `rdep_01M2DVX9GAEFT6ZDWAF76H3WPE`\n  - project revision: `ecb1c66+working-tree-observation-claim`\n  - declared dependencies:\n    - `candidate_content` = `observation-claim:sha256:46d6fd0dd3395e915dd62b8be92ccf74aa80ce6aa2fd6d37669fdfd5d19ab1ab` \u2014 exact input bytes define the target\n  - checks: `rchk_01M2DVX9ESREYJXZAR0D6Q50EJ`\n\n**Check attempts**\n\n- `rchk_01M2DVX9ESREYJXZAR0D6Q50EJ` case `non-nested` mode `executed` outcome `blocked` procedure `internal/toolreg observation binding -> internal/measure checker` executor local-development-operator\n  - procedure revision: `observation-claim-check/1+measure-checker/1`\n  - inputs: `observation-claim:sha256:46d6fd0dd3395e915dd62b8be92ccf74aa80ce6aa2fd6d37669fdfd5d19ab1ab`\n  - environment: `darwin/arm64 go1.26.6; newf ecb1c66+working-tree-observation-claim`\n  - blocker: executions are not nested (a budget-aware algorithm may choose differently from the start); the conditional monotonicity theorem does not apply automatically\n  - output: `{\"schema\":\"observation-claim-check/1\",\"subject_ref\":\"observation-claim:sha256:46d6fd0dd3395e915dd62b8be92ccf74aa80ce6aa2fd6d37669fdfd5d19ab1ab\",\"input_json\":\"{\\n  \\\"schema\\\": \\\"observation-claim/1\\\",\\n  \\\"kind\\\": \\\"solved_monotonicity\\\",\\n  \\\"source_ref\\\": \\\"development:retained-prefix\\\",\\n  \\\"statement\\\": \\\"The larger-budget trace retains previously solved instances\\\",\\n  \\\"binding\\\": {\\n    \\\"population\\\": \\\"instance a\\\",\\n    \\\"ordering\\\": \\\"recorded order\\\",\\n    \\\"stopping_rule\\\": \\\"declared budget\\\",\\n    \\\"budget_min\\\": 1,\\n    \\\"budget_max\\\": 2\\n  },\\n  \\\"observations\\\": [\\n    {\\n      \\\"conditions\\\": {\\n        \\\"population\\\": \\\"instance a\\\",\\n        \\\"ordering\\\": \\\"recorded order\\\",\\n        \\\"stopping_rule\\\": \\\"declared budget\\\",\\n        \\\"budget\\\": 1\\n      },\\n      \\\"instances\\\": [\\n        {\\n          \\\"id\\\": \\\"a\\\",\\n          \\\"submissions\\\": [\\n            {\\n              \\\"move\\\": \\\"m1\\\",\\n              \\\"success\\\": true\\n            }\\n          ]\\n        }\\n      ]\\n    },\\n    {\\n      \\\"conditions\\\": {\\n        \\\"population\\\": \\\"instance a\\\",\\n        \\\"ordering\\\": \\\"recorded order\\\",\\n        \\\"stopping_rule\\\": \\\"declared budget\\\",\\n        \\\"budget\\\": 2\\n      },\\n      \\\"instances\\\": [\\n        {\\n          \\\"id\\\": \\\"a\\\",\\n          \\\"submissions\\\": [\\n            {\\n              \\\"move\\\": \\\"changed-move\\\",\\n              \\\"success\\\": true\\n            },\\n            {\\n              \\\"move\\\": \\\"m2\\\",\\n              \\\"success\\\": false\\n            }\\n          ]\\n        }\\n      ]\\n    }\\n  ]\\n}\\n\",\"input_sha256\":\"46d6fd0dd3395e915dd62b8be92ccf74aa80ce6aa2fd6d37669fdfd5d19ab1ab\",\"source_ref\":\"development:retained-prefix\",\"tool\":{\"Kind\":\"solved_monotonicity\",\"Name\":\"solved-set monotonicity under budget extension\",\"Statement\":\"under verified trace-prefix nesting, a larger-budget execution retains every solved instance; the precondition is checked, never assumed\",\"Implementation\":\"internal/measure\",\"ProcedureRevision\":\"measure-checker/1\",\"InputTypes\":[\"measure.Binding\",\"measure.Observation (before)\",\"measure.Observation (after)\"],\"Premises\":[\"per-instance trace-prefix extension with verdict and move retention (aggregate counts cannot establish nesting)\"],\"Quantifier\":\"the one compared before/after pair\",\"Outputs\":[\"REFUTED\",\"HOLDS_AT_COMPARED_POINTS\",\"INAPPLICABLE\"],\"Limits\":[\"a non-nested pair is INAPPLICABLE, not a failure: a budget-aware algorithm may choose differently from the start\"]},\"max_submissions\":3,\"submission_records\":3,\"assessor_invoked\":true,\"elapsed_nanos\":15667,\"certificate\":{\"Binding\":{\"Sentence\":\"The larger-budget trace retains previously solved instances\",\"MetricNumerator\":\"recorded successful submissions\",\"MetricDenom\":\"recorded submissions\",\"Population\":\"instance a\",\"Budgets\":{\"Lo\":1,\"Hi\":2,\"Unrestricted\":false},\"Ordering\":\"recorded order\",\"StoppingRule\":\"declared budget\",\"Kind\":\"solved_monotonicity\"},\"ConditionsComparable\":false,\"ConditionNotes\":null,\"TraceExtension\":\"not_nested\",\"ExtensionViolations\":[\"instance a submission 0 move changed (\\\"m1\\\" -\\u003e \\\"changed-move\\\")\"],\"Rows\":null,\"Question\":\"Did the larger-budget execution retain every instance the smaller-budget execution had solved?\",\"Verdict\":\"INAPPLICABLE\",\"Reason\":\"executions are not nested (a budget-aware algorithm may choose differently from the start); the conditional monotonicity theorem does not apply automatically\",\"NotAssessed\":[\"Statistical anomaly: NOT ASSESSED\",\"Change in underlying success probability: NOT ASSESSED (two different observed rates do not, by themselves, disprove a constant underlying probability)\",\"Change in uncertainty: NOT ASSESSED (uncertainty is a different quantity requiring its own definition and model)\"]},\"limitations\":[\"typed operator-supplied records; authenticity, source correspondence and truth of success labels not independently verified\",\"fixed metric: recorded successful submissions / recorded submissions; solved instances reported separately\",\"claims concern compared records only; no probability inference, rule admission or automatic assessment\",\"submission reservation bounds input records, not CPU instructions; CPU and custody costs unmeasured; zero provider calls\"]}`\n  - resources: submission allowance=3; input submissions=3; assessor_invoked=true; elapsed_ns=15667; provider_calls=0; cpu=unknown; custody=unknown\n\n## Reading this document\n\n- `unexamined` means no assessment exists. It is not a pass and not a failure.\n- `inconclusive` means an assessment was made and reached no conclusion.\n- `blocked` means a cited check could not execute. A blocker is retained, never\n  converted into support for conformance.\n- `not_applicable` requires an authorized applicability decision with a rationale.\n  Missing implementation never lands here.\n- A stale assessment keeps its historical outcome and loses current authority.\n- An assessment whose declared current dependencies were not supplied to the\n  generator is `compatibility unknown`: the historical outcome stands as history\n  and does not grant a current decision. Supply the missing current values and\n  regenerate to advance.\n- The provenance block names the generator and the governing assessments' input\n  revisions. A snapshot never expires as history, but reusing one for a CURRENT\n  decision requires those inputs to still be compatible.\n",
+    "obligations": [
+      {
+        "key": "observed-non-nested",
+        "semantic_revision": 1,
+        "mandatory": true,
+        "state": "inconclusive",
+        "governing_assessment_id": "rasm_01M2DVX9GAEFT6ZDWAF8E1WSJP",
+        "reasons": [
+          "inconclusive",
+          "execution_blocked"
+        ]
+      }
+    ]
+  }
+}

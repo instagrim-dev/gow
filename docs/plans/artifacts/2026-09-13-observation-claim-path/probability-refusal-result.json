@@ -1,0 +1,169 @@
+{
+  "scope": "local engineering and recorded-observation evidence only",
+  "policy": {
+    "policy_id": "rpol_01M2DVX9WBMWKNXB9K2CWSH254",
+    "obligation_ids": {
+      "observed-probability-refusal@1": "robl_01M2DVX9WBMWKNXB9K2GP5JN2S"
+    }
+  },
+  "execution": {
+    "ok": true,
+    "command": "review check-observations",
+    "persisted": true,
+    "check": {
+      "ID": "rchk_01M2DVX9WTQEF2RWABD389JW77",
+      "ObligationID": "robl_01M2DVX9WBMWKNXB9K2GP5JN2S",
+      "PolicyID": "rpol_01M2DVX9WBMWKNXB9K2CWSH254",
+      "CaseLabel": "probability-refusal",
+      "ProcedureRef": "internal/toolreg observation binding -> internal/measure checker",
+      "ProcedureRevision": "observation-claim-check/1+measure-checker/1",
+      "InputsRef": "observation-claim:sha256:cbf1e28e10573d809375a40564356ddbfaaf75c37c7ea1ebd6b3afa37a560185",
+      "Executor": "local-development-operator",
+      "Environment": "darwin/arm64 go1.26.6; newf ecb1c66+working-tree-observation-claim",
+      "Mode": "executed",
+      "Outcome": "blocked",
+      "OutputRef": "{\"schema\":\"observation-claim-check/1\",\"subject_ref\":\"observation-claim:sha256:cbf1e28e10573d809375a40564356ddbfaaf75c37c7ea1ebd6b3afa37a560185\",\"input_json\":\"{\\n  \\\"schema\\\": \\\"observation-claim/1\\\",\\n  \\\"kind\\\": \\\"probabilistic_property\\\",\\n  \\\"source_ref\\\": \\\"development:retained-prefix\\\",\\n  \\\"statement\\\": \\\"The underlying probability changed between these budgets\\\",\\n  \\\"binding\\\": {\\n    \\\"population\\\": \\\"instance a\\\",\\n    \\\"ordering\\\": \\\"recorded order\\\",\\n    \\\"stopping_rule\\\": \\\"declared budget\\\",\\n    \\\"budget_min\\\": 1,\\n    \\\"budget_max\\\": 2\\n  },\\n  \\\"observations\\\": [\\n    {\\n      \\\"conditions\\\": {\\n        \\\"population\\\": \\\"instance a\\\",\\n        \\\"ordering\\\": \\\"recorded order\\\",\\n        \\\"stopping_rule\\\": \\\"declared budget\\\",\\n        \\\"budget\\\": 1\\n      },\\n      \\\"instances\\\": [\\n        {\\n          \\\"id\\\": \\\"a\\\",\\n          \\\"submissions\\\": [\\n            {\\n              \\\"move\\\": \\\"m1\\\",\\n              \\\"success\\\": true\\n            }\\n          ]\\n        }\\n      ]\\n    },\\n    {\\n      \\\"conditions\\\": {\\n        \\\"population\\\": \\\"instance a\\\",\\n        \\\"ordering\\\": \\\"recorded order\\\",\\n        \\\"stopping_rule\\\": \\\"declared budget\\\",\\n        \\\"budget\\\": 2\\n      },\\n      \\\"instances\\\": [\\n        {\\n          \\\"id\\\": \\\"a\\\",\\n          \\\"submissions\\\": [\\n            {\\n              \\\"move\\\": \\\"m1\\\",\\n              \\\"success\\\": true\\n            },\\n            {\\n              \\\"move\\\": \\\"m2\\\",\\n              \\\"success\\\": false\\n            }\\n          ]\\n        }\\n      ]\\n    }\\n  ]\\n}\\n\",\"input_sha256\":\"cbf1e28e10573d809375a40564356ddbfaaf75c37c7ea1ebd6b3afa37a560185\",\"source_ref\":\"development:retained-prefix\",\"tool\":{\"Kind\":\"probabilistic_property\",\"Name\":\"probabilistic-property refusal\",\"Statement\":\"no tool in this registry decides claims about underlying probabilities or uncertainty; the refusal is recorded with its reason\",\"Implementation\":\"internal/measure\",\"ProcedureRevision\":\"measure-checker/1\",\"InputTypes\":[\"measure.Binding\"],\"Premises\":[\"none: the refusal is unconditional here\"],\"Quantifier\":\"nothing is decided\",\"Outputs\":[\"NOT_ASSESSED\"],\"Limits\":[\"unequal observed proportions alone are not statistical refutation; a probabilistic claim needs a declared target, sampling assumptions, and a statistical procedure this registry does not own\"]},\"max_submissions\":3,\"submission_records\":3,\"assessor_invoked\":true,\"elapsed_nanos\":11875,\"certificate\":{\"Binding\":{\"Sentence\":\"The underlying probability changed between these budgets\",\"MetricNumerator\":\"recorded successful submissions\",\"MetricDenom\":\"recorded submissions\",\"Population\":\"instance a\",\"Budgets\":{\"Lo\":1,\"Hi\":2,\"Unrestricted\":false},\"Ordering\":\"recorded order\",\"StoppingRule\":\"declared budget\",\"Kind\":\"probabilistic_property\"},\"ConditionsComparable\":false,\"ConditionNotes\":null,\"TraceExtension\":\"\",\"ExtensionViolations\":null,\"Rows\":null,\"Question\":\"Does the underlying success probability (or uncertainty) change with budget?\",\"Verdict\":\"NOT_ASSESSED\",\"Reason\":\"this deterministic checker decides observed statistics under specified procedures only; a probabilistic claim requires a declared target quantity, sampling assumptions, and an appropriate statistical procedure \u2014 ordinary random samples from one probability can produce different proportions\",\"NotAssessed\":[\"Statistical anomaly: NOT ASSESSED\",\"Change in underlying success probability: NOT ASSESSED (two different observed rates do not, by themselves, disprove a constant underlying probability)\",\"Change in uncertainty: NOT ASSESSED (uncertainty is a different quantity requiring its own definition and model)\"]},\"limitations\":[\"typed operator-supplied records; authenticity, source correspondence and truth of success labels not independently verified\",\"fixed metric: recorded successful submissions / recorded submissions; solved instances reported separately\",\"claims concern compared records only; no probability inference, rule admission or automatic assessment\",\"submission reservation bounds input records, not CPU instructions; CPU and custody costs unmeasured; zero provider calls\"]}",
+      "Blocker": "this deterministic checker decides observed statistics under specified procedures only; a probabilistic claim requires a declared target quantity, sampling assumptions, and an appropriate statistical procedure \u2014 ordinary random samples from one probability can produce different proportions",
+      "StartedAt": "2026-09-13T17:09:18Z",
+      "EndedAt": "2026-09-13T17:09:18Z",
+      "ResourceNote": "submission allowance=3; input submissions=3; assessor_invoked=true; elapsed_ns=11875; provider_calls=0; cpu=unknown; custody=unknown",
+      "CreatedAt": "2026-09-13T17:09:18.362073Z"
+    },
+    "receipt": {
+      "schema": "observation-claim-check/1",
+      "subject_ref": "observation-claim:sha256:cbf1e28e10573d809375a40564356ddbfaaf75c37c7ea1ebd6b3afa37a560185",
+      "input_json": "{\n  \"schema\": \"observation-claim/1\",\n  \"kind\": \"probabilistic_property\",\n  \"source_ref\": \"development:retained-prefix\",\n  \"statement\": \"The underlying probability changed between these budgets\",\n  \"binding\": {\n    \"population\": \"instance a\",\n    \"ordering\": \"recorded order\",\n    \"stopping_rule\": \"declared budget\",\n    \"budget_min\": 1,\n    \"budget_max\": 2\n  },\n  \"observations\": [\n    {\n      \"conditions\": {\n        \"population\": \"instance a\",\n        \"ordering\": \"recorded order\",\n        \"stopping_rule\": \"declared budget\",\n        \"budget\": 1\n      },\n      \"instances\": [\n        {\n          \"id\": \"a\",\n          \"submissions\": [\n            {\n              \"move\": \"m1\",\n              \"success\": true\n            }\n          ]\n        }\n      ]\n    },\n    {\n      \"conditions\": {\n        \"population\": \"instance a\",\n        \"ordering\": \"recorded order\",\n        \"stopping_rule\": \"declared budget\",\n        \"budget\": 2\n      },\n      \"instances\": [\n        {\n          \"id\": \"a\",\n          \"submissions\": [\n            {\n              \"move\": \"m1\",\n              \"success\": true\n            },\n            {\n              \"move\": \"m2\",\n              \"success\": false\n            }\n          ]\n        }\n      ]\n    }\n  ]\n}\n",
+      "input_sha256": "cbf1e28e10573d809375a40564356ddbfaaf75c37c7ea1ebd6b3afa37a560185",
+      "source_ref": "development:retained-prefix",
+      "tool": {
+        "Kind": "probabilistic_property",
+        "Name": "probabilistic-property refusal",
+        "Statement": "no tool in this registry decides claims about underlying probabilities or uncertainty; the refusal is recorded with its reason",
+        "Implementation": "internal/measure",
+        "ProcedureRevision": "measure-checker/1",
+        "InputTypes": [
+          "measure.Binding"
+        ],
+        "Premises": [
+          "none: the refusal is unconditional here"
+        ],
+        "Quantifier": "nothing is decided",
+        "Outputs": [
+          "NOT_ASSESSED"
+        ],
+        "Limits": [
+          "unequal observed proportions alone are not statistical refutation; a probabilistic claim needs a declared target, sampling assumptions, and a statistical procedure this registry does not own"
+        ]
+      },
+      "max_submissions": 3,
+      "submission_records": 3,
+      "assessor_invoked": true,
+      "elapsed_nanos": 11875,
+      "certificate": {
+        "Binding": {
+          "Sentence": "The underlying probability changed between these budgets",
+          "MetricNumerator": "recorded successful submissions",
+          "MetricDenom": "recorded submissions",
+          "Population": "instance a",
+          "Budgets": {
+            "Lo": 1,
+            "Hi": 2,
+            "Unrestricted": false
+          },
+          "Ordering": "recorded order",
+          "StoppingRule": "declared budget",
+          "Kind": "probabilistic_property"
+        },
+        "ConditionsComparable": false,
+        "ConditionNotes": null,
+        "TraceExtension": "",
+        "ExtensionViolations": null,
+        "Rows": null,
+        "Question": "Does the underlying success probability (or uncertainty) change with budget?",
+        "Verdict": "NOT_ASSESSED",
+        "Reason": "this deterministic checker decides observed statistics under specified procedures only; a probabilistic claim requires a declared target quantity, sampling assumptions, and an appropriate statistical procedure \u2014 ordinary random samples from one probability can produce different proportions",
+        "NotAssessed": [
+          "Statistical anomaly: NOT ASSESSED",
+          "Change in underlying success probability: NOT ASSESSED (two different observed rates do not, by themselves, disprove a constant underlying probability)",
+          "Change in uncertainty: NOT ASSESSED (uncertainty is a different quantity requiring its own definition and model)"
+        ]
+      },
+      "limitations": [
+        "typed operator-supplied records; authenticity, source correspondence and truth of success labels not independently verified",
+        "fixed metric: recorded successful submissions / recorded submissions; solved instances reported separately",
+        "claims concern compared records only; no probability inference, rule admission or automatic assessment",
+        "submission reservation bounds input records, not CPU instructions; CPU and custody costs unmeasured; zero provider calls"
+      ]
+    }
+  },
+  "cold_read_identical": true,
+  "coverage_before_assessment": "UNDETERMINED",
+  "applicability": {
+    "ID": "rapp_01M2DVX9Y0AT7M8GTRTMEX407R",
+    "ObligationID": "robl_01M2DVX9WBMWKNXB9K2GP5JN2S",
+    "PolicyID": "rpol_01M2DVX9WBMWKNXB9K2CWSH254",
+    "SubjectRef": "observation-claim:sha256:cbf1e28e10573d809375a40564356ddbfaaf75c37c7ea1ebd6b3afa37a560185",
+    "Decision": "applies",
+    "Rationale": "criterion concerns the supplied typed observed claim",
+    "Authorizer": "local-development-operator",
+    "CreatedAt": "2026-09-13T17:09:18.400415Z"
+  },
+  "assessment": {
+    "assessment": {
+      "ID": "rasm_01M2DVX9YD5C4TQW5SK770KWVW",
+      "ObligationID": "robl_01M2DVX9WBMWKNXB9K2GP5JN2S",
+      "PolicyID": "rpol_01M2DVX9WBMWKNXB9K2CWSH254",
+      "ApplicabilityDecisionID": "rapp_01M2DVX9Y0AT7M8GTRTMEX407R",
+      "ManifestID": "rdep_01M2DVX9YD5C4TQW5SK52J93X1",
+      "SubjectRef": "observation-claim:sha256:cbf1e28e10573d809375a40564356ddbfaaf75c37c7ea1ebd6b3afa37a560185",
+      "ContextRef": "supplied development observations only; no authenticity or probability inference",
+      "Outcome": "inconclusive",
+      "Argument": "this deterministic checker decides observed statistics under specified procedures only; a probabilistic claim requires a declared target quantity, sampling assumptions, and an appropriate statistical procedure \u2014 ordinary random samples from one probability can produce different proportions",
+      "Assessor": "local-development-operator",
+      "CreatedAt": "2026-09-13T17:09:18.413187Z",
+      "CheckAttemptIDs": [
+        "rchk_01M2DVX9WTQEF2RWABD389JW77"
+      ]
+    },
+    "manifest": {
+      "ID": "rdep_01M2DVX9YD5C4TQW5SK52J93X1",
+      "PolicyID": "rpol_01M2DVX9WBMWKNXB9K2CWSH254",
+      "ObligationID": "robl_01M2DVX9WBMWKNXB9K2GP5JN2S",
+      "ProjectRevision": "ecb1c66+working-tree-observation-claim",
+      "ContractHash": "",
+      "RecipeHash": "",
+      "EvidenceCutoff": "",
+      "CreatedAt": "2026-09-13T17:09:18.413187Z",
+      "Dependencies": [
+        {
+          "Ordinal": 1,
+          "DependencyKind": "candidate_content",
+          "DependencyRef": "observation-claim:sha256:cbf1e28e10573d809375a40564356ddbfaaf75c37c7ea1ebd6b3afa37a560185",
+          "WhyRelevant": "exact input bytes define the target"
+        }
+      ]
+    }
+  },
+  "coverage": {
+    "policy_id": "rpol_01M2DVX9WBMWKNXB9K2CWSH254",
+    "decision": "UNDETERMINED",
+    "reasons": [
+      "execution_blocked",
+      "inconclusive"
+    ],
+    "document": "# COVERAGE\n\nGenerated from the normative review ledger. Do not edit by hand: this file is\nan export of records, not a status field. Change the records and regenerate.\n\n## Decision\n\n- **decision**: `UNDETERMINED`\n- **policy**: `obs-probability-refusal@1` (whether the supplied observed property holds at the compared points)\n- **policy id**: `rpol_01M2DVX9WBMWKNXB9K2CWSH254`\n- **owner**: local-development-operator\n- **authority**: local engineering verification\n- **scope justification**: disclosed input records only; no research or spending decision\n- **evidence cutoff**: _none recorded_\n\n### Provenance\n\n- **generator**: `coverage-generator/3`\n- **generated at**: 2026-09-13T17:09:18Z\n- **project revision**: `ecb1c66+working-tree-observation-claim`\n- **contract**: _none recorded for the governing assessments_\n- **recipe**: _none recorded for the governing assessments_\n\nGeneration time is non-semantic metadata: repeated generation from identical\nrecords changes that line and nothing else.\n\n### Unresolved reasons\n\n- `execution_blocked`\n- `inconclusive`\n\n## Obligations\n\n| obligation | mandatory | state | governing assessment | reasons |\n| --- | --- | --- | --- | --- |\n| `observed-probability-refusal@1` | yes | `inconclusive` | `rasm_01M2DVX9YD5C4TQW5SK770KWVW` | `inconclusive`, `execution_blocked` |\n\n## Records\n\n### `observed-probability-refusal@1`\n\n- **obligation id**: `robl_01M2DVX9WBMWKNXB9K2GP5JN2S`\n- **requirement**: the declared observed property holds\n- **owner**: local-development-operator\n- **state**: `inconclusive`\n\n**Applicability**\n\n- `rapp_01M2DVX9Y0AT7M8GTRTMEX407R` subject `observation-claim:sha256:cbf1e28e10573d809375a40564356ddbfaaf75c37c7ea1ebd6b3afa37a560185` decision `applies` by local-development-operator: criterion concerns the supplied typed observed claim\n\n**Assessments**\n\n- `rasm_01M2DVX9YD5C4TQW5SK770KWVW` outcome `inconclusive` subject `observation-claim:sha256:cbf1e28e10573d809375a40564356ddbfaaf75c37c7ea1ebd6b3afa37a560185` context `supplied development observations only; no authenticity or probability inference` by local-development-operator\n  - argument: this deterministic checker decides observed statistics under specified procedures only; a probabilistic claim requires a declared target quantity, sampling assumptions, and an appropriate statistical procedure \u2014 ordinary random samples from one probability can produce different proportions\n  - manifest: `rdep_01M2DVX9YD5C4TQW5SK52J93X1`\n  - project revision: `ecb1c66+working-tree-observation-claim`\n  - declared dependencies:\n    - `candidate_content` = `observation-claim:sha256:cbf1e28e10573d809375a40564356ddbfaaf75c37c7ea1ebd6b3afa37a560185` \u2014 exact input bytes define the target\n  - checks: `rchk_01M2DVX9WTQEF2RWABD389JW77`\n\n**Check attempts**\n\n- `rchk_01M2DVX9WTQEF2RWABD389JW77` case `probability-refusal` mode `executed` outcome `blocked` procedure `internal/toolreg observation binding -> internal/measure checker` executor local-development-operator\n  - procedure revision: `observation-claim-check/1+measure-checker/1`\n  - inputs: `observation-claim:sha256:cbf1e28e10573d809375a40564356ddbfaaf75c37c7ea1ebd6b3afa37a560185`\n  - environment: `darwin/arm64 go1.26.6; newf ecb1c66+working-tree-observation-claim`\n  - blocker: this deterministic checker decides observed statistics under specified procedures only; a probabilistic claim requires a declared target quantity, sampling assumptions, and an appropriate statistical procedure \u2014 ordinary random samples from one probability can produce different proportions\n  - output: `{\"schema\":\"observation-claim-check/1\",\"subject_ref\":\"observation-claim:sha256:cbf1e28e10573d809375a40564356ddbfaaf75c37c7ea1ebd6b3afa37a560185\",\"input_json\":\"{\\n  \\\"schema\\\": \\\"observation-claim/1\\\",\\n  \\\"kind\\\": \\\"probabilistic_property\\\",\\n  \\\"source_ref\\\": \\\"development:retained-prefix\\\",\\n  \\\"statement\\\": \\\"The underlying probability changed between these budgets\\\",\\n  \\\"binding\\\": {\\n    \\\"population\\\": \\\"instance a\\\",\\n    \\\"ordering\\\": \\\"recorded order\\\",\\n    \\\"stopping_rule\\\": \\\"declared budget\\\",\\n    \\\"budget_min\\\": 1,\\n    \\\"budget_max\\\": 2\\n  },\\n  \\\"observations\\\": [\\n    {\\n      \\\"conditions\\\": {\\n        \\\"population\\\": \\\"instance a\\\",\\n        \\\"ordering\\\": \\\"recorded order\\\",\\n        \\\"stopping_rule\\\": \\\"declared budget\\\",\\n        \\\"budget\\\": 1\\n      },\\n      \\\"instances\\\": [\\n        {\\n          \\\"id\\\": \\\"a\\\",\\n          \\\"submissions\\\": [\\n            {\\n              \\\"move\\\": \\\"m1\\\",\\n              \\\"success\\\": true\\n            }\\n          ]\\n        }\\n      ]\\n    },\\n    {\\n      \\\"conditions\\\": {\\n        \\\"population\\\": \\\"instance a\\\",\\n        \\\"ordering\\\": \\\"recorded order\\\",\\n        \\\"stopping_rule\\\": \\\"declared budget\\\",\\n        \\\"budget\\\": 2\\n      },\\n      \\\"instances\\\": [\\n        {\\n          \\\"id\\\": \\\"a\\\",\\n          \\\"submissions\\\": [\\n            {\\n              \\\"move\\\": \\\"m1\\\",\\n              \\\"success\\\": true\\n            },\\n            {\\n              \\\"move\\\": \\\"m2\\\",\\n              \\\"success\\\": false\\n            }\\n          ]\\n        }\\n      ]\\n    }\\n  ]\\n}\\n\",\"input_sha256\":\"cbf1e28e10573d809375a40564356ddbfaaf75c37c7ea1ebd6b3afa37a560185\",\"source_ref\":\"development:retained-prefix\",\"tool\":{\"Kind\":\"probabilistic_property\",\"Name\":\"probabilistic-property refusal\",\"Statement\":\"no tool in this registry decides claims about underlying probabilities or uncertainty; the refusal is recorded with its reason\",\"Implementation\":\"internal/measure\",\"ProcedureRevision\":\"measure-checker/1\",\"InputTypes\":[\"measure.Binding\"],\"Premises\":[\"none: the refusal is unconditional here\"],\"Quantifier\":\"nothing is decided\",\"Outputs\":[\"NOT_ASSESSED\"],\"Limits\":[\"unequal observed proportions alone are not statistical refutation; a probabilistic claim needs a declared target, sampling assumptions, and a statistical procedure this registry does not own\"]},\"max_submissions\":3,\"submission_records\":3,\"assessor_invoked\":true,\"elapsed_nanos\":11875,\"certificate\":{\"Binding\":{\"Sentence\":\"The underlying probability changed between these budgets\",\"MetricNumerator\":\"recorded successful submissions\",\"MetricDenom\":\"recorded submissions\",\"Population\":\"instance a\",\"Budgets\":{\"Lo\":1,\"Hi\":2,\"Unrestricted\":false},\"Ordering\":\"recorded order\",\"StoppingRule\":\"declared budget\",\"Kind\":\"probabilistic_property\"},\"ConditionsComparable\":false,\"ConditionNotes\":null,\"TraceExtension\":\"\",\"ExtensionViolations\":null,\"Rows\":null,\"Question\":\"Does the underlying success probability (or uncertainty) change with budget?\",\"Verdict\":\"NOT_ASSESSED\",\"Reason\":\"this deterministic checker decides observed statistics under specified procedures only; a probabilistic claim requires a declared target quantity, sampling assumptions, and an appropriate statistical procedure \u2014 ordinary random samples from one probability can produce different proportions\",\"NotAssessed\":[\"Statistical anomaly: NOT ASSESSED\",\"Change in underlying success probability: NOT ASSESSED (two different observed rates do not, by themselves, disprove a constant underlying probability)\",\"Change in uncertainty: NOT ASSESSED (uncertainty is a different quantity requiring its own definition and model)\"]},\"limitations\":[\"typed operator-supplied records; authenticity, source correspondence and truth of success labels not independently verified\",\"fixed metric: recorded successful submissions / recorded submissions; solved instances reported separately\",\"claims concern compared records only; no probability inference, rule admission or automatic assessment\",\"submission reservation bounds input records, not CPU instructions; CPU and custody costs unmeasured; zero provider calls\"]}`\n  - resources: submission allowance=3; input submissions=3; assessor_invoked=true; elapsed_ns=11875; provider_calls=0; cpu=unknown; custody=unknown\n\n## Reading this document\n\n- `unexamined` means no assessment exists. It is not a pass and not a failure.\n- `inconclusive` means an assessment was made and reached no conclusion.\n- `blocked` means a cited check could not execute. A blocker is retained, never\n  converted into support for conformance.\n- `not_applicable` requires an authorized applicability decision with a rationale.\n  Missing implementation never lands here.\n- A stale assessment keeps its historical outcome and loses current authority.\n- An assessment whose declared current dependencies were not supplied to the\n  generator is `compatibility unknown`: the historical outcome stands as history\n  and does not grant a current decision. Supply the missing current values and\n  regenerate to advance.\n- The provenance block names the generator and the governing assessments' input\n  revisions. A snapshot never expires as history, but reusing one for a CURRENT\n  decision requires those inputs to still be compatible.\n",
+    "obligations": [
+      {
+        "key": "observed-probability-refusal",
+        "semantic_revision": 1,
+        "mandatory": true,
+        "state": "inconclusive",
+        "governing_assessment_id": "rasm_01M2DVX9YD5C4TQW5SK770KWVW",
+        "reasons": [
+          "inconclusive",
+          "execution_blocked"
+        ]
+      }
+    ]
+  }
+}

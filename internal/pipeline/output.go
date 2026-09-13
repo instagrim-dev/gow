@@ -11,6 +11,7 @@ type ErrorResponse struct {
 	OK      bool        `json:"ok"`
 	Command string      `json:"command"`
 	Error   ErrorDetail `json:"error"`
+	Result  any         `json:"result,omitempty"`
 }
 
 type InitResponse struct {

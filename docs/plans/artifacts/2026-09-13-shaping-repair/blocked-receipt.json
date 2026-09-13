@@ -1,0 +1,338 @@
+{
+  "Version": "shaping-resource-diagnostic/1",
+  "BuildVersion": "ecb1c66+working-tree",
+  "EvidenceLabel": "development/resource-diagnostic/freshness-unverified",
+  "SourcePackLabel": "engineering-smoke/synthetic",
+  "SourceProvenance": "disclosed implementer-authored double-not reduction for engineering verification only",
+  "DesignHash": "36c886451cf7195c3ddc77b38eea9a04664c8a32dafd989803c3192160115e7a",
+  "TaskHash": "05f1c0e00bc1fc11f742f981f0e0ee2cb0587b6fa8608fb050bd288d565c80a2",
+  "CatalogHash": "a24de9c4efe86d6b8e89d26ff9071980844c5be9c74613689c8660169d4816a2",
+  "CollectionHash": "bd6f9f9a549e0cfa04d5eecbf02b1cb41ac259c2f3a30ef84d3afcfa04bbb256",
+  "CheckerVersion": "finite-equivalence-checker/1",
+  "Controllers": {
+    "H0": "catalog-order/1",
+    "H1": "h1-frequency/0",
+    "HG": "shape-selector/2-budgeted/1",
+    "task-only": "task-probe/1"
+  },
+  "Budget": {
+    "Expansions": 2,
+    "RuleApplications": 128,
+    "Candidates": 0,
+    "HistoryBytes": 1024,
+    "CheckAssignments": 16,
+    "MaxStates": 32,
+    "MaxTermNodes": 64
+  },
+  "Tasks": [
+    {
+      "EpisodeID": "smoke-double-not",
+      "Start": "not(not(x))",
+      "Domain": {
+        "Width": 4,
+        "Vars": [
+          "x"
+        ]
+      },
+      "TargetCost": 1,
+      "Catalog": [
+        "double-not"
+      ],
+      "History": null
+    }
+  ],
+  "RuleIdentities": [
+    "double-not|w4|vars=[a]|not(not(a))=\u003ea"
+  ],
+  "SetupCertificates": [
+    {
+      "Binding": {
+        "Sentence": "double-not",
+        "Domain": {
+          "Width": 4,
+          "Vars": [
+            "a"
+          ]
+        }
+      },
+      "Left": "not(not(a))",
+      "Right": "a",
+      "PremiseFailures": null,
+      "DomainSize": 16,
+      "AssignmentsChecked": 16,
+      "Exhaustive": true,
+      "Question": "Do the two expressions evaluate identically on every assignment of the declared finite domain?",
+      "Verdict": "HOLDS_ON_DECLARED_DOMAIN",
+      "Reason": "all 16 assignments of the declared domain were enumerated and agree; this supports the declared domain only",
+      "Counterexample": null,
+      "NotAssessed": [
+        "Equivalence outside the declared domain (4-bit words, variables {a}, all operators modulo 2^4): NOT ASSESSED (an exhaustive finite certificate supports exactly its domain)",
+        "Equivalence at other word widths: NOT ASSESSED (a width-4 identity need not hold at width 8, and conversely)",
+        "Real or unbounded-integer identity: NOT ASSESSED (machine-word semantics do not inherit real-number identities)",
+        "Cost, performance, or preferability: NOT ASSESSED (semantic equality is not improvement)",
+        "General rewrite-rule admission: NOT ASSESSED (admission is a review decision citing this certificate, not a property of it)"
+      ]
+    }
+  ],
+  "SetupAssignments": 32,
+  "Cells": [
+    {
+      "EpisodeID": "smoke-double-not",
+      "Arm": "H0",
+      "Decision": {
+        "ControllerVersion": "catalog-order/1",
+        "SnapshotHash": "70efc9f7ef8059d1d1c6ee64874439a00048f7e4dbeefa4d75b5daddcc0282f4",
+        "InputHash": "ccbfdadb720a7a70e7a3ef5dda3b66d8b0a46301b268a4381afbbd4237d4bcbe",
+        "EnabledRules": [
+          "double-not"
+        ],
+        "Preferences": null,
+        "RelevantAttempts": null,
+        "ProbeRuleApplications": 0,
+        "ProbeCandidates": 0
+      },
+      "Search": {
+        "Original": "not(not(x))",
+        "Best": "not(not(x))",
+        "OriginalCost": 3,
+        "BestCost": 3,
+        "Steps": null,
+        "Explored": 1,
+        "Generated": 0,
+        "RuleApplications": 1,
+        "ResourceBudgetExhausted": true,
+        "BudgetExhausted": false,
+        "StateBounded": false,
+        "TermSizeBounded": false,
+        "Cancelled": false,
+        "Endpoint": {
+          "Binding": {
+            "Sentence": "search endpoint: not(not(x)) == not(not(x))",
+            "Domain": {
+              "Width": 4,
+              "Vars": [
+                "x"
+              ]
+            }
+          },
+          "Left": "not(not(x))",
+          "Right": "not(not(x))",
+          "PremiseFailures": null,
+          "DomainSize": 16,
+          "AssignmentsChecked": 16,
+          "Exhaustive": true,
+          "Question": "Do the two expressions evaluate identically on every assignment of the declared finite domain?",
+          "Verdict": "HOLDS_ON_DECLARED_DOMAIN",
+          "Reason": "all 16 assignments of the declared domain were enumerated and agree; this supports the declared domain only",
+          "Counterexample": null,
+          "NotAssessed": [
+            "Equivalence outside the declared domain (4-bit words, variables {x}, all operators modulo 2^4): NOT ASSESSED (an exhaustive finite certificate supports exactly its domain)",
+            "Equivalence at other word widths: NOT ASSESSED (a width-4 identity need not hold at width 8, and conversely)",
+            "Real or unbounded-integer identity: NOT ASSESSED (machine-word semantics do not inherit real-number identities)",
+            "Cost, performance, or preferability: NOT ASSESSED (semantic equality is not improvement)",
+            "General rewrite-rule admission: NOT ASSESSED (admission is a review decision citing this certificate, not a property of it)"
+          ]
+        },
+        "EndpointVerified": true
+      },
+      "SearchStarted": true,
+      "RuleApplications": 1,
+      "Candidates": 0,
+      "HistoryBytes": 0,
+      "CheckAssignments": 16,
+      "ElapsedNanos": 13791,
+      "Completed": false,
+      "BlockedReason": ""
+    },
+    {
+      "EpisodeID": "smoke-double-not",
+      "Arm": "H1",
+      "Decision": {
+        "ControllerVersion": "h1-frequency/0",
+        "SnapshotHash": "42e0729c62806db9b6c9e632420fe69424519b7aa7a31dbceadbc56398c1e096",
+        "InputHash": "efc8f02b8da440ebbe11cb67db52c2974d1eb33cda2275397cd37a04151a7c80",
+        "EnabledRules": [
+          "double-not"
+        ],
+        "Preferences": null,
+        "RelevantAttempts": null,
+        "ProbeRuleApplications": 0,
+        "ProbeCandidates": 0
+      },
+      "Search": {
+        "Original": "not(not(x))",
+        "Best": "not(not(x))",
+        "OriginalCost": 3,
+        "BestCost": 3,
+        "Steps": null,
+        "Explored": 1,
+        "Generated": 0,
+        "RuleApplications": 1,
+        "ResourceBudgetExhausted": true,
+        "BudgetExhausted": false,
+        "StateBounded": false,
+        "TermSizeBounded": false,
+        "Cancelled": false,
+        "Endpoint": {
+          "Binding": {
+            "Sentence": "search endpoint: not(not(x)) == not(not(x))",
+            "Domain": {
+              "Width": 4,
+              "Vars": [
+                "x"
+              ]
+            }
+          },
+          "Left": "not(not(x))",
+          "Right": "not(not(x))",
+          "PremiseFailures": null,
+          "DomainSize": 16,
+          "AssignmentsChecked": 16,
+          "Exhaustive": true,
+          "Question": "Do the two expressions evaluate identically on every assignment of the declared finite domain?",
+          "Verdict": "HOLDS_ON_DECLARED_DOMAIN",
+          "Reason": "all 16 assignments of the declared domain were enumerated and agree; this supports the declared domain only",
+          "Counterexample": null,
+          "NotAssessed": [
+            "Equivalence outside the declared domain (4-bit words, variables {x}, all operators modulo 2^4): NOT ASSESSED (an exhaustive finite certificate supports exactly its domain)",
+            "Equivalence at other word widths: NOT ASSESSED (a width-4 identity need not hold at width 8, and conversely)",
+            "Real or unbounded-integer identity: NOT ASSESSED (machine-word semantics do not inherit real-number identities)",
+            "Cost, performance, or preferability: NOT ASSESSED (semantic equality is not improvement)",
+            "General rewrite-rule admission: NOT ASSESSED (admission is a review decision citing this certificate, not a property of it)"
+          ]
+        },
+        "EndpointVerified": true
+      },
+      "SearchStarted": true,
+      "RuleApplications": 1,
+      "Candidates": 0,
+      "HistoryBytes": 0,
+      "CheckAssignments": 16,
+      "ElapsedNanos": 10584,
+      "Completed": false,
+      "BlockedReason": ""
+    },
+    {
+      "EpisodeID": "smoke-double-not",
+      "Arm": "HG",
+      "Decision": {
+        "ControllerVersion": "shape-selector/2-budgeted/1",
+        "SnapshotHash": "6ca89df10b3757371469e2a7e0f068bac5fdba4295ef43acb402e03d723d28e7",
+        "InputHash": "3d39975a9479dde804c15fb043ad5b7675e37dea0bb7f8baf01f59a982b4ee9e",
+        "EnabledRules": null,
+        "Preferences": null,
+        "RelevantAttempts": null,
+        "ProbeRuleApplications": 1,
+        "ProbeCandidates": 0
+      },
+      "Search": {
+        "Original": "",
+        "Best": "",
+        "OriginalCost": 0,
+        "BestCost": 0,
+        "Steps": null,
+        "Explored": 0,
+        "Generated": 0,
+        "RuleApplications": 0,
+        "ResourceBudgetExhausted": false,
+        "BudgetExhausted": false,
+        "StateBounded": false,
+        "TermSizeBounded": false,
+        "Cancelled": false,
+        "Endpoint": {
+          "Binding": {
+            "Sentence": "",
+            "Domain": {
+              "Width": 0,
+              "Vars": null
+            }
+          },
+          "Left": "",
+          "Right": "",
+          "PremiseFailures": null,
+          "DomainSize": 0,
+          "AssignmentsChecked": 0,
+          "Exhaustive": false,
+          "Question": "",
+          "Verdict": "",
+          "Reason": "",
+          "Counterexample": null,
+          "NotAssessed": null
+        },
+        "EndpointVerified": false
+      },
+      "SearchStarted": false,
+      "RuleApplications": 1,
+      "Candidates": 0,
+      "HistoryBytes": 0,
+      "CheckAssignments": 0,
+      "ElapsedNanos": 24667,
+      "Completed": false,
+      "BlockedReason": "selector incomplete: selector probe \"double-not\" incomplete: term-size-bounded=false cancelled=false resource-budget-exhausted=true; no rule ordering or negative rationale was issued"
+    },
+    {
+      "EpisodeID": "smoke-double-not",
+      "Arm": "task-only",
+      "Decision": {
+        "ControllerVersion": "task-probe/1",
+        "SnapshotHash": "9d0f335b68137aa6a1dd0d461b8d67af4fb42007b136dde3f9809cacceaa16d9",
+        "InputHash": "c647d84f28fa68d743a0edfff729b9e9f6dcefdebe48187ef5fbae2fddaa5fe3",
+        "EnabledRules": null,
+        "Preferences": null,
+        "RelevantAttempts": null,
+        "ProbeRuleApplications": 1,
+        "ProbeCandidates": 0
+      },
+      "Search": {
+        "Original": "",
+        "Best": "",
+        "OriginalCost": 0,
+        "BestCost": 0,
+        "Steps": null,
+        "Explored": 0,
+        "Generated": 0,
+        "RuleApplications": 0,
+        "ResourceBudgetExhausted": false,
+        "BudgetExhausted": false,
+        "StateBounded": false,
+        "TermSizeBounded": false,
+        "Cancelled": false,
+        "Endpoint": {
+          "Binding": {
+            "Sentence": "",
+            "Domain": {
+              "Width": 0,
+              "Vars": null
+            }
+          },
+          "Left": "",
+          "Right": "",
+          "PremiseFailures": null,
+          "DomainSize": 0,
+          "AssignmentsChecked": 0,
+          "Exhaustive": false,
+          "Question": "",
+          "Verdict": "",
+          "Reason": "",
+          "Counterexample": null,
+          "NotAssessed": null
+        },
+        "EndpointVerified": false
+      },
+      "SearchStarted": false,
+      "RuleApplications": 1,
+      "Candidates": 0,
+      "HistoryBytes": 0,
+      "CheckAssignments": 0,
+      "ElapsedNanos": 4500,
+      "Completed": false,
+      "BlockedReason": "selector incomplete: selector probe \"double-not\" incomplete: term-size-bounded=false cancelled=false resource-budget-exhausted=true; no rule ordering or negative rationale was issued"
+    }
+  ],
+  "Completions": null,
+  "Assessment": "blocked",
+  "Error": "episode smoke-double-not arm HG blocked: selector incomplete: selector probe \"double-not\" incomplete: term-size-bounded=false cancelled=false resource-budget-exhausted=true; no rule ordering or negative rationale was issued",
+  "ExecutionError": "",
+  "CustodyMeasured": false,
+  "CPUMeasured": false
+}

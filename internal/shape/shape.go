@@ -87,9 +87,9 @@ type Decision struct {
 	// probes are search work performed before the budgeted search and
 	// must be charged, not smuggled in free). Zero for selectors that
 	// run no probe (v0, H1). Units: ProbeRuleApplications counts rules
-	// probed against the task; ProbeCandidates counts candidate rewrites
-	// the probes materialized — the same unit of work a search expansion
-	// performs per successor generated.
+	// probed against the task; ProbeCandidates counts matched candidate
+	// positions admitted to size preflight, including rejected sizes — the
+	// same candidate event rewrite.Result.Generated records for search.
 	ProbeRuleApplications int
 	ProbeCandidates       int
 }

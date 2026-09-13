@@ -1,0 +1,7 @@
+{
+  "scope": "smoke setup correction; no product code change required",
+  "completed_first_case": "rchk_01M2DSSFF9R03ENYMM0TQP13CR",
+  "error": "UNIQUE constraint failed: review_obligations.obligation_key, review_obligations.semantic_revision",
+  "cause": "second policy attempted to define the same global obligation key and revision",
+  "correction": "use distinct obligation keys for distinct policies"
+}

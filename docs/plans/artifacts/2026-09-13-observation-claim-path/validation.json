@@ -1,0 +1,85 @@
+{
+  "scope": "current dirty checkout including preceding repairs and new observation claim path",
+  "started_at": "2026-09-13T17:11:10.492797+00:00",
+  "go_version": "go version go1.26.6 darwin/arm64",
+  "checks": [
+    {
+      "argv": [
+        "go",
+        "build",
+        "./..."
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_seconds": 1.057,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "go",
+        "vet",
+        "./..."
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_seconds": 0.244,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "go",
+        "test",
+        "./..."
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_seconds": 16.691,
+      "stdout": "ok  \tgithub.com/instagrim-dev/newf\t(cached)\nok  \tgithub.com/instagrim-dev/newf/cmd/newf\t6.604s\n?   \tgithub.com/instagrim-dev/newf/corpus/experiments/two-arm-comparison\t[no test files]\nok  \tgithub.com/instagrim-dev/newf/docs/thesis/examples/why-map-the-work\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/canon\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/cluster\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/config\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/domain\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/dryrun\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/experiment\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/finite\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/frontier\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/invariant\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/lean\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/measure\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/normalize\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/pipeline\t15.740s\nok  \tgithub.com/instagrim-dev/newf/internal/policy\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/projection\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/provider\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/provider/localfp\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/relational\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/review\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/rewrite\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/screen\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/sealedrun\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/shape\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/store\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/success\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/toolreg\t0.045s\nok  \tgithub.com/instagrim-dev/newf/internal/verify\t(cached)\nok  \tgithub.com/instagrim-dev/newf/internal/witness\t(cached)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "./internal/toolreg",
+        "./cmd/newf",
+        "-run",
+        "TestObservationClaim|TestCLIObservationCheck|TestFiniteClaim|TestCLIFiniteCheck",
+        "-count=1"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_seconds": 81.047,
+      "stdout": "ok  \tgithub.com/instagrim-dev/newf/internal/toolreg\t1.396s\nok  \tgithub.com/instagrim-dev/newf/cmd/newf\t79.569s\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "gofmt",
+        "-l",
+        "."
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_seconds": 0.059,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_seconds": 0.028,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "completed_at": "2026-09-13T17:12:49.626091+00:00"
+}

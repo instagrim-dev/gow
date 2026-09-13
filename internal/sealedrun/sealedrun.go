@@ -23,6 +23,7 @@ import (
 	"fmt"
 
 	"github.com/instagrim-dev/newf/internal/finite"
+	"github.com/instagrim-dev/newf/internal/rewrite"
 	"github.com/instagrim-dev/newf/internal/screen"
 	"github.com/instagrim-dev/newf/internal/shape"
 )
@@ -43,7 +44,7 @@ type EpisodeSpec struct {
 
 // Pack is a sealed episode collection with its provenance.
 type Pack struct {
-	Label      string // evidence tier label, e.g. "agent-sealed/v1"
+	Label      string // caller's evidence-tier claim, not validated custody or freshness
 	Provenance string // who authored it, from what inputs, when
 	Episodes   []EpisodeSpec
 }
@@ -84,14 +85,33 @@ func Menu() map[string]ruleDef {
 	}
 }
 
-// EpisodeTrace is the per-episode attribution record.
+// CellTrace retains execution independently of comparison validity. Result
+// includes the best candidate, rewrite path, endpoint certificate, and work
+// counters, even if a resource stop prevents a completion measurement.
+// SearchStarted distinguishes a refused/unreached cell from a measured miss.
+type CellTrace struct {
+	Execution     screen.Execution
+	SearchStarted bool
+	Result        rewrite.Result
+	Error         string
+}
+
+// EpisodeTrace is the per-episode execution receipt. Cells is authoritative;
+// the per-arm maps remain convenient projections for existing callers. A
+// non-nil runner error never invalidates the work recorded here.
 type EpisodeTrace struct {
 	EpisodeID string
-	HG        shape.Decision
-	H1        shape.Decision
-	Completed map[screen.Arm]bool
-	Explored  map[screen.Arm]int
-	// Generated is candidate rewrites materialized per arm — the cost
+	// SourcePackLabel is the caller's unverified provenance claim. It is
+	// separate from the evidence presentation the execution is allowed.
+	SourcePackLabel string
+	EvidenceLabel   string
+	Error           string
+	Cells           map[screen.Arm]CellTrace
+	HG              shape.Decision
+	H1              shape.Decision
+	Completed       map[screen.Arm]bool
+	Explored        map[screen.Arm]int
+	// Generated is matched candidates admitted to size preflight per arm — the cost
 	// unit charged to the task ledger, kept beside Explored (the budget
 	// unit) so a reader never has to infer which measure a figure is.
 	Generated map[screen.Arm]int
@@ -100,11 +120,9 @@ type EpisodeTrace struct {
 	// runs no probe. Recorded per episode so probe accounting is
 	// auditable without re-running the selector.
 	ProbeWork map[screen.Arm]int64
-	// Blocked records, per arm, why a cell carries NO completion
-	// measurement (resource-truncated search). An arm absent from this
-	// map was measured; an arm present in it has a meaningless
-	// Completed value. The run aborts on any blocked cell, so this is a
-	// diagnostic for the failure path, not a scored outcome.
+	// Blocked records why a cell has no completion measurement: an
+	// unstarted/refused cell or a resource-truncated search. Completed
+	// is meaningful only for cells absent from this map.
 	Blocked map[screen.Arm]string
 }
 

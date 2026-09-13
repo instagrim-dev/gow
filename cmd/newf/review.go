@@ -41,6 +41,10 @@ func newReviewCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *c
 	cmd.AddCommand(newReviewPolicyCommand(stdout, app, opts))
 	cmd.AddCommand(newReviewApplicabilityCommand(stdout, app, opts))
 	cmd.AddCommand(newReviewCheckCommand(stdout, app, opts))
+	cmd.AddCommand(newReviewFiniteCheckCommand(stdout, app, opts))
+	cmd.AddCommand(newReviewFiniteInstanceCheckCommand(stdout, app, opts))
+	cmd.AddCommand(newReviewObservationCheckCommand(stdout, app, opts))
+	cmd.AddCommand(newReviewCheckShowCommand(stdout, app, opts))
 	cmd.AddCommand(newReviewAssessCommand(stdout, app, opts))
 	cmd.AddCommand(newReviewCoverageCommand(stdout, app, opts))
 	return cmd

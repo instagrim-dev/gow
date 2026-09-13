@@ -324,6 +324,28 @@ func (s *Store) GetReviewPolicy(ctx context.Context, id string) (ReviewPolicyRow
 	return p, err
 }
 
+// GetReviewCheckAttempt loads one check attempt by id, across every policy.
+// The lookup is deliberately global: a byte-binding guard that only saw one
+// policy's checks could be bypassed by citing a receipt recorded under
+// another policy.
+func (s *Store) GetReviewCheckAttempt(ctx context.Context, id string) (ReviewCheckAttemptRow, error) {
+	var a ReviewCheckAttemptRow
+	err := s.db.QueryRowContext(ctx, `
+SELECT id, obligation_id, policy_id, case_label, procedure_ref, procedure_revision, inputs_ref, executor, environment,
+       mode, outcome, output_ref, blocker, started_at, ended_at, resource_note, created_at
+FROM review_check_attempts WHERE id = ?
+`, id).Scan(&a.ID, &a.ObligationID, &a.PolicyID, &a.CaseLabel, &a.ProcedureRef, &a.ProcedureRevision,
+		&a.InputsRef, &a.Executor, &a.Environment, &a.Mode, &a.Outcome, &a.OutputRef, &a.Blocker,
+		&a.StartedAt, &a.EndedAt, &a.ResourceNote, &a.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ReviewCheckAttemptRow{}, fmt.Errorf("%w: review check attempt %s", ErrNotFound, id)
+	}
+	if err != nil {
+		return ReviewCheckAttemptRow{}, err
+	}
+	return a, nil
+}
+
 const reviewPolicySelect = `
 SELECT id, policy_key, revision, decision_name, owner, authority_source, scope_justification, evidence_cutoff,
        case_budget, attempt_budget, provider_call_budget, COALESCE(supersedes_policy_id,''), supersede_rationale, created_at

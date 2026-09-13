@@ -1,0 +1,113 @@
+{
+  "scope": "injected failure at real SQLite insert; recovery output retained",
+  "policy": {
+    "policy_id": "rpol_01M2DSWCC0PEQSWFQGNJS9RQV3",
+    "obligation_ids": {
+      "equivalence-storage-failure@1": "robl_01M2DSWCC0PEQSWFQGNP6ZZ12Z"
+    }
+  },
+  "error": {
+    "ok": false,
+    "command": "review check-finite",
+    "error": {
+      "code": "internal_error",
+      "message": "finite check executed but its receipt was not persisted: constraint failed: injected local verification storage failure (1811)"
+    },
+    "result": {
+      "ok": false,
+      "command": "review check-finite",
+      "persisted": false,
+      "check": {
+        "ID": "rchk_01M2DSWCCJQ2S1D5KH5SAVHPB0",
+        "ObligationID": "robl_01M2DSWCC0PEQSWFQGNP6ZZ12Z",
+        "PolicyID": "rpol_01M2DSWCC0PEQSWFQGNJS9RQV3",
+        "CaseLabel": "storage-failure",
+        "ProcedureRef": "internal/toolreg finite claim binding -> internal/finite checker",
+        "ProcedureRevision": "finite-claim-check/1+finite-equivalence-checker/1",
+        "InputsRef": "finite-claim:sha256:db30ab3a43e1f29320416a3f50864e036c2b6f6f1d85aa85d992fde6b635ddad",
+        "Executor": "local-development-operator",
+        "Environment": "darwin/arm64 go1.26.6; newf ecb1c66+working-tree-finite-claim",
+        "Mode": "executed",
+        "Outcome": "completed",
+        "OutputRef": "{\"schema\":\"finite-claim-check/1\",\"subject_ref\":\"finite-claim:sha256:db30ab3a43e1f29320416a3f50864e036c2b6f6f1d85aa85d992fde6b635ddad\",\"input_json\":\"{\\n  \\\"schema\\\": \\\"finite-claim/1\\\",\\n  \\\"kind\\\": \\\"finite_equivalence\\\",\\n  \\\"source_ref\\\": \\\"development:four-bit-add-zero\\\",\\n  \\\"statement\\\": \\\"x + 0 equals x over the declared four-bit domain\\\",\\n  \\\"domain\\\": {\\n    \\\"width\\\": 4,\\n    \\\"variables\\\": [\\n      \\\"x\\\"\\n    ]\\n  },\\n  \\\"left\\\": {\\n    \\\"op\\\": \\\"add\\\",\\n    \\\"args\\\": [\\n      {\\n        \\\"var\\\": \\\"x\\\"\\n      },\\n      {\\n        \\\"const\\\": 0\\n      }\\n    ]\\n  },\\n  \\\"right\\\": {\\n    \\\"var\\\": \\\"x\\\"\\n  }\\n}\\n\",\"input_sha256\":\"db30ab3a43e1f29320416a3f50864e036c2b6f6f1d85aa85d992fde6b635ddad\",\"source_ref\":\"development:four-bit-add-zero\",\"tool\":{\"Kind\":\"finite_equivalence\",\"Name\":\"exhaustive finite equivalence\",\"Statement\":\"enumeration of every assignment of a declared finite domain (fixed-width machine words, total operators modulo 2^width); first counterexample in canonical order\",\"Implementation\":\"internal/finite\",\"ProcedureRevision\":\"finite-equivalence-checker/1\",\"InputTypes\":[\"finite.Binding\",\"finite.Expr (left)\",\"finite.Expr (right)\"],\"Premises\":[\"width within [1,8]\",\"every free variable declared in the domain\",\"every operator in the seed language (division is absent by design)\",\"domain size within the exhaustiveness cap\"],\"Quantifier\":\"exactly the declared finite domain; never other widths, wider variable sets, or unbounded integers\",\"Outputs\":[\"HOLDS_ON_DECLARED_DOMAIN\",\"REFUTED\",\"UNRESOLVED\",\"INAPPLICABLE\"],\"Limits\":[\"refuses domains above the exhaustiveness cap rather than sampling\",\"warrant consumption is separately enforced by finite.VerifyRuleWarrant\"]},\"max_assignments\":16,\"elapsed_nanos\":14000,\"certificate\":{\"Binding\":{\"Sentence\":\"x + 0 equals x over the declared four-bit domain\",\"Domain\":{\"Width\":4,\"Vars\":[\"x\"]}},\"Left\":\"add(x, 0)\",\"Right\":\"x\",\"PremiseFailures\":null,\"DomainSize\":16,\"AssignmentsChecked\":16,\"Exhaustive\":true,\"Question\":\"Do the two expressions evaluate identically on every assignment of the declared finite domain?\",\"Verdict\":\"HOLDS_ON_DECLARED_DOMAIN\",\"Reason\":\"all 16 assignments of the declared domain were enumerated and agree; this supports the declared domain only\",\"Counterexample\":null,\"NotAssessed\":[\"Equivalence outside the declared domain (4-bit words, variables {x}, all operators modulo 2^4): NOT ASSESSED (an exhaustive finite certificate supports exactly its domain)\",\"Equivalence at other word widths: NOT ASSESSED (a width-4 identity need not hold at width 8, and conversely)\",\"Real or unbounded-integer identity: NOT ASSESSED (machine-word semantics do not inherit real-number identities)\",\"Cost, performance, or preferability: NOT ASSESSED (semantic equality is not improvement)\",\"General rewrite-rule admission: NOT ASSESSED (admission is a review decision citing this certificate, not a property of it)\"]},\"limitations\":[\"operator-supplied typed target; correspondence to source prose is not independently assessed\",\"certificate decides only its declared finite domain; no rule admission or normative assessment is automatic\",\"CPU and custody cost unmeasured; zero provider calls\"]}",
+        "Blocker": "",
+        "StartedAt": "2026-09-13T16:33:50Z",
+        "EndedAt": "2026-09-13T16:33:50Z",
+        "ResourceNote": "assignment allowance=16; checked=16; elapsed_ns=14000; provider_calls=0; cpu=unknown; custody=unknown",
+        "CreatedAt": "2026-09-13T16:33:50.99457Z"
+      },
+      "receipt": {
+        "schema": "finite-claim-check/1",
+        "subject_ref": "finite-claim:sha256:db30ab3a43e1f29320416a3f50864e036c2b6f6f1d85aa85d992fde6b635ddad",
+        "input_json": "{\n  \"schema\": \"finite-claim/1\",\n  \"kind\": \"finite_equivalence\",\n  \"source_ref\": \"development:four-bit-add-zero\",\n  \"statement\": \"x + 0 equals x over the declared four-bit domain\",\n  \"domain\": {\n    \"width\": 4,\n    \"variables\": [\n      \"x\"\n    ]\n  },\n  \"left\": {\n    \"op\": \"add\",\n    \"args\": [\n      {\n        \"var\": \"x\"\n      },\n      {\n        \"const\": 0\n      }\n    ]\n  },\n  \"right\": {\n    \"var\": \"x\"\n  }\n}\n",
+        "input_sha256": "db30ab3a43e1f29320416a3f50864e036c2b6f6f1d85aa85d992fde6b635ddad",
+        "source_ref": "development:four-bit-add-zero",
+        "tool": {
+          "Kind": "finite_equivalence",
+          "Name": "exhaustive finite equivalence",
+          "Statement": "enumeration of every assignment of a declared finite domain (fixed-width machine words, total operators modulo 2^width); first counterexample in canonical order",
+          "Implementation": "internal/finite",
+          "ProcedureRevision": "finite-equivalence-checker/1",
+          "InputTypes": [
+            "finite.Binding",
+            "finite.Expr (left)",
+            "finite.Expr (right)"
+          ],
+          "Premises": [
+            "width within [1,8]",
+            "every free variable declared in the domain",
+            "every operator in the seed language (division is absent by design)",
+            "domain size within the exhaustiveness cap"
+          ],
+          "Quantifier": "exactly the declared finite domain; never other widths, wider variable sets, or unbounded integers",
+          "Outputs": [
+            "HOLDS_ON_DECLARED_DOMAIN",
+            "REFUTED",
+            "UNRESOLVED",
+            "INAPPLICABLE"
+          ],
+          "Limits": [
+            "refuses domains above the exhaustiveness cap rather than sampling",
+            "warrant consumption is separately enforced by finite.VerifyRuleWarrant"
+          ]
+        },
+        "max_assignments": 16,
+        "elapsed_nanos": 14000,
+        "certificate": {
+          "Binding": {
+            "Sentence": "x + 0 equals x over the declared four-bit domain",
+            "Domain": {
+              "Width": 4,
+              "Vars": [
+                "x"
+              ]
+            }
+          },
+          "Left": "add(x, 0)",
+          "Right": "x",
+          "PremiseFailures": null,
+          "DomainSize": 16,
+          "AssignmentsChecked": 16,
+          "Exhaustive": true,
+          "Question": "Do the two expressions evaluate identically on every assignment of the declared finite domain?",
+          "Verdict": "HOLDS_ON_DECLARED_DOMAIN",
+          "Reason": "all 16 assignments of the declared domain were enumerated and agree; this supports the declared domain only",
+          "Counterexample": null,
+          "NotAssessed": [
+            "Equivalence outside the declared domain (4-bit words, variables {x}, all operators modulo 2^4): NOT ASSESSED (an exhaustive finite certificate supports exactly its domain)",
+            "Equivalence at other word widths: NOT ASSESSED (a width-4 identity need not hold at width 8, and conversely)",
+            "Real or unbounded-integer identity: NOT ASSESSED (machine-word semantics do not inherit real-number identities)",
+            "Cost, performance, or preferability: NOT ASSESSED (semantic equality is not improvement)",
+            "General rewrite-rule admission: NOT ASSESSED (admission is a review decision citing this certificate, not a property of it)"
+          ]
+        },
+        "limitations": [
+          "operator-supplied typed target; correspondence to source prose is not independently assessed",
+          "certificate decides only its declared finite domain; no rule admission or normative assessment is automatic",
+          "CPU and custody cost unmeasured; zero provider calls"
+        ]
+      }
+    }
+  },
+  "row_absent_verified": true
+}

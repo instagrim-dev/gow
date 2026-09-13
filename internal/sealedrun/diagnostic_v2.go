@@ -12,9 +12,10 @@ import (
 // enforced in the label: when the pack under test is the one whose
 // failures motivated the selector's design, this is a development
 // diagnostic (the controller was fit to this pack's observed defects); it
-// can never confirm the selector's value. Confirmation requires a pack
-// authored after the selector froze. The outcome label carries both the
-// controller version and the taint suffix, so no reader can mistake
+// can never confirm the selector's value. Freshness requires validated
+// freeze, exposure, and custody records, which this API does not accept;
+// a pack's name or authorship assertion cannot supply them. The outcome label
+// carries both the controller version and the taint suffix, so no reader can mistake
 // either the grade or which procedure produced it — record 019's run-3
 // numbers belong to shape-selector/1, and a re-run under /2 must not
 // borrow that label.

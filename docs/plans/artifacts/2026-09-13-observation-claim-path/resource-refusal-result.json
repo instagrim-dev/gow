@@ -1,0 +1,175 @@
+{
+  "scope": "local engineering and recorded-observation evidence only",
+  "policy": {
+    "policy_id": "rpol_01M2DVX9SGJFFAK18A8XYXWPV9",
+    "obligation_ids": {
+      "observed-resource-refusal@1": "robl_01M2DVX9SGJFFAK18A8ZRFNTXF"
+    }
+  },
+  "execution": {
+    "ok": true,
+    "command": "review check-observations",
+    "persisted": true,
+    "check": {
+      "ID": "rchk_01M2DVX9SY9NG3PDJXR61J5KKX",
+      "ObligationID": "robl_01M2DVX9SGJFFAK18A8ZRFNTXF",
+      "PolicyID": "rpol_01M2DVX9SGJFFAK18A8XYXWPV9",
+      "CaseLabel": "resource-refusal",
+      "ProcedureRef": "internal/toolreg observation binding -> internal/measure checker",
+      "ProcedureRevision": "observation-claim-check/1+measure-checker/1",
+      "InputsRef": "observation-claim:sha256:98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851",
+      "Executor": "local-development-operator",
+      "Environment": "darwin/arm64 go1.26.6; newf ecb1c66+working-tree-observation-claim",
+      "Mode": "executed",
+      "Outcome": "blocked",
+      "OutputRef": "{\"schema\":\"observation-claim-check/1\",\"subject_ref\":\"observation-claim:sha256:98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851\",\"input_json\":\"{\\n  \\\"schema\\\": \\\"observation-claim/1\\\",\\n  \\\"kind\\\": \\\"observed_rate_invariance\\\",\\n  \\\"source_ref\\\": \\\"development:retained-prefix\\\",\\n  \\\"statement\\\": \\\"The observed success-per-submission rate is unchanged at budgets 1 and 2\\\",\\n  \\\"binding\\\": {\\n    \\\"population\\\": \\\"instance a\\\",\\n    \\\"ordering\\\": \\\"recorded order\\\",\\n    \\\"stopping_rule\\\": \\\"declared budget\\\",\\n    \\\"budget_min\\\": 1,\\n    \\\"budget_max\\\": 2\\n  },\\n  \\\"observations\\\": [\\n    {\\n      \\\"conditions\\\": {\\n        \\\"population\\\": \\\"instance a\\\",\\n        \\\"ordering\\\": \\\"recorded order\\\",\\n        \\\"stopping_rule\\\": \\\"declared budget\\\",\\n        \\\"budget\\\": 1\\n      },\\n      \\\"instances\\\": [\\n        {\\n          \\\"id\\\": \\\"a\\\",\\n          \\\"submissions\\\": [\\n            {\\n              \\\"move\\\": \\\"m1\\\",\\n              \\\"success\\\": true\\n            }\\n          ]\\n        }\\n      ]\\n    },\\n    {\\n      \\\"conditions\\\": {\\n        \\\"population\\\": \\\"instance a\\\",\\n        \\\"ordering\\\": \\\"recorded order\\\",\\n        \\\"stopping_rule\\\": \\\"declared budget\\\",\\n        \\\"budget\\\": 2\\n      },\\n      \\\"instances\\\": [\\n        {\\n          \\\"id\\\": \\\"a\\\",\\n          \\\"submissions\\\": [\\n            {\\n              \\\"move\\\": \\\"m1\\\",\\n              \\\"success\\\": true\\n            },\\n            {\\n              \\\"move\\\": \\\"m2\\\",\\n              \\\"success\\\": false\\n            }\\n          ]\\n        }\\n      ]\\n    }\\n  ]\\n}\\n\",\"input_sha256\":\"98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851\",\"source_ref\":\"development:retained-prefix\",\"tool\":{\"Kind\":\"observed_rate_invariance\",\"Name\":\"observed-rate invariance\",\"Statement\":\"exact fraction comparison across declared conditions; sign of a rate change under genuine sample extension follows N*s \u2212 S*m (big.Int cross-multiplication, no floats)\",\"Implementation\":\"internal/measure\",\"ProcedureRevision\":\"measure-checker/1\",\"InputTypes\":[\"measure.Binding\",\"[]measure.Observation\"],\"Premises\":[\"non-budget conditions (population, ordering, stopping rule) identical across compared records, or the change is not attributable to budget alone\",\"compared budgets inside the claim's declared range (unrestricted claims admit every budget)\",\"nonzero denominators for any rate comparison\",\"incremental decomposition only under verified trace-prefix nesting\"],\"Quantifier\":\"the compared recorded observations only; equality at tested points never extends to untested budgets\",\"Outputs\":[\"REFUTED\",\"HOLDS_AT_COMPARED_POINTS\",\"UNRESOLVED\",\"INAPPLICABLE\"],\"Limits\":[\"decides observed statistics under specified procedures only; owns no statistical model\"]},\"max_submissions\":2,\"submission_records\":3,\"assessor_invoked\":false,\"elapsed_nanos\":11917,\"certificate\":{\"Binding\":{\"Sentence\":\"The observed success-per-submission rate is unchanged at budgets 1 and 2\",\"MetricNumerator\":\"recorded successful submissions\",\"MetricDenom\":\"recorded submissions\",\"Population\":\"instance a\",\"Budgets\":{\"Lo\":1,\"Hi\":2,\"Unrestricted\":false},\"Ordering\":\"recorded order\",\"StoppingRule\":\"declared budget\",\"Kind\":\"observed_rate_invariance\"},\"ConditionsComparable\":false,\"ConditionNotes\":null,\"TraceExtension\":\"not_checked\",\"ExtensionViolations\":null,\"Rows\":null,\"Question\":\"Is the bound observed property supported by the supplied observations?\",\"Verdict\":\"UNRESOLVED\",\"Reason\":\"input has 2 observations, 2 instance records and 3 submission records; ceilings are 64/4096/16384 and reserved submissions 2; no subset is assessed\",\"NotAssessed\":[\"Authenticity of supplied observations and source correspondence: NOT ASSESSED\",\"Underlying probabilities, uncertainty and untested budgets: NOT ASSESSED\"]},\"limitations\":[\"typed operator-supplied records; authenticity, source correspondence and truth of success labels not independently verified\",\"fixed metric: recorded successful submissions / recorded submissions; solved instances reported separately\",\"claims concern compared records only; no probability inference, rule admission or automatic assessment\",\"submission reservation bounds input records, not CPU instructions; CPU and custody costs unmeasured; zero provider calls\"]}",
+      "Blocker": "input has 2 observations, 2 instance records and 3 submission records; ceilings are 64/4096/16384 and reserved submissions 2; no subset is assessed",
+      "StartedAt": "2026-09-13T17:09:18Z",
+      "EndedAt": "2026-09-13T17:09:18Z",
+      "ResourceNote": "submission allowance=2; input submissions=3; assessor_invoked=false; elapsed_ns=11917; provider_calls=0; cpu=unknown; custody=unknown",
+      "CreatedAt": "2026-09-13T17:09:18.270015Z"
+    },
+    "receipt": {
+      "schema": "observation-claim-check/1",
+      "subject_ref": "observation-claim:sha256:98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851",
+      "input_json": "{\n  \"schema\": \"observation-claim/1\",\n  \"kind\": \"observed_rate_invariance\",\n  \"source_ref\": \"development:retained-prefix\",\n  \"statement\": \"The observed success-per-submission rate is unchanged at budgets 1 and 2\",\n  \"binding\": {\n    \"population\": \"instance a\",\n    \"ordering\": \"recorded order\",\n    \"stopping_rule\": \"declared budget\",\n    \"budget_min\": 1,\n    \"budget_max\": 2\n  },\n  \"observations\": [\n    {\n      \"conditions\": {\n        \"population\": \"instance a\",\n        \"ordering\": \"recorded order\",\n        \"stopping_rule\": \"declared budget\",\n        \"budget\": 1\n      },\n      \"instances\": [\n        {\n          \"id\": \"a\",\n          \"submissions\": [\n            {\n              \"move\": \"m1\",\n              \"success\": true\n            }\n          ]\n        }\n      ]\n    },\n    {\n      \"conditions\": {\n        \"population\": \"instance a\",\n        \"ordering\": \"recorded order\",\n        \"stopping_rule\": \"declared budget\",\n        \"budget\": 2\n      },\n      \"instances\": [\n        {\n          \"id\": \"a\",\n          \"submissions\": [\n            {\n              \"move\": \"m1\",\n              \"success\": true\n            },\n            {\n              \"move\": \"m2\",\n              \"success\": false\n            }\n          ]\n        }\n      ]\n    }\n  ]\n}\n",
+      "input_sha256": "98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851",
+      "source_ref": "development:retained-prefix",
+      "tool": {
+        "Kind": "observed_rate_invariance",
+        "Name": "observed-rate invariance",
+        "Statement": "exact fraction comparison across declared conditions; sign of a rate change under genuine sample extension follows N*s \u2212 S*m (big.Int cross-multiplication, no floats)",
+        "Implementation": "internal/measure",
+        "ProcedureRevision": "measure-checker/1",
+        "InputTypes": [
+          "measure.Binding",
+          "[]measure.Observation"
+        ],
+        "Premises": [
+          "non-budget conditions (population, ordering, stopping rule) identical across compared records, or the change is not attributable to budget alone",
+          "compared budgets inside the claim's declared range (unrestricted claims admit every budget)",
+          "nonzero denominators for any rate comparison",
+          "incremental decomposition only under verified trace-prefix nesting"
+        ],
+        "Quantifier": "the compared recorded observations only; equality at tested points never extends to untested budgets",
+        "Outputs": [
+          "REFUTED",
+          "HOLDS_AT_COMPARED_POINTS",
+          "UNRESOLVED",
+          "INAPPLICABLE"
+        ],
+        "Limits": [
+          "decides observed statistics under specified procedures only; owns no statistical model"
+        ]
+      },
+      "max_submissions": 2,
+      "submission_records": 3,
+      "assessor_invoked": false,
+      "elapsed_nanos": 11917,
+      "certificate": {
+        "Binding": {
+          "Sentence": "The observed success-per-submission rate is unchanged at budgets 1 and 2",
+          "MetricNumerator": "recorded successful submissions",
+          "MetricDenom": "recorded submissions",
+          "Population": "instance a",
+          "Budgets": {
+            "Lo": 1,
+            "Hi": 2,
+            "Unrestricted": false
+          },
+          "Ordering": "recorded order",
+          "StoppingRule": "declared budget",
+          "Kind": "observed_rate_invariance"
+        },
+        "ConditionsComparable": false,
+        "ConditionNotes": null,
+        "TraceExtension": "not_checked",
+        "ExtensionViolations": null,
+        "Rows": null,
+        "Question": "Is the bound observed property supported by the supplied observations?",
+        "Verdict": "UNRESOLVED",
+        "Reason": "input has 2 observations, 2 instance records and 3 submission records; ceilings are 64/4096/16384 and reserved submissions 2; no subset is assessed",
+        "NotAssessed": [
+          "Authenticity of supplied observations and source correspondence: NOT ASSESSED",
+          "Underlying probabilities, uncertainty and untested budgets: NOT ASSESSED"
+        ]
+      },
+      "limitations": [
+        "typed operator-supplied records; authenticity, source correspondence and truth of success labels not independently verified",
+        "fixed metric: recorded successful submissions / recorded submissions; solved instances reported separately",
+        "claims concern compared records only; no probability inference, rule admission or automatic assessment",
+        "submission reservation bounds input records, not CPU instructions; CPU and custody costs unmeasured; zero provider calls"
+      ]
+    }
+  },
+  "cold_read_identical": true,
+  "coverage_before_assessment": "UNDETERMINED",
+  "applicability": {
+    "ID": "rapp_01M2DVX9V3VAC6QRT2S55MNYDY",
+    "ObligationID": "robl_01M2DVX9SGJFFAK18A8ZRFNTXF",
+    "PolicyID": "rpol_01M2DVX9SGJFFAK18A8XYXWPV9",
+    "SubjectRef": "observation-claim:sha256:98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851",
+    "Decision": "applies",
+    "Rationale": "criterion concerns the supplied typed observed claim",
+    "Authorizer": "local-development-operator",
+    "CreatedAt": "2026-09-13T17:09:18.307312Z"
+  },
+  "assessment": {
+    "assessment": {
+      "ID": "rasm_01M2DVX9VFF84Q055G0XRE4MZJ",
+      "ObligationID": "robl_01M2DVX9SGJFFAK18A8ZRFNTXF",
+      "PolicyID": "rpol_01M2DVX9SGJFFAK18A8XYXWPV9",
+      "ApplicabilityDecisionID": "rapp_01M2DVX9V3VAC6QRT2S55MNYDY",
+      "ManifestID": "rdep_01M2DVX9VFF84Q055G0XJED96S",
+      "SubjectRef": "observation-claim:sha256:98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851",
+      "ContextRef": "supplied development observations only; no authenticity or probability inference",
+      "Outcome": "inconclusive",
+      "Argument": "input has 2 observations, 2 instance records and 3 submission records; ceilings are 64/4096/16384 and reserved submissions 2; no subset is assessed",
+      "Assessor": "local-development-operator",
+      "CreatedAt": "2026-09-13T17:09:18.319934Z",
+      "CheckAttemptIDs": [
+        "rchk_01M2DVX9SY9NG3PDJXR61J5KKX"
+      ]
+    },
+    "manifest": {
+      "ID": "rdep_01M2DVX9VFF84Q055G0XJED96S",
+      "PolicyID": "rpol_01M2DVX9SGJFFAK18A8XYXWPV9",
+      "ObligationID": "robl_01M2DVX9SGJFFAK18A8ZRFNTXF",
+      "ProjectRevision": "ecb1c66+working-tree-observation-claim",
+      "ContractHash": "",
+      "RecipeHash": "",
+      "EvidenceCutoff": "",
+      "CreatedAt": "2026-09-13T17:09:18.319934Z",
+      "Dependencies": [
+        {
+          "Ordinal": 1,
+          "DependencyKind": "candidate_content",
+          "DependencyRef": "observation-claim:sha256:98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851",
+          "WhyRelevant": "exact input bytes define the target"
+        }
+      ]
+    }
+  },
+  "coverage": {
+    "policy_id": "rpol_01M2DVX9SGJFFAK18A8XYXWPV9",
+    "decision": "UNDETERMINED",
+    "reasons": [
+      "execution_blocked",
+      "inconclusive"
+    ],
+    "document": "# COVERAGE\n\nGenerated from the normative review ledger. Do not edit by hand: this file is\nan export of records, not a status field. Change the records and regenerate.\n\n## Decision\n\n- **decision**: `UNDETERMINED`\n- **policy**: `obs-resource-refusal@1` (whether the supplied observed property holds at the compared points)\n- **policy id**: `rpol_01M2DVX9SGJFFAK18A8XYXWPV9`\n- **owner**: local-development-operator\n- **authority**: local engineering verification\n- **scope justification**: disclosed input records only; no research or spending decision\n- **evidence cutoff**: _none recorded_\n\n### Provenance\n\n- **generator**: `coverage-generator/3`\n- **generated at**: 2026-09-13T17:09:18Z\n- **project revision**: `ecb1c66+working-tree-observation-claim`\n- **contract**: _none recorded for the governing assessments_\n- **recipe**: _none recorded for the governing assessments_\n\nGeneration time is non-semantic metadata: repeated generation from identical\nrecords changes that line and nothing else.\n\n### Unresolved reasons\n\n- `execution_blocked`\n- `inconclusive`\n\n## Obligations\n\n| obligation | mandatory | state | governing assessment | reasons |\n| --- | --- | --- | --- | --- |\n| `observed-resource-refusal@1` | yes | `inconclusive` | `rasm_01M2DVX9VFF84Q055G0XRE4MZJ` | `inconclusive`, `execution_blocked` |\n\n## Records\n\n### `observed-resource-refusal@1`\n\n- **obligation id**: `robl_01M2DVX9SGJFFAK18A8ZRFNTXF`\n- **requirement**: the declared observed property holds\n- **owner**: local-development-operator\n- **state**: `inconclusive`\n\n**Applicability**\n\n- `rapp_01M2DVX9V3VAC6QRT2S55MNYDY` subject `observation-claim:sha256:98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851` decision `applies` by local-development-operator: criterion concerns the supplied typed observed claim\n\n**Assessments**\n\n- `rasm_01M2DVX9VFF84Q055G0XRE4MZJ` outcome `inconclusive` subject `observation-claim:sha256:98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851` context `supplied development observations only; no authenticity or probability inference` by local-development-operator\n  - argument: input has 2 observations, 2 instance records and 3 submission records; ceilings are 64/4096/16384 and reserved submissions 2; no subset is assessed\n  - manifest: `rdep_01M2DVX9VFF84Q055G0XJED96S`\n  - project revision: `ecb1c66+working-tree-observation-claim`\n  - declared dependencies:\n    - `candidate_content` = `observation-claim:sha256:98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851` \u2014 exact input bytes define the target\n  - checks: `rchk_01M2DVX9SY9NG3PDJXR61J5KKX`\n\n**Check attempts**\n\n- `rchk_01M2DVX9SY9NG3PDJXR61J5KKX` case `resource-refusal` mode `executed` outcome `blocked` procedure `internal/toolreg observation binding -> internal/measure checker` executor local-development-operator\n  - procedure revision: `observation-claim-check/1+measure-checker/1`\n  - inputs: `observation-claim:sha256:98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851`\n  - environment: `darwin/arm64 go1.26.6; newf ecb1c66+working-tree-observation-claim`\n  - blocker: input has 2 observations, 2 instance records and 3 submission records; ceilings are 64/4096/16384 and reserved submissions 2; no subset is assessed\n  - output: `{\"schema\":\"observation-claim-check/1\",\"subject_ref\":\"observation-claim:sha256:98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851\",\"input_json\":\"{\\n  \\\"schema\\\": \\\"observation-claim/1\\\",\\n  \\\"kind\\\": \\\"observed_rate_invariance\\\",\\n  \\\"source_ref\\\": \\\"development:retained-prefix\\\",\\n  \\\"statement\\\": \\\"The observed success-per-submission rate is unchanged at budgets 1 and 2\\\",\\n  \\\"binding\\\": {\\n    \\\"population\\\": \\\"instance a\\\",\\n    \\\"ordering\\\": \\\"recorded order\\\",\\n    \\\"stopping_rule\\\": \\\"declared budget\\\",\\n    \\\"budget_min\\\": 1,\\n    \\\"budget_max\\\": 2\\n  },\\n  \\\"observations\\\": [\\n    {\\n      \\\"conditions\\\": {\\n        \\\"population\\\": \\\"instance a\\\",\\n        \\\"ordering\\\": \\\"recorded order\\\",\\n        \\\"stopping_rule\\\": \\\"declared budget\\\",\\n        \\\"budget\\\": 1\\n      },\\n      \\\"instances\\\": [\\n        {\\n          \\\"id\\\": \\\"a\\\",\\n          \\\"submissions\\\": [\\n            {\\n              \\\"move\\\": \\\"m1\\\",\\n              \\\"success\\\": true\\n            }\\n          ]\\n        }\\n      ]\\n    },\\n    {\\n      \\\"conditions\\\": {\\n        \\\"population\\\": \\\"instance a\\\",\\n        \\\"ordering\\\": \\\"recorded order\\\",\\n        \\\"stopping_rule\\\": \\\"declared budget\\\",\\n        \\\"budget\\\": 2\\n      },\\n      \\\"instances\\\": [\\n        {\\n          \\\"id\\\": \\\"a\\\",\\n          \\\"submissions\\\": [\\n            {\\n              \\\"move\\\": \\\"m1\\\",\\n              \\\"success\\\": true\\n            },\\n            {\\n              \\\"move\\\": \\\"m2\\\",\\n              \\\"success\\\": false\\n            }\\n          ]\\n        }\\n      ]\\n    }\\n  ]\\n}\\n\",\"input_sha256\":\"98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851\",\"source_ref\":\"development:retained-prefix\",\"tool\":{\"Kind\":\"observed_rate_invariance\",\"Name\":\"observed-rate invariance\",\"Statement\":\"exact fraction comparison across declared conditions; sign of a rate change under genuine sample extension follows N*s \u2212 S*m (big.Int cross-multiplication, no floats)\",\"Implementation\":\"internal/measure\",\"ProcedureRevision\":\"measure-checker/1\",\"InputTypes\":[\"measure.Binding\",\"[]measure.Observation\"],\"Premises\":[\"non-budget conditions (population, ordering, stopping rule) identical across compared records, or the change is not attributable to budget alone\",\"compared budgets inside the claim's declared range (unrestricted claims admit every budget)\",\"nonzero denominators for any rate comparison\",\"incremental decomposition only under verified trace-prefix nesting\"],\"Quantifier\":\"the compared recorded observations only; equality at tested points never extends to untested budgets\",\"Outputs\":[\"REFUTED\",\"HOLDS_AT_COMPARED_POINTS\",\"UNRESOLVED\",\"INAPPLICABLE\"],\"Limits\":[\"decides observed statistics under specified procedures only; owns no statistical model\"]},\"max_submissions\":2,\"submission_records\":3,\"assessor_invoked\":false,\"elapsed_nanos\":11917,\"certificate\":{\"Binding\":{\"Sentence\":\"The observed success-per-submission rate is unchanged at budgets 1 and 2\",\"MetricNumerator\":\"recorded successful submissions\",\"MetricDenom\":\"recorded submissions\",\"Population\":\"instance a\",\"Budgets\":{\"Lo\":1,\"Hi\":2,\"Unrestricted\":false},\"Ordering\":\"recorded order\",\"StoppingRule\":\"declared budget\",\"Kind\":\"observed_rate_invariance\"},\"ConditionsComparable\":false,\"ConditionNotes\":null,\"TraceExtension\":\"not_checked\",\"ExtensionViolations\":null,\"Rows\":null,\"Question\":\"Is the bound observed property supported by the supplied observations?\",\"Verdict\":\"UNRESOLVED\",\"Reason\":\"input has 2 observations, 2 instance records and 3 submission records; ceilings are 64/4096/16384 and reserved submissions 2; no subset is assessed\",\"NotAssessed\":[\"Authenticity of supplied observations and source correspondence: NOT ASSESSED\",\"Underlying probabilities, uncertainty and untested budgets: NOT ASSESSED\"]},\"limitations\":[\"typed operator-supplied records; authenticity, source correspondence and truth of success labels not independently verified\",\"fixed metric: recorded successful submissions / recorded submissions; solved instances reported separately\",\"claims concern compared records only; no probability inference, rule admission or automatic assessment\",\"submission reservation bounds input records, not CPU instructions; CPU and custody costs unmeasured; zero provider calls\"]}`\n  - resources: submission allowance=2; input submissions=3; assessor_invoked=false; elapsed_ns=11917; provider_calls=0; cpu=unknown; custody=unknown\n\n## Reading this document\n\n- `unexamined` means no assessment exists. It is not a pass and not a failure.\n- `inconclusive` means an assessment was made and reached no conclusion.\n- `blocked` means a cited check could not execute. A blocker is retained, never\n  converted into support for conformance.\n- `not_applicable` requires an authorized applicability decision with a rationale.\n  Missing implementation never lands here.\n- A stale assessment keeps its historical outcome and loses current authority.\n- An assessment whose declared current dependencies were not supplied to the\n  generator is `compatibility unknown`: the historical outcome stands as history\n  and does not grant a current decision. Supply the missing current values and\n  regenerate to advance.\n- The provenance block names the generator and the governing assessments' input\n  revisions. A snapshot never expires as history, but reusing one for a CURRENT\n  decision requires those inputs to still be compatible.\n",
+    "obligations": [
+      {
+        "key": "observed-resource-refusal",
+        "semantic_revision": 1,
+        "mandatory": true,
+        "state": "inconclusive",
+        "governing_assessment_id": "rasm_01M2DVX9VFF84Q055G0XRE4MZJ",
+        "reasons": [
+          "inconclusive",
+          "execution_blocked"
+        ]
+      }
+    ]
+  }
+}

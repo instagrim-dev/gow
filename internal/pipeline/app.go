@@ -148,6 +148,7 @@ type problemStore interface {
 	LatestReviewPolicy(context.Context, string) (store.ReviewPolicyRow, bool, error)
 	GetReviewPolicy(context.Context, string) (store.ReviewPolicyRow, error)
 	LoadReviewCoverage(context.Context, string) (store.ReviewCoverage, error)
+	GetReviewCheckAttempt(context.Context, string) (store.ReviewCheckAttemptRow, error)
 	PersistSuccessRevision(context.Context, store.SuccessRevisionRecord) (store.PersistSuccessRevisionResult, error)
 	GetSuccessRevision(context.Context, string) (store.SuccessRevisionRecord, error)
 	ListSuccessRevisions(context.Context, string) ([]store.SuccessRevisionRecord, error)

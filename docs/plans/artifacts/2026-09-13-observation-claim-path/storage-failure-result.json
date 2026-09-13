@@ -1,0 +1,137 @@
+{
+  "scope": "injected real SQLite insert failure; calculation result retained for recovery",
+  "policy": {
+    "policy_id": "rpol_01M2DVX9Z8MP843RF5KGYGH53D",
+    "obligation_ids": {
+      "observed-storage-failure@1": "robl_01M2DVX9Z8MP843RF5KJ2BDAMY"
+    }
+  },
+  "error": {
+    "ok": false,
+    "command": "review check-observations",
+    "error": {
+      "code": "internal_error",
+      "message": "observation check produced a result but its receipt was not persisted: constraint failed: injected observation storage failure (1811)"
+    },
+    "result": {
+      "ok": false,
+      "command": "review check-observations",
+      "persisted": false,
+      "check": {
+        "ID": "rchk_01M2DVX9ZQN7W1A71AX1ABSTSA",
+        "ObligationID": "robl_01M2DVX9Z8MP843RF5KJ2BDAMY",
+        "PolicyID": "rpol_01M2DVX9Z8MP843RF5KGYGH53D",
+        "CaseLabel": "storage-failure",
+        "ProcedureRef": "internal/toolreg observation binding -> internal/measure checker",
+        "ProcedureRevision": "observation-claim-check/1+measure-checker/1",
+        "InputsRef": "observation-claim:sha256:98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851",
+        "Executor": "local-development-operator",
+        "Environment": "darwin/arm64 go1.26.6; newf ecb1c66+working-tree-observation-claim",
+        "Mode": "executed",
+        "Outcome": "completed",
+        "OutputRef": "{\"schema\":\"observation-claim-check/1\",\"subject_ref\":\"observation-claim:sha256:98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851\",\"input_json\":\"{\\n  \\\"schema\\\": \\\"observation-claim/1\\\",\\n  \\\"kind\\\": \\\"observed_rate_invariance\\\",\\n  \\\"source_ref\\\": \\\"development:retained-prefix\\\",\\n  \\\"statement\\\": \\\"The observed success-per-submission rate is unchanged at budgets 1 and 2\\\",\\n  \\\"binding\\\": {\\n    \\\"population\\\": \\\"instance a\\\",\\n    \\\"ordering\\\": \\\"recorded order\\\",\\n    \\\"stopping_rule\\\": \\\"declared budget\\\",\\n    \\\"budget_min\\\": 1,\\n    \\\"budget_max\\\": 2\\n  },\\n  \\\"observations\\\": [\\n    {\\n      \\\"conditions\\\": {\\n        \\\"population\\\": \\\"instance a\\\",\\n        \\\"ordering\\\": \\\"recorded order\\\",\\n        \\\"stopping_rule\\\": \\\"declared budget\\\",\\n        \\\"budget\\\": 1\\n      },\\n      \\\"instances\\\": [\\n        {\\n          \\\"id\\\": \\\"a\\\",\\n          \\\"submissions\\\": [\\n            {\\n              \\\"move\\\": \\\"m1\\\",\\n              \\\"success\\\": true\\n            }\\n          ]\\n        }\\n      ]\\n    },\\n    {\\n      \\\"conditions\\\": {\\n        \\\"population\\\": \\\"instance a\\\",\\n        \\\"ordering\\\": \\\"recorded order\\\",\\n        \\\"stopping_rule\\\": \\\"declared budget\\\",\\n        \\\"budget\\\": 2\\n      },\\n      \\\"instances\\\": [\\n        {\\n          \\\"id\\\": \\\"a\\\",\\n          \\\"submissions\\\": [\\n            {\\n              \\\"move\\\": \\\"m1\\\",\\n              \\\"success\\\": true\\n            },\\n            {\\n              \\\"move\\\": \\\"m2\\\",\\n              \\\"success\\\": false\\n            }\\n          ]\\n        }\\n      ]\\n    }\\n  ]\\n}\\n\",\"input_sha256\":\"98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851\",\"source_ref\":\"development:retained-prefix\",\"tool\":{\"Kind\":\"observed_rate_invariance\",\"Name\":\"observed-rate invariance\",\"Statement\":\"exact fraction comparison across declared conditions; sign of a rate change under genuine sample extension follows N*s \u2212 S*m (big.Int cross-multiplication, no floats)\",\"Implementation\":\"internal/measure\",\"ProcedureRevision\":\"measure-checker/1\",\"InputTypes\":[\"measure.Binding\",\"[]measure.Observation\"],\"Premises\":[\"non-budget conditions (population, ordering, stopping rule) identical across compared records, or the change is not attributable to budget alone\",\"compared budgets inside the claim's declared range (unrestricted claims admit every budget)\",\"nonzero denominators for any rate comparison\",\"incremental decomposition only under verified trace-prefix nesting\"],\"Quantifier\":\"the compared recorded observations only; equality at tested points never extends to untested budgets\",\"Outputs\":[\"REFUTED\",\"HOLDS_AT_COMPARED_POINTS\",\"UNRESOLVED\",\"INAPPLICABLE\"],\"Limits\":[\"decides observed statistics under specified procedures only; owns no statistical model\"]},\"max_submissions\":3,\"submission_records\":3,\"assessor_invoked\":true,\"elapsed_nanos\":22708,\"certificate\":{\"Binding\":{\"Sentence\":\"The observed success-per-submission rate is unchanged at budgets 1 and 2\",\"MetricNumerator\":\"recorded successful submissions\",\"MetricDenom\":\"recorded submissions\",\"Population\":\"instance a\",\"Budgets\":{\"Lo\":1,\"Hi\":2,\"Unrestricted\":false},\"Ordering\":\"recorded order\",\"StoppingRule\":\"declared budget\",\"Kind\":\"observed_rate_invariance\"},\"ConditionsComparable\":true,\"ConditionNotes\":null,\"TraceExtension\":\"verified\",\"ExtensionViolations\":null,\"Rows\":[{\"Label\":\"budget 1 -\\u003e 2\",\"Before\":{\"Successes\":1,\"Submissions\":1},\"Added\":{\"Successes\":0,\"Submissions\":1},\"After\":{\"Successes\":1,\"Submissions\":2},\"Direction\":-1,\"SolvedBefore\":1,\"SolvedAfter\":1,\"SolvedLost\":0,\"MarginalYield\":\"0/1 (= 0.00000)\",\"Accounting\":\"added batch (0/1 (= 0.00000)) underperforms the prior average (1/1 (= 1.00000)); the added observations fully account for the fall \u2014 accumulated achievement is unchanged (solved 1 -\\u003e 1, lost 0)\"}],\"Question\":\"Is the observed rate unchanged across the compared budgets, under otherwise identical declared conditions?\",\"Verdict\":\"REFUTED\",\"Reason\":\"the observed rate differs between compared budgets inside the declared range\",\"NotAssessed\":[\"Statistical anomaly: NOT ASSESSED\",\"Change in underlying success probability: NOT ASSESSED (two different observed rates do not, by themselves, disprove a constant underlying probability)\",\"Change in uncertainty: NOT ASSESSED (uncertainty is a different quantity requiring its own definition and model)\"]},\"limitations\":[\"typed operator-supplied records; authenticity, source correspondence and truth of success labels not independently verified\",\"fixed metric: recorded successful submissions / recorded submissions; solved instances reported separately\",\"claims concern compared records only; no probability inference, rule admission or automatic assessment\",\"submission reservation bounds input records, not CPU instructions; CPU and custody costs unmeasured; zero provider calls\"]}",
+        "Blocker": "",
+        "StartedAt": "2026-09-13T17:09:18Z",
+        "EndedAt": "2026-09-13T17:09:18Z",
+        "ResourceNote": "submission allowance=3; input submissions=3; assessor_invoked=true; elapsed_ns=22708; provider_calls=0; cpu=unknown; custody=unknown",
+        "CreatedAt": "2026-09-13T17:09:18.45601Z"
+      },
+      "receipt": {
+        "schema": "observation-claim-check/1",
+        "subject_ref": "observation-claim:sha256:98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851",
+        "input_json": "{\n  \"schema\": \"observation-claim/1\",\n  \"kind\": \"observed_rate_invariance\",\n  \"source_ref\": \"development:retained-prefix\",\n  \"statement\": \"The observed success-per-submission rate is unchanged at budgets 1 and 2\",\n  \"binding\": {\n    \"population\": \"instance a\",\n    \"ordering\": \"recorded order\",\n    \"stopping_rule\": \"declared budget\",\n    \"budget_min\": 1,\n    \"budget_max\": 2\n  },\n  \"observations\": [\n    {\n      \"conditions\": {\n        \"population\": \"instance a\",\n        \"ordering\": \"recorded order\",\n        \"stopping_rule\": \"declared budget\",\n        \"budget\": 1\n      },\n      \"instances\": [\n        {\n          \"id\": \"a\",\n          \"submissions\": [\n            {\n              \"move\": \"m1\",\n              \"success\": true\n            }\n          ]\n        }\n      ]\n    },\n    {\n      \"conditions\": {\n        \"population\": \"instance a\",\n        \"ordering\": \"recorded order\",\n        \"stopping_rule\": \"declared budget\",\n        \"budget\": 2\n      },\n      \"instances\": [\n        {\n          \"id\": \"a\",\n          \"submissions\": [\n            {\n              \"move\": \"m1\",\n              \"success\": true\n            },\n            {\n              \"move\": \"m2\",\n              \"success\": false\n            }\n          ]\n        }\n      ]\n    }\n  ]\n}\n",
+        "input_sha256": "98f20c8de13b8cc0e43bc170aef32c7d08ceedb55cb0db69dd39e734ab23c851",
+        "source_ref": "development:retained-prefix",
+        "tool": {
+          "Kind": "observed_rate_invariance",
+          "Name": "observed-rate invariance",
+          "Statement": "exact fraction comparison across declared conditions; sign of a rate change under genuine sample extension follows N*s \u2212 S*m (big.Int cross-multiplication, no floats)",
+          "Implementation": "internal/measure",
+          "ProcedureRevision": "measure-checker/1",
+          "InputTypes": [
+            "measure.Binding",
+            "[]measure.Observation"
+          ],
+          "Premises": [
+            "non-budget conditions (population, ordering, stopping rule) identical across compared records, or the change is not attributable to budget alone",
+            "compared budgets inside the claim's declared range (unrestricted claims admit every budget)",
+            "nonzero denominators for any rate comparison",
+            "incremental decomposition only under verified trace-prefix nesting"
+          ],
+          "Quantifier": "the compared recorded observations only; equality at tested points never extends to untested budgets",
+          "Outputs": [
+            "REFUTED",
+            "HOLDS_AT_COMPARED_POINTS",
+            "UNRESOLVED",
+            "INAPPLICABLE"
+          ],
+          "Limits": [
+            "decides observed statistics under specified procedures only; owns no statistical model"
+          ]
+        },
+        "max_submissions": 3,
+        "submission_records": 3,
+        "assessor_invoked": true,
+        "elapsed_nanos": 22708,
+        "certificate": {
+          "Binding": {
+            "Sentence": "The observed success-per-submission rate is unchanged at budgets 1 and 2",
+            "MetricNumerator": "recorded successful submissions",
+            "MetricDenom": "recorded submissions",
+            "Population": "instance a",
+            "Budgets": {
+              "Lo": 1,
+              "Hi": 2,
+              "Unrestricted": false
+            },
+            "Ordering": "recorded order",
+            "StoppingRule": "declared budget",
+            "Kind": "observed_rate_invariance"
+          },
+          "ConditionsComparable": true,
+          "ConditionNotes": null,
+          "TraceExtension": "verified",
+          "ExtensionViolations": null,
+          "Rows": [
+            {
+              "Label": "budget 1 -> 2",
+              "Before": {
+                "Successes": 1,
+                "Submissions": 1
+              },
+              "Added": {
+                "Successes": 0,
+                "Submissions": 1
+              },
+              "After": {
+                "Successes": 1,
+                "Submissions": 2
+              },
+              "Direction": -1,
+              "SolvedBefore": 1,
+              "SolvedAfter": 1,
+              "SolvedLost": 0,
+              "MarginalYield": "0/1 (= 0.00000)",
+              "Accounting": "added batch (0/1 (= 0.00000)) underperforms the prior average (1/1 (= 1.00000)); the added observations fully account for the fall \u2014 accumulated achievement is unchanged (solved 1 -> 1, lost 0)"
+            }
+          ],
+          "Question": "Is the observed rate unchanged across the compared budgets, under otherwise identical declared conditions?",
+          "Verdict": "REFUTED",
+          "Reason": "the observed rate differs between compared budgets inside the declared range",
+          "NotAssessed": [
+            "Statistical anomaly: NOT ASSESSED",
+            "Change in underlying success probability: NOT ASSESSED (two different observed rates do not, by themselves, disprove a constant underlying probability)",
+            "Change in uncertainty: NOT ASSESSED (uncertainty is a different quantity requiring its own definition and model)"
+          ]
+        },
+        "limitations": [
+          "typed operator-supplied records; authenticity, source correspondence and truth of success labels not independently verified",
+          "fixed metric: recorded successful submissions / recorded submissions; solved instances reported separately",
+          "claims concern compared records only; no probability inference, rule admission or automatic assessment",
+          "submission reservation bounds input records, not CPU instructions; CPU and custody costs unmeasured; zero provider calls"
+        ]
+      }
+    }
+  },
+  "row_absent_verified": true
+}

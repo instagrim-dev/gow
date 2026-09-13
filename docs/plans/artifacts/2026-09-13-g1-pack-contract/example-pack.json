@@ -1,0 +1,54 @@
+{
+  "schema": "g1-pack/3",
+  "pack_id": "example-g1-metadata-only",
+  "task_manifest": {
+    "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+    "byte_length": 3840,
+    "locator": "custodian://g1/task-manifest/example-001"
+  },
+  "answer_manifest": {
+    "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+    "byte_length": 4128,
+    "locator": "custodian://g1/answer-manifest/example-001"
+  },
+  "custody": {
+    "task_author_exposure": "unexposed_to_implementation_cases",
+    "implementer_access": "no_protected_content",
+    "answer_separation": "separate_answer_manifest",
+    "record_ref": "custody://g1/record/example-001"
+  },
+  "case_counts": {
+    "applicable": 24,
+    "inapplicable": 16,
+    "underspecified": 8
+  },
+  "claim_kind_counts": {
+    "finite_equivalence": 12,
+    "finite_instance": 12,
+    "observed_rate_invariance": 8,
+    "solved_monotonicity": 8,
+    "probability_out_of_scope": 8
+  },
+  "tool_contracts": [
+    {"kind": "finite_equivalence", "procedure": "finite-claim-check/1", "version": "finite-equivalence-checker/1", "registry_sha256": "95458ca6a49e875342bd7e00bb9da26fcb558df439accf94b3055bffa2313375"},
+    {"kind": "finite_instance", "procedure": "finite-instance-claim-check/1", "version": "finite-equivalence-checker/1", "registry_sha256": "fde8ffc552a3b54c2a4e60192b63d6d7a0ffe0e229c6a29f5bbcb0b1e215f30e"},
+    {"kind": "observed_rate_invariance", "procedure": "observation-claim-check/1", "version": "measure-checker/1", "registry_sha256": "e6c686e5ba1e311b283d164e1b15b1f01aa93a4e94e0ec96e3fb8cec5bfb2ca5"},
+    {"kind": "solved_monotonicity", "procedure": "observation-claim-check/1", "version": "measure-checker/1", "registry_sha256": "94c5b431e32ca5cf04761f8e3a0e963fd7c0e4f9c00dd04433c9b139571e7377"},
+    {"kind": "probabilistic_property", "procedure": "observation-claim-check/1", "version": "measure-checker/1", "registry_sha256": "3b3945ca6a85347ac1ae72e81032a6f33a5ee5e608c31d35576e3394d02c60a5"}
+  ],
+  "progression": {
+    "min_applicable_completed": 23,
+    "max_applicable_false_refusals": 1,
+    "max_inapplicable_false_certifications": 0,
+    "require_inapplicable_failed_condition": true,
+    "require_underspecified_missing_premise": true,
+    "max_underspecified_definite_conclusions": 0,
+    "max_invalid_certified": 0
+  },
+  "execution": {
+    "resource_ceiling_ref": "operator://g1/proposed-ceiling/example-001",
+    "provider_call_ceiling": 0,
+    "provider_spend_cents": 0,
+    "approval_ref": ""
+  }
+}

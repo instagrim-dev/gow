@@ -149,6 +149,16 @@ type ArmReport struct {
 	FullCost     int64 // meaningful only when CustodyKnown
 }
 
+// ControlDiagnostics compares HG with H1 on low-value/misleading cases.
+// Episode counts compare run-summed completions; execution counts pair the
+// same episode ID and repetition number. Repetitions are not new families.
+type ControlDiagnostics struct {
+	EpisodeAggregateWins   int64
+	EpisodeAggregateLosses int64
+	PairedExecutionWins    int64
+	PairedExecutionLosses  int64
+}
+
 // Outcome is the decision-arithmetic result. ArithmeticSatisfied is a
 // statement about the supplied records only; RuleSatisfied is the spending
 // rule as defined, which additionally requires the roadmap population.
@@ -177,6 +187,7 @@ type Outcome struct {
 	Arms             map[Arm]ArmReport
 	CustodyDominates bool // total custody exceeds total task-directed cost; a diagnostic, not an affordability decision
 	Notes            []string
+	Controls         ControlDiagnostics
 }
 
 // Evaluate checks the grid for completeness and computes conditions
@@ -212,6 +223,7 @@ func Evaluate(d Design, execs []Execution) (Outcome, error) {
 		run int
 	}
 	seen := make(map[cell]bool, len(execs))
+	completed := make(map[cell]bool, len(execs))
 	for _, e := range execs {
 		if _, ok := episodes[e.EpisodeID]; !ok {
 			return Outcome{}, fmt.Errorf("execution references undeclared episode %q", e.EpisodeID)
@@ -233,6 +245,7 @@ func Evaluate(d Design, execs []Execution) (Outcome, error) {
 			return Outcome{}, fmt.Errorf("duplicate execution for %s/%s run %d", e.Arm, e.EpisodeID, e.Run)
 		}
 		seen[c] = true
+		completed[c] = e.Completed
 	}
 	want := len(allArms) * len(episodes) * d.RunsPerCell
 	if len(execs) != want {
@@ -376,16 +389,26 @@ func Evaluate(d Design, execs []Execution) (Outcome, error) {
 	// and losses are exported beside it so a zero net is never read as
 	// "no losses" (2026-09-13 external review finding 4: run 2 tied 7/12
 	// on controls via one paired gain offsetting one paired loss).
-	var controlGrossWins, controlGrossLosses int64
+	var controls ControlDiagnostics
 	for id, ep := range episodes {
 		if ep.Stratum != StratumLowValue && ep.Stratum != StratumMisleading {
 			continue
 		}
 		switch {
 		case perEpisode[ArmHG][id] > perEpisode[ArmH1][id]:
-			controlGrossWins++
+			controls.EpisodeAggregateWins++
 		case perEpisode[ArmHG][id] < perEpisode[ArmH1][id]:
-			controlGrossLosses++
+			controls.EpisodeAggregateLosses++
+		}
+		for run := 1; run <= d.RunsPerCell; run++ {
+			hg := completed[cell{ArmHG, id, run}]
+			h1 := completed[cell{ArmH1, id, run}]
+			if hg && !h1 {
+				controls.PairedExecutionWins++
+			}
+			if h1 && !hg {
+				controls.PairedExecutionLosses++
+			}
 		}
 	}
 
@@ -409,7 +432,7 @@ func Evaluate(d Design, execs []Execution) (Outcome, error) {
 			Statement: fmt.Sprintf("on low-value/misleading strata HG loses at most %d completion per run to H1 NET (H1_lowmis_sum − HG_lowmis_sum <= %d·r); the criterion is a net difference, and the gross paired wins/losses are reported beside it", MaxLowValueLossPerRun, MaxLowValueLossPerRun),
 			Left:      lowMisSums[ArmH1] - lowMisSums[ArmHG], Op: "<=", Right: MaxLowValueLossPerRun * r,
 			Satisfied: lowMisSums[ArmH1]-lowMisSums[ArmHG] <= MaxLowValueLossPerRun*r,
-			Detail:    fmt.Sprintf("H1 low/mis %d vs HG low/mis %d (net %d); gross paired control episodes: HG wins %d, HG losses %d — a zero net does not mean zero losses", lowMisSums[ArmH1], lowMisSums[ArmHG], lowMisSums[ArmH1]-lowMisSums[ArmHG], controlGrossWins, controlGrossLosses),
+			Detail:    fmt.Sprintf("H1 low/mis %d vs HG low/mis %d (net %d); episode-aggregate controls: HG wins %d, HG losses %d; paired executions: HG wins %d, HG losses %d — a zero net does not mean zero losses", lowMisSums[ArmH1], lowMisSums[ArmHG], lowMisSums[ArmH1]-lowMisSums[ArmHG], controls.EpisodeAggregateWins, controls.EpisodeAggregateLosses, controls.PairedExecutionWins, controls.PairedExecutionLosses),
 		},
 		{
 			Name:      "d",
@@ -443,6 +466,7 @@ func Evaluate(d Design, execs []Execution) (Outcome, error) {
 		RuleSatisfied:       arithmeticSatisfied && populationConforms,
 		Arms:                reports,
 		CustodyDominates:    custodyAllKnown && custodyTotal > taskTotal,
+		Controls:            controls,
 	}
 	out.Notes = append(out.Notes, "gate eligibility cannot be produced here: it requires custodian-sealed protected episodes, a validated custody chain, frozen arm snapshots, and execution authorization — none of which this arithmetic can verify or supply")
 	if !custodyAllKnown {

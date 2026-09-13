@@ -1,0 +1,26 @@
+{
+  "schema": "finite-claim/1",
+  "kind": "finite_equivalence",
+  "source_ref": "development:deliberately-false-add-one",
+  "statement": "x + 1 equals x over the declared four-bit domain",
+  "domain": {
+    "width": 4,
+    "variables": [
+      "x"
+    ]
+  },
+  "left": {
+    "op": "add",
+    "args": [
+      {
+        "var": "x"
+      },
+      {
+        "const": 1
+      }
+    ]
+  },
+  "right": {
+    "var": "x"
+  }
+}

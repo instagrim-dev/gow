@@ -1,0 +1,395 @@
+{
+  "Version": "shaping-resource-diagnostic/1",
+  "BuildVersion": "ecb1c66+working-tree",
+  "EvidenceLabel": "development/resource-diagnostic/freshness-unverified",
+  "SourcePackLabel": "engineering-smoke/synthetic",
+  "SourceProvenance": "disclosed implementer-authored double-not reduction for engineering verification only",
+  "DesignHash": "1b01cbabbaabcaca81f1be09e6841ac702576eb051be3c72104ead1947b9d3ac",
+  "TaskHash": "05f1c0e00bc1fc11f742f981f0e0ee2cb0587b6fa8608fb050bd288d565c80a2",
+  "CatalogHash": "a24de9c4efe86d6b8e89d26ff9071980844c5be9c74613689c8660169d4816a2",
+  "CollectionHash": "53b68a0ad0f1f1ef83ffbf8d006714ebb30e827cab0b70b5aa6f2099043169b8",
+  "CheckerVersion": "finite-equivalence-checker/1",
+  "Controllers": {
+    "H0": "catalog-order/1",
+    "H1": "h1-frequency/0",
+    "HG": "shape-selector/2-budgeted/1",
+    "task-only": "task-probe/1"
+  },
+  "Budget": {
+    "Expansions": 2,
+    "RuleApplications": 128,
+    "Candidates": 256,
+    "HistoryBytes": 1024,
+    "CheckAssignments": 16,
+    "MaxStates": 32,
+    "MaxTermNodes": 64
+  },
+  "Tasks": [
+    {
+      "EpisodeID": "smoke-double-not",
+      "Start": "not(not(x))",
+      "Domain": {
+        "Width": 4,
+        "Vars": [
+          "x"
+        ]
+      },
+      "TargetCost": 1,
+      "Catalog": [
+        "double-not"
+      ],
+      "History": null
+    }
+  ],
+  "RuleIdentities": [
+    "double-not|w4|vars=[a]|not(not(a))=\u003ea"
+  ],
+  "SetupCertificates": [
+    {
+      "Binding": {
+        "Sentence": "double-not",
+        "Domain": {
+          "Width": 4,
+          "Vars": [
+            "a"
+          ]
+        }
+      },
+      "Left": "not(not(a))",
+      "Right": "a",
+      "PremiseFailures": null,
+      "DomainSize": 16,
+      "AssignmentsChecked": 16,
+      "Exhaustive": true,
+      "Question": "Do the two expressions evaluate identically on every assignment of the declared finite domain?",
+      "Verdict": "HOLDS_ON_DECLARED_DOMAIN",
+      "Reason": "all 16 assignments of the declared domain were enumerated and agree; this supports the declared domain only",
+      "Counterexample": null,
+      "NotAssessed": [
+        "Equivalence outside the declared domain (4-bit words, variables {a}, all operators modulo 2^4): NOT ASSESSED (an exhaustive finite certificate supports exactly its domain)",
+        "Equivalence at other word widths: NOT ASSESSED (a width-4 identity need not hold at width 8, and conversely)",
+        "Real or unbounded-integer identity: NOT ASSESSED (machine-word semantics do not inherit real-number identities)",
+        "Cost, performance, or preferability: NOT ASSESSED (semantic equality is not improvement)",
+        "General rewrite-rule admission: NOT ASSESSED (admission is a review decision citing this certificate, not a property of it)"
+      ]
+    }
+  ],
+  "SetupAssignments": 32,
+  "Cells": [
+    {
+      "EpisodeID": "smoke-double-not",
+      "Arm": "H0",
+      "Decision": {
+        "ControllerVersion": "catalog-order/1",
+        "SnapshotHash": "70efc9f7ef8059d1d1c6ee64874439a00048f7e4dbeefa4d75b5daddcc0282f4",
+        "InputHash": "ccbfdadb720a7a70e7a3ef5dda3b66d8b0a46301b268a4381afbbd4237d4bcbe",
+        "EnabledRules": [
+          "double-not"
+        ],
+        "Preferences": null,
+        "RelevantAttempts": null,
+        "ProbeRuleApplications": 0,
+        "ProbeCandidates": 0
+      },
+      "Search": {
+        "Original": "not(not(x))",
+        "Best": "x",
+        "OriginalCost": 3,
+        "BestCost": 1,
+        "Steps": [
+          {
+            "Rule": "double-not",
+            "Before": "not(not(x))",
+            "After": "x"
+          }
+        ],
+        "Explored": 2,
+        "Generated": 1,
+        "RuleApplications": 2,
+        "ResourceBudgetExhausted": false,
+        "BudgetExhausted": false,
+        "StateBounded": false,
+        "TermSizeBounded": false,
+        "Cancelled": false,
+        "Endpoint": {
+          "Binding": {
+            "Sentence": "search endpoint: not(not(x)) == x",
+            "Domain": {
+              "Width": 4,
+              "Vars": [
+                "x"
+              ]
+            }
+          },
+          "Left": "not(not(x))",
+          "Right": "x",
+          "PremiseFailures": null,
+          "DomainSize": 16,
+          "AssignmentsChecked": 16,
+          "Exhaustive": true,
+          "Question": "Do the two expressions evaluate identically on every assignment of the declared finite domain?",
+          "Verdict": "HOLDS_ON_DECLARED_DOMAIN",
+          "Reason": "all 16 assignments of the declared domain were enumerated and agree; this supports the declared domain only",
+          "Counterexample": null,
+          "NotAssessed": [
+            "Equivalence outside the declared domain (4-bit words, variables {x}, all operators modulo 2^4): NOT ASSESSED (an exhaustive finite certificate supports exactly its domain)",
+            "Equivalence at other word widths: NOT ASSESSED (a width-4 identity need not hold at width 8, and conversely)",
+            "Real or unbounded-integer identity: NOT ASSESSED (machine-word semantics do not inherit real-number identities)",
+            "Cost, performance, or preferability: NOT ASSESSED (semantic equality is not improvement)",
+            "General rewrite-rule admission: NOT ASSESSED (admission is a review decision citing this certificate, not a property of it)"
+          ]
+        },
+        "EndpointVerified": true
+      },
+      "SearchStarted": true,
+      "RuleApplications": 2,
+      "Candidates": 1,
+      "HistoryBytes": 0,
+      "CheckAssignments": 16,
+      "ElapsedNanos": 35167,
+      "Completed": true,
+      "BlockedReason": ""
+    },
+    {
+      "EpisodeID": "smoke-double-not",
+      "Arm": "H1",
+      "Decision": {
+        "ControllerVersion": "h1-frequency/0",
+        "SnapshotHash": "42e0729c62806db9b6c9e632420fe69424519b7aa7a31dbceadbc56398c1e096",
+        "InputHash": "efc8f02b8da440ebbe11cb67db52c2974d1eb33cda2275397cd37a04151a7c80",
+        "EnabledRules": [
+          "double-not"
+        ],
+        "Preferences": null,
+        "RelevantAttempts": null,
+        "ProbeRuleApplications": 0,
+        "ProbeCandidates": 0
+      },
+      "Search": {
+        "Original": "not(not(x))",
+        "Best": "x",
+        "OriginalCost": 3,
+        "BestCost": 1,
+        "Steps": [
+          {
+            "Rule": "double-not",
+            "Before": "not(not(x))",
+            "After": "x"
+          }
+        ],
+        "Explored": 2,
+        "Generated": 1,
+        "RuleApplications": 2,
+        "ResourceBudgetExhausted": false,
+        "BudgetExhausted": false,
+        "StateBounded": false,
+        "TermSizeBounded": false,
+        "Cancelled": false,
+        "Endpoint": {
+          "Binding": {
+            "Sentence": "search endpoint: not(not(x)) == x",
+            "Domain": {
+              "Width": 4,
+              "Vars": [
+                "x"
+              ]
+            }
+          },
+          "Left": "not(not(x))",
+          "Right": "x",
+          "PremiseFailures": null,
+          "DomainSize": 16,
+          "AssignmentsChecked": 16,
+          "Exhaustive": true,
+          "Question": "Do the two expressions evaluate identically on every assignment of the declared finite domain?",
+          "Verdict": "HOLDS_ON_DECLARED_DOMAIN",
+          "Reason": "all 16 assignments of the declared domain were enumerated and agree; this supports the declared domain only",
+          "Counterexample": null,
+          "NotAssessed": [
+            "Equivalence outside the declared domain (4-bit words, variables {x}, all operators modulo 2^4): NOT ASSESSED (an exhaustive finite certificate supports exactly its domain)",
+            "Equivalence at other word widths: NOT ASSESSED (a width-4 identity need not hold at width 8, and conversely)",
+            "Real or unbounded-integer identity: NOT ASSESSED (machine-word semantics do not inherit real-number identities)",
+            "Cost, performance, or preferability: NOT ASSESSED (semantic equality is not improvement)",
+            "General rewrite-rule admission: NOT ASSESSED (admission is a review decision citing this certificate, not a property of it)"
+          ]
+        },
+        "EndpointVerified": true
+      },
+      "SearchStarted": true,
+      "RuleApplications": 2,
+      "Candidates": 1,
+      "HistoryBytes": 0,
+      "CheckAssignments": 16,
+      "ElapsedNanos": 9292,
+      "Completed": true,
+      "BlockedReason": ""
+    },
+    {
+      "EpisodeID": "smoke-double-not",
+      "Arm": "HG",
+      "Decision": {
+        "ControllerVersion": "shape-selector/2-budgeted/1",
+        "SnapshotHash": "e2085208dc769aff4d09ea3a2d3725af275ec72858d2164a3ed1b12337e915e6",
+        "InputHash": "28514bf5035aeab7338d94055f4d36f1444630ac6fc6ea789f408f4c79559916",
+        "EnabledRules": [
+          "double-not"
+        ],
+        "Preferences": null,
+        "RelevantAttempts": [],
+        "ProbeRuleApplications": 1,
+        "ProbeCandidates": 1
+      },
+      "Search": {
+        "Original": "not(not(x))",
+        "Best": "x",
+        "OriginalCost": 3,
+        "BestCost": 1,
+        "Steps": [
+          {
+            "Rule": "double-not",
+            "Before": "not(not(x))",
+            "After": "x"
+          }
+        ],
+        "Explored": 2,
+        "Generated": 1,
+        "RuleApplications": 2,
+        "ResourceBudgetExhausted": false,
+        "BudgetExhausted": false,
+        "StateBounded": false,
+        "TermSizeBounded": false,
+        "Cancelled": false,
+        "Endpoint": {
+          "Binding": {
+            "Sentence": "search endpoint: not(not(x)) == x",
+            "Domain": {
+              "Width": 4,
+              "Vars": [
+                "x"
+              ]
+            }
+          },
+          "Left": "not(not(x))",
+          "Right": "x",
+          "PremiseFailures": null,
+          "DomainSize": 16,
+          "AssignmentsChecked": 16,
+          "Exhaustive": true,
+          "Question": "Do the two expressions evaluate identically on every assignment of the declared finite domain?",
+          "Verdict": "HOLDS_ON_DECLARED_DOMAIN",
+          "Reason": "all 16 assignments of the declared domain were enumerated and agree; this supports the declared domain only",
+          "Counterexample": null,
+          "NotAssessed": [
+            "Equivalence outside the declared domain (4-bit words, variables {x}, all operators modulo 2^4): NOT ASSESSED (an exhaustive finite certificate supports exactly its domain)",
+            "Equivalence at other word widths: NOT ASSESSED (a width-4 identity need not hold at width 8, and conversely)",
+            "Real or unbounded-integer identity: NOT ASSESSED (machine-word semantics do not inherit real-number identities)",
+            "Cost, performance, or preferability: NOT ASSESSED (semantic equality is not improvement)",
+            "General rewrite-rule admission: NOT ASSESSED (admission is a review decision citing this certificate, not a property of it)"
+          ]
+        },
+        "EndpointVerified": true
+      },
+      "SearchStarted": true,
+      "RuleApplications": 3,
+      "Candidates": 2,
+      "HistoryBytes": 0,
+      "CheckAssignments": 16,
+      "ElapsedNanos": 32500,
+      "Completed": true,
+      "BlockedReason": ""
+    },
+    {
+      "EpisodeID": "smoke-double-not",
+      "Arm": "task-only",
+      "Decision": {
+        "ControllerVersion": "task-probe/1",
+        "SnapshotHash": "45c8865286c63ec7e4fb4e7e8cc0901edea82e807f38be162317321182772420",
+        "InputHash": "73e650c7ea37d383bfa61d515476e7de3ca5ec3252008088ac57c6f1e5153362",
+        "EnabledRules": [
+          "double-not"
+        ],
+        "Preferences": [
+          {
+            "Rule": "double-not",
+            "Direction": "prefer",
+            "Support": 0,
+            "Evidence": null,
+            "Rationale": "a single application strictly reduces this task's NodeCount; task-only probe, no history evidence"
+          }
+        ],
+        "RelevantAttempts": null,
+        "ProbeRuleApplications": 1,
+        "ProbeCandidates": 1
+      },
+      "Search": {
+        "Original": "not(not(x))",
+        "Best": "x",
+        "OriginalCost": 3,
+        "BestCost": 1,
+        "Steps": [
+          {
+            "Rule": "double-not",
+            "Before": "not(not(x))",
+            "After": "x"
+          }
+        ],
+        "Explored": 2,
+        "Generated": 1,
+        "RuleApplications": 2,
+        "ResourceBudgetExhausted": false,
+        "BudgetExhausted": false,
+        "StateBounded": false,
+        "TermSizeBounded": false,
+        "Cancelled": false,
+        "Endpoint": {
+          "Binding": {
+            "Sentence": "search endpoint: not(not(x)) == x",
+            "Domain": {
+              "Width": 4,
+              "Vars": [
+                "x"
+              ]
+            }
+          },
+          "Left": "not(not(x))",
+          "Right": "x",
+          "PremiseFailures": null,
+          "DomainSize": 16,
+          "AssignmentsChecked": 16,
+          "Exhaustive": true,
+          "Question": "Do the two expressions evaluate identically on every assignment of the declared finite domain?",
+          "Verdict": "HOLDS_ON_DECLARED_DOMAIN",
+          "Reason": "all 16 assignments of the declared domain were enumerated and agree; this supports the declared domain only",
+          "Counterexample": null,
+          "NotAssessed": [
+            "Equivalence outside the declared domain (4-bit words, variables {x}, all operators modulo 2^4): NOT ASSESSED (an exhaustive finite certificate supports exactly its domain)",
+            "Equivalence at other word widths: NOT ASSESSED (a width-4 identity need not hold at width 8, and conversely)",
+            "Real or unbounded-integer identity: NOT ASSESSED (machine-word semantics do not inherit real-number identities)",
+            "Cost, performance, or preferability: NOT ASSESSED (semantic equality is not improvement)",
+            "General rewrite-rule admission: NOT ASSESSED (admission is a review decision citing this certificate, not a property of it)"
+          ]
+        },
+        "EndpointVerified": true
+      },
+      "SearchStarted": true,
+      "RuleApplications": 3,
+      "Candidates": 2,
+      "HistoryBytes": 0,
+      "CheckAssignments": 16,
+      "ElapsedNanos": 8000,
+      "Completed": true,
+      "BlockedReason": ""
+    }
+  ],
+  "Completions": {
+    "H0": 1,
+    "H1": 1,
+    "HG": 1,
+    "task-only": 1
+  },
+  "Assessment": "completed-development-diagnostic",
+  "Error": "",
+  "ExecutionError": "",
+  "CustodyMeasured": false,
+  "CPUMeasured": false
+}

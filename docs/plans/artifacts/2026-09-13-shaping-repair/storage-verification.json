@@ -1,0 +1,68 @@
+{
+  "scope": "synthetic engineering smoke; no protected evaluation or spending decision",
+  "base_revision": "ecb1c668f79784ed372a40ffce56774996ea60c4",
+  "build": "ecb1c66+working-tree",
+  "database": "/var/folders/_v/8mpf15r15fnfxnhvsd4h0fc40000gn/T/newf-shaping-smoke-wi_m0hzg/ledger.sqlite",
+  "ingestion": {
+    "ok": true,
+    "command": "ingest",
+    "store": "/var/folders/_v/8mpf15r15fnfxnhvsd4h0fc40000gn/T/newf-shaping-smoke-wi_m0hzg/ledger.sqlite",
+    "problem_id": "prb_01M2DQV2B3J9PFRNDETM8FCX4K",
+    "run_id": "run_01M2DQVAMWTD35SXJYNXEQH27S",
+    "results": [
+      {
+        "input": "/Users/jmh/dev/gh/newf/docs/reviews/evidence/shaping-resource-2026-09-13/blocked-receipt.json",
+        "source_id": "src_01M2DQVAMYG1KKCZ0H61QM1ZKA",
+        "snapshot_id": "snap_01M2DQVAMYG1KKCZ0H63VQTZ4K",
+        "status": "created_snapshot",
+        "sha256": "9eb1ef1a43a9120a07b45d0099c45d8a045072f6caa03f0808cf6f2adcf76d7c",
+        "media_type": "application/json",
+        "bytes": 12228,
+        "created_source": true
+      },
+      {
+        "input": "/Users/jmh/dev/gh/newf/docs/reviews/evidence/shaping-resource-2026-09-13/smoke-receipt.json",
+        "source_id": "src_01M2DQVAMXT8BZA1GSEBKP5CKB",
+        "snapshot_id": "snap_01M2DQVAMXT8BZA1GSEFE0HRTB",
+        "status": "created_snapshot",
+        "sha256": "608023ccf9a727378d8758bdd74796c81fbc74836fa78e261591ca558bbc3da8",
+        "media_type": "application/json",
+        "bytes": 14513,
+        "created_source": true
+      }
+    ],
+    "summary": {
+      "total": 2,
+      "succeeded": 2,
+      "failed": 0
+    }
+  },
+  "cold_process_snapshot_verification": [
+    {
+      "ok": true,
+      "command": "source snapshot verify",
+      "store": "/var/folders/_v/8mpf15r15fnfxnhvsd4h0fc40000gn/T/newf-shaping-smoke-wi_m0hzg/ledger.sqlite",
+      "snapshot_id": "snap_01M2DQVAMYG1KKCZ0H63VQTZ4K",
+      "status": "verified",
+      "sha256": "9eb1ef1a43a9120a07b45d0099c45d8a045072f6caa03f0808cf6f2adcf76d7c",
+      "bytes": 12228
+    },
+    {
+      "ok": true,
+      "command": "source snapshot verify",
+      "store": "/var/folders/_v/8mpf15r15fnfxnhvsd4h0fc40000gn/T/newf-shaping-smoke-wi_m0hzg/ledger.sqlite",
+      "snapshot_id": "snap_01M2DQVAMXT8BZA1GSEFE0HRTB",
+      "status": "verified",
+      "sha256": "608023ccf9a727378d8758bdd74796c81fbc74836fa78e261591ca558bbc3da8",
+      "bytes": 14513
+    }
+  ],
+  "receipt_inspection": "completed and blocked receipts reconstructed in separate processes",
+  "overwrite_refusal": "existing receipt rejected before execution",
+  "costs": {
+    "provider_calls": 0,
+    "provider_spend": 0,
+    "cpu": "unknown",
+    "custody": "unknown"
+  }
+}
