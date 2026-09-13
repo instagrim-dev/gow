@@ -289,3 +289,35 @@ func TestCheckRecordOutcomeSeparatesRefusalFromDecision(t *testing.T) {
 		t.Fatalf("an unresolved refusal must be blocked, not completed; outcome %q", recBlocked.Outcome)
 	}
 }
+
+// 2026-09-13 external review finding 5: depth alone does not bound
+// validation work. A depth-30 expression whose Binary children share the
+// same subexpression value has ~2^31 logical node visits under plain
+// recursion while staying under MaxExprDepth. The traversal work bound
+// must refuse it promptly, as a resource refusal — not hang, and not
+// call the expression semantically invalid.
+func TestSharedSubexpressionBlowupIsRefusedBounded(t *testing.T) {
+	var e Expr = Var{Name: "x"}
+	for i := 0; i < 30; i++ {
+		e = Binary{Op: OpAdd, X: e, Y: e}
+	}
+	done := make(chan []string, 1)
+	go func() { done <- ValidateExpr(e, Domain{Width: 4, Vars: []string{"x"}}) }()
+	select {
+	case defects := <-done:
+		if len(defects) == 0 {
+			t.Fatal("the blowup expression must be refused, not validated")
+		}
+		found := false
+		for _, d := range defects {
+			if strings.Contains(d, "traversal work bound") && strings.Contains(d, "not a semantic judgment") {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatalf("the refusal must name the work bound and disclaim semantic judgment: %v", defects)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("validation did not return within the deadline; the work bound is not short-circuiting")
+	}
+}

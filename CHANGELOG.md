@@ -49,6 +49,49 @@ conjecture is likewise explicitly not a `v1.0.0` requirement (`AGENTS.md`,
   handling, range scoping, monotonicity, and the motivating budget-sweep
   shape (0/20, 3/40, 3/57).
 
+### Changed — 2026-09-13 external review remediations (`f7554cb` findings)
+
+Five instrumentation/claim-scope corrections; all frozen counts, criteria,
+and dispositions retained (attributed correction note appended to
+`docs/plans/2026-09-13-019-screen-execution-record.md`):
+
+- **Probe accounting (finding 1):** `shape.SelectV1`'s pre-search
+  strict-reduction probes are now metered on the `Decision`
+  (`ProbeRuleApplications`, `ProbeCandidates`) and charged by the sealed
+  runner into the arm's task ledger in one unit (candidate rewrites
+  materialized: `rewrite.Result.Generated` + probe candidates); expansion
+  counts stay in traces as the budget unit. `rewrite.ProbeStrictReduction`
+  is the metered probe; `CanStrictlyReduce` remains as the boolean
+  convenience. Unmeasured custody is now recorded as unmeasured
+  (`screen.Execution.CustodyMeasured`) and reported UNKNOWN — never zero —
+  with per-arm `CustodyKnown`/guarded `FullCost`.
+- **Claim scope (finding 2):** the v1 demotion rationale now states what
+  the probe checked — "no one-step strict NodeCount decrease from the
+  current start" — never "can never reduce this task", and never a verdict
+  on the history's truth. Ordering policy unchanged.
+- **Input identity (finding 3):** `SelectV1` now returns an error and
+  refuses a task expression disagreeing with its declared rendering or
+  duplicate rule names with conflicting content; its input hash binds the
+  actual task rendering and full rule content (`rewrite.Rule.Identity`),
+  not names alone.
+- **Net-vs-gross (finding 4):** screen condition (c) exports gross paired
+  control wins/losses beside the net figure; run-2's "never lost"
+  narration is retracted in the record (tied 7/12, one paired gain offset
+  one paired loss; the frozen net criterion passed and is unchanged). The
+  inaccurate "only the relevance gate" H1/HG attribution comment is
+  corrected: relevance filtering AND failure-driven demotion both differ.
+- **Bounded work (finding 5):** `finite` structural validation carries a
+  traversal-work bound (shared-subexpression blowup refused as a resource
+  refusal, not a semantic judgment); `rewrite.SearchBounded` adds
+  generated-state and rendered-term-size ceilings plus cancellation, all
+  reported as bounded results (`StateBounded`, `TermSizeBounded`,
+  `Cancelled`) with defaults far above every retained run.
+- **Corpus:** `inf-06`'s one-node target annotated structurally
+  unreachable through its catalog (pack bytes retained);
+  `sealedrun.CalibrateH0MinBudgets` separates "unreachable within cap"
+  from "completes with zero expansions" and callers guard the empty
+  median case.
+
 ### Added — Lean 4 kernel as a deterministic verifier tier
 
 `internal/lean` (commit `5cba8b7`): an asymmetric deterministic verifier —

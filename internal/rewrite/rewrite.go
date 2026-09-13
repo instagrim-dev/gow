@@ -106,10 +106,31 @@ type Result struct {
 	BestCost     int64
 	Steps        []Step // rewrite path from Original to Best
 	Explored     int    // expressions expanded
+	// Generated counts candidate rewrites the search materialized
+	// (successors produced by rule application, before dedup). It is
+	// the same unit of work a selector probe performs per candidate, so
+	// callers can charge search and pre-search probe work on one ledger
+	// (2026-09-13 external review finding 1). Explored (expansions)
+	// remains the budget unit; the two are different measures and must
+	// not be conflated.
+	Generated int
 	// BudgetExhausted: the expansion budget stopped the search. Best is
 	// best-found under the budget — not a claim of optimality and not
 	// saturation.
 	BudgetExhausted bool
+	// StateBounded: the generated-state ceiling stopped the search
+	// (2026-09-13 external review finding 5: one counted expansion can
+	// materialize many successors, so an expansion budget alone does not
+	// bound memory). Best is best-found under the ceiling — a resource
+	// stop, never a semantic judgment.
+	StateBounded bool
+	// TermSizeBounded: at least one successor exceeded the rendered-size
+	// ceiling and was not enqueued. The reachable set was truncated by a
+	// resource bound, not by rule semantics.
+	TermSizeBounded bool
+	// Cancelled: the caller's cancellation channel closed mid-search.
+	// Best is best-found at the stop; nothing stronger is claimed.
+	Cancelled bool
 	// Endpoint is the independent oracle replay of Original == Best.
 	// EndpointVerified is true only when the oracle exhaustively holds;
 	// any refusal leaves the best expression an unverified candidate.
@@ -117,10 +138,40 @@ type Result struct {
 	EndpointVerified bool
 }
 
+// Limits bounds search work beyond the expansion budget (2026-09-13
+// external review finding 5). Zero values take the package defaults; the
+// defaults are set far above anything a legitimate pack episode reaches,
+// so bounded and unbounded runs coincide on all retained results.
+type Limits struct {
+	// MaxStates caps the visited-set size (generated, deduplicated
+	// states). Exceeding it stops the search with StateBounded.
+	MaxStates int
+	// MaxRenderedSize caps a successor's canonical rendering length.
+	// Larger successors are skipped and TermSizeBounded is set: growth
+	// rules (e.g. not-intro) must not materialize unbounded terms.
+	MaxRenderedSize int
+	// Cancel, when non-nil and closed, stops the search with Cancelled.
+	Cancel <-chan struct{}
+}
+
+// Default work ceilings. Chosen orders of magnitude above the retained
+// screen runs (budget ≤ 500, terms ≤ tens of nodes) so they change no
+// recorded outcome while making pathological inputs terminate.
+const (
+	DefaultMaxStates       = 1 << 20 // ~1M visited states
+	DefaultMaxRenderedSize = 1 << 16 // 64 KiB canonical rendering
+)
+
 // Search runs deterministic breadth-first rewriting from start under the
-// admitted rules, within maxExpansions. It refuses malformed inputs and
-// out-of-scope rules rather than proceeding on unstated premises.
+// admitted rules, within maxExpansions and the default work ceilings. It
+// refuses malformed inputs and out-of-scope rules rather than proceeding
+// on unstated premises.
 func Search(start finite.Expr, d finite.Domain, rules []Rule, cost CostModel, maxExpansions int) (Result, error) {
+	return SearchBounded(start, d, rules, cost, maxExpansions, Limits{})
+}
+
+// SearchBounded is Search with explicit work ceilings and cancellation.
+func SearchBounded(start finite.Expr, d finite.Domain, rules []Rule, cost CostModel, maxExpansions int, lim Limits) (Result, error) {
 	if defects := finite.ValidateExpr(start, d); len(defects) > 0 {
 		return Result{}, fmt.Errorf("start expression is not valid in the search domain: %v", defects)
 	}
@@ -137,6 +188,12 @@ func Search(start finite.Expr, d finite.Domain, rules []Rule, cost CostModel, ma
 		if r.domain.Width != d.Width {
 			return Result{}, fmt.Errorf("rule %q was admitted at width %d and cannot be applied in a width-%d search; a certificate warrants exactly its domain", r.name, r.domain.Width, d.Width)
 		}
+	}
+	if lim.MaxStates <= 0 {
+		lim.MaxStates = DefaultMaxStates
+	}
+	if lim.MaxRenderedSize <= 0 {
+		lim.MaxRenderedSize = DefaultMaxRenderedSize
 	}
 
 	type parentEdge struct {
@@ -156,7 +213,16 @@ func Search(start finite.Expr, d finite.Domain, rules []Rule, cost CostModel, ma
 	}
 
 	expansions := 0
+search:
 	for len(queue) > 0 {
+		if lim.Cancel != nil {
+			select {
+			case <-lim.Cancel:
+				res.Cancelled = true
+				break search
+			default:
+			}
+		}
 		if expansions >= maxExpansions {
 			res.BudgetExhausted = true
 			break
@@ -169,9 +235,20 @@ func Search(start finite.Expr, d finite.Domain, rules []Rule, cost CostModel, ma
 
 		for _, r := range rules {
 			for _, next := range applyEverywhere(current, r, d) {
+				res.Generated++
 				nextKey := finite.Render(next)
+				if len(nextKey) > lim.MaxRenderedSize {
+					// A resource bound truncated the reachable set; the
+					// result says so rather than silently narrowing.
+					res.TermSizeBounded = true
+					continue
+				}
 				if _, seen := visited[nextKey]; seen {
 					continue
+				}
+				if len(visited) >= lim.MaxStates {
+					res.StateBounded = true
+					break search
 				}
 				visited[nextKey] = next
 				parents[nextKey] = parentEdge{parent: key, step: Step{Rule: r.name, Before: key, After: nextKey}}
@@ -211,21 +288,48 @@ func Search(start finite.Expr, d finite.Domain, rules []Rule, cost CostModel, ma
 }
 
 // CanStrictlyReduce reports whether a single application of the rule at
-// any position of e strictly reduces the cost. It is the task-grounding
-// probe for history claims (shape-selector/1): deterministic, computable
-// by any arm from the task and admitted rules alone, and independent of
-// any history content.
+// any position of e strictly reduces the cost. See ProbeStrictReduction
+// for the metered form; this convenience discards the work count.
+//
+// CLAIM SCOPE: a false answer means only "no ONE-STEP strict cost
+// decrease from THIS start expression". It is not a proof that the rule
+// can never contribute — e.g. add-zero cannot one-step reduce add(0,x),
+// yet reduces it after the cost-neutral add-comm step (2026-09-13
+// external review finding 2).
 func CanStrictlyReduce(e finite.Expr, r Rule, d finite.Domain, cost CostModel) bool {
+	reduces, _ := ProbeStrictReduction(e, r, d, cost)
+	return reduces
+}
+
+// ProbeStrictReduction is the metered task-grounding probe for history
+// claims (shape-selector/1): deterministic, computable by any arm from
+// the task and admitted rules alone, and independent of any history
+// content. It returns whether one application of the rule at any
+// position of e strictly reduces the cost, and the number of candidate
+// rewrites the probe materialized — the probe's work, which the caller
+// must charge to whatever cost ledger covers the arm that ran it
+// (2026-09-13 external review finding 1: uncharged pre-search probes).
+func ProbeStrictReduction(e finite.Expr, r Rule, d finite.Domain, cost CostModel) (reduces bool, candidates int) {
 	if cost == nil {
 		cost = NodeCount
 	}
 	base := cost(e)
 	for _, next := range applyEverywhere(e, r, d) {
+		candidates++
 		if cost(next) < base {
-			return true
+			reduces = true
 		}
 	}
-	return false
+	return reduces, candidates
+}
+
+// Identity returns a canonical content identity for the admitted rule:
+// name, admitted domain, and both sides' canonical renderings. Two rules
+// with equal Identity are the same rewrite; a name alone is not an
+// identity (2026-09-13 external review finding 3: a decision hash bound
+// to names only misses rule-content changes).
+func (r Rule) Identity() string {
+	return fmt.Sprintf("%s|w%d|vars=%v|%s=>%s", r.name, r.domain.Width, r.domain.Vars, finite.Render(r.lhs), finite.Render(r.rhs))
 }
 
 // applyEverywhere returns every expression obtained by applying the rule

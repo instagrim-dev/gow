@@ -95,8 +95,12 @@ const (
 
 // Execution is one arm×episode×run cell's recorded result. Costs are
 // unit-agnostic nonnegative integer units, consistent within a batch; a
-// future runtime adapter must represent an unavailable measurement as
-// unavailable, never as a measured zero.
+// runtime adapter must represent an unavailable measurement as
+// unavailable, never as a measured zero: CustodyMeasured says whether
+// CustodyCost is a measurement at all. An unmeasured cell leaves its
+// arm's custody and full-cost ledgers UNKNOWN (2026-09-13 external
+// review finding 1: the runner supplied absent custody measurements as
+// zero and the calculator folded them into FullCost).
 type Execution struct {
 	Arm              Arm
 	EpisodeID        string
@@ -105,6 +109,7 @@ type Execution struct {
 	InvalidCertified bool // a result was certified valid that was not
 	TaskCost         int64
 	CustodyCost      int64
+	CustodyMeasured  bool // false: CustodyCost is not a measurement and must be zero
 }
 
 // Condition is one spending-rule clause with the exact integers compared.
@@ -119,11 +124,16 @@ type Condition struct {
 }
 
 // ArmReport carries one arm's completions and its two cost ledgers.
+// CustodyKnown is false when any of the arm's executions carried an
+// unmeasured custody cost; in that case CustodyCost and FullCost are NOT
+// totals — they are unknown, and the zero values are placeholders guarded
+// by the flag, never figures to report.
 type ArmReport struct {
-	Completions int64
-	TaskCost    int64
-	CustodyCost int64
-	FullCost    int64
+	Completions  int64
+	TaskCost     int64
+	CustodyKnown bool
+	CustodyCost  int64 // meaningful only when CustodyKnown
+	FullCost     int64 // meaningful only when CustodyKnown
 }
 
 // Outcome is the decision-arithmetic result. ArithmeticSatisfied is a
@@ -224,18 +234,28 @@ func Evaluate(d Design, execs []Execution) (Outcome, error) {
 	lowMisSums := map[Arm]int64{}
 	perEpisode := map[Arm]map[string]int64{ArmH0: {}, ArmH1: {}, ArmHG: {}}
 	reports := map[Arm]ArmReport{}
+	for _, a := range allArms {
+		reports[a] = ArmReport{CustodyKnown: true} // falsified by any unmeasured cell
+	}
 	invalidCount := int64(0)
 	for _, e := range execs {
 		if e.TaskCost < 0 || e.CustodyCost < 0 {
 			return Outcome{}, fmt.Errorf("execution %s/%s run %d carries a negative cost (task %d, custody %d); charges are nonnegative and an unavailable measurement must be represented as unavailable, not negative or zero", e.Arm, e.EpisodeID, e.Run, e.TaskCost, e.CustodyCost)
+		}
+		if !e.CustodyMeasured && e.CustodyCost != 0 {
+			return Outcome{}, fmt.Errorf("execution %s/%s run %d carries custody cost %d while declaring it unmeasured; a figure is either a measurement or absent, never both", e.Arm, e.EpisodeID, e.Run, e.CustodyCost)
 		}
 		rep := reports[e.Arm]
 		var err error
 		if rep.TaskCost, err = addChecked(rep.TaskCost, e.TaskCost); err != nil {
 			return Outcome{}, fmt.Errorf("arm %s task-cost ledger: %w", e.Arm, err)
 		}
-		if rep.CustodyCost, err = addChecked(rep.CustodyCost, e.CustodyCost); err != nil {
-			return Outcome{}, fmt.Errorf("arm %s custody-cost ledger: %w", e.Arm, err)
+		if !e.CustodyMeasured {
+			rep.CustodyKnown = false
+		} else if rep.CustodyKnown {
+			if rep.CustodyCost, err = addChecked(rep.CustodyCost, e.CustodyCost); err != nil {
+				return Outcome{}, fmt.Errorf("arm %s custody-cost ledger: %w", e.Arm, err)
+			}
 		}
 		if e.Completed {
 			rep.Completions++
@@ -252,17 +272,27 @@ func Evaluate(d Design, execs []Execution) (Outcome, error) {
 		reports[e.Arm] = rep
 	}
 	var taskTotal, custodyTotal int64
+	custodyAllKnown := true
 	for a, rep := range reports {
 		var err error
-		if rep.FullCost, err = addChecked(rep.TaskCost, rep.CustodyCost); err != nil {
-			return Outcome{}, fmt.Errorf("arm %s full-cost ledger: %w", a, err)
+		if rep.CustodyKnown {
+			if rep.FullCost, err = addChecked(rep.TaskCost, rep.CustodyCost); err != nil {
+				return Outcome{}, fmt.Errorf("arm %s full-cost ledger: %w", a, err)
+			}
+		} else {
+			// An unknown ledger reports nothing: a partial sum would be
+			// a number that looks like a total.
+			rep.CustodyCost, rep.FullCost = 0, 0
+			custodyAllKnown = false
 		}
 		reports[a] = rep
 		if taskTotal, err = addChecked(taskTotal, rep.TaskCost); err != nil {
 			return Outcome{}, fmt.Errorf("cross-arm task total: %w", err)
 		}
-		if custodyTotal, err = addChecked(custodyTotal, rep.CustodyCost); err != nil {
-			return Outcome{}, fmt.Errorf("cross-arm custody total: %w", err)
+		if rep.CustodyKnown {
+			if custodyTotal, err = addChecked(custodyTotal, rep.CustodyCost); err != nil {
+				return Outcome{}, fmt.Errorf("cross-arm custody total: %w", err)
+			}
 		}
 	}
 
@@ -313,6 +343,23 @@ func Evaluate(d Design, execs []Execution) (Outcome, error) {
 	}
 	sort.Strings(families)
 
+	// Condition (c) is DEFINED on the net difference; gross paired wins
+	// and losses are exported beside it so a zero net is never read as
+	// "no losses" (2026-09-13 external review finding 4: run 2 tied 7/12
+	// on controls via one paired gain offsetting one paired loss).
+	var controlGrossWins, controlGrossLosses int64
+	for id, ep := range episodes {
+		if ep.Stratum != StratumLowValue && ep.Stratum != StratumMisleading {
+			continue
+		}
+		switch {
+		case perEpisode[ArmHG][id] > perEpisode[ArmH1][id]:
+			controlGrossWins++
+		case perEpisode[ArmHG][id] < perEpisode[ArmH1][id]:
+			controlGrossLosses++
+		}
+	}
+
 	conds := []Condition{
 		{
 			Name:      "a",
@@ -330,10 +377,10 @@ func Evaluate(d Design, execs []Execution) (Outcome, error) {
 		},
 		{
 			Name:      "c",
-			Statement: fmt.Sprintf("on low-value/misleading strata HG loses at most %d completion per run to H1 (H1_lowmis_sum − HG_lowmis_sum <= %d·r)", MaxLowValueLossPerRun, MaxLowValueLossPerRun),
+			Statement: fmt.Sprintf("on low-value/misleading strata HG loses at most %d completion per run to H1 NET (H1_lowmis_sum − HG_lowmis_sum <= %d·r); the criterion is a net difference, and the gross paired wins/losses are reported beside it", MaxLowValueLossPerRun, MaxLowValueLossPerRun),
 			Left:      lowMisSums[ArmH1] - lowMisSums[ArmHG], Op: "<=", Right: MaxLowValueLossPerRun * r,
 			Satisfied: lowMisSums[ArmH1]-lowMisSums[ArmHG] <= MaxLowValueLossPerRun*r,
-			Detail:    fmt.Sprintf("H1 low/mis %d vs HG low/mis %d", lowMisSums[ArmH1], lowMisSums[ArmHG]),
+			Detail:    fmt.Sprintf("H1 low/mis %d vs HG low/mis %d (net %d); gross paired control episodes: HG wins %d, HG losses %d — a zero net does not mean zero losses", lowMisSums[ArmH1], lowMisSums[ArmHG], lowMisSums[ArmH1]-lowMisSums[ArmHG], controlGrossWins, controlGrossLosses),
 		},
 		{
 			Name:      "d",
@@ -366,9 +413,12 @@ func Evaluate(d Design, execs []Execution) (Outcome, error) {
 		PopulationDefects:   popDefects,
 		RuleSatisfied:       arithmeticSatisfied && populationConforms,
 		Arms:                reports,
-		CustodyDominates:    custodyTotal > taskTotal,
+		CustodyDominates:    custodyAllKnown && custodyTotal > taskTotal,
 	}
 	out.Notes = append(out.Notes, "gate eligibility cannot be produced here: it requires custodian-sealed protected episodes, a validated custody chain, frozen arm snapshots, and execution authorization — none of which this arithmetic can verify or supply")
+	if !custodyAllKnown {
+		out.Notes = append(out.Notes, "at least one arm carries unmeasured custody costs: custody and full-cost ledgers for those arms are UNKNOWN, not zero, and custody dominance is undecidable on this batch")
+	}
 	if !populationConforms {
 		out.Notes = append(out.Notes, "the episode population does not match the roadmap shape the spending rule is defined over; this evaluation is a development calculation, not the screen")
 	}

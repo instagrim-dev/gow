@@ -83,6 +83,15 @@ type Decision struct {
 	EnabledRules      []string
 	Preferences       []Preference
 	RelevantAttempts  []int // indices judged relevant, for audit
+	// Probe work meter (2026-09-13 external review finding 1: selector
+	// probes are search work performed before the budgeted search and
+	// must be charged, not smuggled in free). Zero for selectors that
+	// run no probe (v0, H1). Units: ProbeRuleApplications counts rules
+	// probed against the task; ProbeCandidates counts candidate rewrites
+	// the probes materialized — the same unit of work a search expansion
+	// performs per successor generated.
+	ProbeRuleApplications int
+	ProbeCandidates       int
 }
 
 // SnapshotHash returns the content hash of the controller's frozen

@@ -63,3 +63,34 @@ Option (a) executed: `shape-selector/1` ("trust, then verify against the task") 
 ## Upgrade path unchanged
 
 Agent-sealed/v1 re-authoring by a clean-room custodian when agent infrastructure recovers; human tiers per the `018` packets. This pack then becomes development material.
+
+## Attributed corrections — 2026-09-13 external review of `main` at `f7554cb` (additive; frozen text above retained verbatim)
+
+The external review reproduced the completion table above with an independent Python reference implementation (exhaustive endpoint checks over the declared four-bit domains) and found the counts correct. It also found four defects in the record's *explanations and instrumentation*, corrected here without changing any frozen criterion, count, or disposition.
+
+### 1. Run-2 condition (c): net zero was narrated as "never lost" — false
+
+The run-2 table row reads "HG never lost control episodes *relative to H1*". The paired control outcomes were:
+
+| Control episode | H1 | HG-v0 | Difference |
+|---|---|---|---|
+| `low-03` | Miss | Complete | HG gains one |
+| `mis-06` | Complete | Miss | HG loses one |
+
+Both arms completed **7/12 controls, but not the same seven**. Corrected reading: **control totals tied at seven; one paired gain offset one paired loss. Condition (c), defined on the net difference, passed.** The frozen net-loss criterion is unchanged; the "never lost" sentence above is retracted as an explanation. The evaluator now exports gross paired wins and losses beside the net figure on condition (c) so this conflation cannot recur silently (`internal/screen`).
+
+`mis-06` also witnesses the attribution correction below: all of its histories pass the v0 similarity gate, and the H1/HG difference there comes from HG's failure-driven demotion of `mul-zero`, not from relevance filtering.
+
+### 2. v0 H1/HG attribution: two mechanisms differ, not one
+
+The frozen comparison changes both **relevance filtering** (HG gates history by task similarity; H1 uses all of it) and **failure handling** (HG demotes rules supported only by relevant failures; H1 ignores failed attempts entirely). Statements above attributing HG−H1 differences to the relevance gate alone are corrected to "the gated procedure", with the mechanism pair recorded at `internal/shape/comparator.go`. Isolating either mechanism requires a comparator arm that differs in exactly one of them — future-pack design material, not a retrospective edit.
+
+### 3. Run-3 (v1) cost accounting: the probes were uncharged, and the diagnostic does not isolate history value
+
+v1 performs per-rule strict-reduction probes against the task **before** its budgeted search; H0/H1 run no such probes, and the runner charged only search expansions. The review's reference implementation counted **91 rule probes producing 188 candidate rewrites** across the 24 episodes, outside the reported cost. Additionally, a review-only, history-free counterfactual (same immediate-reduction probes, reducing rules first in catalog order, same budget-two search) **also completes 16 tasks and matches v1's completion status on all 24 episodes**. The frozen run-3 measurements stand as complete-policy comparisons; what is retracted is any reading of "13 → 16" as isolating *history-conditioned* shaping value. The repairs going forward: the selector meters its probe work on the `Decision` (`ProbeRuleApplications`, `ProbeCandidates`), the runner charges it into the arm's task ledger in one unit (candidate rewrites materialized, search + probes), expansion counts remain in the traces as the budget unit, unmeasured custody is recorded as unmeasured (never zero), and any future test of incremental history value must include a comparably capable task-only probe arm.
+
+### 4. Corpus: `inf-06`'s one-node target is unattainable through its catalog
+
+`inf-06` (start `add(mul(x, 0), mul(y, 1))`, target cost 1) is reachable only to `add(0, y)` under its catalog (`not-intro`, `mul-zero`, `mul-one`, right-zero `add(a,0)→a`): the catalog lacks left-zero elimination and `add-comm`, so the semantically valid one-node result `y` is structurally unreachable — an argument from the permitted rewrite structure, not from budget exhaustion. All arms fail it identically; recorded counts stand. Annotated at the spec site in `pack_agent_sealed_v1.go` (pack bytes retained). Related calibration repair: `CalibrateH0MinBudgets` no longer conflates "already completes with zero expansions" with "unreachable within cap" (unreachable episodes are now reported separately), and median derivation guards the empty case.
+
+*Scope of this section: explanation and instrumentation corrections attributed to the 2026-09-13 external review. No frozen count, criterion, or disposition above was altered; the code repairs land in the same commit as this note.*

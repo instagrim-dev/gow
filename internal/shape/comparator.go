@@ -13,9 +13,16 @@ const ComparatorVersion = "h1-frequency/0"
 // SelectUngatedFrequency is the H1 arm: a capable deterministic use of
 // the same History bytes with NO relevance gate — rules ordered by global
 // success frequency (rules seen in any completed attempt, however
-// dissimilar), ties and zero-support rules in catalog order. Its
-// deliberate weakness relative to HG is exactly the treatment under
-// test: HG's only additional privilege is the relevance gate.
+// dissimilar), ties and zero-support rules in catalog order.
+//
+// H1 vs HG(v0) differs in TWO mechanisms, not one (2026-09-13 external
+// review finding 1 corrected the earlier "only the relevance gate"
+// claim): (i) HG filters history by task similarity where H1 uses all of
+// it, and (ii) HG additionally demotes rules supported only by relevant
+// FAILURES, where H1 ignores failed attempts entirely. An HG−H1 outcome
+// difference therefore cannot be attributed to relevance filtering
+// alone; mis-06 in the 019 record is a concrete case where all histories
+// pass the gate and the difference comes from failure-driven demotion.
 //
 // Parity discipline: same Input, same Decision shape, same catalog
 // dedupe, same identity fields (its own version and snapshot), so the

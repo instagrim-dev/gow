@@ -46,7 +46,7 @@ func TestImplementerAuthoredV1ScreenRun(t *testing.T) {
 	// Run 2: the calibrated budget. The calibration rule was stated
 	// before computation and is arm-blind (CalibrateH0MinBudgets):
 	// budget = median of per-episode minimum H0-completing budgets.
-	mins, err := CalibrateH0MinBudgets(pack, 500)
+	mins, unreachable, err := CalibrateH0MinBudgets(pack, 500)
 	if err != nil {
 		t.Fatalf("calibration: %v", err)
 	}
@@ -55,6 +55,12 @@ func TestImplementerAuthoredV1ScreenRun(t *testing.T) {
 		if v > 0 {
 			vals = append(vals, v)
 		}
+	}
+	// Guard the empty case (2026-09-13 external review, corpus
+	// correction): an empty set of positive minimums has no median, and
+	// unreachable episodes carry no scarcity information.
+	if len(vals) == 0 {
+		t.Fatalf("no episode yields a positive H0 minimum budget (unreachable within cap: %v); the calibration rule is undefined on this pack", unreachable)
 	}
 	sort.Ints(vals)
 	budget := vals[len(vals)/2]

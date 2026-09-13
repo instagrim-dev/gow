@@ -218,3 +218,119 @@ func TestSearchIsDeterministic(t *testing.T) {
 		t.Fatalf("xor of identical subexpressions should collapse to 0, got %q", a.Best)
 	}
 }
+
+// 2026-09-13 external review finding 5: an expansion budget alone does
+// not bound generated state — one counted expansion can materialize many
+// successors, and a growth rule (not-intro) admits unbounded terms.
+// SearchBounded's ceilings must convert resource exhaustion into a
+// bounded result, never a semantic claim.
+func TestStateCeilingStopsGrowthAsBoundedResult(t *testing.T) {
+	d4a := dom(4, "a")
+	notIntro := admit(t, "not-intro",
+		finite.Var{Name: "a"},
+		finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: finite.Var{Name: "a"}}}, d4a)
+	start := finite.Var{Name: "x"}
+	res, err := SearchBounded(start, dom(4, "x"), []Rule{notIntro}, NodeCount, 1_000_000, Limits{MaxStates: 8})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.StateBounded {
+		t.Fatalf("the state ceiling must be reported as the stop reason: %+v", res)
+	}
+	if res.Best != "x" || res.BestCost != 1 {
+		t.Fatalf("best-found must survive a resource stop: %+v", res)
+	}
+	if !res.EndpointVerified {
+		t.Fatal("the trivial endpoint x == x must still replay")
+	}
+}
+
+func TestTermSizeCeilingTruncatesAndSaysSo(t *testing.T) {
+	d4a := dom(4, "a")
+	notIntro := admit(t, "not-intro",
+		finite.Var{Name: "a"},
+		finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: finite.Var{Name: "a"}}}, d4a)
+	start := finite.Var{Name: "x"}
+	// Renderings: x → not(not(x)) → ... The 12-byte ceiling admits
+	// not(not(x)) but refuses the next doubling.
+	res, err := SearchBounded(start, dom(4, "x"), []Rule{notIntro}, NodeCount, 100, Limits{MaxRenderedSize: 12})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.TermSizeBounded {
+		t.Fatalf("a skipped oversize successor must be flagged: %+v", res)
+	}
+	if res.StateBounded || res.Cancelled {
+		t.Fatalf("only the term-size bound fired here: %+v", res)
+	}
+}
+
+func TestCancellationStopsSearchAsBoundedResult(t *testing.T) {
+	d4a := dom(4, "a")
+	notIntro := admit(t, "not-intro",
+		finite.Var{Name: "a"},
+		finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: finite.Var{Name: "a"}}}, d4a)
+	cancel := make(chan struct{})
+	close(cancel) // already cancelled: the search must stop immediately
+	res, err := SearchBounded(finite.Var{Name: "x"}, dom(4, "x"), []Rule{notIntro}, NodeCount, 1_000_000, Limits{Cancel: cancel})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Cancelled {
+		t.Fatalf("cancellation must be reported: %+v", res)
+	}
+	if res.Explored != 0 {
+		t.Fatalf("a pre-cancelled search performs no expansions, got %d", res.Explored)
+	}
+}
+
+// The metered probe reports the same reduces verdict as the boolean
+// convenience, plus the candidates it materialized — the work a caller
+// must charge (finding 1).
+func TestProbeStrictReductionMetersWork(t *testing.T) {
+	d4a := dom(4, "a")
+	dnLHS, dnRHS := doubleNot(d4a)
+	dn := admit(t, "double-not", dnLHS, dnRHS, d4a)
+	e := finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: finite.Var{Name: "x"}}}
+	reduces, candidates := ProbeStrictReduction(e, dn, dom(4, "x"), NodeCount)
+	if !reduces {
+		t.Fatal("double-not reduces not(not(x))")
+	}
+	if candidates < 1 {
+		t.Fatalf("the probe materialized at least one candidate, meter says %d", candidates)
+	}
+	if got := CanStrictlyReduce(e, dn, dom(4, "x"), NodeCount); got != reduces {
+		t.Fatalf("convenience and metered probe disagree: %v vs %v", got, reduces)
+	}
+}
+
+// Rule identity binds content, not just the name (finding 3).
+func TestRuleIdentityBindsContent(t *testing.T) {
+	d4a := dom(4, "a")
+	dnLHS, dnRHS := doubleNot(d4a)
+	a := admit(t, "same-name", dnLHS, dnRHS, d4a)
+	b := admit(t, "same-name",
+		finite.Binary{Op: finite.OpAdd, X: finite.Var{Name: "a"}, Y: finite.Const{Value: 0}},
+		finite.Var{Name: "a"}, d4a)
+	if a.Identity() == b.Identity() {
+		t.Fatal("two different rewrites under one name must have distinct identities")
+	}
+	if a.Identity() != admit(t, "same-name", dnLHS, dnRHS, d4a).Identity() {
+		t.Fatal("identical rules must share an identity")
+	}
+}
+
+// Search still counts generated candidates for the cost ledger.
+func TestSearchCountsGeneratedCandidates(t *testing.T) {
+	d4a := dom(4, "a")
+	dnLHS, dnRHS := doubleNot(d4a)
+	dn := admit(t, "double-not", dnLHS, dnRHS, d4a)
+	e := finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: finite.Var{Name: "x"}}}
+	res, err := Search(e, dom(4, "x"), []Rule{dn}, NodeCount, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Generated < 1 {
+		t.Fatalf("the search materialized candidates; the meter must not report %d", res.Generated)
+	}
+}

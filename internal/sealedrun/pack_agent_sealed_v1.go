@@ -94,6 +94,18 @@ func AgentSealedV1() Pack {
 	}
 	eps = append(eps,
 		spec("inf-05", screen.StratumInformative, "fam-mulchain", bn(finite.OpMul, bn(finite.OpAdd, xv("x"), bn(finite.OpMul, xv("y"), cn(0))), cn(1)), []string{"x", "y"}, catC, mulHist, 1),
+		// inf-06 ANNOTATION (2026-09-13 external review, corpus
+		// correction; the pre-committed pack bytes are retained
+		// unchanged): the declared one-node target (cost 1) is
+		// semantically valid — the expression equals y — but UNREACHABLE
+		// through this catalog: mul-zero and mul-one reach add(0, y),
+		// and catC has neither left-zero elimination (add(0,a)→a) nor
+		// add-comm to expose the right-zero rule. The reachability
+		// argument is structural, not a budget observation. All arms
+		// fail it identically, so recorded counts stand; the episode
+		// measures nothing informative about history use. Future packs:
+		// validate a reference rewrite path for every intended-attainable
+		// target before sealing.
 		spec("inf-06", screen.StratumInformative, "fam-mulchain", bn(finite.OpAdd, bn(finite.OpMul, xv("x"), cn(0)), bn(finite.OpMul, xv("y"), cn(1))), []string{"x", "y"}, catC, mulHist, 1),
 		spec("inf-07", screen.StratumInformative, "fam-mulchain", bn(finite.OpMul, bn(finite.OpMul, bn(finite.OpAdd, xv("z"), cn(0)), cn(1)), cn(1)), []string{"z"}, catC, mulHist, 1),
 		spec("inf-08", screen.StratumInformative, "fam-mulchain", bn(finite.OpAdd, bn(finite.OpAdd, bn(finite.OpMul, xv("x"), cn(0)), xv("y")), bn(finite.OpMul, xv("x"), cn(0))), []string{"x", "y"}, catC, mulHist, 3),

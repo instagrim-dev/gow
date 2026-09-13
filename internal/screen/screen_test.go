@@ -44,9 +44,10 @@ func grid(eps []Episode, counts map[Arm]map[string]int64, custodyPerExec int64) 
 			for run := 1; run <= r; run++ {
 				execs = append(execs, Execution{
 					Arm: arm, EpisodeID: ep.ID, Run: run,
-					Completed:   int64(run) <= c,
-					TaskCost:    1,
-					CustodyCost: custodyPerExec,
+					Completed:       int64(run) <= c,
+					TaskCost:        1,
+					CustodyCost:     custodyPerExec,
+					CustodyMeasured: true, // this helper always measures; unmeasured custody has its own tests
 				})
 			}
 		}
@@ -364,5 +365,81 @@ func TestGateEligibilityIsUnconditionallyFalse(t *testing.T) {
 		if out.GateEligible {
 			t.Fatalf("label %q must not produce gate eligibility", label)
 		}
+	}
+}
+
+// Unmeasured custody stays UNKNOWN, never zero (2026-09-13 external
+// review finding 1: the runner supplied absent custody measurements as
+// zero and the calculator folded them into FullCost).
+func TestUnmeasuredCustodyIsUnknownNotZero(t *testing.T) {
+	execs := grid(episodes24(), baseCounts(), 0)
+	for i := range execs {
+		execs[i].CustodyMeasured = false
+	}
+	out, err := Evaluate(devDesign(), execs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for arm, rep := range out.Arms {
+		if rep.CustodyKnown {
+			t.Fatalf("arm %s custody must be unknown when no cell measured it: %+v", arm, rep)
+		}
+		if rep.CustodyCost != 0 || rep.FullCost != 0 {
+			t.Fatalf("arm %s must not report a custody or full-cost figure it never measured: %+v", arm, rep)
+		}
+		if rep.TaskCost == 0 {
+			t.Fatalf("arm %s task ledger is measured and must survive: %+v", arm, rep)
+		}
+	}
+	if out.CustodyDominates {
+		t.Fatal("custody dominance is undecidable without custody measurements")
+	}
+	noted := false
+	for _, n := range out.Notes {
+		if strings.Contains(n, "UNKNOWN, not zero") {
+			noted = true
+		}
+	}
+	if !noted {
+		t.Fatalf("the unknown custody ledger must be stated on the outcome: %v", out.Notes)
+	}
+}
+
+// A cell may not carry a custody figure while declaring it unmeasured:
+// a number is a measurement or absent, never both.
+func TestUnmeasuredCustodyWithFigureIsRefused(t *testing.T) {
+	execs := grid(episodes24(), baseCounts(), 50)
+	execs[0].CustodyMeasured = false // figure 50 retained
+	if _, err := Evaluate(devDesign(), execs); err == nil {
+		t.Fatal("an unmeasured cell carrying a custody figure must be an error")
+	} else if !strings.Contains(err.Error(), "unmeasured") {
+		t.Fatalf("error must name the contradiction: %v", err)
+	}
+}
+
+// Condition (c) is defined on the NET difference; the outcome must also
+// export the gross paired wins and losses so a zero net cannot be read
+// as "no losses" (2026-09-13 external review finding 4: run 2 tied 7/12
+// on controls via one paired gain offsetting one paired loss).
+func TestConditionCExportsGrossWinsAndLosses(t *testing.T) {
+	counts := baseCounts()
+	// Add a paired control gain and a paired control loss with the net
+	// unchanged: HG completes mis-01 (H1 doesn't) and drops low-01 (H1
+	// keeps it). Gross: HG wins mis-01; loses low-01, low-04..06.
+	delete(counts[ArmHG], "low-01")
+	counts[ArmHG]["mis-01"] = 1
+	out, err := Evaluate(devDesign(), grid(episodes24(), counts, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := condition(t, out, "c")
+	if !c.Satisfied {
+		t.Fatalf("net-on-threshold control difference satisfies (c): %+v", c)
+	}
+	if !strings.Contains(c.Detail, "HG wins 1, HG losses 4") {
+		t.Fatalf("gross paired wins/losses must be exported beside the net figure: %q", c.Detail)
+	}
+	if !strings.Contains(c.Detail, "a zero net does not mean zero losses") {
+		t.Fatalf("the net-vs-gross caveat must be stated on the condition: %q", c.Detail)
 	}
 }

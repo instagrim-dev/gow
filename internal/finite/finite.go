@@ -205,16 +205,29 @@ var (
 // runs in bounded work.
 const MaxExprDepth = 64
 
+// MaxValidateVisits bounds total node visits during structural
+// validation. Depth alone does not bound work: a depth-30 expression
+// whose children share subexpression values re-visits shared subtrees
+// exponentially under plain recursion (2026-09-13 external review
+// finding 5). Exceeding the visit budget is a resource refusal — the
+// expression is refused for admission, with no semantic judgment made.
+const MaxValidateVisits = 1 << 20
+
 // structureDefects rejects structurally invalid expressions before any
 // rendering or traversal: the exported node structs allow nil children and
 // foreign node types, so structure is a checked premise, not an assumption.
 // A structurally invalid expression is an applicability refusal, never a
 // panic.
 func structureDefects(label string, e Expr) []string {
-	return structureWalk(label, e, 0)
+	visits := 0
+	return structureWalk(label, e, 0, &visits)
 }
 
-func structureWalk(label string, e Expr, depth int) []string {
+func structureWalk(label string, e Expr, depth int, visits *int) []string {
+	*visits++
+	if *visits > MaxValidateVisits {
+		return []string{fmt.Sprintf("%s: structural validation exceeded the traversal work bound (%d node visits); the expression is refused as too large to validate — a resource refusal, not a semantic judgment", label, MaxValidateVisits)}
+	}
 	if e == nil {
 		return []string{fmt.Sprintf("%s: expression node is nil", label)}
 	}
@@ -241,14 +254,20 @@ func structureWalk(label string, e Expr, depth int) []string {
 		if !knownUnary[t.Op] {
 			defects = append(defects, fmt.Sprintf("%s: unknown unary operator %q", label, t.Op))
 		}
-		return append(defects, structureWalk(label, t.X, depth+1)...)
+		return append(defects, structureWalk(label, t.X, depth+1, visits)...)
 	case Binary:
 		var defects []string
 		if !knownBinary[t.Op] {
 			defects = append(defects, fmt.Sprintf("%s: unknown binary operator %q", label, t.Op))
 		}
-		defects = append(defects, structureWalk(label, t.X, depth+1)...)
-		return append(defects, structureWalk(label, t.Y, depth+1)...)
+		defects = append(defects, structureWalk(label, t.X, depth+1, visits)...)
+		if *visits > MaxValidateVisits {
+			// Short-circuit the sibling subtree: without this, a
+			// shared-subexpression blowup would still be entered node
+			// by node after the bound tripped.
+			return defects
+		}
+		return append(defects, structureWalk(label, t.Y, depth+1, visits)...)
 	default:
 		return []string{fmt.Sprintf("%s: expression node %T is outside the seed language", label, e)}
 	}
