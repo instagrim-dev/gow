@@ -1,11 +1,11 @@
 # Protected G1 dispatch decision packet
 
-**Status: decision-complete; dispatch authorized 2026-09-13; execution in
-flight.** This packet is the minimum operator decision surface for a
-protected G1 dispatch. A blank, ambiguous, or unverified field blocks
-dispatch. Completing this document does not create authority beyond the
-recorded operator decisions below; the observed-isolation row is graded from
-the custodian's return packet.
+**Status: dispatch executed 2026-09-13; batch verdict `invalid`.** This
+packet is the minimum operator decision surface for a protected G1 dispatch.
+A blank, ambiguous, or unverified field blocks dispatch. Completing this
+document did not create authority beyond the recorded operator decisions
+below; the observed-isolation row and batch grading are recorded in the
+attempt-4 grading artifact linked in the launch record.
 
 ## Fixed engineering contract
 
@@ -181,10 +181,24 @@ acceptance matrix these limitations cap the grade at `agent-sealed/v1`
   pattern-matched a provider policy filter; the underlying task (authoring
   held-out JSON test cases for a local offline checker) is benign.
 - **2026-09-13, attempt 4 (local fresh-context subagent, replanned
-  prompt):** same mechanism and identical frozen documents; the dispatch
-  prompt was rewritten in plain language describing the held-out test-set
-  task directly, with the same workspace-only boundary and summary
-  restrictions. No contract value changed.
+  prompt):** infrastructure block struck mid-run after ~30 minutes; the
+  custodian had verified the executable, executed the frozen policy
+  definition, authored 48 fresh cases, sealed manifests before execution
+  (`de2d6685…c87fe` / `c7af3a6f…5d05d8`; provenance `c1e173b6…db43b2`),
+  and executed all 48 cases (`protected/receipts/outcome-summary.json`).
+  Return-packet assembly did not run. The transcript's final events show
+  the custodian moved beyond the data-only public interface into `nm`/
+  `otool` disassembly of the pinned executable's `readG1Manifest` and
+  `g1 validate` decision paths — the block interrupted that sequence.
+  Under the approved acceptance matrix the batch grades **`invalid`** on
+  two independent grounds: validity precondition #1 (data-only interface)
+  failed, and the custodian's own applicable-stratum
+  `matches_expected` counts are 21/24 < 23. Full grading:
+  [`2026-09-13-g1-dispatch-attempt4-grading.md`](2026-09-13-g1-dispatch-attempt4-grading.md).
+  Retained protected material stays in `/private/tmp/g1-custodian-ws/`
+  and is now exposed to the implementer lane; any retry needs a fresh
+  case set and a narrower authorization that closes the
+  executable-inspection failure mode.
 
 Per the operative handoff, a failed isolated-agent launch is preserved as an
 infrastructure failure; it does not make implementer-authored cases
