@@ -86,13 +86,59 @@ append-only JSONL sealed with the task manifest before execution, explicit
 per-case exposure declarations with `none` required for protected cases, and
 manifest-consistency rules feeding the approved acceptance matrix.
 
-### Still open — blocks dispatch
+### Dispatch authority — RECORDED
 
-| Row | Why it remains open |
+Granted by the explicit operator instruction **"dispatch"** on 2026-09-13 in
+the working session, following the recorded rows above. Effective
+immediately. Permitted commands: exactly the data-only check, retrieval, and
+`g1 pack` commands in `CUSTODIAN_PUBLIC_INTERFACE.md`, under the recorded
+zero-spend ceiling. Permitted outputs: the return packet defined in the
+dispatch authorization. Named outcome recipient: the operator, via the
+committed return packet on the custodian branch. The full authorization text
+is retained at
+[`2026-09-13-g1-dispatch-authorization.md`](2026-09-13-g1-dispatch-authorization.md)
+and rides with the custodian packet as `DISPATCH_AUTHORIZATION.md`.
+
+### Frozen execution contract — RECORDED
+
+- Tool registry, procedures, and checker versions: as shipped at revision
+  `0cd7284` (the pinned executable is the frozen tool interface).
+- Dispatch executable (linux/amd64 for the cloud custodian VM): SHA-256
+  `006f466a1dac2e7370a26be8c25b75cb7ff85094cc6cca3159de1bab47dc37d8`, built
+  from an exact export of revision `0cd7284` with
+  `CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false ./cmd/newf`,
+  Go 1.26.6, byte-identical across two independent builds. The earlier
+  recorded darwin/arm64 hash `5d052272…9d72690` remains the local-platform
+  identity; it embeds the VCS stamp of `0cd7284` and reproduces only at that
+  revision.
+- Policy and obligations: the exact `review policy` definition frozen in the
+  authorization (`g1-protected-usefulness@1`, five mandatory route
+  obligations). IDs are storage handles generated in the custodian database
+  and are recorded in the return packet before case authoring.
+- Budget vector: the recorded zero-spend ceiling.
+
+### Content boundary — RECORDED (procedural, with declared limitations)
+
+Protected material lives only on the custodian's working branch
+(`protected/tasks/`, `protected/answers/`, `protected/receipts/`,
+`protected/case-provenance.jsonl`), with an append-only self-declared
+`protected/ACCESS_LOG.md`. Declared limitations, recorded rather than hidden:
+git provides no enforced read barrier — implementer-lane reads of the pushed
+branch are technically possible and are not mechanically logged; the access
+log and exposure record are custodian declarations. The clean-room base
+branch `g1-custodian-cleanroom` (`742bb689…`) is an orphan commit containing
+only the two-file packet, the dispatch authorization, and the pinned
+executable; it carries no repository history. The custodian VM can, in
+principle, fetch other refs of this repository; the authorization forbids it
+and requires an explicit declaration either way. Under the approved
+acceptance matrix these limitations cap the grade at `agent-sealed/v1`
+(model-family-dependent) at best.
+
+### Still open — recordable only at completion
+
+| Row | Status |
 |---|---|
-| Dispatch authority | The recorded approval scope was "record rows", explicitly not dispatch. Needs approval reference, effective date, permitted commands/outputs, and named outcome recipient. |
-| Content boundary | Protected task/answer storage locations and access-log location do not exist yet; they are created at launch and recorded then. |
-| Custodian isolation (observed) | Recorded mechanism above; the actual observed boundary is recordable only when the custodian context starts. |
+| Custodian isolation (observed) | The custodian records the actually observed runtime boundary in its custody/exposure record at launch; graded when the return packet is read. |
 
 ## Required pre-dispatch artifacts
 
