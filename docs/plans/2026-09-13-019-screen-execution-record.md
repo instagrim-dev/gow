@@ -83,9 +83,19 @@ Both arms completed **7/12 controls, but not the same seven**. Corrected reading
 
 ### 2. v0 H1/HG attribution: two mechanisms differ, not one
 
-The frozen comparison changes both **relevance filtering** (HG gates history by task similarity; H1 uses all of it) and **failure handling** (HG demotes rules supported only by relevant failures; H1 ignores failed attempts entirely). Statements above attributing HG−H1 differences to the relevance gate alone are corrected to "the gated procedure", with the mechanism pair recorded at `internal/shape/comparator.go`. Isolating either mechanism requires a comparator arm that differs in exactly one of them — future-pack design material, not a retrospective edit.
+The frozen comparison changes both **relevance filtering** (HG gates history by task similarity; H1 uses all of it) and **failure handling** (HG demotes rules supported only by relevant failures; H1 ignores failed attempts entirely). An HG−H1 outcome difference therefore cannot be attributed to relevance filtering alone.
 
-### 3. Run-3 (v1) cost accounting: the probes were uncharged, and the diagnostic does not isolate history value
+Three statements in the frozen text above are **retracted as explanations** on that basis. They are retracted, not rewritten — the frozen text stands verbatim, and an earlier version of this section wrongly said they "are corrected to 'the gated procedure'", asserting a substitution that was never applied to any of them (self-review of this note):
+
+| Frozen site | Retracted phrase | Corrected reading |
+|---|---|---|
+| Run-2 conditions table, row (b) | "the relevance gate beats ungated history" | the *gated procedure* beats ungated history; which of its two mechanisms produced the margin is unresolved |
+| Dispositions, item 3 | "a weak, single-family signal that **gating** helps" | a weak, single-family signal that the gated procedure helps |
+| Run-3 prose | the same reading carried forward | as above |
+
+`mis-06` is the concrete witness: all of its histories pass the similarity gate, so the H1/HG difference there comes from HG's failure-driven demotion of `mul-zero`, not from filtering any history out. The mechanism pair is recorded at `internal/shape/comparator.go`. Isolating either mechanism requires a comparator arm that differs in exactly one of them — future-pack design material, not a retrospective edit.
+
+### 3. Run-3 cost accounting: the probes were uncharged, and the diagnostic does not isolate history value
 
 v1 performs per-rule strict-reduction probes against the task **before** its budgeted search; H0/H1 run no such probes, and the runner charged only search expansions. The review's reference implementation counted **91 rule probes producing 188 candidate rewrites** across the 24 episodes, outside the reported cost. Additionally, a review-only, history-free counterfactual (same immediate-reduction probes, reducing rules first in catalog order, same budget-two search) **also completes 16 tasks and matches v1's completion status on all 24 episodes**. The frozen run-3 measurements stand as complete-policy comparisons; what is retracted is any reading of "13 → 16" as isolating *history-conditioned* shaping value. The repairs going forward: the selector meters its probe work on the `Decision` (`ProbeRuleApplications`, `ProbeCandidates`), the runner charges it into the arm's task ledger in one unit (candidate rewrites materialized, search + probes), expansion counts remain in the traces as the budget unit, unmeasured custody is recorded as unmeasured (never zero), and any future test of incremental history value must include a comparably capable task-only probe arm.
 
@@ -105,6 +115,20 @@ add(0, x) --add-comm--> add(x, 0) --add-zero--> x
 
 Corrected reading, and the wording the selector now emits: **"no one-step strict NodeCount decrease from the current start."** Demotion remains a declared heuristic. It is not a proof of permanent uselessness and not a refutation of the history. A regression test fails the build on any rationale containing "can never reduce".
 
+Three frozen sites carry the over-scoped wording and are **retracted as explanations** (the frozen text stands verbatim):
+
+| Frozen site | Retracted phrase | Corrected reading |
+|---|---|---|
+| Dispositions, item 2 | "distrusting successes whose credited rules **never reduce the current task**" | distrusting successes whose credited rules show no one-step strict NodeCount decrease from the current start |
+| Run-3 prose | "success claims that can't are demoted as **distrusted**" | preference is withheld by a declared heuristic; the claim is not adjudicated |
+| Run-3 prose | "failure claims against demonstrably-reducing rules are **distrusted** and stay neutral" | the demotion is withheld because the rule demonstrably reduces; the historical failure is not called false |
+
+"Distrusted" is the specific word to avoid: it reads as a verdict on whether the history is truthful, which the probe never tests. Current one-step usefulness and historical truth are different claims, and the shipped rationale says so explicitly.
+
+**Symbol correction (same run-3 prose):** it cites `rewrite.CanStrictlyReduce` as the selector's probe. The selector calls **`rewrite.ProbeStrictReduction`** — the metered form. `CanStrictlyReduce` remains as the un-metered boolean convenience, and that un-metered form is precisely what finding 1 charged as uncharged work, so the citation names the one variant that would not have been chargeable.
+
+**Enumeration correction (same run-3 prose):** it opens "Option (a) executed". No lettered enumeration of these repairs exists — dispositions item 2 lists two *unlabeled* candidate repairs, and `2026-09-12-017`'s only lettered options are forks F1–F3 (inputs / output levers / policy-identity home), none of which is this repair. Worse than a dangling label: read in the order item 2 lists them, "(a)" points at **failure-aware relevance weighting**, while the shipped selector implements the **second** alternative — distrusting success claims whose credited rule shows no one-step reduction. The correct reading is "the second candidate repair from dispositions item 2 executed"; relevance weighting was never implemented.
+
 ### 5a. What the probe meter shows once the work is charged
 
 The per-arm cost ledger is now logged beside the completion counts (task cost = candidate rewrites materialized, split into search-generated and selector-probe components). At the calibrated budget, run 3 reports:
@@ -116,6 +140,19 @@ The per-arm cost ledger is now logged beside the completion counts (task cost = 
 | HG (`shape-selector/2`) | **566** | 287 | **279** |
 
 The probe component (279 = 91 rule applications + 188 candidate rewrites) **exceeds** the search work it saves: HG expands the fewest candidates of any arm (287 vs 325) and is nonetheless the **most expensive** arm once its pre-search probes are charged — a 74% cost premium over H1 for its four extra completions. Under the previous accounting HG appeared cheapest. This is a measured consequence of finding 1, not a new experiment: the figures come from the same retained run whose completion counts are unchanged. It sharpens the external review's point that "13 → 16" is not a clean capability gain, and it is the number a spending decision should see beside the margin.
+
+### 5b. Input identity: the decision hash omitted inputs that change the decision
+
+The selector's input hash covered the embedded textual `Input`, domain, rule **names**, and version. It did not bind rule bodies, and the procedure never checked that the actual probed expression agreed with its declared rendering. Two source-derived counterexamples from the external review:
+
+| Change | Old hash payload | Decision change |
+|---|---|---|
+| Hold `TaskStart` fixed; change the actual task from `not(not(x))` to `x` | unchanged | double-not goes from reducing to non-reducing |
+| Replace a rule with a different valid rule bearing the same name | unchanged | probe result and preference change |
+
+The retained run is **not** corrupted: the runner constructs consistent inputs from a fixed menu, so neither substitution occurred. This was an exposed API/provenance defect — the identity contract was not enforced at the boundary.
+
+Both are now closed by **refusal** rather than by hashing more: the selector errors on a task expression that does not render to `Input.TaskStart`, and on duplicate rule names carrying different content (exact duplicates are tolerated). Rule content enters the hash through `rewrite.Rule.Identity()` (name, admitted domain, both rendered sides). The task needs no separate hashed copy — every accepted input satisfies `Render(Task) == TaskStart`, so the hashed `Input` already pins the probed expression. A self-review caught the first attempt hashing a redundant `Task` field whose value could not diverge on any accepted input, and the test asserting it moved would have passed without the fix; both are gone.
 
 ### 6. Bounded work, and what the first repair left open
 
@@ -130,11 +167,13 @@ The load-bearing repair is at the consumer: **a resource stop is not a non-compl
 
 ### 7. Controller identity: the corrections made a new version, and it is labeled as one
 
-The repairs in §3, §5, and §6 leave the **rule ordering unchanged** for every accepted input — run 3 still reports 14/12/16 — but they do not leave the *procedure* unchanged: it now refuses inputs its predecessor decided, and its frozen probe-description parameter changed, moving its snapshot hash (`dc88c9fc…` → `5f0dc8e2…`). `internal/shape/shape.go` states the governing rule: "any change is a new version." Keeping the `shape-selector/1` label over changed frozen parameters would have put two procedures behind one identifier, and disclosure in a comment does not discharge that rule.
+The repairs in §3, §5, §5b, and §6 leave the **rule ordering unchanged** for every accepted input — run 3 still reports 14/12/16 — but they do not leave the *procedure* unchanged: it now refuses inputs its predecessor decided, and its frozen probe-description parameter changed, moving its snapshot hash (`dc88c9fc…` → `5f0dc8e2…`). `internal/shape/shape.go` states the governing rule: "any change is a new version." Keeping the `shape-selector/1` label over changed frozen parameters would have put two procedures behind one identifier, and disclosure in a comment does not discharge that rule.
 
 The controller is therefore **`shape-selector/2`**. Consequences recorded here:
 
 - Record 019's retained run-3 figures **belong to `shape-selector/1`**, which stays frozen and recoverable from git at `f7554cb`. The re-run under `/2` reproduces them, and its outcome label names `/2` so the two measurements cannot be conflated.
 - The confirmatory runner's freeze anchor was a hard-coded commit hash naming `/1`'s freeze. Once `/1`'s parameters changed, that hash silently anchored to a superseded procedure, and a pack authored between the two commits would have been admitted as confirmatory evidence for a controller frozen *after* it. The anchor is now expressed as the version identity plus the emitted label — a hash in a comment cannot stay correct across a version bump; a version string can.
 
-*Scope of this section: explanation and instrumentation corrections attributed to the 2026-09-13 external review, plus §6–§7 corrections attributed to the self-review of the first repair. No frozen count, criterion, or disposition above was altered; §5's retraction concerns the run-3 prose's claim scope, not its figures. The code repairs land across two commits, both referenced from `CHANGELOG.md`.*
+*Scope of this section. Sections §1–§5b answer the 2026-09-13 external review, one section per finding plus the corpus item: §1 net-vs-gross (finding 4), §2 attribution and §3 cost accounting (finding 1), §4 corpus, §5 claim scope (finding 2), §5b input identity (finding 3). Sections §5a, §6, and §7 are attributed to the self-review of that remediation — §5a reports what the new probe meter measures, §6 records what the first bounded-work repair left open, §7 records the controller-version consequence.*
+
+*No frozen count, criterion, or disposition above was altered. What §2 and §5 retract are **explanations**: the frozen text stands verbatim and the retraction tables name each site rather than asserting a substitution that was never applied — an earlier version of §2 made exactly that false claim and is itself corrected here. The code repairs land across three commits, all referenced from `CHANGELOG.md`.*

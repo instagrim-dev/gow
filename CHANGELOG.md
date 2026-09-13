@@ -51,38 +51,41 @@ conjecture is likewise explicitly not a `v1.0.0` requirement (`AGENTS.md`,
 
 ### Changed — 2026-09-13 external review remediations (`f7554cb` findings)
 
-Five instrumentation/claim-scope corrections; all frozen counts, criteria,
-and dispositions retained. Each is recorded with its own section in the
-attributed correction note appended to
-`docs/plans/2026-09-13-019-screen-execution-record.md` (§1–§4 for the
-findings below and the corpus item, §5 for claim scope, §6 for bounded
-work, §7 for the controller-identity consequence):
+Five instrumentation/claim-scope corrections plus one corpus item; all
+frozen counts, criteria, and dispositions retained. Each has its own
+section in the attributed correction note appended to
+`docs/plans/2026-09-13-019-screen-execution-record.md`: §1 net-vs-gross
+(finding 4), §2 attribution and §3 cost accounting (finding 1), §4 corpus,
+§5 claim scope (finding 2), §5b input identity (finding 3), §6 bounded
+work (finding 5). §2 and §5 carry per-site retraction tables naming every
+frozen sentence they retract as an explanation.
 
-- **Probe accounting (finding 1):** `shape.SelectV1`'s pre-search
+- **Probe accounting (finding 1):** the selector's pre-search
   strict-reduction probes are now metered on the `Decision`
   (`ProbeRuleApplications`, `ProbeCandidates`) and charged by the sealed
   runner into the arm's task ledger in one unit (candidate rewrites
-  materialized: `rewrite.Result.Generated` + probe candidates); expansion
+  materialized: `rewrite.Result.Generated` + probe work); expansion
   counts stay in traces as the budget unit. `rewrite.ProbeStrictReduction`
   is the metered probe; `CanStrictlyReduce` remains as the boolean
   convenience. Unmeasured custody is now recorded as unmeasured
   (`screen.Execution.CustodyMeasured`) and reported UNKNOWN — never zero —
-  with per-arm `CustodyKnown`/guarded `FullCost`.
-- **Claim scope (finding 2):** the v1 demotion rationale now states what
+  with per-arm `CustodyKnown`/guarded `FullCost`. Same finding, second
+  half: the inaccurate "only the relevance gate" H1/HG attribution
+  comment is corrected — relevance filtering AND failure-driven demotion
+  both differ (`internal/shape/comparator.go`), so an HG−H1 difference
+  cannot be attributed to gating alone.
+- **Claim scope (finding 2):** the demotion rationale now states what
   the probe checked — "no one-step strict NodeCount decrease from the
   current start" — never "can never reduce this task", and never a verdict
   on the history's truth. Ordering policy unchanged.
-- **Input identity (finding 3):** `SelectV1` now returns an error and
+- **Input identity (finding 3):** the selector now returns an error and
   refuses a task expression disagreeing with its declared rendering or
-  duplicate rule names with conflicting content; its input hash binds the
-  actual task rendering and full rule content (`rewrite.Rule.Identity`),
-  not names alone.
+  duplicate rule names with conflicting content; its input hash binds
+  full rule content (`rewrite.Rule.Identity`), not names alone.
 - **Net-vs-gross (finding 4):** screen condition (c) exports gross paired
   control wins/losses beside the net figure; run-2's "never lost"
   narration is retracted in the record (tied 7/12, one paired gain offset
-  one paired loss; the frozen net criterion passed and is unchanged). The
-  inaccurate "only the relevance gate" H1/HG attribution comment is
-  corrected: relevance filtering AND failure-driven demotion both differ.
+  one paired loss; the frozen net criterion passed and is unchanged).
 - **Bounded work (finding 5):** `finite` structural validation carries a
   traversal-work bound (shared-subexpression blowup refused as a resource
   refusal, not a semantic judgment); `rewrite.SearchBounded` adds
@@ -102,7 +105,9 @@ work, §7 for the controller-identity consequence):
 An adversarial pass over the remediation commit found six defects in it.
 All are corrected here; every frozen count still reproduces (run 1
 21/21/21, run 2 14/12/13, run 3 14/12/16, calibrated budget 2), and
-correction sections §5–§7 were added to the execution record:
+correction sections §5a, §6, and §7 were added to the execution record
+(§5b was added at the same time to close the finding-3 gap the first
+note left):
 
 - **A resource stop was still a semantic non-completion.** The bound flags
   landed with no consumer: a search truncated by the state or term-size
