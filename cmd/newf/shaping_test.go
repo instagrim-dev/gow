@@ -190,3 +190,97 @@ func TestShapingReceiptConcurrentPublicationDoesNotOverwrite(t *testing.T) {
 		t.Fatalf("complete pending receipt was not retained: %v", err)
 	}
 }
+
+func packFileArgs(packPath, outPath string) []string {
+	return []string{"--json", "shaping", "diagnose", "--pack-file", packPath, "--out", outPath,
+		"--expansions", "2", "--rule-applications", "128", "--candidates", "256", "--history-bytes", "65536",
+		"--check-assignments", "4096", "--max-states", "1024", "--max-term-nodes", "1024"}
+}
+
+const cliPackJSON = `{
+	"schema": "shaping-pack/1",
+	"label": "development/cli-file-pack",
+	"provenance": "implementer-authored CLI boundary fixture, 2026-09-13",
+	"episodes": [{
+		"id": "cli-double-not",
+		"stratum": "history_informative",
+		"family": "double-not",
+		"start": {"op": "not", "args": [{"op": "not", "args": [{"var": "x"}]}]},
+		"variables": ["x"],
+		"catalog": ["double-not"],
+		"target_cost": 1
+	}]
+}`
+
+func TestShapingCLIDataOnlyPackFileExecutesAndInspects(t *testing.T) {
+	dir := t.TempDir()
+	packPath := filepath.Join(dir, "pack.json")
+	if err := os.WriteFile(packPath, []byte(cliPackJSON), 0600); err != nil {
+		t.Fatal(err)
+	}
+	outPath := filepath.Join(dir, "receipt.json")
+	var stdout, stderr bytes.Buffer
+	if code := execute(context.Background(), packFileArgs(packPath, outPath), &stdout, &stderr); code != 0 {
+		t.Fatalf("pack-file diagnose failed: code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	receipt, err := readShapingReceipt(outPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if receipt.SourcePackLabel != "development/cli-file-pack" || receipt.EvidenceLabel != sealedrun.ResourceEvidenceLabel {
+		t.Fatalf("file pack must keep its source claim and the forced development label: %+v", receipt)
+	}
+	if receipt.Assessment != "completed-development-diagnostic" || len(receipt.Cells) != 4 {
+		t.Fatalf("expected a complete four-arm diagnostic from the file pack: %+v", receipt)
+	}
+	stdout.Reset()
+	if code := execute(context.Background(), []string{"--json", "shaping", "inspect", outPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("inspect failed: code=%d %s %s", code, stdout.String(), stderr.String())
+	}
+}
+
+func TestShapingCLIPackFlagsAreExclusiveAndOneRequired(t *testing.T) {
+	dir := t.TempDir()
+	packPath := filepath.Join(dir, "pack.json")
+	if err := os.WriteFile(packPath, []byte(cliPackJSON), 0600); err != nil {
+		t.Fatal(err)
+	}
+	both := append(packFileArgs(packPath, filepath.Join(dir, "a.json")), "--pack", "smoke")
+	var stdout, stderr bytes.Buffer
+	if code := execute(context.Background(), both, &stdout, &stderr); code == 0 {
+		t.Fatalf("--pack and --pack-file together must be refused: %s", stdout.String())
+	}
+	neither := []string{"--json", "shaping", "diagnose", "--out", filepath.Join(dir, "b.json"),
+		"--expansions", "2", "--rule-applications", "128", "--candidates", "256", "--history-bytes", "65536",
+		"--check-assignments", "4096", "--max-states", "1024", "--max-term-nodes", "1024"}
+	stdout.Reset()
+	stderr.Reset()
+	if code := execute(context.Background(), neither, &stdout, &stderr); code == 0 {
+		t.Fatalf("one of --pack/--pack-file must be required: %s", stdout.String())
+	}
+}
+
+func TestShapingCLIMalformedPackFileFailsBeforeReceiptPreparation(t *testing.T) {
+	dir := t.TempDir()
+	packPath := filepath.Join(dir, "pack.json")
+	if err := os.WriteFile(packPath, []byte(`{"schema": "shaping-pack/2"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	outPath := filepath.Join(dir, "receipt.json")
+	var stdout, stderr bytes.Buffer
+	if code := execute(context.Background(), packFileArgs(packPath, outPath), &stdout, &stderr); code == 0 || !strings.Contains(stdout.String(), "unsupported shaping pack schema") {
+		t.Fatalf("expected schema refusal: code=%d %s", code, stdout.String())
+	}
+	if _, err := os.Lstat(outPath); !os.IsNotExist(err) {
+		t.Fatal("a refused pack must not create a receipt")
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if strings.Contains(e.Name(), ".pending") {
+			t.Fatalf("a refused pack must not leave a pending receipt: %s", e.Name())
+		}
+	}
+}

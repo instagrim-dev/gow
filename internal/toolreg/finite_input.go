@@ -106,6 +106,14 @@ func (c FiniteClaim) Compile() (finite.Binding, finite.Expr, finite.Expr, []stri
 	return b, left, right, nil, nil
 }
 
+// Compile converts one data-only expression into a finite.Expr under the
+// shared depth and node admission ceilings. It is the single typed entry
+// point for other strict input formats that embed expressions.
+func (e *FiniteExpression) Compile() (finite.Expr, error) {
+	count := 0
+	return e.compile(0, &count)
+}
+
 func (e *FiniteExpression) compile(depth int, nodes *int) (finite.Expr, error) {
 	if e == nil {
 		return nil, fmt.Errorf("missing expression argument")
@@ -157,5 +165,5 @@ func (e *FiniteExpression) compile(depth int, nodes *int) (finite.Expr, error) {
 }
 
 func finiteClaimKeys(raw []byte) error {
-	return strictClaimKeys(raw, "finite claim", []string{"schema", "kind", "source_ref", "statement", "domain", "width", "variables", "left", "right", "var", "const", "op", "args"}, 2*finite.MaxExprDepth+8)
+	return StrictKeys(raw, "finite claim", []string{"schema", "kind", "source_ref", "statement", "domain", "width", "variables", "left", "right", "var", "const", "op", "args"}, 2*finite.MaxExprDepth+8)
 }

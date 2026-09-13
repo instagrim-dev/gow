@@ -79,7 +79,7 @@ func DecodeObservationClaim(raw []byte) (ObservationClaim, error) {
 		return c, fmt.Errorf("observation claim must be valid UTF-8")
 	}
 	keys := []string{"schema", "kind", "source_ref", "statement", "binding", "population", "ordering", "stopping_rule", "budget_min", "budget_max", "observations", "conditions", "budget", "instances", "id", "submissions", "move", "success"}
-	if err := strictClaimKeys(raw, "observation claim", keys, 16); err != nil {
+	if err := StrictKeys(raw, "observation claim", keys, 16); err != nil {
 		return c, err
 	}
 	d := json.NewDecoder(bytes.NewReader(raw))

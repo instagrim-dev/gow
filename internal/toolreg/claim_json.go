@@ -9,7 +9,9 @@ import (
 
 // encoding/json accepts duplicate and case-variant struct keys. Refuse both
 // before decoding so the exact bound input has one interpretation.
-func strictClaimKeys(raw []byte, label string, keys []string, maxDepth int) error {
+// StrictKeys is shared by every strict data-only input format; callers own
+// their allowed key set and nesting ceiling.
+func StrictKeys(raw []byte, label string, keys []string, maxDepth int) error {
 	allowed := map[string]bool{}
 	for _, k := range keys {
 		allowed[k] = true

@@ -30,7 +30,7 @@ type shapingResponse struct {
 
 func newShapingCommand(stdout io.Writer, opts *rootOptions, version string) *cobra.Command {
 	cmd := &cobra.Command{Use: "shaping", Short: "Run and inspect bounded development shaping diagnostics"}
-	var pack, out string
+	var pack, packFile, out string
 	var budget sealedrun.ResourceBudget
 	diagnose := &cobra.Command{
 		Use: "diagnose", Short: "Execute a disclosed pack with explicit per-cell resource allowances", Args: cobra.NoArgs,
@@ -40,10 +40,16 @@ func newShapingCommand(stdout io.Writer, opts *rootOptions, version string) *cob
 			ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
 			var input sealedrun.Pack
-			switch pack {
-			case "development-v1":
+			switch {
+			case packFile != "":
+				decoded, err := readShapingPackFile(packFile)
+				if err != nil {
+					return wrapCommandError("shaping diagnose", err)
+				}
+				input = decoded
+			case pack == "development-v1":
 				input = sealedrun.AgentSealedV1()
-			case "smoke":
+			case pack == "smoke":
 				input = sealedrun.ResourceSmokePack()
 			default:
 				return wrapCommandError("shaping diagnose", fmt.Errorf("unsupported pack %q: use smoke or development-v1", pack))
@@ -69,6 +75,7 @@ func newShapingCommand(stdout io.Writer, opts *rootOptions, version string) *cob
 		},
 	}
 	diagnose.Flags().StringVar(&pack, "pack", "", "Built-in disclosed pack: smoke (engineering check) or development-v1 (exposed diagnostic)")
+	diagnose.Flags().StringVar(&packFile, "pack-file", "", "Strict data-only shaping-pack/1 JSON file (at most 1 MiB); its label is an unverified claim")
 	diagnose.Flags().StringVar(&out, "out", "", "New receipt file; existing files are never replaced")
 	diagnose.Flags().IntVar(&budget.Expansions, "expansions", 0, "Per-cell search expansion allowance")
 	diagnose.Flags().IntVar(&budget.RuleApplications, "rule-applications", 0, "Per-cell shared selector/search rule-application allowance")
@@ -77,9 +84,11 @@ func newShapingCommand(stdout io.Writer, opts *rootOptions, version string) *cob
 	diagnose.Flags().Int64Var(&budget.CheckAssignments, "check-assignments", 0, "Per-cell reserved final-check assignment allowance")
 	diagnose.Flags().IntVar(&budget.MaxStates, "max-states", 0, "Per-cell visited-state safety ceiling")
 	diagnose.Flags().IntVar(&budget.MaxTermNodes, "max-term-nodes", 0, "Per-expression node safety ceiling")
-	for _, name := range []string{"pack", "out", "expansions", "rule-applications", "candidates", "history-bytes", "check-assignments", "max-states", "max-term-nodes"} {
+	for _, name := range []string{"out", "expansions", "rule-applications", "candidates", "history-bytes", "check-assignments", "max-states", "max-term-nodes"} {
 		_ = diagnose.MarkFlagRequired(name)
 	}
+	diagnose.MarkFlagsOneRequired("pack", "pack-file")
+	diagnose.MarkFlagsMutuallyExclusive("pack", "pack-file")
 	cmd.AddCommand(diagnose)
 	cmd.AddCommand(&cobra.Command{
 		Use: "inspect <receipt>", Short: "Reconstruct arithmetic from a retained receipt without rerunning its checks", Args: cobra.ExactArgs(1),
@@ -161,6 +170,22 @@ func publishShapingReceipt(pending *os.File, path string, receipt sealedrun.Reso
 		return fmt.Errorf("receipt saved at %s but temporary link remains at %s: %w", path, retained, err)
 	}
 	return nil
+}
+
+// readShapingPackFile bounds the read before decoding; DecodeShapingPack owns
+// format admission and the runner owns semantic validation, so a bad pack is
+// refused before any receipt file is prepared.
+func readShapingPackFile(path string) (sealedrun.Pack, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return sealedrun.Pack{}, err
+	}
+	defer f.Close()
+	raw, err := io.ReadAll(io.LimitReader(f, sealedrun.MaxShapingPackBytes+1))
+	if err != nil {
+		return sealedrun.Pack{}, err
+	}
+	return sealedrun.DecodeShapingPack(raw)
 }
 
 func readShapingReceipt(path string) (sealedrun.ResourceReceipt, error) {

@@ -58,7 +58,7 @@ func DecodeFiniteInstanceClaim(raw []byte) (FiniteInstanceClaim, error) {
 		return c, fmt.Errorf("finite instance claim must be valid UTF-8")
 	}
 	keys := []string{"schema", "kind", "source_ref", "statement", "domain", "width", "variables", "left", "right", "var", "const", "op", "args", "assignments", "values", "value"}
-	if err := strictClaimKeys(raw, "finite instance claim", keys, 2*finite.MaxExprDepth+10); err != nil {
+	if err := StrictKeys(raw, "finite instance claim", keys, 2*finite.MaxExprDepth+10); err != nil {
 		return c, err
 	}
 	d := json.NewDecoder(bytes.NewReader(raw))
