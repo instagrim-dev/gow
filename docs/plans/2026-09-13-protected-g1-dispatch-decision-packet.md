@@ -1,10 +1,11 @@
 # Protected G1 dispatch decision packet
 
-**Status: partially recorded, not dispatch-authorized.** This packet is the
-minimum operator decision surface for a protected G1 dispatch. A blank,
-ambiguous, or unverified field blocks dispatch. Completing this document does
-not create authority. The recorded-decision section below captures actual
-operator selections; the open rows are the remaining blockers.
+**Status: decision-complete; dispatch authorized 2026-09-13; execution in
+flight.** This packet is the minimum operator decision surface for a
+protected G1 dispatch. A blank, ambiguous, or unverified field blocks
+dispatch. Completing this document does not create authority beyond the
+recorded operator decisions below; the observed-isolation row is graded from
+the custodian's return packet.
 
 ## Fixed engineering contract
 
