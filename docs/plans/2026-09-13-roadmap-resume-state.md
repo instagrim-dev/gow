@@ -123,8 +123,16 @@ raw cells and setup certificates are concrete fields in a receipt. Existing
 `newf ingest <receipt> --problem <id>` retains its bytes as an immutable source
 snapshot. `newf source snapshot verify <snapshot-id>` checks stored integrity.
 No new mutable policy ledger or scientific status promotion is introduced.
-Native shaping-policy rows and a general data-only protected-pack input format
-remain outside this repair.
+Native shaping-policy rows remain outside this repair. A strict data-only
+pack input now exists: `shaping diagnose --pack-file` accepts a
+`shaping-pack/1` JSON file under the
+[shaping pack input contract](../shaping-pack-contract.md). The decoder owns
+format admission; the unchanged runner owns semantic validation and forces
+the development evidence label, so a file pack cannot upgrade its own grade.
+Boundary evidence: `internal/sealedrun/pack_input_test.go` (label laundering,
+ambiguous keys, missing explicit fields, single-owner semantic refusal) and
+`cmd/newf/shaping_test.go` (end-to-end file execution, exclusive/required
+flags, refusal before receipt preparation).
 
 Actual command execution is retained in:
 
@@ -383,12 +391,16 @@ The next research dispatch requires a concrete approved design and fresh custody
 artifacts; later roadmap stages are not marked complete by these engineering
 repairs.
 
-**Next action:** no further engineering is runnable on this path without an
-operator decision. The next concrete step is resolving the immutable release
+**Next action:** with the data-only pack input delivered, no further
+engineering is runnable on this path without an operator decision. The next
+concrete step is resolving the immutable release
 identity live and recording it in the release-identity row of the dispatch
 decision packet, then completing the remaining packet rows. This does not
 authorize G1 dispatch. To re-exercise delivered paths meanwhile:
 `go build -o /tmp/newf ./cmd/newf && /tmp/newf --db <fresh.sqlite> review check-finite --input docs/plans/artifacts/2026-09-13-finite-claim-path/holds-input.json --policy <id> --obligation <id> --case <label> --executor <name> --max-assignments 64`.
+Operator-authored development packs can also run without editing Go, under the
+[shaping pack input contract](../shaping-pack-contract.md):
+`/tmp/newf shaping diagnose --pack-file <pack.json> --out <new-receipt.json> --expansions 2 --rule-applications 128 --candidates 256 --history-bytes 65536 --check-assignments 4096 --max-states 1024 --max-term-nodes 1024`.
 
 ### G1 pack metadata preparation
 

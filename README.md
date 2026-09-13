@@ -28,7 +28,10 @@ generator**.
 
 The bounded shaping development path is available as `newf shaping diagnose`
 and `newf shaping inspect`. It records shared probe/search resource allowances,
-checked endpoints and blocked receipts. See the
+checked endpoints and blocked receipts. Packs are authored either as built-in
+disclosed fixtures (`--pack`) or as strict data-only `shaping-pack/1` JSON
+files (`--pack-file`; see the
+[shaping pack input contract](docs/shaping-pack-contract.md)). See the
 [operator contract and current repair status](docs/plans/2026-09-13-roadmap-resume-state.md)
 for the disclosed smoke command, persistence/replay scope and evaluation gates.
 
