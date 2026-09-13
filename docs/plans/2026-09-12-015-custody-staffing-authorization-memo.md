@@ -55,6 +55,8 @@ Untouched. Downstream of D1–D4 + sealed execution; listed only so the chain of
 
 ## Trigger ledger
 
+**D19 (2026-09-13, operator directive): agent-native custody variant is the operative tier.** The human-staffing requirement was declared unnecessary friction for this single-developer context. The chain proceeds with: a clean-room custodian agent (fresh context; receives ONLY the revision-2 handoff and public interfaces; authors packs AFTER the HG controller froze at `d68b961`), mechanical sealing (content hashes, pack committed verbatim with provenance), and agent review lanes where the packets specified humans. Evidence grade recorded honestly on every artifact: **`agent-sealed/v1` = conversation-isolated and post-freeze, but model-family-dependent** — stronger than development, weaker than human-sealed. Human staffing (packets in [`018`](2026-09-12-018-external-staffing-packets.md)) remains the upgrade path, not a gate. `screen.Outcome.GateEligible` stays constitutionally false; the spending decision D18 is the operator's own act reading the labeled outcome, not a flag the code grants.
+
 | Decision | Trigger that closes it | Status (2026-09-12) |
 |---|---|---|
 | D1 | Operator names the custodian option (and person, for (a)/(c)) | **CLOSED: option (c)+(a)** — operator holds custody mechanics now; an unexposed human is recruited for task authorship before any sealed claim. Operator exposure history (this workstream's dev cases and registry internals) rides on anything the operator authors. **Recruitment packet ready to forward: [`018`](2026-09-12-018-external-staffing-packets.md) Packet A** |
