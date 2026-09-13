@@ -70,13 +70,15 @@ func runWithSelector(p Pack, budget int, hg hgSelector, label string) (screen.Ou
 		}
 		// Selector probe work is charged to the arm whose selector
 		// performed it (2026-09-13 external review finding 1: v1's
-		// pre-search probes were previously uncharged). The Decision
-		// meters candidates in the same unit Search reports in
-		// res.Generated, so one ledger covers both.
+		// pre-search probes were previously uncharged). BOTH meters are
+		// charged: a probe that matches nothing still traverses every
+		// position of the task, so charging candidates alone would leave
+		// non-matching probes free — reopening the uncharged-work hole
+		// at a smaller scale (2026-09-13 self-review).
 		probeCharge := map[screen.Arm]int64{
 			screen.ArmH0: 0,
-			screen.ArmH1: int64(h1Dec.ProbeCandidates),
-			screen.ArmHG: int64(hgDec.ProbeCandidates),
+			screen.ArmH1: probeWork(h1Dec),
+			screen.ArmHG: probeWork(hgDec),
 		}
 		trace := EpisodeTrace{EpisodeID: ep.Decl.ID, HG: hgDec, H1: h1Dec, Completed: map[screen.Arm]bool{}, Explored: map[screen.Arm]int{}}
 		for _, arm := range []screen.Arm{screen.ArmH0, screen.ArmH1, screen.ArmHG} {
@@ -87,6 +89,18 @@ func runWithSelector(p Pack, budget int, hg hgSelector, label string) (screen.Ou
 			res, err := rewrite.Search(ep.Start, domain, ordered, rewrite.NodeCount, budget)
 			if err != nil {
 				return screen.Outcome{}, nil, fmt.Errorf("episode %s arm %s: %w", ep.Decl.ID, arm, err)
+			}
+			// A resource stop is NOT a non-completion: reaching the
+			// state ceiling, refusing an oversize term, or being
+			// cancelled truncates the reachable set, so this cell
+			// measures nothing about the arm's capability. Refuse the
+			// run rather than record it as a miss (2026-09-13
+			// self-review of the finding-5 repair). BudgetExhausted is
+			// deliberately NOT in this set: the budget is the declared
+			// measurement parameter, and stopping on it is the
+			// measurement working as designed.
+			if blocked := searchBlockedReason(res); blocked != "" {
+				return screen.Outcome{}, nil, fmt.Errorf("episode %s arm %s: measurement blocked — %s; the search was truncated by a resource bound, so this cell carries no completion outcome (a resource stop is not a semantic refutation)", ep.Decl.ID, arm, blocked)
 			}
 			completed := res.BestCost <= ep.TargetCost && res.EndpointVerified
 			trace.Completed[arm] = completed
@@ -127,20 +141,59 @@ func hgV0(in shape.Input, _ finite.Expr, _ finite.Domain, _ []rewrite.Rule) (sha
 	return shape.Select(in), nil
 }
 
-func hgV1(in shape.Input, task finite.Expr, domain finite.Domain, rules []rewrite.Rule) (shape.Decision, error) {
-	return shape.SelectV1(shape.InputV1{Input: in, Task: task, Domain: domain, Rules: rules})
+// probeWork is a selector's total charged pre-search work: one unit per
+// rule probed against the task (the positional traversal every probe
+// performs, match or not) plus one unit per candidate rewrite the probes
+// materialized. Selectors that run no probe charge zero.
+func probeWork(dec shape.Decision) int64 {
+	return int64(dec.ProbeRuleApplications) + int64(dec.ProbeCandidates)
 }
 
-// RunConfirmatoryV1 runs a POST-FREEZE pack with the v1 controller under
-// the pack's own label (suffix "+v1" identifies the HG controller, not a
-// grade downgrade). Only lawful for packs authored after shape-selector/1
-// froze (f7554cb); running v1 on a pack that motivated its design is
-// adaptation reuse and must go through RunDiagnosticV1 instead, which
-// forces the taint suffix. The v0 counterpart needs no dedicated wrapper:
-// RunWithBudget is already the v0 runner under the pack's own label.
-func RunConfirmatoryV1(p Pack, budget int) (screen.Outcome, []EpisodeTrace, error) {
+// searchBlockedReason names the resource bound that truncated a search,
+// or "" when the search stopped on its declared budget or ran to
+// completion. BudgetExhausted is not a block: the budget is the declared
+// measurement parameter.
+func searchBlockedReason(res rewrite.Result) string {
+	switch {
+	case res.Cancelled:
+		return "search cancelled before it completed"
+	case res.StateBounded:
+		return fmt.Sprintf("generated-state ceiling reached after %d expansions", res.Explored)
+	case res.TermSizeBounded:
+		return "at least one successor exceeded the term-size ceiling, truncating the reachable set"
+	default:
+		return ""
+	}
+}
+
+func hgV2(in shape.Input, task finite.Expr, domain finite.Domain, rules []rewrite.Rule) (shape.Decision, error) {
+	return shape.SelectV2(shape.InputV2{Input: in, Task: task, Domain: domain, Rules: rules})
+}
+
+// RunConfirmatoryV2 runs a POST-FREEZE pack with the current
+// failure-aware controller under the pack's own label (the version suffix
+// identifies the HG controller, not a grade downgrade). Running it on a
+// pack that motivated the controller's design is adaptation reuse and
+// must go through RunDiagnosticV2 instead, which forces the taint suffix.
+// The v0 counterpart needs no dedicated wrapper: RunWithBudget is already
+// the v0 runner under the pack's own label.
+//
+// FREEZE ANCHOR: lawful only for packs authored after
+// shape.ControllerVersionV2 froze — the commit that introduced THIS
+// version string, not the commit that introduced its predecessor. The
+// anchor was previously a hard-coded hash (`f7554cb`) naming
+// shape-selector/1's freeze; when /1's frozen parameters changed, that
+// hash silently became an anchor to a superseded procedure, and a pack
+// authored in between would have been admitted as confirmatory evidence
+// for a controller frozen after it (2026-09-13 self-review, finding 2).
+// The anchor is therefore expressed as the version identity plus the
+// label the outcome carries: a reader comparing a pack's authorship date
+// against `git log -S'shape-selector/2'` resolves the true freeze point,
+// and the emitted label records which procedure ran. A hash written here
+// cannot stay correct across a version bump; the version string can.
+func RunConfirmatoryV2(p Pack, budget int) (screen.Outcome, []EpisodeTrace, error) {
 	if p.Label == "" {
 		return screen.Outcome{}, nil, fmt.Errorf("a pack must carry its evidence-tier label")
 	}
-	return runWithSelector(p, budget, hgV1, p.Label+"+v1")
+	return runWithSelector(p, budget, hgV2, p.Label+"+"+shape.ControllerVersionV2)
 }

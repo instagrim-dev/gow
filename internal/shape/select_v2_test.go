@@ -12,7 +12,7 @@ import (
 // v0 admits lookalike lying histories at full weight. v1 grounds each
 // history claim against the task via the strict-reduction probe.
 
-func admitV1(t *testing.T, name string, lhs, rhs finite.Expr) rewrite.Rule {
+func admitRule(t *testing.T, name string, lhs, rhs finite.Expr) rewrite.Rule {
 	t.Helper()
 	d := finite.Domain{Width: 4, Vars: []string{"a"}}
 	cert := finite.AssessEquivalence(finite.Binding{Sentence: name, Domain: d}, lhs, rhs)
@@ -28,15 +28,15 @@ func admitV1(t *testing.T, name string, lhs, rhs finite.Expr) rewrite.Rule {
 // v1 must distrust it (not-intro can never reduce) AND distrust the
 // failure claims (the reducers demonstrably reduce), restoring an order
 // no worse than the catalog's.
-func TestV1NeutralizesBlatantLie(t *testing.T) {
+func TestSelectorNeutralizesBlatantLie(t *testing.T) {
 	task := nn(addZ(v("x")))
 	catalog := []string{"double-not", "add-zero", "not-intro"}
 	rules := []rewrite.Rule{
-		admitV1(t, "double-not", nn(v("a")), v("a")),
-		admitV1(t, "add-zero", addZ(v("a")), v("a")),
-		admitV1(t, "not-intro", v("a"), nn(v("a"))),
+		admitRule(t, "double-not", nn(v("a")), v("a")),
+		admitRule(t, "add-zero", addZ(v("a")), v("a")),
+		admitRule(t, "not-intro", v("a"), nn(v("a"))),
 	}
-	in := InputV1{
+	in := InputV2{
 		Input: Input{
 			TaskStart: RenderExpr(task), Target: 1, Catalog: catalog,
 			History: History{
@@ -46,9 +46,9 @@ func TestV1NeutralizesBlatantLie(t *testing.T) {
 		},
 		Task: task, Domain: finite.Domain{Width: 4, Vars: []string{"x"}}, Rules: rules,
 	}
-	dec, err := SelectV1(in)
+	dec, err := SelectV2(in)
 	if err != nil {
-		t.Fatalf("SelectV1: %v", err)
+		t.Fatalf("SelectV2: %v", err)
 	}
 	if dec.EnabledRules[len(dec.EnabledRules)-1] != "not-intro" {
 		t.Fatalf("the lying success claim must be demoted last: %v", dec.EnabledRules)
@@ -72,22 +72,22 @@ func TestV1NeutralizesBlatantLie(t *testing.T) {
 	if withheld == 0 {
 		t.Fatalf("the one-step demotion must be recorded with its scoped rationale: %+v", dec.Preferences)
 	}
-	if dec.ControllerVersion != ControllerVersionV1 {
+	if dec.ControllerVersion != ControllerVersionV2 {
 		t.Fatalf("wrong version: %s", dec.ControllerVersion)
 	}
 }
 
 // Informative history must still help: credited reducers that pass the
 // probe are preferred, exactly as in v0's happy path.
-func TestV1InformativeHistoryStillPrefersReducers(t *testing.T) {
+func TestSelectorInformativeHistoryStillPrefersReducers(t *testing.T) {
 	task := nn(addZ(nn(v("x"))))
 	catalog := []string{"not-intro", "double-not", "add-zero"} // bad neutral order
 	rules := []rewrite.Rule{
-		admitV1(t, "double-not", nn(v("a")), v("a")),
-		admitV1(t, "add-zero", addZ(v("a")), v("a")),
-		admitV1(t, "not-intro", v("a"), nn(v("a"))),
+		admitRule(t, "double-not", nn(v("a")), v("a")),
+		admitRule(t, "add-zero", addZ(v("a")), v("a")),
+		admitRule(t, "not-intro", v("a"), nn(v("a"))),
 	}
-	in := InputV1{
+	in := InputV2{
 		Input: Input{
 			TaskStart: RenderExpr(task), Target: 1, Catalog: catalog,
 			History: History{
@@ -96,9 +96,9 @@ func TestV1InformativeHistoryStillPrefersReducers(t *testing.T) {
 		},
 		Task: task, Domain: finite.Domain{Width: 4, Vars: []string{"x"}}, Rules: rules,
 	}
-	dec, err := SelectV1(in)
+	dec, err := SelectV2(in)
 	if err != nil {
-		t.Fatalf("SelectV1: %v", err)
+		t.Fatalf("SelectV2: %v", err)
 	}
 	if dec.EnabledRules[0] == "not-intro" {
 		t.Fatalf("informative history must promote the reducers: %v", dec.EnabledRules)
@@ -115,7 +115,7 @@ func TestV1InformativeHistoryStillPrefersReducers(t *testing.T) {
 // structurally dominant one. (Search-level harm from this narrower
 // surface needs deep constructions; it is measured at the screen, not
 // hand-built here.)
-func TestV1StillMisleadableByCreditAllocation(t *testing.T) {
+func TestSelectorStillMisleadableByCreditAllocation(t *testing.T) {
 	// Task nn(addZ(nn(x))): double-not carries 3 of the 4 reduction
 	// steps; add-zero carries 1. The lie credits add-zero as the sole
 	// success and double-not as the failure. Both pass the probe, so
@@ -125,10 +125,10 @@ func TestV1StillMisleadableByCreditAllocation(t *testing.T) {
 	task := nn(addZ(nn(v("x"))))
 	catalog := []string{"double-not", "add-zero"}
 	rules := []rewrite.Rule{
-		admitV1(t, "double-not", nn(v("a")), v("a")),
-		admitV1(t, "add-zero", addZ(v("a")), v("a")),
+		admitRule(t, "double-not", nn(v("a")), v("a")),
+		admitRule(t, "add-zero", addZ(v("a")), v("a")),
 	}
-	in := InputV1{
+	in := InputV2{
 		Input: Input{
 			TaskStart: RenderExpr(task), Target: 1, Catalog: catalog,
 			History: History{
@@ -138,9 +138,9 @@ func TestV1StillMisleadableByCreditAllocation(t *testing.T) {
 		},
 		Task: task, Domain: finite.Domain{Width: 4, Vars: []string{"x"}}, Rules: rules,
 	}
-	dec, err := SelectV1(in)
+	dec, err := SelectV2(in)
 	if err != nil {
-		t.Fatalf("SelectV1: %v", err)
+		t.Fatalf("SelectV2: %v", err)
 	}
 	if dec.EnabledRules[0] != "add-zero" {
 		t.Fatalf("a lie among probe-passing rules must still steer the ordering (the misleadability property): %v", dec.EnabledRules)
@@ -153,17 +153,17 @@ func TestV1StillMisleadableByCreditAllocation(t *testing.T) {
 }
 
 // Determinism and version identity.
-func TestV1Deterministic(t *testing.T) {
+func TestSelectorDeterministic(t *testing.T) {
 	task := nn(v("x"))
-	rules := []rewrite.Rule{admitV1(t, "double-not", nn(v("a")), v("a"))}
-	in := InputV1{
+	rules := []rewrite.Rule{admitRule(t, "double-not", nn(v("a")), v("a"))}
+	in := InputV2{
 		Input: Input{TaskStart: RenderExpr(task), Target: 1, Catalog: []string{"double-not"}},
 		Task:  task, Domain: finite.Domain{Width: 4, Vars: []string{"x"}}, Rules: rules,
 	}
-	a, errA := SelectV1(in)
-	b, errB := SelectV1(in)
+	a, errA := SelectV2(in)
+	b, errB := SelectV2(in)
 	if errA != nil || errB != nil {
-		t.Fatalf("SelectV1: %v / %v", errA, errB)
+		t.Fatalf("SelectV2: %v / %v", errA, errB)
 	}
 	if a.InputHash != b.InputHash || a.SnapshotHash != b.SnapshotHash || len(a.EnabledRules) != len(b.EnabledRules) {
 		t.Fatalf("nondeterministic: %+v vs %+v", a, b)
@@ -174,17 +174,17 @@ func TestV1Deterministic(t *testing.T) {
 // hash must move when decision-relevant inputs move, and inputs whose
 // declared rendering disagrees with the actual task must be refused —
 // never silently probed against a task other than the one hashed.
-func TestV1IdentityContract(t *testing.T) {
+func TestSelectorIdentityContract(t *testing.T) {
 	task := nn(v("x"))
 	domain := finite.Domain{Width: 4, Vars: []string{"x"}}
-	doubleNot := admitV1(t, "double-not", nn(v("a")), v("a"))
-	base := InputV1{
+	doubleNot := admitRule(t, "double-not", nn(v("a")), v("a"))
+	base := InputV2{
 		Input: Input{TaskStart: RenderExpr(task), Target: 1, Catalog: []string{"double-not"}},
 		Task:  task, Domain: domain, Rules: []rewrite.Rule{doubleNot},
 	}
-	baseDec, err := SelectV1(base)
+	baseDec, err := SelectV2(base)
 	if err != nil {
-		t.Fatalf("SelectV1(base): %v", err)
+		t.Fatalf("SelectV2(base): %v", err)
 	}
 
 	// (i) Task/rendering mismatch is refused: keep TaskStart, swap the
@@ -192,7 +192,7 @@ func TestV1IdentityContract(t *testing.T) {
 	// flips the double-not probe while a name-only hash is unchanged).
 	mismatch := base
 	mismatch.Task = v("x")
-	if _, err := SelectV1(mismatch); err == nil {
+	if _, err := SelectV2(mismatch); err == nil {
 		t.Fatal("a task expression disagreeing with its declared rendering must be refused")
 	}
 
@@ -200,23 +200,36 @@ func TestV1IdentityContract(t *testing.T) {
 	// name (a valid admitted rule, different rewrite). The hash must
 	// move, because the probe result may move.
 	swapped := base
-	swapped.Rules = []rewrite.Rule{admitV1(t, "double-not", addZ(v("a")), v("a"))}
-	swappedDec, err := SelectV1(swapped)
+	swapped.Rules = []rewrite.Rule{admitRule(t, "double-not", addZ(v("a")), v("a"))}
+	swappedDec, err := SelectV2(swapped)
 	if err != nil {
-		t.Fatalf("SelectV1(swapped): %v", err)
+		t.Fatalf("SelectV2(swapped): %v", err)
 	}
 	if swappedDec.InputHash == baseDec.InputHash {
 		t.Fatal("replacing a rule's content under the same name must change the input hash; names alone are not an identity")
 	}
 
-	// (iii) The actual task is bound: a different task with its correct
-	// rendering hashes differently even under an identical rule menu.
+	// (iii) The task is bound by REFUSAL, not by a second hashed copy of
+	// its rendering. This is the discriminating form: the review's
+	// counterexample (hold TaskStart, swap the actual task) is defeated
+	// by (i); a subtest that changes the task AND its rendering, then
+	// asserts the hash moved, passes on the unfixed code too — Input
+	// already contained TaskStart before the repair — so it protected
+	// nothing (2026-09-13 self-review). What is actually guaranteed is
+	// the invariant below: every ACCEPTED input has Render(Task) equal to
+	// TaskStart, so the hashed Input pins the probed expression.
+	accepted := base
+	if got := RenderExpr(accepted.Task); got != accepted.Input.TaskStart {
+		t.Fatalf("accepted input must satisfy Render(Task) == TaskStart; got %q vs %q", got, accepted.Input.TaskStart)
+	}
+	// And the pinning is load-bearing: a different task under its own
+	// correct rendering is a different hashed Input.
 	other := base
 	other.Task = nn(nn(v("x")))
 	other.TaskStart = RenderExpr(other.Task)
-	otherDec, err := SelectV1(other)
+	otherDec, err := SelectV2(other)
 	if err != nil {
-		t.Fatalf("SelectV1(other): %v", err)
+		t.Fatalf("SelectV2(other): %v", err)
 	}
 	if otherDec.InputHash == baseDec.InputHash {
 		t.Fatal("changing the task must change the input hash")
@@ -225,13 +238,13 @@ func TestV1IdentityContract(t *testing.T) {
 	// (iv) Conflicting duplicate rule names are refused; exact
 	// duplicates are tolerated.
 	conflicting := base
-	conflicting.Rules = []rewrite.Rule{doubleNot, admitV1(t, "double-not", addZ(v("a")), v("a"))}
-	if _, err := SelectV1(conflicting); err == nil {
+	conflicting.Rules = []rewrite.Rule{doubleNot, admitRule(t, "double-not", addZ(v("a")), v("a"))}
+	if _, err := SelectV2(conflicting); err == nil {
 		t.Fatal("two rules sharing a name with different content must be refused")
 	}
 	duplicated := base
 	duplicated.Rules = []rewrite.Rule{doubleNot, doubleNot}
-	if _, err := SelectV1(duplicated); err != nil {
+	if _, err := SelectV2(duplicated); err != nil {
 		t.Fatalf("an exact duplicate rule is harmless and must not be refused: %v", err)
 	}
 }
@@ -239,22 +252,22 @@ func TestV1IdentityContract(t *testing.T) {
 // Probe metering (2026-09-13 external review finding 1): the probes v1
 // runs before the budgeted search are work, and the decision must carry
 // their meter so a runner can charge them.
-func TestV1MetersProbeWork(t *testing.T) {
+func TestSelectorMetersProbeWork(t *testing.T) {
 	task := nn(addZ(v("x")))
-	in := InputV1{
+	in := InputV2{
 		Input: Input{
 			TaskStart: RenderExpr(task), Target: 1,
 			Catalog: []string{"double-not", "add-zero"},
 		},
 		Task: task, Domain: finite.Domain{Width: 4, Vars: []string{"x"}},
 		Rules: []rewrite.Rule{
-			admitV1(t, "double-not", nn(v("a")), v("a")),
-			admitV1(t, "add-zero", addZ(v("a")), v("a")),
+			admitRule(t, "double-not", nn(v("a")), v("a")),
+			admitRule(t, "add-zero", addZ(v("a")), v("a")),
 		},
 	}
-	dec, err := SelectV1(in)
+	dec, err := SelectV2(in)
 	if err != nil {
-		t.Fatalf("SelectV1: %v", err)
+		t.Fatalf("SelectV2: %v", err)
 	}
 	if dec.ProbeRuleApplications != 2 {
 		t.Fatalf("two catalog rules probed, meter says %d", dec.ProbeRuleApplications)

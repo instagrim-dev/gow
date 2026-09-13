@@ -5,6 +5,7 @@ package rewrite
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/instagrim-dev/newf/internal/finite"
 )
@@ -251,9 +252,9 @@ func TestTermSizeCeilingTruncatesAndSaysSo(t *testing.T) {
 		finite.Var{Name: "a"},
 		finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: finite.Var{Name: "a"}}}, d4a)
 	start := finite.Var{Name: "x"}
-	// Renderings: x → not(not(x)) → ... The 12-byte ceiling admits
-	// not(not(x)) but refuses the next doubling.
-	res, err := SearchBounded(start, dom(4, "x"), []Rule{notIntro}, NodeCount, 100, Limits{MaxRenderedSize: 12})
+	// Tree sizes: x is 1 node, not(not(x)) is 3, the next doubling is 5.
+	// A 3-node ceiling admits the first successor and refuses the next.
+	res, err := SearchBounded(start, dom(4, "x"), []Rule{notIntro}, NodeCount, 100, Limits{MaxTermNodes: 3})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,6 +263,51 @@ func TestTermSizeCeilingTruncatesAndSaysSo(t *testing.T) {
 	}
 	if res.StateBounded || res.Cancelled {
 		t.Fatalf("only the term-size bound fired here: %+v", res)
+	}
+}
+
+// The size ceiling must be paid BEFORE rendering, not after (2026-09-13
+// self-review): a bound that renders every candidate and measures the
+// string has already spent the cost it exists to refuse. A start
+// expression with shared subexpressions makes the difference measurable —
+// under a render-then-measure bound this search rendered 16k multi-hundred-KB
+// terms and kept none.
+func TestOversizeSuccessorsAreRefusedWithoutRendering(t *testing.T) {
+	d4a := dom(4, "a")
+	addZero := admit(t, "add-zero",
+		finite.Binary{Op: finite.OpAdd, X: finite.Var{Name: "a"}, Y: finite.Const{Value: 0}},
+		finite.Var{Name: "a"}, d4a)
+	var e finite.Expr = finite.Binary{Op: finite.OpAdd, X: finite.Var{Name: "x"}, Y: finite.Const{Value: 0}}
+	for i := 0; i < 10; i++ { // shared doubling: ~3k nodes, valid for admission
+		e = finite.Binary{Op: finite.OpAdd, X: e, Y: e}
+	}
+	if defects := finite.ValidateExpr(e, dom(4, "x")); len(defects) > 0 {
+		t.Fatalf("the start must be admissible for this test to say anything: %v", defects)
+	}
+	done := make(chan Result, 1)
+	go func() {
+		// A ceiling below the start's own size refuses every successor.
+		res, err := SearchBounded(e, dom(4, "x"), []Rule{addZero}, NodeCount, 500, Limits{MaxTermNodes: 8})
+		if err != nil {
+			t.Error(err)
+			close(done)
+			return
+		}
+		done <- res
+	}()
+	select {
+	case res, ok := <-done:
+		if !ok {
+			t.Fatal("search failed")
+		}
+		if !res.TermSizeBounded {
+			t.Fatalf("every successor exceeded the ceiling and must be reported as truncation: %+v", res)
+		}
+		if res.Best != res.Original {
+			t.Fatalf("no successor was retained, so the best must remain the original: %+v", res)
+		}
+	case <-time.After(20 * time.Second):
+		t.Fatal("the size bound is being paid after rendering; refusal must not cost what it refuses")
 	}
 }
 

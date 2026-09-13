@@ -293,9 +293,9 @@ func TestCheckRecordOutcomeSeparatesRefusalFromDecision(t *testing.T) {
 // 2026-09-13 external review finding 5: depth alone does not bound
 // validation work. A depth-30 expression whose Binary children share the
 // same subexpression value has ~2^31 logical node visits under plain
-// recursion while staying under MaxExprDepth. The traversal work bound
-// must refuse it promptly, as a resource refusal — not hang, and not
-// call the expression semantically invalid.
+// recursion while staying under MaxExprDepth. The size bound must refuse
+// it promptly, as a resource refusal — not hang, and not call the
+// expression semantically invalid.
 func TestSharedSubexpressionBlowupIsRefusedBounded(t *testing.T) {
 	var e Expr = Var{Name: "x"}
 	for i := 0; i < 30; i++ {
@@ -310,14 +310,46 @@ func TestSharedSubexpressionBlowupIsRefusedBounded(t *testing.T) {
 		}
 		found := false
 		for _, d := range defects {
-			if strings.Contains(d, "traversal work bound") && strings.Contains(d, "not a semantic judgment") {
+			if strings.Contains(d, "expression tree exceeds the maximum size") && strings.Contains(d, "not a semantic judgment") {
 				found = true
 			}
 		}
 		if !found {
-			t.Fatalf("the refusal must name the work bound and disclaim semantic judgment: %v", defects)
+			t.Fatalf("the refusal must name the size bound and disclaim semantic judgment: %v", defects)
 		}
 	case <-time.After(10 * time.Second):
-		t.Fatal("validation did not return within the deadline; the work bound is not short-circuiting")
+		t.Fatal("validation did not return within the deadline; the size bound is not short-circuiting")
+	}
+}
+
+// The admission bound must bound what CONSUMERS pay, not merely the
+// validator's own traversal (2026-09-13 self-review): the first repair
+// bounded visits at 2^20 and still admitted expressions rendering to
+// megabytes, which every downstream renderer, hash, and search key then
+// paid repeatedly. An admitted expression's rendering is now bounded.
+func TestAdmittedExpressionHasBoundedRendering(t *testing.T) {
+	// Just under the bound: shared doubling to ~2047 nodes.
+	var ok Expr = Var{Name: "x"}
+	for i := 0; i < 10; i++ {
+		ok = Binary{Op: OpAdd, X: ok, Y: ok}
+	}
+	if defects := ValidateExpr(ok, Domain{Width: 4, Vars: []string{"x"}}); len(defects) > 0 {
+		t.Fatalf("an expression within the node bound must be admitted: %v", defects)
+	}
+	// Every admitted expression renders within a size proportional to
+	// the node bound; ~12 bytes per node is a generous ceiling for this
+	// language's operator names.
+	if got := len(Render(ok)); got > MaxExprNodes*12 {
+		t.Fatalf("an admitted expression rendered to %d bytes, above the bound the node ceiling implies", got)
+	}
+	// Just over the bound: one more doubling.
+	tooBig := Binary{Op: OpAdd, X: ok, Y: ok}
+	tooBig2 := Binary{Op: OpAdd, X: tooBig, Y: tooBig}
+	defects := ValidateExpr(tooBig2, Domain{Width: 4, Vars: []string{"x"}})
+	if len(defects) == 0 {
+		t.Fatal("an expression above the node bound must be refused")
+	}
+	if !strings.Contains(defects[0], "resource refusal") {
+		t.Fatalf("the refusal must be stated as a resource refusal: %v", defects)
 	}
 }

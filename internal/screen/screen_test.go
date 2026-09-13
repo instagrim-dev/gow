@@ -443,3 +443,43 @@ func TestConditionCExportsGrossWinsAndLosses(t *testing.T) {
 		t.Fatalf("the net-vs-gross caveat must be stated on the condition: %q", c.Detail)
 	}
 }
+
+// A resource-bounded cell measures nothing: counting it as a
+// non-completion would let truncation masquerade as a searched-and-failed
+// miss (2026-09-13 self-review of the finding-5 repair, where the search
+// carried bound flags no consumer read).
+func TestBlockedMeasurementIsRefusedNotScoredAsMiss(t *testing.T) {
+	execs := grid(episodes24(), baseCounts(), 0)
+	for i := range execs {
+		if execs[i].Completed {
+			continue
+		}
+		execs[i].MeasurementBlocked = true
+		execs[i].BlockedReason = "generated-state ceiling reached after 3 expansions"
+		break
+	}
+	if _, err := Evaluate(devDesign(), execs); err == nil {
+		t.Fatal("a blocked cell must refuse the batch, not be scored as a miss")
+	} else if !strings.Contains(err.Error(), "BLOCKED") || !strings.Contains(err.Error(), "cannot be scored as a miss") {
+		t.Fatalf("the error must name the block and refuse miss-scoring: %v", err)
+	}
+}
+
+// A blocked cell claiming completion is a contradiction, and its own
+// error: a reader must not have to infer which half is wrong.
+func TestBlockedMeasurementCannotClaimCompletion(t *testing.T) {
+	execs := grid(episodes24(), baseCounts(), 0)
+	for i := range execs {
+		if !execs[i].Completed {
+			continue
+		}
+		execs[i].MeasurementBlocked = true
+		execs[i].BlockedReason = "search cancelled before it completed"
+		break
+	}
+	if _, err := Evaluate(devDesign(), execs); err == nil {
+		t.Fatal("a blocked cell claiming completion must be refused")
+	} else if !strings.Contains(err.Error(), "claims completion while declaring its measurement blocked") {
+		t.Fatalf("the error must name the contradiction: %v", err)
+	}
+}

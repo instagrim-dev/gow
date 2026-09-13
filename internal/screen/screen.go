@@ -101,6 +101,15 @@ const (
 // arm's custody and full-cost ledgers UNKNOWN (2026-09-13 external
 // review finding 1: the runner supplied absent custody measurements as
 // zero and the calculator folded them into FullCost).
+//
+// MeasurementBlocked marks a cell whose search stopped on a RESOURCE
+// bound (state ceiling, term-size ceiling, cancellation) rather than on
+// the declared budget. Such a cell has no completion measurement at all:
+// Completed=false would be indistinguishable from a searched-and-failed
+// miss, so a blocked cell is refused by Evaluate instead of counted
+// (2026-09-13 self-review of the finding-5 repair: bound flags existed on
+// the search result and no consumer read them, so resource truncation
+// silently became a semantic non-completion).
 type Execution struct {
 	Arm              Arm
 	EpisodeID        string
@@ -110,6 +119,10 @@ type Execution struct {
 	TaskCost         int64
 	CustodyCost      int64
 	CustodyMeasured  bool // false: CustodyCost is not a measurement and must be zero
+	// MeasurementBlocked: a resource bound stopped this cell. Must carry
+	// BlockedReason and must not claim Completed.
+	MeasurementBlocked bool
+	BlockedReason      string
 }
 
 // Condition is one spending-rule clause with the exact integers compared.
@@ -244,6 +257,22 @@ func Evaluate(d Design, execs []Execution) (Outcome, error) {
 		}
 		if !e.CustodyMeasured && e.CustodyCost != 0 {
 			return Outcome{}, fmt.Errorf("execution %s/%s run %d carries custody cost %d while declaring it unmeasured; a figure is either a measurement or absent, never both", e.Arm, e.EpisodeID, e.Run, e.CustodyCost)
+		}
+		if e.MeasurementBlocked {
+			// A resource-bounded cell has no completion measurement.
+			// Counting it as a non-completion would let truncation
+			// masquerade as a searched-and-failed miss, which is exactly
+			// the semantic refutation the roadmap forbids; the whole
+			// batch is refused so the blocked cell is repaired or
+			// declared, never averaged over.
+			reason := e.BlockedReason
+			if reason == "" {
+				reason = "unstated"
+			}
+			if e.Completed {
+				return Outcome{}, fmt.Errorf("execution %s/%s run %d claims completion while declaring its measurement blocked (%s); a blocked cell measures nothing", e.Arm, e.EpisodeID, e.Run, reason)
+			}
+			return Outcome{}, fmt.Errorf("execution %s/%s run %d has a BLOCKED measurement (%s): a resource bound stopped it, so it carries no completion outcome and cannot be scored as a miss; repair the bound or record the run as verification_blocked", e.Arm, e.EpisodeID, e.Run, reason)
 		}
 		rep := reports[e.Arm]
 		var err error

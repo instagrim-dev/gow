@@ -93,4 +93,36 @@ v1 performs per-rule strict-reduction probes against the task **before** its bud
 
 `inf-06` (start `add(mul(x, 0), mul(y, 1))`, target cost 1) is reachable only to `add(0, y)` under its catalog (`not-intro`, `mul-zero`, `mul-one`, right-zero `add(a,0)→a`): the catalog lacks left-zero elimination and `add-comm`, so the semantically valid one-node result `y` is structurally unreachable — an argument from the permitted rewrite structure, not from budget exhaustion. All arms fail it identically; recorded counts stand. Annotated at the spec site in `pack_agent_sealed_v1.go` (pack bytes retained). Related calibration repair: `CalibrateH0MinBudgets` no longer conflates "already completes with zero expansions" with "unreachable within cap" (unreachable episodes are now reported separately), and median derivation guards the empty case.
 
-*Scope of this section: explanation and instrumentation corrections attributed to the 2026-09-13 external review. No frozen count, criterion, or disposition above was altered; the code repairs land in the same commit as this note.*
+### 5. Run-3 claim scope: a one-step probe negative was narrated as permanent uselessness
+
+The run-3 description above states that success claims whose credited rule "can't [strictly reduce the current task by one application]" are "demoted as distrusted". The emitted rationale went further, reading "can never reduce this task; the success claim is distrusted". Both exceed what the probe checked. The probe answers exactly one question: *can one application of this rule, at some position of the current start expression, strictly lower NodeCount?* A negative answer is not a reachability result, and it is not a verdict on the history. The external review's counterexample uses rules already on the menu:
+
+```text
+add(0, x) --add-comm--> add(x, 0) --add-zero--> x
+```
+
+`add-zero` cannot one-step reduce `add(0, x)`; it becomes the reducing step after a cost-neutral transformation. The diagnostic executes this path. Separately, a historical success can be genuine even when its credited rule does not help *this* task — current usefulness and historical truth are different claims.
+
+Corrected reading, and the wording the selector now emits: **"no one-step strict NodeCount decrease from the current start."** Demotion remains a declared heuristic. It is not a proof of permanent uselessness and not a refutation of the history. A regression test fails the build on any rationale containing "can never reduce".
+
+### 6. Bounded work, and what the first repair left open
+
+The external review showed that a maximum depth of 64 bounds nothing in practice: a depth-30 expression whose `Binary` children share one subexpression value costs 2^31−1 logical node visits while staying far under the depth limit. Search had a related boundary — one counted expansion applies all rules at all positions and materializes every successor, with `not-intro` admitting growth and no ceiling on generated state or term size.
+
+A self-review of the first repair found it **incomplete in two ways**, both now closed:
+
+- The repair bounded the *validator's own* traversal at 2^20 visits while still admitting expressions whose canonical rendering was megabytes. Every downstream consumer — search visited-set keys, selector identity hashes, oracle replay — then paid that size repeatedly. The bound is now on **tree size at admission** (`finite.MaxExprNodes`), so a validated expression is bounded for every consumer, and `rewrite`'s successor ceiling is defined as that same constant rather than an independent number that could drift from it.
+- The search's size ceiling **rendered each successor and then measured the string**, paying the cost it existed to refuse; a measured audit search spent 66 seconds on one expansion, rendering 16,384 oversize terms and retaining none. Successors are now measured on the tree and dropped at construction.
+
+The load-bearing repair is at the consumer: **a resource stop is not a non-completion.** The first repair added `StateBounded`, `TermSizeBounded`, and `Cancelled` to the search result, and *no consumer read them* — so a truncated search reached the screen grid as `Completed: false`, indistinguishable from a searched-and-failed miss. That is precisely the semantic refutation the roadmap forbids. The runner now aborts a run whose search was resource-truncated, and `screen.Evaluate` refuses a batch containing a cell marked `MeasurementBlocked` rather than scoring it. `BudgetExhausted` is deliberately excluded from that set: the budget is the declared measurement parameter, and stopping on it is the measurement working as designed. No retained run is affected — every pack expression is tens of nodes — but the recorded figures now rest on a measurement that cannot silently become a truncation.
+
+### 7. Controller identity: the corrections made a new version, and it is labeled as one
+
+The repairs in §3, §5, and §6 leave the **rule ordering unchanged** for every accepted input — run 3 still reports 14/12/16 — but they do not leave the *procedure* unchanged: it now refuses inputs its predecessor decided, and its frozen probe-description parameter changed, moving its snapshot hash (`dc88c9fc…` → `5f0dc8e2…`). `internal/shape/shape.go` states the governing rule: "any change is a new version." Keeping the `shape-selector/1` label over changed frozen parameters would have put two procedures behind one identifier, and disclosure in a comment does not discharge that rule.
+
+The controller is therefore **`shape-selector/2`**. Consequences recorded here:
+
+- Record 019's retained run-3 figures **belong to `shape-selector/1`**, which stays frozen and recoverable from git at `f7554cb`. The re-run under `/2` reproduces them, and its outcome label names `/2` so the two measurements cannot be conflated.
+- The confirmatory runner's freeze anchor was a hard-coded commit hash naming `/1`'s freeze. Once `/1`'s parameters changed, that hash silently anchored to a superseded procedure, and a pack authored between the two commits would have been admitted as confirmatory evidence for a controller frozen *after* it. The anchor is now expressed as the version identity plus the emitted label — a hash in a comment cannot stay correct across a version bump; a version string can.
+
+*Scope of this section: explanation and instrumentation corrections attributed to the 2026-09-13 external review, plus §6–§7 corrections attributed to the self-review of the first repair. No frozen count, criterion, or disposition above was altered; §5's retraction concerns the run-3 prose's claim scope, not its figures. The code repairs land across two commits, both referenced from `CHANGELOG.md`.*

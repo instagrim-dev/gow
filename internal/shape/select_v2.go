@@ -8,27 +8,38 @@ import (
 	"github.com/instagrim-dev/newf/internal/rewrite"
 )
 
-// ControllerVersionV1 identifies the failure-aware v1 selector. v0
-// (shape-selector/0) remains frozen and untouched; this is a successor
-// version motivated by the 2026-09-13 screen run 2 (record 019): the
-// H0 guard fired because v0's relevance gate admits structurally
-// lookalike LYING histories at full weight.
+// ControllerVersionV2 identifies the failure-aware selector that grounds
+// history claims against the task. Its predecessor lineage:
 //
-// 2026-09-13 external review repairs (ordering policy UNCHANGED — the
-// rule ordering emitted for any accepted input is byte-identical to the
-// frozen v1; the repairs are to identity binding, claim wording, and
-// work metering, and the snapshot/input hashes change to say so):
+//   - shape-selector/0 (v0, frozen): relevance gate only. The
+//     2026-09-13 screen run 2 (record 019) fired the H0 guard because
+//     that gate admits structurally lookalike LYING histories at full
+//     weight.
+//   - shape-selector/1 (frozen at f7554cb, recoverable from git): added
+//     the task-grounding probe. It produced record 019's run-3 numbers
+//     (H0 14 / H1 12 / HG 16) and is the identity those numbers belong
+//     to.
+//   - shape-selector/2 (this procedure): the 2026-09-13 external review
+//     repairs. The RULE ORDERING emitted for any accepted input is
+//     unchanged from /1 — run 3 reproduces 16 — but the procedure is not
+//     the same procedure: it refuses inputs /1 decided, and its frozen
+//     probe parameter changed, so its snapshot hash moved. Keeping the
+//     /1 label over changed frozen parameters would have put two
+//     procedures behind one identifier, which shape.go's versioning rule
+//     ("any change is a new version") forbids. The bump is that rule
+//     being obeyed, not a behavioral claim.
+//
+// The /2 repairs are:
 //
 //   - finding 1: probe work is metered on the Decision so the runner can
 //     charge it (the probes were previously uncharged pre-search work);
 //   - finding 2: the demotion rationale states what the probe actually
 //     checked (one-step, from the current start) instead of "can never
 //     reduce this task";
-//   - finding 3: the input hash binds the actual task expression and the
-//     admitted rules' CONTENT, and the procedure refuses inputs whose
-//     task disagrees with its declared rendering or whose rule names
-//     collide with different content.
-const ControllerVersionV1 = "shape-selector/1"
+//   - finding 3: the input hash binds the admitted rules' CONTENT, and
+//     the procedure refuses inputs whose task disagrees with its declared
+//     rendering or whose rule names collide with different content.
+const ControllerVersionV2 = "shape-selector/2"
 
 // probeDescription is the frozen probe's identity string, hashed into
 // the snapshot. Its wording carries the probe's exact claim scope: a
@@ -36,33 +47,39 @@ const ControllerVersionV1 = "shape-selector/1"
 const probeDescription = "single-application strict NodeCount reduction from the current task start (one-step probe; not a multi-step reachability claim)"
 
 // ruleIdentity is the hashed identity view of everything that can change
-// the v1 decision: the plain Input, the domain, the task expression's
-// canonical rendering, the admitted rules' full content identities
-// (rewrite.Rule.Identity: name, admitted domain, both sides), and the
-// controller version. Names alone are NOT an identity — the 2026-09-13
-// external review (finding 3) showed a name-only hash is blind to task
-// or rule-content substitution that flips the probe.
+// the decision: the plain Input (whose TaskStart is the task's canonical
+// rendering — SelectV2 refuses any input where the actual expression
+// disagrees, so Input pins the task), the domain, the admitted rules'
+// full content identities (rewrite.Rule.Identity: name, admitted domain,
+// both sides), and the controller version.
+//
+// Rule NAMES alone are not an identity: the 2026-09-13 external review
+// (finding 3) showed a name-only hash is blind to rule-content
+// substitution that flips the probe. The task is bound by the refusal,
+// not by a second hashed copy of the same rendering — the self-review of
+// that repair found a redundant Task field whose value could never
+// diverge from In.TaskStart on any accepted input, so it proved nothing
+// and is not carried here.
 type ruleIdentity struct {
 	In      Input
 	Domain  finite.Domain
-	Task    string   // canonical rendering of the actual probed expression
 	Rules   []string // rewrite.Rule.Identity() strings, sorted
 	Version string
 }
 
-// InputV1 extends Input with what the task-grounding probe needs: the
+// InputV2 extends Input with what the task-grounding probe needs: the
 // task as an expression (Input.TaskStart stays its canonical rendering;
 // no parser exists and none is implied), the search domain, and the
 // admitted rules matching the catalog names.
-type InputV1 struct {
+type InputV2 struct {
 	Input
 	Task   finite.Expr
 	Domain finite.Domain
 	Rules  []rewrite.Rule
 }
 
-// SelectV1 is the v1 procedure: v0's relevance gate plus task-grounded
-// distrust of history claims. "Trust, then verify against the task":
+// SelectV2 is v0's relevance gate plus task-grounded distrust of history
+// claims. "Trust, then verify against the task":
 //
 //   - a rule credited by relevant SUCCESSES earns preference only if a
 //     single application can strictly reduce the current task's cost
@@ -90,16 +107,16 @@ type InputV1 struct {
 // DOES reduce this task (but wastefully) passes the probe and hurts.
 // v1 narrows the lie surface; it does not pretend to close it.
 //
-// SelectV1 refuses inputs that violate its identity contract: a task
+// SelectV2 refuses inputs that violate its identity contract: a task
 // expression that does not render to Input.TaskStart, an invalid task
 // for the declared domain, or duplicate rule names carrying different
 // rule content. A refusal is an error, never a silent decision.
-func SelectV1(in InputV1) (Decision, error) {
+func SelectV2(in InputV2) (Decision, error) {
 	if defects := finite.ValidateExpr(in.Task, in.Domain); len(defects) > 0 {
-		return Decision{}, fmt.Errorf("v1 task expression is not valid in the declared domain: %v", defects)
+		return Decision{}, fmt.Errorf("selector task expression is not valid in the declared domain: %v", defects)
 	}
 	if got := finite.Render(in.Task); got != in.TaskStart {
-		return Decision{}, fmt.Errorf("v1 identity contract violation: the task expression renders to %q but Input.TaskStart declares %q; the probe would ground history claims against a different task than the one hashed", got, in.TaskStart)
+		return Decision{}, fmt.Errorf("selector identity contract violation: the task expression renders to %q but Input.TaskStart declares %q; the probe would ground history claims against a different task than the one hashed", got, in.TaskStart)
 	}
 
 	ruleByName := map[string]rewrite.Rule{}
@@ -107,7 +124,7 @@ func SelectV1(in InputV1) (Decision, error) {
 	for _, r := range in.Rules {
 		if prev, dup := ruleByName[r.Name()]; dup {
 			if prev.Identity() != r.Identity() {
-				return Decision{}, fmt.Errorf("v1 identity contract violation: two admitted rules share the name %q with different content (%s vs %s); a name is not a rule identity", r.Name(), prev.Identity(), r.Identity())
+				return Decision{}, fmt.Errorf("selector identity contract violation: two admitted rules share the name %q with different content (%s vs %s); a name is not a rule identity", r.Name(), prev.Identity(), r.Identity())
 			}
 			continue // exact duplicate: harmless, keep one
 		}
@@ -127,13 +144,13 @@ func SelectV1(in InputV1) (Decision, error) {
 	in.Catalog = catalog
 
 	dec := Decision{
-		ControllerVersion: ControllerVersionV1,
+		ControllerVersion: ControllerVersionV2,
 		SnapshotHash: hashOf(struct {
 			Version   string
 			Threshold int
 			Probe     string
-		}{ControllerVersionV1, SimilarityThreshold, probeDescription}),
-		InputHash: hashOf(ruleIdentity{In: in.Input, Domain: in.Domain, Task: finite.Render(in.Task), Rules: ruleIdentities, Version: ControllerVersionV1}),
+		}{ControllerVersionV2, SimilarityThreshold, probeDescription}),
+		InputHash: hashOf(ruleIdentity{In: in.Input, Domain: in.Domain, Rules: ruleIdentities, Version: ControllerVersionV2}),
 	}
 
 	// Task-grounding probe per catalog rule, metered: this is search

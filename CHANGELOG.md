@@ -52,8 +52,11 @@ conjecture is likewise explicitly not a `v1.0.0` requirement (`AGENTS.md`,
 ### Changed — 2026-09-13 external review remediations (`f7554cb` findings)
 
 Five instrumentation/claim-scope corrections; all frozen counts, criteria,
-and dispositions retained (attributed correction note appended to
-`docs/plans/2026-09-13-019-screen-execution-record.md`):
+and dispositions retained. Each is recorded with its own section in the
+attributed correction note appended to
+`docs/plans/2026-09-13-019-screen-execution-record.md` (§1–§4 for the
+findings below and the corpus item, §5 for claim scope, §6 for bounded
+work, §7 for the controller-identity consequence):
 
 - **Probe accounting (finding 1):** `shape.SelectV1`'s pre-search
   strict-reduction probes are now metered on the `Decision`
@@ -83,14 +86,63 @@ and dispositions retained (attributed correction note appended to
 - **Bounded work (finding 5):** `finite` structural validation carries a
   traversal-work bound (shared-subexpression blowup refused as a resource
   refusal, not a semantic judgment); `rewrite.SearchBounded` adds
-  generated-state and rendered-term-size ceilings plus cancellation, all
-  reported as bounded results (`StateBounded`, `TermSizeBounded`,
-  `Cancelled`) with defaults far above every retained run.
+  generated-state and term-size ceilings plus cancellation, all recorded
+  on the result (`StateBounded`, `TermSizeBounded`, `Cancelled`) with
+  defaults far above every retained run. **Completed by the self-review
+  entry below** — the first pass added the flags without a consumer, so
+  resource truncation still reached the grid as a non-completion.
 - **Corpus:** `inf-06`'s one-node target annotated structurally
   unreachable through its catalog (pack bytes retained);
   `sealedrun.CalibrateH0MinBudgets` separates "unreachable within cap"
   from "completes with zero expansions" and callers guard the empty
   median case.
+
+### Changed — 2026-09-13 self-review of the remediation above
+
+An adversarial pass over the remediation commit found six defects in it.
+All are corrected here; every frozen count still reproduces (run 1
+21/21/21, run 2 14/12/13, run 3 14/12/16, calibrated budget 2), and
+correction sections §5–§7 were added to the execution record:
+
+- **A resource stop was still a semantic non-completion.** The bound flags
+  landed with no consumer: a search truncated by the state or term-size
+  ceiling reached `screen.Evaluate` as `Completed: false`, indistinguishable
+  from a searched-and-failed miss. `sealedrun` now aborts a run whose
+  search was resource-truncated (`searchBlockedReason`), and
+  `screen.Execution.MeasurementBlocked` / `BlockedReason` make a blocked
+  cell refuse the batch instead of being scored. `BudgetExhausted` is
+  excluded by design: the budget is the declared measurement parameter.
+- **`shape-selector/1` gained a second procedure under one identifier.**
+  The repairs changed a frozen probe parameter (snapshot hash moved) and
+  made the selector refuse inputs it previously decided, which
+  `internal/shape/shape.go`'s "any change is a new version" rule forbids.
+  Bumped to **`shape-selector/2`** (`SelectV2`, `InputV2`,
+  `RunDiagnosticV2`, `RunConfirmatoryV2`); `/1` stays frozen and owns
+  record 019's run-3 figures. The confirmatory freeze anchor no longer
+  hard-codes a commit hash that silently pointed at the superseded
+  procedure; outcome labels now carry the controller version.
+- **The term-size ceiling was charged after the work it prevented.**
+  Successors were rendered and then measured, so refusal cost what it
+  refused (a measured audit: 66s for one expansion, 16,384 oversize terms
+  rendered and discarded). Size is now measured on the tree before
+  rendering, and the bound moved to **admission**: `finite.MaxExprNodes`
+  bounds expression tree size, so every consumer of a validated
+  expression — search keys, identity hashes, oracle replay — inherits a
+  bounded rendering. `rewrite`'s ceiling is defined as that constant.
+- **A non-matching probe was free.** The runner charged
+  `ProbeCandidates` only, so a rule probed against a task it never matches
+  performed a full positional traversal at zero cost. `probeWork` now
+  charges applications and candidates.
+- **A vacuous identity subtest.** One subtest changed the task *and* its
+  rendering, then asserted the hash moved — which passed on the unfixed
+  code, since `Input` already carried `TaskStart`. Replaced with the
+  invariant that actually holds (every accepted input satisfies
+  `Render(Task) == TaskStart`, so the hashed `Input` pins the probed
+  expression), and the redundant hashed `Task` field was dropped.
+- **The correction note claimed coverage it did not have.** It carried
+  four sections for six corrections; findings 2 and 5 were absent while
+  the changelog asserted five. Sections §5 (claim scope), §6 (bounded
+  work) and §7 (controller identity) added.
 
 ### Added — Lean 4 kernel as a deterministic verifier tier
 

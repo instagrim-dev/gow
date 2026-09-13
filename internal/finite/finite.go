@@ -205,13 +205,31 @@ var (
 // runs in bounded work.
 const MaxExprDepth = 64
 
-// MaxValidateVisits bounds total node visits during structural
-// validation. Depth alone does not bound work: a depth-30 expression
-// whose children share subexpression values re-visits shared subtrees
-// exponentially under plain recursion (2026-09-13 external review
-// finding 5). Exceeding the visit budget is a resource refusal — the
-// expression is refused for admission, with no semantic judgment made.
-const MaxValidateVisits = 1 << 20
+// MaxExprNodes bounds an expression's TREE size — the number of logical
+// node visits a traversal performs, which for shared subexpressions is
+// larger than the DAG's allocation count and is exactly the size its
+// canonical rendering expands to.
+//
+// It replaces the earlier visit-only work bound (2026-09-13 external
+// review finding 5, and the self-review that followed it). Two lessons
+// are folded in here:
+//
+//   - Depth alone bounds nothing: a depth-30 expression whose Binary
+//     children share one subexpression value costs 2^31−1 logical visits
+//     while staying far under MaxExprDepth.
+//   - A work bound alone bounds nothing downstream: a bound of 2^20
+//     visits admitted expressions whose rendering is megabytes, and
+//     every consumer that renders (search keys, selector identity
+//     hashes, oracle replay) then paid that size repeatedly.
+//
+// Bounding tree size at ADMISSION is the shared choke point: every
+// consumer of a validated expression inherits a bounded rendering.
+// 4096 nodes is three orders of magnitude above every retained pack
+// episode (tens of nodes) and renders to roughly 25 KB.
+//
+// Exceeding it is a RESOURCE refusal: the expression is refused for
+// admission with no semantic judgment about the expression's validity.
+const MaxExprNodes = 4096
 
 // structureDefects rejects structurally invalid expressions before any
 // rendering or traversal: the exported node structs allow nil children and
@@ -225,8 +243,8 @@ func structureDefects(label string, e Expr) []string {
 
 func structureWalk(label string, e Expr, depth int, visits *int) []string {
 	*visits++
-	if *visits > MaxValidateVisits {
-		return []string{fmt.Sprintf("%s: structural validation exceeded the traversal work bound (%d node visits); the expression is refused as too large to validate — a resource refusal, not a semantic judgment", label, MaxValidateVisits)}
+	if *visits > MaxExprNodes {
+		return []string{fmt.Sprintf("%s: expression tree exceeds the maximum size %d nodes; refused as too large to validate, render, or search — a resource refusal, not a semantic judgment", label, MaxExprNodes)}
 	}
 	if e == nil {
 		return []string{fmt.Sprintf("%s: expression node is nil", label)}
@@ -261,7 +279,7 @@ func structureWalk(label string, e Expr, depth int, visits *int) []string {
 			defects = append(defects, fmt.Sprintf("%s: unknown binary operator %q", label, t.Op))
 		}
 		defects = append(defects, structureWalk(label, t.X, depth+1, visits)...)
-		if *visits > MaxValidateVisits {
+		if *visits > MaxExprNodes {
 			// Short-circuit the sibling subtree: without this, a
 			// shared-subexpression blowup would still be entered node
 			// by node after the bound tripped.

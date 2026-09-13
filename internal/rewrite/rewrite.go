@@ -146,20 +146,24 @@ type Limits struct {
 	// MaxStates caps the visited-set size (generated, deduplicated
 	// states). Exceeding it stops the search with StateBounded.
 	MaxStates int
-	// MaxRenderedSize caps a successor's canonical rendering length.
-	// Larger successors are skipped and TermSizeBounded is set: growth
-	// rules (e.g. not-intro) must not materialize unbounded terms.
-	MaxRenderedSize int
+	// MaxTermNodes caps a successor's TREE SIZE, checked before the
+	// successor is rendered. Larger successors are skipped and
+	// TermSizeBounded is set: growth rules (e.g. not-intro) must not
+	// materialize unbounded terms, and the check must not itself cost a
+	// full rendering of the term it rejects (self-review of the first
+	// repair, which rendered first and measured after).
+	MaxTermNodes int
 	// Cancel, when non-nil and closed, stops the search with Cancelled.
 	Cancel <-chan struct{}
 }
 
-// Default work ceilings. Chosen orders of magnitude above the retained
-// screen runs (budget ≤ 500, terms ≤ tens of nodes) so they change no
-// recorded outcome while making pathological inputs terminate.
+// Default work ceilings. MaxTermNodes matches finite.MaxExprNodes: a
+// search may not construct a term the domain would refuse to admit, so
+// the ceiling is the admission bound rather than an independent number
+// that could drift from it.
 const (
-	DefaultMaxStates       = 1 << 20 // ~1M visited states
-	DefaultMaxRenderedSize = 1 << 16 // 64 KiB canonical rendering
+	DefaultMaxStates    = 1 << 20 // ~1M visited states
+	DefaultMaxTermNodes = finite.MaxExprNodes
 )
 
 // Search runs deterministic breadth-first rewriting from start under the
@@ -192,8 +196,8 @@ func SearchBounded(start finite.Expr, d finite.Domain, rules []Rule, cost CostMo
 	if lim.MaxStates <= 0 {
 		lim.MaxStates = DefaultMaxStates
 	}
-	if lim.MaxRenderedSize <= 0 {
-		lim.MaxRenderedSize = DefaultMaxRenderedSize
+	if lim.MaxTermNodes <= 0 {
+		lim.MaxTermNodes = DefaultMaxTermNodes
 	}
 
 	type parentEdge struct {
@@ -234,15 +238,15 @@ search:
 		res.Explored++
 
 		for _, r := range rules {
-			for _, next := range applyEverywhere(current, r, d) {
-				res.Generated++
+			successors, dropped := applyEverywhereBounded(current, r, d, lim.MaxTermNodes)
+			res.Generated += len(successors) + dropped
+			if dropped > 0 {
+				// A resource bound truncated the reachable set; the
+				// result says so rather than silently narrowing.
+				res.TermSizeBounded = true
+			}
+			for _, next := range successors {
 				nextKey := finite.Render(next)
-				if len(nextKey) > lim.MaxRenderedSize {
-					// A resource bound truncated the reachable set; the
-					// result says so rather than silently narrowing.
-					res.TermSizeBounded = true
-					continue
-				}
 				if _, seen := visited[nextKey]; seen {
 					continue
 				}
@@ -302,7 +306,7 @@ func CanStrictlyReduce(e finite.Expr, r Rule, d finite.Domain, cost CostModel) b
 }
 
 // ProbeStrictReduction is the metered task-grounding probe for history
-// claims (shape-selector/1): deterministic, computable by any arm from
+// claims (shape.ControllerVersionV2): deterministic, computable by any arm from
 // the task and admitted rules alone, and independent of any history
 // content. It returns whether one application of the rule at any
 // position of e strictly reduces the cost, and the number of candidate
@@ -338,24 +342,61 @@ func (r Rule) Identity() string {
 // identical states share one visited-set key and one rendering
 // (adversarial review finding 10).
 func applyEverywhere(e finite.Expr, r Rule, d finite.Domain) []finite.Expr {
-	var out []finite.Expr
+	out, _ := applyEverywhereBounded(e, r, d, 0)
+	return out
+}
+
+// applyEverywhereBounded is applyEverywhere with an optional successor
+// tree-size ceiling (maxNodes <= 0 disables it). Oversize successors are
+// dropped at construction so the caller never renders, hashes, or
+// enqueues a term the domain would refuse to admit; dropped reports how
+// many were refused, so the caller can say the reachable set was
+// truncated instead of silently narrowing it.
+func applyEverywhereBounded(e finite.Expr, r Rule, d finite.Domain, maxNodes int) (out []finite.Expr, dropped int) {
+	keep := func(x finite.Expr) {
+		if maxNodes > 0 && treeSize(x) > maxNodes {
+			dropped++
+			return
+		}
+		out = append(out, x)
+	}
 	if b, ok := match(r.lhs, e, d, map[string]finite.Expr{}); ok {
-		out = append(out, normalizeConsts(subst(r.rhs, b), d))
+		keep(normalizeConsts(subst(r.rhs, b), d))
 	}
 	switch t := e.(type) {
 	case finite.Unary:
-		for _, v := range applyEverywhere(t.X, r, d) {
-			out = append(out, finite.Unary{Op: t.Op, X: v})
+		sub, subDropped := applyEverywhereBounded(t.X, r, d, maxNodes)
+		dropped += subDropped
+		for _, v := range sub {
+			keep(finite.Unary{Op: t.Op, X: v})
 		}
 	case finite.Binary:
-		for _, v := range applyEverywhere(t.X, r, d) {
-			out = append(out, finite.Binary{Op: t.Op, X: v, Y: t.Y})
+		left, leftDropped := applyEverywhereBounded(t.X, r, d, maxNodes)
+		dropped += leftDropped
+		for _, v := range left {
+			keep(finite.Binary{Op: t.Op, X: v, Y: t.Y})
 		}
-		for _, v := range applyEverywhere(t.Y, r, d) {
-			out = append(out, finite.Binary{Op: t.Op, X: t.X, Y: v})
+		right, rightDropped := applyEverywhereBounded(t.Y, r, d, maxNodes)
+		dropped += rightDropped
+		for _, v := range right {
+			keep(finite.Binary{Op: t.Op, X: t.X, Y: v})
 		}
 	}
-	return out
+	return out, dropped
+}
+
+// treeSize counts logical nodes — the measure finite.MaxExprNodes bounds
+// at admission, and the size a canonical rendering expands to. Shared
+// subexpressions are counted once per reference, deliberately: that is
+// the cost a traversal or rendering actually pays.
+func treeSize(e finite.Expr) int {
+	switch t := e.(type) {
+	case finite.Unary:
+		return 1 + treeSize(t.X)
+	case finite.Binary:
+		return 1 + treeSize(t.X) + treeSize(t.Y)
+	}
+	return 1
 }
 
 // match binds the pattern's variables (metavariables, quantified by the

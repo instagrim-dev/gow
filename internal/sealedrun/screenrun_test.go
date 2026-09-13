@@ -2,9 +2,11 @@ package sealedrun
 
 import (
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/instagrim-dev/newf/internal/screen"
+	"github.com/instagrim-dev/newf/internal/shape"
 )
 
 // TestImplementerAuthoredV1ScreenRun executes the pre-committed pack
@@ -74,16 +76,29 @@ func TestImplementerAuthoredV1ScreenRun(t *testing.T) {
 	t.Logf("calibrated budget (median of blind-H0 minimums) = %d", budget)
 	logRun(t, "run-2 (calibrated)", out2, traces2)
 
-	// Run 3: v1 diagnostic on the SAME pack — adaptation reuse, labeled;
-	// development diagnosis of the v1 repair, never confirmation.
-	out3, traces3, err := RunDiagnosticV1(pack, budget)
+	// Run 3: failure-aware-selector diagnostic on the SAME pack —
+	// adaptation reuse, labeled; development diagnosis of the repair,
+	// never confirmation.
+	//
+	// IDENTITY NOTE: record 019's retained run-3 figures (14/12/16) were
+	// produced by shape-selector/1. This assertion re-runs the pack under
+	// shape-selector/2, whose ordering policy is unchanged, so the
+	// figures coincide — but they are a /2 measurement and the emitted
+	// label says so. The frozen /1 numbers stay attributed to /1.
+	out3, traces3, err := RunDiagnosticV2(pack, budget)
 	if err != nil {
-		t.Fatalf("v1 diagnostic: %v", err)
+		t.Fatalf("failure-aware-selector diagnostic: %v", err)
 	}
 	if out3.GateEligible {
 		t.Fatal("gate eligibility must be unreachable regardless of outcome")
 	}
-	logRun(t, "run-3 (v1 diagnostic, adaptation reuse)", out3, traces3)
+	if !strings.Contains(out3.EvidenceLabel, shape.ControllerVersionV2) {
+		t.Fatalf("the outcome label must name the controller that produced it: %q", out3.EvidenceLabel)
+	}
+	if !strings.Contains(out3.EvidenceLabel, "adaptation-reuse-diagnostic") {
+		t.Fatalf("adaptation reuse must stay enforced in the label: %q", out3.EvidenceLabel)
+	}
+	logRun(t, "run-3 ("+shape.ControllerVersionV2+" diagnostic, adaptation reuse)", out3, traces3)
 }
 
 func logRun(t *testing.T, name string, out screen.Outcome, traces []EpisodeTrace) {
