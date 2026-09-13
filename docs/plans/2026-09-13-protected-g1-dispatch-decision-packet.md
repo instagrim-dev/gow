@@ -154,6 +154,23 @@ acceptance matrix these limitations cap the grade at `agent-sealed/v1`
   request `aa7d071c-fe98-46c0-95fe-5847c8e345de`). No custodian context was
   created.
 
+- **2026-09-13, attempt 3 (local fresh-context subagent):** operator
+  explicitly substituted the mechanism after the cloud failures. The
+  custodian runs in a dedicated scratch workspace containing only the
+  two-file packet, the frozen authorization, a local-substitution addendum,
+  and a pinned darwin/arm64 executable (SHA-256
+  `c105248752eb2e5e708ebe9c1a48f30d389a822036452e61f4ef41c0c4a93123`, built
+  from the same exact export of revision `0cd7284` with
+  `CGO_ENABLED=0 go build -trimpath -buildvcs=false ./cmd/newf`,
+  byte-identical across two builds). The addendum records the isolation
+  downgrade plainly: the custodian shares the implementer host; the
+  workspace boundary is procedural, not enforced; the achievable grade is at
+  most `agent-sealed/v1` with a declared shared-host limitation, else
+  development grade. Protected storage moves from a git branch to the
+  workspace directory; all other frozen values are unchanged. The unused
+  clean-room branch `g1-custodian-cleanroom` is retained for a future cloud
+  retry.
+
 Per the operative handoff, a failed isolated-agent launch is preserved as an
 infrastructure failure; it does not make implementer-authored cases
 independent, and development-grade authoring must not be described as the
