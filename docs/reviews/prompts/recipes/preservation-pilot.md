@@ -2,7 +2,7 @@
 id: review-preservation
 revision: 1
 kind: qualitative_comparison_protocol
-status: ceilings_declared_twelve_runs_authorized
+status: executed_rejected_candidate_packaging_transfer_gated
 preparation: ../../preservation-pilot/PREPARATION.md
 covers: [study-design, comparative-validation, decisions, reporting]
 contract: ../review-contract.md

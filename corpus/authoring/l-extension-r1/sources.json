@@ -1,0 +1,412 @@
+{
+  "schema": "l-extension-source-register/v1",
+  "package": "l-extension-r1",
+  "domain": "SHA-1 collision cryptanalysis",
+  "objective": "Produce a collision for the full, unmodified SHA-1 hash function.",
+  "content_revision": 1,
+  "compiled": "2026-09-12",
+  "verification_method": "Each entry was checked against a primary or publisher locator (IACR ePrint, IACR-hosted proceedings PDF, Springer/DOI, USENIX, RFC 6194, university repository). Fields that could not be confirmed against such a locator are marked unverified rather than guessed.",
+  "retention_policy": "No primary source bytes are retained. These are public locators plus authored summaries. The one exception is the SHAttered artifact pair, whose bytes are public and whose digests were computed locally; see src-shattered-artifacts.",
+  "sources": [
+    {
+      "id": "src-chabaud-joux-1998",
+      "title": "Differential Collisions in SHA-0",
+      "authors": [
+        "Florent Chabaud",
+        "Antoine Joux"
+      ],
+      "venue": "CRYPTO '98, LNCS 1462, pp. 56-71, Springer",
+      "year": 1998,
+      "locator": "https://doi.org/10.1007/BFb0055720",
+      "doi": "10.1007/BFb0055720",
+      "verification_status": "partially_verified",
+      "verification_basis": "Bibliography and the 2^61 figure confirmed via RFC 6194 section 2.1 (https://www.rfc-editor.org/rfc/rfc6194.txt) and the Springer abstract. Full text was not retrievable (publisher wall); only the abstract was read.",
+      "original_source_bytes_retained": false,
+      "read_scope": "abstract only, plus RFC 6194 corroboration",
+      "verified_claims": [
+        "Theoretical attack on the SHA-0 compression function with complexity 2^61.",
+        "The method does not find SHA-1 collisions faster than birthday: 'In the case of SHA-1, this method is unable to find collisions faster than the birthday paradox.'"
+      ],
+      "unverified_claims": [
+        "That the paper itself attributes SHA-1's resistance specifically to the rotation in message expansion. Its abstract says only 'the transition to version 1'. The rotation as the SHA-0/SHA-1 delta is separately authoritative (Biham-Chen 2004; Wang et al. 2005) but must not be attributed to this paper."
+      ],
+      "scope_note": "The 2^61 figure is scoped by the abstract to the compression function, not to the full hash."
+    },
+    {
+      "id": "src-biham-chen-2004",
+      "title": "Near-Collisions of SHA-0",
+      "authors": [
+        "Eli Biham",
+        "Rafi Chen"
+      ],
+      "venue": "CRYPTO 2004, pp. 290-305",
+      "year": 2004,
+      "locator": "https://eprint.iacr.org/2004/146",
+      "doi": "10.1007/978-3-540-28628-8_18",
+      "eprint": "2004/146",
+      "verification_status": "verified",
+      "verification_basis": "Abstract read verbatim from IACR ePrint 2004/146.",
+      "original_source_bytes_retained": false,
+      "read_scope": "abstract",
+      "verified_claims": [
+        "Introduces neutral bits: 'the messages have many neutral bits, some of which do not affect the differences for about 15--20 rounds.'",
+        "Two near-collisions of the full SHA-0 compression function, up to 142 of 160 output bits equal.",
+        "Full collisions of 65-round reduced SHA-0 (prior best 35 rounds).",
+        "82-round SHA-0 is weaker than 80-round SHA-0."
+      ],
+      "correction_applied": "This paper does NOT give reduced-round SHA-1 collisions. That result is Biham, Chen, Joux, Carribault, Lemuet & Jalby, EUROCRYPT 2005, DOI 10.1007/11426639_3. The corpus records the SHA-0 scope.",
+      "scope_note": "No collision for full 80-round SHA-0; near-collisions of its compression function only."
+    },
+    {
+      "id": "src-wang-yin-yu-2005",
+      "title": "Finding Collisions in the Full SHA-1",
+      "authors": [
+        "Xiaoyun Wang",
+        "Yiqun Lisa Yin",
+        "Hongbo Yu"
+      ],
+      "venue": "CRYPTO 2005, LNCS 3621, pp. 17-36",
+      "year": 2005,
+      "locator": "https://iacr.org/archive/crypto2005/36210017/36210017.pdf",
+      "doi": "10.1007/11535218_2",
+      "verification_status": "verified",
+      "verification_basis": "Full text read from the IACR-hosted proceedings PDF.",
+      "original_source_bytes_retained": false,
+      "read_scope": "full text",
+      "verified_claims": [
+        "'collisions of SHA-1 can be found with complexity less than 2^69 hash operations. This is the first attack on the full 80-step SHA-1 with complexity less than the 2^80 theoretical bound.'",
+        "Section 5 reports a real 58-step SHA-1 collision found with fewer than 2^33 hash operations.",
+        "Reduced-round figures: 75-round at 2^78, 70-round at 2^68."
+      ],
+      "scope_note": "The full-SHA-1 result is theoretical. No collision of full SHA-1 was produced. The only produced collision is for the 58-step reduction."
+    },
+    {
+      "id": "src-wang-yao-yao-2005",
+      "title": "New Collision Search for SHA-1",
+      "authors": [
+        "Xiaoyun Wang",
+        "Andrew Yao",
+        "Frances Yao"
+      ],
+      "venue": "Rump session, CRYPTO 2005 (presented by Adi Shamir); never published as a full paper",
+      "year": 2005,
+      "locator": "https://csrc.nist.rip/groups/ST/hash/documents/RECHB_FindingSHA1Characteristics_NIST.pdf",
+      "locator_note": "Cited as reference [19] in De Canniere & Rechberger, which is the authoritative record of both the attribution and the non-publication. Corroborated by Schindler, NIST Hash Workshop 2006.",
+      "verification_status": "verified",
+      "verification_basis": "Attribution and non-publication confirmed from two independent secondary-but-authoritative reference lists.",
+      "original_source_bytes_retained": false,
+      "read_scope": "citing works only; no primary artifact exists",
+      "verified_claims": [
+        "Announced improvement of full-SHA-1 collision complexity from 2^69 to 2^63.",
+        "De Canniere & Rechberger, verbatim: 'for the recently announced but to the best of the authors knowledge unpublished improvements ... (from 2^69 to 2^63), no message modification costs are given, thus we lack comparability here.'",
+        "Joux & Peyrin independently describe it as 'an unpublished result'."
+      ],
+      "correction_applied": "Attribution is Wang, Andrew Yao and Frances Yao. NOT Wang, Yin & Yu. A corpus record that attributed the 2^63 announcement to the CRYPTO 2005 paper's authors would be factually wrong.",
+      "scope_note": "No primary account of the mechanism exists. Under the package's eligibility rule this cannot become a Work record; it is retained as register context for the 2^63 figure other records cite."
+    },
+    {
+      "id": "src-decanniere-rechberger-2006",
+      "title": "Finding SHA-1 Characteristics: General Results and Applications",
+      "authors": [
+        "Christophe De Canniere",
+        "Christian Rechberger"
+      ],
+      "venue": "ASIACRYPT 2006, LNCS 4284, pp. 1-20",
+      "year": 2006,
+      "locator": "https://csrc.nist.rip/groups/ST/hash/documents/RECHB_FindingSHA1Characteristics_NIST.pdf",
+      "doi": "10.1007/11935230_1",
+      "verification_status": "verified",
+      "verification_basis": "Full text read from the NIST-hosted PDF; DOI/pagination confirmed via the TU Graz institutional record.",
+      "original_source_bytes_retained": false,
+      "read_scope": "full text",
+      "verified_claims": [
+        "'the complex characteristics needed for the recent collision attacks on members of the SHA family have been constructed manually by Wang et al. In this report, we describe a method to search for them automatically.'",
+        "Two-block collision for 64-step SHA-1; prior published best was 58 steps.",
+        "Expected work factor about 2^35 compression function evaluations."
+      ],
+      "scope_note": "Did not improve the complexity of the attack on full SHA-1. Later extended to 70 steps by the same authors, and to 72/73 steps by others."
+    },
+    {
+      "id": "src-joux-peyrin-2007",
+      "title": "Hash Functions and the (Amplified) Boomerang Attack",
+      "authors": [
+        "Antoine Joux",
+        "Thomas Peyrin"
+      ],
+      "venue": "CRYPTO 2007, LNCS 4622, pp. 244-263",
+      "year": 2007,
+      "locator": "https://doi.org/10.1007/978-3-540-74143-5_14",
+      "doi": "10.1007/978-3-540-74143-5_14",
+      "secondary_locator": "https://thomaspeyrin.github.io/web/assets/docs/papers/Joux-Peyrin-EcryptHashWorkshop2007.pdf",
+      "verification_status": "partially_verified",
+      "verification_basis": "Bibliography confirmed via DOI and the Springer proceedings table of contents. Technical claims were read from the ECRYPT Hash Workshop 2007 version on the author's own site, NOT the CRYPTO proceedings version.",
+      "original_source_bytes_retained": false,
+      "read_scope": "full text of the ECRYPT workshop version; CRYPTO version not retrieved",
+      "verified_claims": [
+        "Boomerang attacks usable as a neutral-bits tool to lower SHA-1 collision attack complexity.",
+        "Improvement is a relative factor of 32.",
+        "Five auxiliary differentials maintaining conformance to step 28, versus approximately step 25 for neutral bits or message modification."
+      ],
+      "unverified_claims": [
+        "Any absolute complexity figure such as 2^61 or 2^58. No absolute figure was verifiable in the CRYPTO version; the corpus records only the relative factor."
+      ],
+      "scope_note": "Records the factor-32 / step-28 / five-auxiliary-differentials claims only."
+    },
+    {
+      "id": "src-mcdonald-hawkes-pieprzyk-2009",
+      "title": "Differential Path for SHA-1 with complexity O(2^52)",
+      "authors": [
+        "Cameron McDonald",
+        "Philip Hawkes",
+        "Josef Pieprzyk"
+      ],
+      "venue": "Cryptology ePrint Archive, Report 2009/259 (WITHDRAWN)",
+      "year": 2009,
+      "locator": "https://eprint.iacr.org/2009/259",
+      "eprint": "2009/259",
+      "verification_status": "verified",
+      "verification_basis": "Withdrawal note read verbatim from the live ePrint page, which self-documents its own retraction.",
+      "original_source_bytes_retained": false,
+      "read_scope": "ePrint abstract page and withdrawal note",
+      "withdrawn": true,
+      "withdrawal_note_verbatim": "The attack complexity reported in this paper was based on two results: 1. The nonlinear differential path in Round 1 uses 5 auxiliary differentials in a Boomerang attack. 2. The linear differential path for Rounds 2-4 has a cost evaluation of 2^57 ct. Manuel. The overall collision attack requires 2^52 message pairs that conform to the differential for Round 1 (achieved by message modification). The cost evaluation for point 2 above was reported by Manuel in November 2008. We have recently discovered this evaluation to be incorrect. This implies the complexity given in this paper is also incorrect. We have decided to withdraw the current paper.",
+      "verified_claims": [
+        "Original (retracted) claim: a differential path usable in a collision attack with complexity O(2^52), described as the lowest-complexity attack on SHA-1 at the time.",
+        "Withdrawn by its own authors.",
+        "Cause of withdrawal: the borrowed cost evaluation of 2^57 for the Rounds 2-4 linear differential path, taken from Manuel (November 2008), was discovered to be incorrect, invalidating the derived 2^52 figure.",
+        "RFC 6194 section 3.1 independently notes that Manuel's 2^51 claim is absent from the published conference paper."
+      ],
+      "unverified_claims": [
+        "That the result was announced at the Eurocrypt 2009 rump session. No programme or primary record was retrievable. The corpus cites the withdrawal, not an announcement venue."
+      ],
+      "scope_note": "The failure is causally tied to src-manuel-2008: the 2^52 claim collapsed because the borrowed cost evaluation collapsed. This is a failure record produced by the field's own error correction, not by a curator's judgment."
+    },
+    {
+      "id": "src-manuel-2008",
+      "title": "Classification and generation of disturbance vectors for collision attacks against SHA-1",
+      "authors": [
+        "Stephane Manuel"
+      ],
+      "venue": "Designs, Codes and Cryptography, vol. 59, no. 1, pp. 247-263 (2011); earlier as IACR ePrint 2008/469 and at IWCC 2009",
+      "year": 2008,
+      "locator": "https://eprint.iacr.org/2008/469",
+      "doi": "10.1007/s10623-010-9458-9",
+      "eprint": "2008/469",
+      "secondary_locator": "https://www.rocq.inria.fr/secret/PUBLICATIONS/RESUMES/Man09.pdf",
+      "verification_status": "verified",
+      "verification_basis": "ePrint abstract and INRIA-hosted version read; journal DOI and pagination confirmed via doi.org.",
+      "original_source_bytes_retained": false,
+      "read_scope": "ePrint abstract, INRIA version, journal abstract",
+      "verified_claims": [
+        "'We show that all published disturbance vectors can be classified into two types of vectors, type-I and type-II.'",
+        "Type-I contains Wang et al.'s vector; type-II contains Jutla & Patthak's Codeword2. Equivalence is under cyclic shift of 32-bit words.",
+        "ePrint 2008/469 claimed a theoretical attack complexity of 2^51 hash function calls and a disturbance vector with cost evaluation 2^57.",
+        "The published journal version drops the 2^51 claim and instead concludes the most efficient disturbance vector is Codeword2, and that 'the common assumption of local collision independence is flawed.'",
+        "RFC 6194 flags that the 2^51 claim is absent from the published conference paper."
+      ],
+      "version_divergence": "The ePrint and published versions are NOT interchangeable: the complexity claim differs. The corpus records both and does not reconcile them.",
+      "scope_note": "The withdrawn 2^57 cost evaluation from this work is what invalidated src-mcdonald-hawkes-pieprzyk-2009."
+    },
+    {
+      "id": "src-stevens-2013",
+      "title": "New Collision Attacks on SHA-1 Based on Optimal Joint Local-Collision Analysis",
+      "authors": [
+        "Marc Stevens"
+      ],
+      "venue": "EUROCRYPT 2013, LNCS 7881, pp. 245-261",
+      "year": 2013,
+      "locator": "https://www.iacr.org/archive/eurocrypt2013/78810243/78810243.pdf",
+      "doi": "10.1007/978-3-642-38348-9_15",
+      "verification_status": "verified",
+      "verification_basis": "Abstract read verbatim from the Springer chapter page and the author's copy; IACR CryptoDB confirms bibliography.",
+      "original_source_bytes_retained": false,
+      "read_scope": "abstract and IACR-hosted PDF",
+      "verified_claims": [
+        "Introduces joint local-collision analysis, determining the theoretical maximum success probability for a set of dependent local collisions, replacing prior heuristic corrections for dependencies.",
+        "Implemented open-source near-collision attack with complexity equivalent to 2^57.5 SHA-1 compressions.",
+        "Identical-prefix collision attack at approximately 2^61 and chosen-prefix collision attack at approximately 2^77.1 SHA-1 compressions.",
+        "This is the first SHA-1 chosen-prefix collision attack."
+      ],
+      "scope_note": "Only the near-collision attack was implemented. The 2^61 and 2^77.1 figures are estimates. No SHA-1 collision was produced."
+    },
+    {
+      "id": "src-stevens-karpman-peyrin-2016",
+      "title": "Freestart collision for full SHA-1",
+      "authors": [
+        "Marc Stevens",
+        "Pierre Karpman",
+        "Thomas Peyrin"
+      ],
+      "venue": "EUROCRYPT 2016, LNCS 9665 Part I, pp. 459-483",
+      "year": 2016,
+      "locator": "https://eprint.iacr.org/2015/967",
+      "doi": "10.1007/978-3-662-49890-3_18",
+      "eprint": "2015/967",
+      "verification_status": "verified",
+      "verification_basis": "Abstract read verbatim from IACR ePrint 2015/967; bibliography confirmed via IACR CryptoDB.",
+      "original_source_bytes_retained": false,
+      "read_scope": "abstract and IACR-hosted PDF",
+      "verified_claims": [
+        "'an explicit freestart colliding pair for SHA-1, i.e. a collision for its internal compression function ... reaching all 80 out of 80 steps.'",
+        "'Only 10 days of computation on a 64-GPU cluster were necessary ... for a cost of approximately 2^57.5 calls to the compression function.'",
+        "Authors' own limitation, verbatim: 'Freestart collisions do not directly imply a collision for the full hash function. However, this work is an important milestone towards an actual SHA-1 collision.'"
+      ],
+      "scope_note": "A freestart collision is a compression-function collision: the attacker may choose the chaining value rather than being bound to SHA-1's standard IV. The paper says 'a collision for its internal compression function' rather than 'modified IV'; the corpus uses the paper's own wording. Builds on Karpman, Peyrin & Stevens, CRYPTO 2015 (76-step freestart)."
+    },
+    {
+      "id": "src-shattered-2017",
+      "title": "The First Collision for Full SHA-1",
+      "authors": [
+        "Marc Stevens",
+        "Elie Bursztein",
+        "Pierre Karpman",
+        "Ange Albertini",
+        "Yarik Markov"
+      ],
+      "venue": "CRYPTO 2017, LNCS 10401, pp. 570-596",
+      "year": 2017,
+      "locator": "https://eprint.iacr.org/2017/190",
+      "doi": "10.1007/978-3-319-63688-7_19",
+      "eprint": "2017/190",
+      "verification_status": "verified",
+      "verification_basis": "Full text read from the IACR ePrint 2017/190 PDF; bibliography confirmed via IACR CryptoDB and dblp.",
+      "original_source_bytes_retained": false,
+      "read_scope": "full text",
+      "verified_claims": [
+        "First known instance of a collision for full SHA-1.",
+        "Cost 2^63.1 compression function calls; approximately 6,500 CPU years and 100 GPU years (paper figure).",
+        "Two PDF files with different arbitrarily-chosen visual contents.",
+        "Identical-prefix, verbatim: 'This is an identical-prefix collision attack, where a given prefix P is extended with two distinct near-collision block pairs such that they collide for any suffix S.'",
+        "Authors concede a gap between the 2^61 theoretical estimate and the executed 2^63.1 cost, attributed to GPU efficiency loss and distributed-launch inefficiency."
+      ],
+      "figure_divergence": "The paper states 100 GPU years; the Google Security Blog (https://security.googleblog.com/2017/02/announcing-first-sha1-collision.html) states 110 years of GPU computation. The corpus records both with their sources and does not reconcile them.",
+      "scope_note": "Identical-prefix, NOT chosen-prefix. Does not break preimage resistance. Approximately 100,000x faster than brute force."
+    },
+    {
+      "id": "src-shattered-artifacts",
+      "title": "SHAttered colliding PDF pair (artifact)",
+      "authors": [
+        "Marc Stevens",
+        "Elie Bursztein",
+        "Pierre Karpman",
+        "Ange Albertini",
+        "Yarik Markov"
+      ],
+      "venue": "Published artifact accompanying CRYPTO 2017",
+      "year": 2017,
+      "locator": "https://shattered.io/static/shattered-1.pdf",
+      "secondary_locator": "https://shattered.io/static/shattered-2.pdf",
+      "archived_project_page": "https://web.archive.org/web/20170224030000/https://shattered.io/",
+      "verification_status": "verified_by_local_computation",
+      "verification_basis": "Both files downloaded (HTTP 200, application/pdf, 422435 bytes each) and digests computed locally. This is direct evidence, stronger than a citation.",
+      "original_source_bytes_retained": false,
+      "bytes_retention_note": "The artifact bytes are public and were fetched for verification but are not retained in this package. Digests below are recorded instead.",
+      "read_scope": "full artifact bytes, hashed",
+      "shared_sha1_digest": "38762cf7f55934b34d179ae6a4c80cadccbb7f0a",
+      "artifact_sha256": "2bb787a73e37352f92383abe7e2902936d1059ad9f1ba6daaa9c1e58ee6970d0",
+      "second_artifact_sha256": "d4488775d29bdef7993367d541064dbdda50d383f89f0aa13a6ff2e0894ba5ff",
+      "verified_claims": [
+        "Both files share SHA-1 38762cf7f55934b34d179ae6a4c80cadccbb7f0a.",
+        "The two files have distinct SHA-256 digests and differ at byte 193: the collision is reproducible by anyone.",
+        "The shared SHA-1 digest string as locally computed agrees with the string published on the legacy project page."
+      ],
+      "digest_provenance": "The SHA-256 values are LOCALLY COMPUTED, not published. No authoritative page publishes them: the archived 2017 project page publishes no digest strings, and neither does the Google Security Blog.",
+      "domain_caution": "shattered.io is no longer the original CWI/Google project page; it now serves unrelated commercial content, and shattered.it redirects to an unrelated SEO blog. The PDFs at shattered.io/static/ are still genuine (hash-verified). Any PROSE claim about the project must cite the Wayback capture, not the live domain.",
+      "scope_note": "This artifact is why the domain satisfies selection criterion 7: the outcome is a concrete object anyone can check by computing a digest."
+    },
+    {
+      "id": "src-leurent-peyrin-2019",
+      "title": "From Collisions to Chosen-Prefix Collisions - Application to Full SHA-1",
+      "authors": [
+        "Gaetan Leurent",
+        "Thomas Peyrin"
+      ],
+      "venue": "EUROCRYPT 2019, LNCS 11478 Part III, pp. 527-555",
+      "year": 2019,
+      "locator": "https://eprint.iacr.org/2019/459",
+      "doi": "10.1007/978-3-030-17659-4_18",
+      "eprint": "2019/459",
+      "verification_status": "verified",
+      "verification_basis": "Read from IACR ePrint 2019/459; bibliography confirmed via IACR CryptoDB and the Crossmark record.",
+      "original_source_bytes_retained": false,
+      "read_scope": "abstract and ePrint text",
+      "verified_claims": [
+        "Chosen-prefix collision on SHA-1 between 2^66.9 and 2^69.4, a RANGE, 'depending on assumptions about the cost of finding near-collision blocks'.",
+        "Previous best chosen-prefix was 2^77.1 (src-stevens-2013).",
+        "Reference identical-prefix collision estimated at 2^64.7.",
+        "Two-phase method: birthday search onto pre-defined target differences, then a multi-block approach exploiting the clustering effect. Also applied to MD5."
+      ],
+      "scope_note": "No executed chosen-prefix collision. Purely an attack-complexity result. The authors flag the near-collision-block cost assumption as the source of the range."
+    },
+    {
+      "id": "src-leurent-peyrin-2020",
+      "title": "SHA-1 is a Shambles - First Chosen-Prefix Collision on SHA-1 and Application to the PGP Web of Trust",
+      "authors": [
+        "Gaetan Leurent",
+        "Thomas Peyrin"
+      ],
+      "venue": "29th USENIX Security Symposium (USENIX Security '20), pp. 1839-1856",
+      "year": 2020,
+      "locator": "https://www.usenix.org/conference/usenixsecurity20/presentation/leurent",
+      "eprint": "2020/014",
+      "secondary_locator": "https://sha-mbles.github.io/",
+      "verification_status": "verified",
+      "verification_basis": "Read from IACR ePrint 2020/014 and the project page; USENIX proceedings entry confirms pagination and ISBN 978-1-939133-17-5.",
+      "original_source_bytes_retained": false,
+      "read_scope": "abstract, ePrint text, project page",
+      "verified_claims": [
+        "First practical chosen-prefix collision for SHA-1.",
+        "Chosen-prefix complexity 2^63.4, improved from 2^67.1; identical-prefix improved to 2^61.2 from 2^64.7.",
+        "Actual compute: two months on 900 Nvidia GTX 1060 GPUs.",
+        "Application: 'creating a pair of PGP/GnuPG keys with different identities, but colliding SHA-1 certificates ... leading to a forgery.' Tracked as CVE-2019-14855; fixed in GnuPG 2.2.18 (25 November 2019).",
+        "Authors' limitation, verbatim: 'HMAC-SHA-1 seems relatively safe, and preimage resistance ... of SHA-1 remains unbroken as of today.'"
+      ],
+      "cost_divergence": "The paper estimates 45k USD for a chosen-prefix collision; the project page states the attack 'costed us about 75k USD' with 45k being a retrospective estimate at then-current prices. The corpus records both and does not reconcile them.",
+      "scope_note": "Source code was deliberately withheld at publication time."
+    },
+    {
+      "id": "src-mironov-zhang-2006",
+      "title": "Applications of SAT Solvers to Cryptanalysis of Hash Functions",
+      "authors": [
+        "Ilya Mironov",
+        "Lintao Zhang"
+      ],
+      "venue": "SAT 2006, LNCS 4121, pp. 102-115",
+      "year": 2006,
+      "locator": "https://eprint.iacr.org/2006/254.pdf",
+      "eprint": "2006/254",
+      "verification_status": "verified",
+      "verification_basis": "Read from the IACR ePrint 2006/254 PDF.",
+      "original_source_bytes_retained": false,
+      "read_scope": "full text",
+      "verified_claims": [
+        "SAT-based collision search succeeded on MD4 (under 10 minutes) and MD5 (one collision in approximately 100 hours).",
+        "Failed to scale to SHA-0, verbatim: 'we estimate that generating a full collision using SatELiteGTI would require approximately 3 million CPU hours ... A successful SAT-solver-aided attack on SHA-0 is still a theoretical possibility.'",
+        "SHA-1 was left as an explicit open problem."
+      ],
+      "correction_applied": "This, not Nossum, is the citable SAT negative result. See src-nossum-2012-excluded.",
+      "scope_note": "SAT-based collision search never reached full SHA-0 and never attempted full SHA-1."
+    },
+    {
+      "id": "src-nossum-2012-excluded",
+      "title": "SAT-based preimage attacks on SHA-1",
+      "authors": [
+        "Vegard Nossum"
+      ],
+      "venue": "Master's thesis, University of Oslo, Department of Informatics",
+      "year": 2012,
+      "locator": "https://hdl.handle.net/10852/34912",
+      "verification_status": "verified_and_excluded",
+      "verification_basis": "Abstract read from the University of Oslo repository record.",
+      "original_source_bytes_retained": false,
+      "read_scope": "abstract",
+      "excluded": true,
+      "exclusion_reason": "This is a PREIMAGE study, not a collision attempt, so it is not scored against this corpus's objective. It contains no collision claim and no full-SHA-1 result. Retained in the register as an explicit exclusion so that a later reader does not mistake it for a failed SAT collision attempt: that citation is src-mironov-zhang-2006.",
+      "verified_claims": [
+        "'we investigate the current state of the art in carrying out preimage attacks against SHA-1 using SAT solvers ... experiments using SAT solvers on encodings of reduced-difficulty versions of SHA-1.'",
+        "Main contribution is an encoding: 'a new encoding of 32-bit modular addition which significantly reduces the time it takes the SAT solver to find a solution.'",
+        "Counter-intuitive finding: fixing bits of the message to reduce the search space yields an instance that is HARDER for the solver."
+      ]
+    }
+  ]
+}

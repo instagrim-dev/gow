@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "command": "source lineage-diff",
+  "left": {
+    "store": "/tmp/lext-validation/new.db",
+    "problem_id": "prb_01M2BZDZS0X3QZFKJYAKP72JT0",
+    "snapshot_count": 12,
+    "distinct_sha256": 12
+  },
+  "right": {
+    "store": "/tmp/lext-validation/empty.db",
+    "problem_id": "prb_01M2BZEPTTTJM7NTRJPW7XEN49",
+    "snapshot_count": 0,
+    "distinct_sha256": 0
+  },
+  "shared_count": 0,
+  "left_only_count": 12,
+  "right_only_count": 0,
+  "verdict": "empty"
+}

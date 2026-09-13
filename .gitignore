@@ -29,3 +29,9 @@ docs/reviews
 # Experiment DB snapshots: the durable record is the sha256 committed in records/runtime.json;
 # the file itself is retained locally per the pilot RUNBOOK retention rule.
 corpus/experiments/*/records/*.db
+
+# Python bytecode from the corpus authoring-package validators. The validators
+# themselves are tracked; their compiled caches are per-interpreter and must not
+# enter the manifest hash set.
+__pycache__/
+*.pyc

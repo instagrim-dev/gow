@@ -341,12 +341,21 @@ func (a *App) CompressSuccesses(ctx context.Context, input SuccessCompressInput)
 	}
 
 	// The vocabulary the corpus was canonicalized under gates condition
-	// references (same pinned-vocab discipline as mining).
+	// references (same pinned-vocab discipline as mining). A store failure
+	// must not silently fall back to the default vocabulary — that would
+	// change compression semantics with no recorded cause; only a genuinely
+	// absent cluster run may use the default.
 	vocabVersion := canon.VocabularyMechanismV1
-	if latest, found, lerr := repoStore.LatestClusterRun(ctx, input.ProblemID); lerr == nil && found {
-		if clusterRun, gerr := repoStore.GetClusterRun(ctx, latest); gerr == nil {
-			vocabVersion = clusterRun.VocabularyVersion
+	latest, found, err := repoStore.LatestClusterRun(ctx, input.ProblemID)
+	if err != nil {
+		return SuccessCompressResponse{}, err
+	}
+	if found {
+		clusterRun, gerr := repoStore.GetClusterRun(ctx, latest)
+		if gerr != nil {
+			return SuccessCompressResponse{}, gerr
 		}
+		vocabVersion = clusterRun.VocabularyVersion
 	}
 	vocab, err := a.loadVocabulary(ctx, repoStore, vocabVersion)
 	if err != nil {

@@ -22,7 +22,9 @@ Every view carries a `mode_disclaimer`; a blinded experiment structurally
 cannot record a historical conclusion. Lifting `historical` needs **data**
 (auditable dated sources), not new machinery: the write path is
 `experiment date-source`, and the epistemic burden of producing real dated
-evidence stays with the operator.
+evidence stays with the operator. The gate was first lifted and a historical
+run executed on 2026-09-12 for the P-vs-NP corpus
+(`corpus/experiments/pvnp-holdout/` — see its `RESULT.md`).
 
 ## The historical dating gate (`experiment date-source`)
 

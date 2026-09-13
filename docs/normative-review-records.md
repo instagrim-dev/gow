@@ -112,6 +112,15 @@ its historical outcome and loses only current authority.
 ## Surfaces
 
 ```sh
+newf review policy --key assessment-admission-decision --revision 1 \
+  --decision-name <decision> --owner <who> --authority <source> --scope <why> \
+  --obligation 'key=...;revision=1;requirement=...;acceptance=...;applicability=...;owner=...;mandatory=true'
+
+newf review assess --policy rpol_... --obligation robl_... \
+  --subject <exact-ref> --context <ref> --outcome conforms --argument <why> \
+  --assessor <who> --applicability rapp_... --check rchk_... \
+  --depends 'project_revision=<sha>=<why relevant>'
+
 newf review applicability --policy rpol_... --obligation robl_... \
   --subject <exact-ref> --decision applies --rationale <why> --authorizer <who>
 

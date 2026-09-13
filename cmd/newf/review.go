@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -36,10 +38,276 @@ func newReviewCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *c
 			"  ELIGIBLE_TO_ADVANCE  scoped permission to advance under this policy\n\n" +
 			"ELIGIBLE_TO_ADVANCE is permission, not a claim that any hypothesis is true.",
 	}
+	cmd.AddCommand(newReviewPolicyCommand(stdout, app, opts))
 	cmd.AddCommand(newReviewApplicabilityCommand(stdout, app, opts))
 	cmd.AddCommand(newReviewCheckCommand(stdout, app, opts))
+	cmd.AddCommand(newReviewAssessCommand(stdout, app, opts))
 	cmd.AddCommand(newReviewCoverageCommand(stdout, app, opts))
 	return cmd
+}
+
+// newReviewPolicyCommand defines a decision policy revision and the obligation
+// revisions it binds.
+//
+// Without this command the two records that carry AUTHORITY (the policy) and
+// CONCLUSION (the assessment) were reachable only from Go test code, so the only
+// practical way to produce a coverage export was to run an integration test.
+// That inverts the contract: coverage is meant to be derived from
+// operator-recorded review state, not to be a by-product of a fixture whose
+// policy and acceptance criteria are hardcoded literals.
+func newReviewPolicyCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cobra.Command {
+	var (
+		key            string
+		revision       int
+		decisionName   string
+		owner          string
+		authority      string
+		scope          string
+		evidenceCutoff string
+		caseBudget     int
+		attemptBudget  int
+		providerBudget int
+		supersedes     string
+		supersedeWhy   string
+		obligations    []string
+	)
+	cmd := &cobra.Command{
+		Use:   "policy",
+		Short: "Define a decision policy revision and the obligations it binds",
+		Long: "Define the versioned decision policy that a review applies.\n\n" +
+			"A policy must name its decision, an accountable owner, the source of that\n" +
+			"authority and a scope justification. All are required: an unowned or\n" +
+			"unscoped policy cannot grant eligibility, and a policy binding no\n" +
+			"mandatory obligation is vacuous — an empty mandatory set is not success.\n\n" +
+			"Bind obligations with repeatable --obligation, using KEY=VALUE fields\n" +
+			"separated by `;`:\n\n" +
+			"  --obligation 'key=current-assessment-authority;revision=1;\\\n" +
+			"    requirement=...;acceptance=...;applicability=...;owner=...;mandatory=true'\n\n" +
+			"Recognized fields: key, revision, requirement, acceptance, applicability,\n" +
+			"owner, mandatory. A review invitation is not authorization to redefine\n" +
+			"requirements: record a NEW revision instead of editing one, and use\n" +
+			"--supersedes with --supersede-rationale so the old basis is retained.",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// The pairing the long help promises is enforced, not
+			// advisory: a supersession without a recorded rationale is
+			// an unexplained authority change in an immutable ledger,
+			// and a rationale without a superseded policy explains
+			// nothing.
+			if supersedes != "" && strings.TrimSpace(supersedeWhy) == "" {
+				return wrapCommandError("review policy", fmt.Errorf("--supersedes requires --supersede-rationale: an authority change must record why the old basis changed"))
+			}
+			if supersedes == "" && supersedeWhy != "" {
+				return wrapCommandError("review policy", fmt.Errorf("--supersede-rationale requires --supersedes: a rationale must name the policy it explains"))
+			}
+			specs, err := parseObligationSpecs(obligations)
+			if err != nil {
+				return wrapCommandError("review policy", err)
+			}
+			result, err := app.DefineReviewPolicy(cmd.Context(), pipeline.ReviewPolicyDefineInput{
+				DBPath: opts.dbPath, Key: key, Revision: revision,
+				DecisionName: decisionName, Owner: owner, AuthoritySource: authority,
+				ScopeJustification: scope, EvidenceCutoff: evidenceCutoff,
+				CaseBudget: caseBudget, AttemptBudget: attemptBudget,
+				ProviderCallBudget: providerBudget,
+				SupersedesPolicyID: supersedes, SupersedeRationale: supersedeWhy,
+				Obligations: specs,
+			})
+			if err != nil {
+				return wrapCommandError("review policy", err)
+			}
+			if opts.jsonOutput {
+				return writeJSON(stdout, result)
+			}
+			fmt.Fprintf(stdout, "policy %s: %s@%d\n", result.PolicyID, key, revision)
+			for _, name := range sortedMapKeys(result.ObligationIDs) {
+				fmt.Fprintf(stdout, "  obligation %s: %s\n", result.ObligationIDs[name], name)
+			}
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&key, "key", "", "Stable policy key (required)")
+	cmd.Flags().IntVar(&revision, "revision", 0, "Policy revision (required)")
+	cmd.Flags().StringVar(&decisionName, "decision-name", "", "The concrete decision this policy governs (required)")
+	cmd.Flags().StringVar(&owner, "owner", "", "Accountable decision owner (required)")
+	cmd.Flags().StringVar(&authority, "authority", "", "Explicit source of that authority (required)")
+	cmd.Flags().StringVar(&scope, "scope", "", "Affirmative scope justification (required)")
+	cmd.Flags().StringVar(&evidenceCutoff, "evidence-cutoff", "", "Evidence cutoff for this revision")
+	cmd.Flags().IntVar(&caseBudget, "case-budget", 0, "Authorized case ceiling")
+	cmd.Flags().IntVar(&attemptBudget, "attempt-budget", 0, "Authorized attempts per failed command")
+	cmd.Flags().IntVar(&providerBudget, "provider-call-budget", 0, "Authorized paid provider calls")
+	cmd.Flags().StringVar(&supersedes, "supersedes", "", "Policy ID this revision supersedes")
+	cmd.Flags().StringVar(&supersedeWhy, "supersede-rationale", "", "Why the superseded policy changed (required with --supersedes)")
+	cmd.Flags().StringArrayVar(&obligations, "obligation", nil, "Obligation as `;`-separated KEY=VALUE fields (repeatable)")
+	return cmd
+}
+
+// parseObligationSpecs parses repeatable --obligation values.
+//
+// Unknown fields are rejected rather than ignored: a misspelled `mandatatory`
+// would otherwise silently produce a non-mandatory obligation, which is exactly
+// the kind of quiet requirement removal the contract treats as a change to the
+// decision basis rather than a typo.
+func parseObligationSpecs(values []string) ([]pipeline.ReviewObligationSpec, error) {
+	specs := make([]pipeline.ReviewObligationSpec, 0, len(values))
+	for i, raw := range values {
+		spec := pipeline.ReviewObligationSpec{}
+		for _, field := range strings.Split(raw, ";") {
+			field = strings.TrimSpace(field)
+			if field == "" {
+				continue
+			}
+			name, value, ok := strings.Cut(field, "=")
+			if !ok {
+				return nil, fmt.Errorf("obligation %d: field %q expects KEY=VALUE", i+1, field)
+			}
+			name, value = strings.TrimSpace(name), strings.TrimSpace(value)
+			switch name {
+			case "key":
+				spec.Key = value
+			case "revision":
+				n, err := strconv.Atoi(value)
+				if err != nil {
+					return nil, fmt.Errorf("obligation %d: revision %q is not an integer", i+1, value)
+				}
+				spec.SemanticRevision = n
+			case "requirement":
+				spec.Requirement = value
+			case "acceptance":
+				spec.AcceptanceCriteria = value
+			case "applicability":
+				spec.ApplicabilityRule = value
+			case "owner":
+				spec.PrimaryOwner = value
+			case "mandatory":
+				b, err := strconv.ParseBool(value)
+				if err != nil {
+					return nil, fmt.Errorf("obligation %d: mandatory %q is not a boolean", i+1, value)
+				}
+				spec.Mandatory = b
+			default:
+				return nil, fmt.Errorf("obligation %d: unknown field %q (recognized: key, revision, "+
+					"requirement, acceptance, applicability, owner, mandatory)", i+1, name)
+			}
+		}
+		specs = append(specs, spec)
+	}
+	return specs, nil
+}
+
+// newReviewAssessCommand records one assessment plus the dependency manifest
+// that bounds its meaning.
+//
+// The manifest is not optional decoration. Staleness is defined relative to what
+// an assessment SAID it depended on, so an assessment with no declared
+// dependencies can be judged neither stale nor current — which is why each
+// --depends value must carry its own reason.
+func newReviewAssessCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cobra.Command {
+	var (
+		policyID        string
+		obligationID    string
+		applicabilityID string
+		subject         string
+		contextRef      string
+		outcome         string
+		argument        string
+		assessor        string
+		projectRevision string
+		contractHash    string
+		recipeHash      string
+		evidenceCutoff  string
+		depends         []string
+		checkIDs        []string
+	)
+	cmd := &cobra.Command{
+		Use:   "assess",
+		Short: "Record one assessment with its dependency manifest",
+		Long: "Record the assessment that an obligation conforms, nonconforms, or is\n" +
+			"inconclusive for an exact subject and context.\n\n" +
+			"Declare each dependency with repeatable --depends KIND=REF=WHY_RELEVANT.\n" +
+			"The reason is required, and it is what makes an unrelated change decidable:\n" +
+			"only a kind this assessment declared can later make it stale, so a change\n" +
+			"to something it never named does not invalidate it.\n\n" +
+			"A `conforms` outcome requires at least one supporting check attempt, and a\n" +
+			"blocked attempt can never support one — the schema refuses that link, so a\n" +
+			"blocker cannot be laundered into support.\n\n" +
+			"Omit --project-revision to record the CURRENT checkout revision, resolved\n" +
+			"from git at write time. A hardcoded revision silently ages.",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			deps, err := parseDependencySpecs(depends)
+			if err != nil {
+				return wrapCommandError("review assess", err)
+			}
+			result, err := app.RecordReviewAssessment(cmd.Context(), pipeline.ReviewAssessInput{
+				DBPath: opts.dbPath, PolicyID: policyID, ObligationID: obligationID,
+				ApplicabilityDecisionID: applicabilityID,
+				SubjectRef:              subject, ContextRef: contextRef,
+				Outcome: outcome, Argument: argument, Assessor: assessor,
+				ProjectRevision: projectRevision, ContractHash: contractHash,
+				RecipeHash: recipeHash, EvidenceCutoff: evidenceCutoff,
+				Dependencies: deps, CheckAttemptIDs: checkIDs,
+			})
+			if err != nil {
+				return wrapCommandError("review assess", err)
+			}
+			if opts.jsonOutput {
+				return writeJSON(stdout, result)
+			}
+			fmt.Fprintf(stdout, "assessment %s: %s for %s\n",
+				result.Assessment.ID, result.Assessment.Outcome, result.Assessment.SubjectRef)
+			fmt.Fprintf(stdout, "  manifest %s (project revision %s)\n",
+				result.Manifest.ID, result.Manifest.ProjectRevision)
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&policyID, "policy", "", "Decision policy ID (rpol_...)")
+	cmd.Flags().StringVar(&obligationID, "obligation", "", "Obligation revision ID (robl_...)")
+	cmd.Flags().StringVar(&applicabilityID, "applicability", "", "Applicability decision this rests on (required)")
+	cmd.Flags().StringVar(&subject, "subject", "", "Exact subject reference (required)")
+	cmd.Flags().StringVar(&contextRef, "context", "", "Exact context reference (required)")
+	cmd.Flags().StringVar(&outcome, "outcome", "", "conforms | nonconforms | inconclusive")
+	cmd.Flags().StringVar(&argument, "argument", "", "The argument for this outcome (required)")
+	cmd.Flags().StringVar(&assessor, "assessor", "", "Who reached the assessment (required)")
+	cmd.Flags().StringVar(&projectRevision, "project-revision", "", "Project revision assessed (default: current git revision)")
+	cmd.Flags().StringVar(&contractHash, "contract", "", "Contract revision or hash bound into this assessment")
+	cmd.Flags().StringVar(&recipeHash, "recipe", "", "Recipe revision or hash bound into this assessment")
+	cmd.Flags().StringVar(&evidenceCutoff, "evidence-cutoff", "", "Evidence cutoff for this assessment")
+	cmd.Flags().StringArrayVar(&depends, "depends", nil, "Dependency as KIND=REF=WHY_RELEVANT (repeatable)")
+	cmd.Flags().StringArrayVar(&checkIDs, "check", nil, "Supporting check attempt ID (repeatable)")
+	return cmd
+}
+
+// parseDependencySpecs parses repeatable --depends KIND=REF=WHY values.
+func parseDependencySpecs(values []string) ([]pipeline.ReviewDependencySpec, error) {
+	deps := make([]pipeline.ReviewDependencySpec, 0, len(values))
+	for i, raw := range values {
+		kind, rest, ok := strings.Cut(raw, "=")
+		if !ok {
+			return nil, fmt.Errorf("dependency %d: expects KIND=REF=WHY_RELEVANT", i+1)
+		}
+		ref, why, ok := strings.Cut(rest, "=")
+		if !ok {
+			return nil, fmt.Errorf("dependency %d: missing WHY_RELEVANT; a dependency without a stated "+
+				"reason makes every repository edit look equally threatening", i+1)
+		}
+		deps = append(deps, pipeline.ReviewDependencySpec{
+			Kind:        strings.TrimSpace(kind),
+			Ref:         strings.TrimSpace(ref),
+			WhyRelevant: strings.TrimSpace(why),
+		})
+	}
+	return deps, nil
+}
+
+// sortedMapKeys returns map keys in a stable order so CLI output is diffable.
+func sortedMapKeys(m map[string]string) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }
 
 func newReviewApplicabilityCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions) *cobra.Command {

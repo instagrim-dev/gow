@@ -3,6 +3,7 @@ package review
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 // These tests pin the projection's PRECEDENCE and its refusals. They exist
@@ -155,11 +156,61 @@ func TestProjectNonconformanceOutranksLaterFavorableAssessment(t *testing.T) {
 func TestProjectStaleAssessmentLosesCurrentAuthority(t *testing.T) {
 	t.Parallel()
 	o := baseObligation()
-	o.Assessments[0].StaleDependency = true
-	o.Assessments[0].StaleReason = "declared population moved"
+	o.Assessments[0].Compatibility = CompatibilityStale
+	o.Assessments[0].CompatibilityReason = "declared population moved"
 	got := Project(basePolicy(o))
 	if got.Decision != DecisionUndetermined || !contains(got.Reasons, ReasonStaleDependency) {
 		t.Fatalf("decision = %s reasons = %v, want %s with %s", got.Decision, got.Reasons, DecisionUndetermined, ReasonStaleDependency)
+	}
+}
+
+// TestProjectUnknownCompatibilityDoesNotGrantCurrentEligibility pins the H1
+// remediation for GOW-R2 (2026-09-12): an assessment whose declared current
+// dependencies were not supplied cannot supply CURRENT permission on the
+// strength of its historical outcome. Unknown is not compatible — collapsing
+// the two would let an incomplete caller manufacture eligibility.
+func TestProjectUnknownCompatibilityDoesNotGrantCurrentEligibility(t *testing.T) {
+	t.Parallel()
+	o := baseObligation()
+	o.Assessments[0].Compatibility = CompatibilityUnknown
+	o.Assessments[0].CompatibilityReason = "no current value supplied for declared assessment_population"
+	got := Project(basePolicy(o))
+	if got.Decision != DecisionUndetermined {
+		t.Fatalf("decision = %s, want %s: an unknown-compatibility assessment must not grant current eligibility",
+			got.Decision, DecisionUndetermined)
+	}
+	if !contains(got.Reasons, ReasonCompatibilityUnknown) {
+		t.Fatalf("reasons = %v, want %s: the reason for undetermined must be visible",
+			got.Reasons, ReasonCompatibilityUnknown)
+	}
+	// Historical preservation: the reason must remain readable on the notes
+	// so a reader can see WHY compatibility was undetermined without losing
+	// the assessment record itself.
+	joined := strings.Join(got.Obligations[0].Notes, "|")
+	if !strings.Contains(joined, "unknown:") || !strings.Contains(joined, "declared assessment_population") {
+		t.Fatalf("notes = %v, want the unknown-compat reason preserved as history", got.Obligations[0].Notes)
+	}
+}
+
+// TestProjectUnknownAndStaleReasonsCoexistWhenBothPresent guards against the
+// two states being collapsed. When one assessment is stale and another is
+// unknown, both reason codes must be reported so the caller knows what is
+// missing.
+func TestProjectUnknownAndStaleReasonsCoexistWhenBothPresent(t *testing.T) {
+	t.Parallel()
+	o := baseObligation()
+	o.Assessments = []AssessmentRecord{
+		{ID: "rasm_stale", SubjectRef: "s", ContextRef: "c", Outcome: Conforms,
+			Argument: "a", Assessor: "w", ManifestID: "m", CheckAttemptIDs: []string{"rchk_1"},
+			CreatedAt: "t1", Compatibility: CompatibilityStale, CompatibilityReason: "population moved"},
+		{ID: "rasm_unknown", SubjectRef: "s", ContextRef: "c", Outcome: Conforms,
+			Argument: "a", Assessor: "w", ManifestID: "m", CheckAttemptIDs: []string{"rchk_1"},
+			CreatedAt: "t2", Compatibility: CompatibilityUnknown, CompatibilityReason: "no current population supplied"},
+	}
+	got := Project(basePolicy(o))
+	if !contains(got.Reasons, ReasonStaleDependency) || !contains(got.Reasons, ReasonCompatibilityUnknown) {
+		t.Fatalf("reasons = %v, want both %s and %s to remain visible",
+			got.Reasons, ReasonStaleDependency, ReasonCompatibilityUnknown)
 	}
 }
 
@@ -171,7 +222,8 @@ func TestProjectStaleNonconformanceDoesNotBlockCurrentDecision(t *testing.T) {
 	o := baseObligation()
 	o.Assessments = []AssessmentRecord{
 		{ID: "rasm_old", SubjectRef: "s", ContextRef: "old", Outcome: Nonconforms, Argument: "a", Assessor: "w",
-			ManifestID: "m", CreatedAt: "t1", StaleDependency: true, StaleReason: "assessed an obsolete population"},
+			ManifestID: "m", CreatedAt: "t1", Compatibility: CompatibilityStale,
+			CompatibilityReason: "assessed an obsolete population"},
 		{ID: "rasm_new", SubjectRef: "s", ContextRef: "new", Outcome: Conforms, Argument: "a", Assessor: "w",
 			ManifestID: "m", CheckAttemptIDs: []string{"rchk_1"}, CreatedAt: "t2"},
 	}
@@ -258,14 +310,70 @@ func TestProjectWithholdStillReportsRemainingUncertainty(t *testing.T) {
 func TestRenderCoverageIsDeterministicAndCitesRecords(t *testing.T) {
 	t.Parallel()
 	p := Project(basePolicy(baseObligation()))
-	first := RenderCoverage(p)
-	if first != RenderCoverage(p) {
-		t.Fatal("rendering must be a pure function of the projection")
+	at := time.Date(2026, 9, 12, 12, 0, 0, 0, time.UTC)
+	first := RenderCoverage(p, at)
+	if first != RenderCoverage(p, at) {
+		t.Fatal("rendering must be a pure function of the projection and the generation time")
 	}
 	for _, want := range []string{"rpol_1", "robl_1", "rapp_1", "rasm_1", "rchk_1"} {
 		if !strings.Contains(first, want) {
 			t.Fatalf("document must cite record %s:\n%s", want, first)
 		}
+	}
+}
+
+// TestRenderCoverageNamesProvenanceWithoutLosingDeterminism pins the contract's
+// two simultaneous requirements: the export must name its generator, generation
+// time and exact input revisions, AND repeated generation from identical records
+// must preserve substantive content.
+//
+// These conflict only if generation time is treated as substantive, which the
+// contract explicitly refuses — it is non-semantic metadata. So the timestamp is
+// the ONLY line permitted to differ between two generations.
+func TestRenderCoverageNamesProvenanceWithoutLosingDeterminism(t *testing.T) {
+	t.Parallel()
+	obligation := baseObligation()
+	obligation.Assessments[0].ProjectRevision = "8f6b1e5"
+	obligation.Assessments[0].ContractHash = "docs/reviews/prompts/review-contract.md"
+	obligation.Assessments[0].RecipeHash = "recipes/assessment-admission-decision.md@1"
+	p := Project(basePolicy(obligation))
+
+	early := RenderCoverage(p, time.Date(2026, 9, 12, 12, 0, 0, 0, time.UTC))
+	later := RenderCoverage(p, time.Date(2027, 3, 4, 5, 6, 7, 0, time.UTC))
+
+	// The generator, the input revisions and the times must all be nameable.
+	for _, want := range []string{GeneratorVersion, "2026-09-12T12:00:00Z", "8f6b1e5",
+		"docs/reviews/prompts/review-contract.md", "recipes/assessment-admission-decision.md@1"} {
+		if !strings.Contains(early, want) {
+			t.Fatalf("provenance must name %q:\n%s", want, early)
+		}
+	}
+	if !strings.Contains(later, "2027-03-04T05:06:07Z") {
+		t.Fatalf("the later generation must carry its own time:\n%s", later)
+	}
+
+	// Raw documents differ ONLY in the timestamp; substantive content does not.
+	if early == later {
+		t.Fatal("the export must actually record its generation time")
+	}
+	if StripNonSemantic(early) != StripNonSemantic(later) {
+		t.Fatalf("substantive content must be identical across generations:\n--- early ---\n%s\n--- later ---\n%s",
+			StripNonSemantic(early), StripNonSemantic(later))
+	}
+	if strings.Contains(StripNonSemantic(early), "generated at") {
+		t.Fatal("StripNonSemantic must remove the generated-at line it is defined to remove")
+	}
+}
+
+// TestRenderCoverageReportsMissingInputRevisions keeps an absent revision
+// visible. Omitting the line would read as "nothing to report" rather than "the
+// governing assessment never said which code it assessed".
+func TestRenderCoverageReportsMissingInputRevisions(t *testing.T) {
+	t.Parallel()
+	p := Project(basePolicy(baseObligation()))
+	doc := RenderCoverage(p, time.Date(2026, 9, 12, 12, 0, 0, 0, time.UTC))
+	if !strings.Contains(doc, "**project revision**: _none recorded for the governing assessments_") {
+		t.Fatalf("a missing project revision must be reported, not omitted:\n%s", doc)
 	}
 }
 

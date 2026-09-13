@@ -1,0 +1,93 @@
+# Run report — manuscript claim fidelity
+
+Reviewed revision: `630e380b9584e378a1aa1360efe432d4651fa439`
+
+## 1. Decision, policy and scope
+
+**Decision under review:** does every quantitative or epistemic claim in `paper/geometry-of-work.tex`'s results and conclusion sections carry exactly the strength its cited evidence supports?
+
+**Decision:** `UNDETERMINED`, reason codes `inconclusive` and `unexamined`. No demonstrated blocking nonconformance was found: every quoted number I checked against the frozen artifacts under `corpus/` matched exactly, and the manuscript's epistemic hedging is unusually disciplined (tier annotations, predeclared-endpoint failures reported as failures, corrections incorporated). Two claim-strength findings (F1, F2 below) are real but neither demonstrates that a results/conclusion claim exceeds its evidence in a way that would flip a reader's decision; both are omission-of-producing-condition issues. Coverage is incomplete: the theoretical superiority section (§9), related-work, and limitations sections were only skimmed; the M7 `run.sh` end-to-end reproduction and the full test suite were not executed.
+
+**Scope:** results sections (§8 Experiments A–E), conclusion (§12), abstract, motivating example (§2), and appendices D (complete experiment tables), E (claim/evidence ledger), F (falsification conditions), verified against the frozen artifacts under `corpus/experiments/` at the reviewed revision. Read-only plus disposable computation inside an extracted copy of the tree; no repository modification.
+
+**Policy basis:** the repository's own epistemic invariants (`AGENTS.md`: no silent promotion of epistemic status; `ModelJudgment != Verification`; conditioned quantities carry their conditions) plus the manuscript's self-declared standard (`paper/geometry-of-work.tex:2830-2837`: every empirical sentence traceable to a frozen artifact and in agreement with it on re-reading).
+
+## 2. Responsibility and critical path
+
+The decision-critical causal path is: frozen experiment artifacts (`corpus/experiments/*`) → per-experiment results prose (§8.1–8.5) → aggregate claims (abstract, §10.1, §12 conclusion) → claim/evidence ledger (appendix E) that asserts the mapping is sound. A fidelity failure anywhere on this path converts artifact-grounded evidence into laundered authority — exactly the failure mode `AGENTS.md` names.
+
+Critical-path segments examined, in order of leverage:
+
+1. **Experiment E (only tier-2 evidence).** E2's numbers gate the paper's strongest empirical sentence. I re-executed the deterministic runner and reproduced every figure exactly (see §4). E1's numbers (p = 1000033, 97 s, `revision_credit: earned`, miss by 1 part in 10³⁸, 0 model calls) match `corpus/experiments/m7-blinded-run/records/episode-001-greedy-vs-global.md` lines 48–76.
+2. **Pilot-003 (§8.2).** Automatic counts (B0: 7 proposals, 2 decisive_no, 5 unknown; B3: 6/2/4; conclusion `inconclusive`; classify/v2 degradation of all four decisive_no) match `records/EXECUTION-RESULT.md`. The blinded-review tally (B0: 0 full, 1 partial; B3: 1 full at rank 4, 1 partial at rank 5) matches `records/INDEPENDENT-REVIEW-RESULT.md`. The wire-invalid B3 capture, symmetric repair policy, identifier-masking-not-concealment caveat, and the over-read-detail correction are all faithfully carried into the manuscript's caveats (1)–(5).
+3. **Pilot-004 (§8.3, appendix D).** All 23 appendix rows (category, reference label, lane agreement, disputed flag) were recomputed from `quorum-result.json` and match exactly; summary counts 7/10/4/2 match; C1 fail (1/3 runs), C2 fail (2 vs 0, both conservative fallbacks), C3's frozen reference-recovery reading (L1 three D1 + three D0, L3 once D1-only, L4 unrecovered), and the 36%/50% figures being a separately-labeled descriptive rate all match `records/CLOSURE-SCORECARD.md` including its endpoint-definition note.
+4. **N2a challenge (§8.4).** The manuscript states the *corrected* strength — "seven-part challenge recorded; refinement proposed; coverage incomplete, at model-judgment strength," C2 characterizes a hypothetical rather than completing a search, C7 has unchecked mathematical steps, exceptional-set expression grows while its density decays — which is exactly the authoritative post-reassessment status in `records/CURRENT-CLAIMS.md`, not the superseded "survives challenge" verdict line. This is the strongest observed protection in the tree.
+5. **Negative controls (§8.1).** ESR control (0 failures in population: 7 partial_success + 4 unknown; 0 mined candidates; B3 0 proposals; six content axes at 0 canonical IDs; `inconclusive`) matches `2026-09-10-esr-negative-control/README.md` and `experiment.json`. M7 Stage 1/Stage 2 (incomparable axes → symmetric `inconclusive`; attested → `no_recovery` for assessed arms; B0-vs-B3 `inconclusive` because B0 emits 0 proposals) matches `m7-blinded-run/RESULT.md`.
+
+Responsibility for the two findings sits with the manuscript's results prose (§8.1, §8.2), not with the artifacts, which are internally candid in both cases.
+
+## 3. Findings, limitations, protections, questions
+
+### Finding F1 — Second-adjudication discordance on the two "partial recovery" verdicts is not reported
+
+- **Location:** `paper/geometry-of-work.tex:1247-1263` (Experiment B review table and the sentence "B0's rank-2 partial also matters: the undirected arm reached the same regime"); `paper/geometry-of-work.tex:1273-1279` (caveat 5); `paper/geometry-of-work.tex:2808-2825` (appendix D judgment table); `paper/geometry-of-work.tex:2851-2852` (ledger rows).
+- **Triggering conditions:** a reader weighs the two `partially_recovers` verdicts (B0 rank 2, B3 rank 5) — in particular the prose use of B0 rank 2 as evidence the undirected arm "reached the same regime."
+- **What the artifact shows:** `corpus/experiments/pilot-003/records/SECOND-ADJUDICATION-RESULT.md` (concordance table): the cue-reduced second review reproduced `recovers` for P10 (B3 rank 4) but reversed **both** partials — P04 (B3 rank 5) and P07 (B0 rank 2) to `does_not_recover`. `records/CLOSURE.md` line 32 restates this ("P04/P07 fail the threshold"). The manuscript's caveat 5 reports only the confirming half of that reassessment (P10 reproduced); the reversal of the two partials appears nowhere in the manuscript, while the r1 partial verdicts are tabulated twice and leveraged in prose.
+- **Violated contract:** the manuscript's own ledger standard (`geometry-of-work.tex:2830-2837`, agreement with the artifact on re-reading) and the bundle obligation against presenting a conditioned quantity (reviewer-1 verdict, known to be contradicted by a stricter re-review) as the unconditioned assessment; `AGENTS.md` "preserve the weaker type and record the limitation."
+- **Downstream consequence:** the "B0 reached the same regime" sentence and both partial-recovery table cells overstate what the total recorded evidence supports; a reader cannot discover that the only follow-up review found neither partial defensible. The headline claim (single full recovery = B3 rank 4) is unaffected — it is the one verdict that *did* replicate.
+- **Discriminating regression check:** a fidelity check that, for every manuscript sentence citing `INDEPENDENT-REVIEW-RESULT.md`, requires either concordance with `SECOND-ADJUDICATION-RESULT.md` or an explicit discordance disclosure; it fails on the current §8.2 text and passes once caveat 5 also reports the P04/P07 reversals.
+- **Evidence class:** demonstrated static path (artifact text vs. manuscript text; no execution needed).
+
+### Finding F2 — Fixture-generated proposals in the negative controls are not identified as such at point of claim
+
+- **Location:** `paper/geometry-of-work.tex:1175-1187` (ESR control paragraph), `paper/geometry-of-work.tex:1199-1208` (M7 Stage 2 paragraph, "yields a decisive `no_recovery` for every assessed arm ... the first decisive (non-abstaining) negative result in the corpus").
+- **Triggering conditions:** a reader of §8.1 assumes the assessed arms are the same kind of model-generated arms as Experiments B–D.
+- **What the artifacts show:** `corpus/experiments/2026-09-10-esr-negative-control/README.md` (run manifest: "provider: `fixture` (deterministic; no model)") and `corpus/experiments/m7-blinded-run/RESULT.md` ("this is a negative result for the **offline deriving-fixture generator** ... the fixtures propose transparent variants"; also the README's warning that two blockers co-occur, so the empty candidate set cannot be attributed to the empty failure population alone). The manuscript's word "fixture" appears zero times; the only hint is appendix C's "fully offline and deterministic" reproduction note (`geometry-of-work.tex:2735-2736`).
+- **Violated contract:** the bundle obligation to list numeric results *with their producing conditions*; `AGENTS.md` provider-provenance discipline (provider identity is part of empirical provenance).
+- **Downstream consequence:** modest. The abstention and no-manufactured-support claims are code-owned and provider-independent, so they survive; but "decisive `no_recovery` for every assessed arm" reads as a model-capability negative when it is a fixture-generator negative, and "the system does not manufacture failure support" generalizes the artifact's own narrower "fixture path did not manufacture failure support."
+- **Discriminating regression check:** a check that every §8 arm-level result names its generation provider class (model vs. deterministic fixture) in the same paragraph; fails on §8.1's two paragraphs, passes on §8.2–8.5.
+- **Evidence class:** demonstrated static path.
+
+### Limitations (of this review, honestly reported)
+
+- Sections §9 (conditional superiority — self-declared "no empirical claim"), §11 related work, §Limitations, and appendix A/B protocol details were skimmed, not line-verified.
+- `corpus/experiments/m7-blinded-run/run.sh` was not re-executed end-to-end; M7 numbers were verified against `RESULT.md` only. `go test ./...` was not run (time budget); `go build ./...` and `gofmt -l .` were run and clean.
+- N5-challenge, pilot-001/002/005, pvnp-holdout, and the superiority-preregistration artifacts were not opened; claims resting solely on them (e.g., N5 six-of-seven coverage) were checked only against `CURRENT-CLAIMS.md`.
+- All verification is single-reviewer inspection plus one executed reproduction; it is not independent adjudication of any mathematical content.
+
+### Observed protections
+
+- The manuscript reads the *corrected* strength for N2a/N5 (matching `CURRENT-CLAIMS.md`'s supersession table), incorporates the 2026-09-12 withdrawal of "5.3% is budget-independent" verbatim into §8.5, and reports predeclared endpoint failures (Pilot-004 C1/C2) as failures.
+- Appendix D's 23-row table is byte-consistent with `quorum-result.json` including lane-agreement counts and disputed flags.
+- The motivating example (§2, `geometry-of-work.tex:446-461`) explicitly labels its strong elements "illustrative inventions" appearing "in no experiment record."
+- Tier annotations (tier-5/tier-4/tier-2) are applied consistently; Experiment E is correctly isolated as the only tier-2 evidence; falsification appendix F states no F-condition has been run.
+- The blinding claim is self-limited everywhere it appears ("identifier masking, not full concealment"), including in the abstract and conclusion.
+
+### Open questions
+
+- Whether the human-external review slot for Pilot-003 (open per `records/CLOSURE.md`) is disclosed anywhere in the manuscript's limitations section (not verified; §Limitations was skimmed).
+- Whether M7 `run.sh` reproduces `RESULT.md`'s stage-2 table at this revision (not executed).
+- Whether the appendix E ledger's remaining rows (N5, vocabulary admissions, `docs/findings/001`) agree with their artifacts on re-reading; only the rows on the critical path above were verified.
+
+## 4. Checks, coverage and resources
+
+Commands executed (all exit 0 unless noted; paths relative to subject tree):
+
+- `git archive <SHA> | tar -x` extraction into an isolated temp tree (exit 0).
+- `grep -n '\\section\|\\subsection' paper/geometry-of-work.tex` — outline (0).
+- Python recomputation of `corpus/experiments/pilot-004-discovery/quorum-result.json` category counts and per-entry lane agreement (0) — matches appendix D exactly.
+- `go run ./corpus/experiments/two-arm-comparison/` (0) — **executed reproduction**: `arm U: hits=3/20 submissions=57 cost-per-hit=19.00; arm M: hits=20/20 submissions=20 cost-per-hit=1.00; map earns its cost: true`, matching §8.5 and `RESULT.md`.
+- `go build ./...` (0); `gofmt -l .` (empty output, 0).
+- Targeted `grep`/`sed` over the manuscript and artifacts for: fixture disclosure (0 hits in tex), second-adjudication mentions (none in tex), episode numbers, freeze parameters (all 0).
+
+Files consulted: `paper/geometry-of-work.tex` (abstract, §2, §8 complete, §10.1, §12, appendices C–F); `AGENTS.md`; `corpus/experiments/2026-09-10-esr-negative-control/{README.md,experiment.json}`; `corpus/experiments/m7-blinded-run/RESULT.md` and `records/episode-001-greedy-vs-global.{md,json}`; `corpus/experiments/pilot-003/records/{EXECUTION-RESULT.md,INDEPENDENT-REVIEW-RESULT.md,SECOND-ADJUDICATION-RESULT.md,CLOSURE.md}`; `corpus/experiments/pilot-004-discovery/{quorum-result.json,FREEZE.md,PROTOCOL-DRAFT.md,records/CLOSURE-SCORECARD.md,records/CURRENT-CLAIMS.md,records/N2a-challenge.md (excerpts)}`; `corpus/experiments/two-arm-comparison/{PROTOCOL.md,RESULT.md}`.
+
+Not examined: `internal/`, `cmd/`, `docs/` (except as cited by the manuscript), pilot-001/002/005, pvnp-holdout, superiority-preregistration, positive-control, `paper/HISTORY.md`, `paper/references.bib`, §9/§11/§Limitations line-level, M7 `run.sh` execution, `go test ./...`.
+
+Wall-clock estimate: ~24 minutes.
+
+## 5. Remediation handoffs
+
+1. **Disclose the second-adjudication discordance in §8.2 (F1).** Extend caveat 5 (`geometry-of-work.tex:1273-1279`) and the appendix D table note to state that the cue-reduced second review reversed both `partially_recovers` verdicts (P04, P07 → `does_not_recover`) while reproducing P10's `recovers`; re-weigh or delete the "B0 reached the same regime" sentence. **Acceptance:** every manuscript sentence citing the review tally either agrees with both recorded reviews or names the disagreement; the ledger row cites `SECOND-ADJUDICATION-RESULT.md` alongside `INDEPENDENT-REVIEW-RESULT.md`.
+2. **Name the fixture provider at point of claim in §8.1 (F2).** Add "deterministic fixture-generated arms (no model calls)" to the ESR-control and M7 Stage-2 paragraphs, and scope "the system does not manufacture failure support" with the artifact's own co-occurring-blockers caveat. **Acceptance:** grep for arm-level results in §8 finds a provider-class statement in the same paragraph for every experiment; the ESR sentence no longer generalizes beyond the artifact's "fixture path" wording.
+3. **Close the unexamined ledger rows.** Verify the remaining appendix E rows (N5 six-of-seven, vocabulary admissions, `docs/findings/001`, M7 `run.sh` reproduction) against their artifacts, recording per-row agreement. **Acceptance:** a recorded per-row check with denominator (rows checked / rows total) exists and any disagreement is either corrected in the manuscript or listed as a known discrepancy in the ledger's preamble.

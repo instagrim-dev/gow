@@ -34,9 +34,20 @@ const (
 
 	// Dependency kinds. These are the ONLY things that can make an assessment
 	// stale, which is what keeps C5 (unrelated change) decidable.
-	depKindAssessmentPopulation = "assessment_population"
-	depKindPolicyRevision       = "policy_revision"
-	depKindCandidateContent     = "candidate_content"
+	depKindAssessmentPopulation = review.DepKindAssessmentPopulation
+	depKindPolicyRevision       = review.DepKindPolicyRevision
+	depKindCandidateContent     = review.DepKindCandidateContent
+	depKindProjectRevision      = review.DepKindProjectRevision
+
+	// gateProjectRevision is the revision this scenario's assessments declare.
+	//
+	// It is a FIXTURE value, deliberately not the live checkout: the scenario
+	// asserts staleness by moving the *current* value against this declared one,
+	// which requires the declared side to be stable. Production writes resolve
+	// the real revision instead (see App.projectRevision), and the gate covers
+	// that separately — a scenario that both declared and supplied the live
+	// revision could never observe a project-revision change at all.
+	gateProjectRevision = "review-gate-fixture-revision-1"
 )
 
 // reviewLedger is the instantiated normative context for one scenario run.

@@ -65,6 +65,15 @@ the v1 `residue_locality` / `residue_class_locality` precedent), and the
 documented alias additions to existing terms exist only in v3
 (`mechanismV3ExtraAliases`). A superset regression pins v2-in-v3.
 
+The lineage continues by the same strict-superset rule (each version pinned
+by a regression test in `internal/canon`): `mechanism/v4` and `mechanism/v5`
+extend v3 for later corpus work, and `mechanism/v6` (2026-09-12) adds
+verbatim per-label canonicalizations of the `pvnp-holdout` corpus — one
+alias per stated label, no cross-label aliasing, with the KI03
+algorithm-to-hardness *implication* and the withheld target's *conversion*
+kept as distinct canonical IDs by construction
+(`internal/canon/vocabulary_v6_test.go`).
+
 The set-valued field kinds (`representation`, `assumption`, `operator`,
 `preserves`, `breaks`, `auxiliary_object`) match the existing
 `mechanism_attributes.kind` values one-to-one, so canonicalization maps directly

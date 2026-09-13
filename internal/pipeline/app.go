@@ -2,10 +2,14 @@ package pipeline
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -22,6 +26,7 @@ type App struct {
 	getwd               func() (string, error)
 	stdin               io.Reader
 	openStoreFn         func(context.Context, string) (string, problemStore, error)
+	projectRevisionFn   func() string
 	normalizers         map[string]provider.Normalizer
 	invariantMinerFn    provider.InvariantMiner
 	challengerFn        provider.Challenger
@@ -261,7 +266,152 @@ func New(version string) *App {
 		},
 	}
 	app.openStoreFn = app.defaultOpenStore
+	app.projectRevisionFn = resolveProjectRevision
 	return app
+}
+
+// projectRevisionUnknown is recorded when the checkout revision cannot be
+// resolved. It is deliberately an explicit marker rather than an empty string:
+// "we could not tell which code was assessed" is a real limitation that must
+// survive into the export, not a field a reader can mistake for a clean answer.
+const projectRevisionUnknown = "unknown"
+
+// dirtyRevisionDigestLength is how much of the working-tree digest is kept. 48
+// bits is far beyond what is needed to distinguish successive edits of one tree,
+// and a full hash would bury the commit id it annotates.
+const dirtyRevisionDigestLength = 12
+
+// resolveProjectRevision reports the current checkout revision, content-addressing
+// any uncommitted state.
+//
+// A hardcoded revision silently ages: an assessment recorded against a literal
+// stays "current" across every later commit, and the stale literal is exactly
+// the value a later reader would use to judge compatibility. Resolving at write
+// time is what lets `project_revision` function as a real dependency.
+//
+// A bare `+dirty` marker is not enough, and that gap was a finding of its own
+// (E3-2, docs/reviews/2026-09-12-e3-w2-migration-run.md). Two materially
+// different trees at one commit stringify identically under a bare marker, so an
+// assessment of pre-fix code and an assessment of post-fix code declare the same
+// dependency value, neither can go stale relative to the other, and a
+// demonstrated blocker can never be retired. In a repository whose norm is a
+// dirty tree, that covers most changes. The digest closes it: the revision
+// changes when the bytes change, with no commit in between.
+//
+// What the digest covers, exactly:
+//
+//   - tracked changes, staged and unstaged, via `git diff HEAD --binary`.
+//     `--binary` is belt-and-braces rather than strictly required: a plain diff
+//     renders a modified binary as "Binary files … differ", but its `index`
+//     line still carries abbreviated before/after blob hashes, so content
+//     changes do reach the digest either way. This was checked by mutation —
+//     dropping `--binary` did not break the binary test — so the flag is kept
+//     for the stronger reason that an abbreviated hash is a 7-hex-digit prefix
+//     chosen for human display, while `--binary` embeds the actual content.
+//   - untracked, non-ignored files, by path AND content.
+//
+// What it deliberately excludes: ignored files. In this repository
+// `docs/reviews` is ignored, so writing a review does not change the revision —
+// which is intended, since a review should not invalidate its own assessment.
+func resolveProjectRevision() string {
+	return resolveProjectRevisionIn("")
+}
+
+// resolveProjectRevisionIn resolves the revision of the checkout containing dir.
+// An empty dir means the current working directory. The parameter exists so the
+// resolver is testable against a fixture repository without a process-wide
+// chdir.
+func resolveProjectRevisionIn(dir string) string {
+	head, err := gitOutput(dir, "rev-parse", "HEAD")
+	if err != nil {
+		return projectRevisionUnknown
+	}
+	revision := strings.TrimSpace(string(head))
+	if revision == "" {
+		return projectRevisionUnknown
+	}
+
+	status, err := gitOutput(dir, "status", "--porcelain")
+	if err != nil {
+		// The commit is known but cleanliness is not. Saying so beats implying
+		// the tree was clean.
+		return revision + "+dirty:" + projectRevisionUnknown
+	}
+	if len(strings.TrimSpace(string(status))) == 0 {
+		return revision
+	}
+
+	digest, ok := workingTreeDigest(dir)
+	if !ok {
+		return revision + "+dirty:" + projectRevisionUnknown
+	}
+	return revision + "+dirty:" + digest
+}
+
+// workingTreeDigest hashes the uncommitted content of the checkout containing
+// dir. ok=false means the digest could not be computed, which the caller must
+// report rather than paper over.
+func workingTreeDigest(dir string) (string, bool) {
+	sum := sha256.New()
+
+	trackedDiff, err := gitOutput(dir, "diff", "HEAD", "--binary")
+	if err != nil {
+		return "", false
+	}
+	sum.Write(trackedDiff)
+
+	// `ls-files --others --exclude-standard -z` lists untracked, non-ignored
+	// files one per NUL, unquoted. It is used in preference to parsing porcelain
+	// status because that output collapses untracked directories and quotes
+	// unusual paths, both of which would make the digest depend on formatting
+	// rather than on content.
+	untracked, err := gitOutput(dir, "ls-files", "--others", "--exclude-standard", "-z")
+	if err != nil {
+		return "", false
+	}
+	paths := make([]string, 0, 8)
+	for _, p := range strings.Split(string(untracked), "\x00") {
+		if p != "" {
+			paths = append(paths, p)
+		}
+	}
+	// Sorted so the digest depends on the set of files, not on git's ordering.
+	sort.Strings(paths)
+
+	root := dir
+	if root == "" {
+		root = "."
+	}
+	for _, p := range paths {
+		sum.Write([]byte("\x00untracked:" + p + "\x00"))
+		content, readErr := os.ReadFile(filepath.Join(root, p))
+		if readErr != nil {
+			// A file that vanished mid-walk, or is unreadable, makes the digest
+			// incomplete. Refuse rather than emit a value that looks precise.
+			return "", false
+		}
+		sum.Write(content)
+	}
+
+	return hex.EncodeToString(sum.Sum(nil))[:dirtyRevisionDigestLength], true
+}
+
+// gitOutput runs one git command in dir, returning its stdout.
+func gitOutput(dir string, args ...string) ([]byte, error) {
+	cmd := exec.Command("git", args...)
+	if dir != "" {
+		cmd.Dir = dir
+	}
+	return cmd.Output()
+}
+
+// projectRevision returns the resolver's answer, tolerating a nil hook so a
+// zero-value App in a test cannot panic here.
+func (a *App) projectRevision() string {
+	if a.projectRevisionFn == nil {
+		return projectRevisionUnknown
+	}
+	return a.projectRevisionFn()
 }
 
 func (a *App) InitProblem(ctx context.Context, input InitProblemInput) (InitResponse, error) {

@@ -1,0 +1,7 @@
+The arm mapping for R01..R12 is sealed at /tmp/pp-sealed-mapping.txt until
+adjudication completes. Commitment (sha256 of the sealed mapping file):
+3af45374560dca1b7c43780773cd881e5fef2df8771680dfcd26b7a260dc961e
+Blinded copies are byte-identical to raw reports except a mechanical
+redaction of the exact phrase "the bundle obligation" -> "the stated
+review obligation" wherever it occurred (packaging self-reference).
+Which and how many files were redacted is part of the sealed mapping.

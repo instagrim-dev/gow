@@ -1,0 +1,232 @@
+{
+  "schema": "newf-dependence-audit/v1",
+  "artifact_status": "audit_delivered",
+  "audit_id": "es-pvnp-independence",
+  "content_revision": 1,
+  "authored": "2026-09-12",
+  "execution_pin": {
+    "repository": "instagrim-dev/gow",
+    "head": "cbc3685a0a2bb668f59fc7985680f4ccdb665957",
+    "branch_at_authoring": "research/l-extension-authoring",
+    "plan_source_head": "8f6b1e5b5d893610a4522b01418d5f28503801cf",
+    "head_verified_unchanged_during_audit": true
+  },
+  "companion_record": "es-pvnp-independence-audit.md",
+  "discharges": {
+    "obligation": "l-coh-arc-consolidation.md correction 3, ES-vs-pvnp clause",
+    "scorecard_row": "es-pvnp-independence",
+    "prior_disposition": "deferred: cross-corpus independence beyond raw source bytes"
+  },
+  "overall_finding": {
+    "disposition": "independent_construction_not_established",
+    "statement": "The ES and P-vs-NP corpora draw on disjoint primary subject-matter sources (zero shared citations, zero shared cited authors, code-verified SHA-256 disjointness) but share the corpus author, selection authority, annotation template, posture vocabulary, outcome-label source, decision rule, and execution path. Independent corpus construction is not established; independent subject matter under common construction is.",
+    "evidence_tier": "SGO",
+    "independence_score_emitted": false,
+    "independent_true_emitted": false
+  },
+  "units_compared": {
+    "es": {
+      "substantive_corpus_lineages": 1,
+      "train_notes": 12,
+      "train_path": "corpus/train/",
+      "target_notes": 1,
+      "target_path": "corpus/target/",
+      "database_instances": 4,
+      "database_paths": [".newf/m7/newf.db", ".newf/pilot-001/newf.db", ".newf/pilot-002/newf.db", ".newf/pilot-003/newf.db"],
+      "independent_research_replications": 1,
+      "source_bytes_retained": false
+    },
+    "pvnp": {
+      "substantive_corpus_lineages": 1,
+      "train_notes": 12,
+      "train_path": "corpus/experiments/pvnp-holdout/train/",
+      "target_notes": 2,
+      "target_path": "corpus/experiments/pvnp-holdout/target/",
+      "database_instances": 1,
+      "database_paths": [".newf/pvnp/newf.db"],
+      "independent_research_replications": 1,
+      "source_bytes_retained": false
+    },
+    "note": "Four ES databases share 12/13 source_snapshots.sha256 byte-for-byte per source-lineage-check-result.md: one corpus at four HEADs. n=2 corpus lineages, not 5."
+  },
+  "dimensions": [
+    {
+      "id": "A",
+      "dimension": "raw_source_identity",
+      "disposition": "distinct_origins_supported",
+      "qualified": true,
+      "evidence": [
+        "Zero shared citations between corpora; disjoint cited-source sets.",
+        "ES cited anchors: Mordell 1969; Elsholtz & Tao 2011-2013; Browning & Elsholtz 2010-2011; Vaughan 1970; Monks & Velingker; arXiv:2404.01508.",
+        "pvnp cited anchors: Baker-Gill-Solovay 1975; Razborov-Rudich 1994/1997; Mulmuley-Sohoni 2001; Kabanets-Impagliazzo 2003; Hastad; Smolensky.",
+        "corpus/README.md: notes are 'project-authored summaries for normalization, not original mathematics and not verified proofs'.",
+        "corpus/experiments/pvnp-holdout/RESULT.md: corpus is 'not raw historical text'."
+      ],
+      "qualifications": [
+        "ES has only 2 machine-resolvable identifiers (arXiv IDs) across 13 files; remaining sourcing is prose in an Era line that corpus/README.md declares 'not audited'.",
+        "pvnp corpus files contain zero arXiv/DOI/URL tokens; DOIs live in SCOPE.md and records/date-source-0{1,2}.json.",
+        "Neither corpus retains primary source bytes, so raw-source identity is verified against stated anchors only."
+      ],
+      "missing_evidence": [
+        "Retained or hashed primary source bytes for either corpus.",
+        "A pvnp source register with per-source read_scope comparable to corpus/research/erdos-straus-2026-09-10/sources.json.",
+        "Record of which passages were actually consulted while authoring either corpus."
+      ]
+    },
+    {
+      "id": "B",
+      "dimension": "underlying_work_lineage",
+      "disposition": "distinct_origins_supported",
+      "qualified": false,
+      "evidence": [
+        "Cross-check of 49 author surnames across both corpora returns strict partition: no name appears in both.",
+        "No cross-citation in either direction; rg 'Erd|erdos|residue' over pvnp-holdout/train/*.md returns zero hits.",
+        "newf source lineage-diff verdict 'disjoint': left prb_01M2B8ZMHRCJN4YVH4CP6SNXTD (.newf/m7/newf.db, 12 snapshots) vs right prb_01M2BKVV5A7HD9HSAQKG7XEDST (.newf/pvnp/newf.db, 12 snapshots), shared 0.",
+        "Only ES mentions anywhere in the pvnp tree are two apparatus references in SCOPE.md, not source citations."
+      ],
+      "supporting_records": [
+        "corpus/experiments/pilot-004-discovery/records/source-lineage-admission-gate-result.md"
+      ],
+      "missing_evidence": [
+        "Verification is against stated anchors, not against what was actually consulted."
+      ]
+    },
+    {
+      "id": "C",
+      "dimension": "corpus_selection",
+      "disposition": "shared_dependency_observed",
+      "evidence": [
+        "Same sole git author created both corpora: jmh <5620391+instagrim-dev@users.noreply.github.com>.",
+        "corpus/README.md created 8551dbe 2026-09-10 07:00 -0700; corpus/train/ at 42353c0 (rename of pre-cutoff/) 2026-09-10 07:37 -0700.",
+        "pvnp-holdout/SCOPE.md created 7c7d289 2026-09-12 12:28 -0700; pvnp-holdout/train/ at 4d80e41 2026-09-12 12:37 -0700.",
+        "pvnp corpus created approximately two days after ES, ES first.",
+        "pvnp has an explicit preregistered selection specification with numbered honesty constraints plus a two-round blind contamination review.",
+        "pvnp SCOPE.md declares itself 'model-authored design artifact'; no ES document carries an equivalent self-declaration."
+      ],
+      "missing_evidence": [
+        "No ES inclusion/exclusion criteria document exists; the twelve families' selection rule is not recorded anywhere.",
+        "No adversarial or blind selection review for ES comparable to pvnp's.",
+        "No record of any second party reviewing either selection."
+      ]
+    },
+    {
+      "id": "D",
+      "dimension": "annotation_construction",
+      "disposition": "shared_dependency_observed",
+      "evidence": [
+        "All 27 corpus files declare schema_version 'normalize/v1'.",
+        "Payload key sets identical at top, approach, and outcome levels; pvnp mechanism level is the same 10 keys plus completeness_basis, completeness_scope, field_completeness (additive only).",
+        "pvnp-holdout/SCOPE.md:66: 'Each file follows the corpus/train/ shape: prose + newf-normalize payload with mechanism axes'.",
+        "Prompts near-identical across corpora: corpus/experiments/pilot-001/prompts/b0.md vs corpus/experiments/pvnp-holdout/captures/b0-prompt.md share headings, wire-schema paragraphs, and constraint list, with the domain sentence swapped."
+      ],
+      "provenance_gap": {
+        "finding": "authoring_agent_identity_not_recorded",
+        "es_attribution": "'project-authored' only (corpus/README.md, README.md, pilot-001/PROTOCOL.md); no model, provider, version, or session.",
+        "pvnp_attribution": "'Author-attested 2026-09-12 as part of pvnp-holdout corpus preparation', repeated verbatim in completeness_basis of all 14 files; no model, provider, version, or session.",
+        "contrast": "corpus/experiments/pilot-003/captures/config.json records proposer and model_identity for downstream capture steps, so the absence at corpus-authoring time is a provenance gap, not a repository convention."
+      },
+      "missing_evidence": [
+        "Model/provider/version/session identity for corpus authoring in both corpora.",
+        "Any authoring transcript or session capture for the notes themselves.",
+        "Whether the pvnp author had ES payloads in context while writing."
+      ]
+    },
+    {
+      "id": "E",
+      "dimension": "representation",
+      "disposition": "shared_dependency_observed",
+      "evidence": [
+        "normalize/v1 defined once at internal/normalize/schema.go:20; used by all 27 files.",
+        "Same three posture axes with same code-validated enums at internal/domain/normalize.go:336-342 (locality, construction_mode, uncertainty_mode).",
+        "mechanism/v* vocabulary family seeded from one file internal/canon/vocabulary_seed.go; ES pins mechanism/v3 (m7-blinded-run/run.sh:20) and mechanism/v1 (pilot-001), pvnp pins mechanism/v6 declared as a v5 superset.",
+        "Shared comparison profile classify/v3 (internal/canon/compare.go:87) with profile sha 34b4bf219dcacebd7c58b1917723d525f19491918e705357c5c6fd63c6ec91b2 present in readiness records for both corpora."
+      ],
+      "missing_evidence": [
+        "Nothing missing for this disposition; shared identifiers are exact. No corpus in the repository uses a schema or posture vocabulary not derived from internal/normalize plus internal/canon."
+      ]
+    },
+    {
+      "id": "F",
+      "dimension": "outcome_assessment",
+      "disposition": "shared_dependency_observed",
+      "evidence": [
+        "Outcome labels are author-supplied inside each note's own embedded payload (outcome.class with self-declared support array) on both sides; no independent labeller recorded for either corpus.",
+        "Shared decision rule recovery-rule/v1 (internal/experiment/recovery.go:23) recorded for ES (m7-blinded-run, pilot-003, pilot-001) and pvnp (pvnp-holdout/records/run.json, SCOPE.md).",
+        "Shared leakage checker leakage-check/v1 (internal/store/experiment_store.go:245) cited in both corpora's records.",
+        "Adjudication rubric is the same template with the domain criterion swapped: same 4-question passage-level structure, same three-verdict enum (recovers / does_not_recover / cannot_assess), same mandatory procedural-cue clause.",
+        "pvnp-holdout/RESULT.md:91-94 records the shared-model-family limitation explicitly; ES makes no equivalent statement."
+      ],
+      "missing_evidence": [
+        "Independent (non-author, non-same-model-family) outcome labelling for either corpus.",
+        "ES adjudicator or model identity for corpus-level outcome labels."
+      ]
+    },
+    {
+      "id": "G",
+      "dimension": "execution",
+      "disposition": "shared_dependency_observed",
+      "evidence": [
+        "Both corpora normalized with --provider fixture; single implementation internal/provider/fixture.go.",
+        "fixture.go derives mechanism axes by parsing the author's own embedded newf-normalize JSON (fixtureBlockStart '<!-- newf-normalize'), so the normalized representation was hand-authored in both cases.",
+        "Same verb chain: init, ingest, normalize --provider fixture, mechanism signature, cluster build, failure-space build, invariants mine --emit-posture-axes, challenge.",
+        "Same miner eligibility code path derivePostureAxisProposals applied across all five databases per l-population-validation-result.md."
+      ],
+      "asymmetries": [
+        "ES has a committed reproducible runner corpus/experiments/m7-blinded-run/run.sh; pvnp has none.",
+        ".newf/ is gitignored, so the database artifacts backing the lineage evidence are not reproducible from a fresh clone."
+      ],
+      "missing_evidence": [
+        "A committed reproducible runner for pvnp.",
+        "Any second independent implementation to cross-check normalization or mining."
+      ]
+    }
+  ],
+  "disposition_counts": {
+    "distinct_origins_supported": 2,
+    "shared_dependency_observed": 5,
+    "undetermined": 0
+  },
+  "most_consequential_finding": "internal/provider/fixture.go derives each corpus's normalized mechanism axes by parsing the corpus author's own embedded newf-normalize JSON. For both corpora the representation the miner, challenger, and recovery rule operate on was hand-authored by the same author, in the same template, under the same vocabulary. Source-byte disjointness sits upstream of this and does not touch it.",
+  "claims_constrained": [
+    "ES and pvnp are two independent research replications: not supported.",
+    "Agreement between the corpora corroborates a domain-general property: constrained, because shared annotator, template, vocabulary, and decision rule mean agreement can reflect the instrument.",
+    "Divergence between the corpora reflects a domain difference: constrained, because divergence could reflect the mechanism/v3 vs mechanism/v6 vocabulary difference or single-pass annotation choices.",
+    "The l-pvnp-replication partial-replication reading generalizes: already capped at PE; this audit supplies the reason the observation is not independent."
+  ],
+  "claims_unaffected": [
+    "The source-byte disjoint verdict itself (SGO, retained).",
+    "Deterministic code-level results in the l-coh arc, including correction 5's CMA fixture test.",
+    "pvnp's internal chronology discipline and leakage audit."
+  ],
+  "what_would_establish_independence": {
+    "corpus_selection": "Inclusion/exclusion criteria authored by a party who did not author the notes, recorded before source screening.",
+    "annotation_construction": "A different annotator with the authoring identity actually recorded.",
+    "representation": "A schema or vocabulary not derived from internal/normalize plus internal/canon, or independent re-annotation under a second vocabulary.",
+    "outcome_assessment": "Outcome labels supplied by a party other than the note author, without reference exposure.",
+    "execution": "A second implementation cross-checking normalization and mining.",
+    "third_corpus_note": "A third corpus discharges none of these for the existing pair. Adding a third corpus cannot retroactively make ES and pvnp independent of each other."
+  },
+  "unresolved_items": [
+    "Authoring-agent identity (model/provider/session) for both corpora.",
+    "Which source passages were actually consulted during authoring.",
+    "Whether the pvnp author had ES payloads in context while writing SCOPE.md:66's declared shape match.",
+    "Reproducibility of the lineage evidence from a fresh clone, since .newf/ is gitignored.",
+    "Whether the shared-annotator dependency was intentional; recorded as observed only."
+  ],
+  "explicitly_not_done": [
+    "No historical pilot, mine, challenge, or evaluation was rerun.",
+    "No frozen record, threshold, policy, or vocabulary was modified.",
+    "No claim tier in CURRENT-CLAIMS.md or the manuscript was changed.",
+    "No numeric independence confidence was computed.",
+    "No finding that construction dependence invalidates either corpus's internal deterministic results."
+  ],
+  "supporting_records": [
+    "corpus/experiments/pilot-004-discovery/records/source-lineage-check-result.md",
+    "corpus/experiments/pilot-004-discovery/records/source-lineage-admission-gate-result.md",
+    "corpus/experiments/pilot-004-discovery/records/l-population-validation-result.md",
+    "corpus/experiments/pilot-004-discovery/records/l-pvnp-replication-result.md",
+    "corpus/experiments/pilot-004-discovery/records/l-pvnp-replication-predeclaration.md",
+    "corpus/experiments/pilot-004-discovery/records/l-coh-arc-consolidation.md"
+  ],
+  "execution_authorization": null
+}

@@ -1,0 +1,23 @@
+{
+  "command": "newf --json --db <scratch> normalize --problem <new> --all --provider fixture",
+  "ok": true,
+  "normalized_record_count": 12,
+  "approach_counts": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "statuses": [
+    "created"
+  ],
+  "note": "Scratch-store IDs omitted: they are disposable-database artifacts, not package identity. Full output retained in the session terminal at execution time."
+}
