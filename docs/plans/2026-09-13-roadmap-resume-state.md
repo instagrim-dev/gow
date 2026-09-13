@@ -1,16 +1,19 @@
 # Shaping and typed-claim delivery status
 
-Base and observed remote `main`: `ecb1c668f79784ed372a40ffce56774996ea60c4`.
-The current local delivery head is
-`79457162cab6f4a421a6315df1169e5b7d4bbd88`, with four unpublished commits:
+Review base: `ecb1c668f79784ed372a40ffce56774996ea60c4`. The delivery head
+`59f4a20a26abf92e6eec148e8c39bbbc45ae5e67` was published to remote `main`
+on 2026-09-13 as a fast-forward of five commits and confirmed against the
+fetched remote ref:
 
 - `46d4afadc6ffca56a041f679935dcf7c7d84ef50` — executable shaping and typed G1 paths.
 - `0a007f7c933c2ff868efb3ab6895ef02dbf0fb8f` — clean-room dispatch preparation.
 - `19585cf841003610bcf164c03b94a9bce98ff392` — committed delivery checkpoint.
 - `79457162cab6f4a421a6315df1169e5b7d4bbd88` — subject-scoped review assessment and coverage repair.
+- `59f4a20a26abf92e6eec148e8c39bbbc45ae5e67` — retained subject-scoped review evidence.
 
-None of these commits has been published. Reverify the current local `HEAD`
-before any release action.
+Publication makes these commits an immutable committed revision candidate for
+the dispatch packet's release-identity decision; it does not itself record
+that decision. Reverify the current local `HEAD` before any release action.
 The delivered scope is the six shaping review boundaries, a runnable
 development resource diagnostic, typed finite-equivalence, finite-instance and
 observation claim paths through scoped assessment, and subject-isolated review
@@ -39,9 +42,12 @@ counts one traversal begun, including a traversal with no match.
 
 `rewrite.Limits.MaxTermNodes` remains a successor ceiling for the legacy API.
 The new resource diagnostic explicitly applies its node allowance to both the
-initial expression and successors. Reaching the visited-state ceiling stops
-generation immediately and leaves the comparison blocked, even if a useful
-checked endpoint was retained.
+initial expression and successors. The visited-state ceiling uses refusal
+semantics: `StateBounded` is set only when an unseen successor is denied
+admission because the set is full; a reachable set that exactly fits
+`MaxStates` completes unbounded. When the ceiling does fire, generation stops
+and the comparison is blocked, even if a useful checked endpoint was
+retained.
 
 The legacy Boolean probe accepts only the default `NodeCount` cost and rejects
 incomplete assessments. Custom costs use `ProbeStrictReductionBounded` and
@@ -357,15 +363,22 @@ data-only and excludes development examples, review records, tests and protected
 content. It does not establish isolation or authorize a dispatch. The concrete
 operator inputs still needed for that boundary are listed in
 [`2026-09-13-protected-g1-dispatch-decision-packet.md`](2026-09-13-protected-g1-dispatch-decision-packet.md);
-the unpublished local head is not a protected-dispatch release identity until the operator chooses and records it as one.
+the published head `59f4a20` is now an eligible immutable revision, but it is not a protected-dispatch release identity until the operator chooses and records it as one.
 
 The local engineering path for the seed tools and subject-scoped review
-projection is complete at the unpublished local delivery head. The next research
+projection is complete at the published delivery head. The next research
 dispatch requires an approved G1 pack, custody boundary and progression criteria;
 existing paths can be rerun with retained input JSON using the operator contract.
 The next research dispatch requires a concrete approved design and fresh custody
 artifacts; later roadmap stages are not marked complete by these engineering
 repairs.
+
+**Next action:** no further engineering is runnable on this path without an
+operator decision. The next concrete step is the operator completing the
+release-identity row of the dispatch decision packet against published
+`59f4a20` (or a successor), then the remaining packet rows. To re-exercise
+delivered paths meanwhile:
+`go build -o /tmp/newf ./cmd/newf && /tmp/newf --db <fresh.sqlite> review check-finite --input docs/plans/artifacts/2026-09-13-finite-claim-path/holds-input.json --policy <id> --obligation <id> --case <label> --executor <name> --max-assignments 64`.
 
 ### G1 pack metadata preparation
 
