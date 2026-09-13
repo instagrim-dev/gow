@@ -85,3 +85,17 @@ Conclusion: the substrate fits; **no parallel policy ledger is needed** (roadmap
 ## Deliberately excluded from this tranche
 
 Per roadmap first-30-days exclusions: no egg/Lean integration expansion, no second DSL, no scheduling synthesis, no new orchestration layer, no paid-delivery promise, no provider dispatch, no reinterpretation of previously gated pilots. Preservation-pilot, historical-rerun, and other authorization boundaries are unchanged.
+
+## Addendum: e98d8ed review — NEEDS_CHANGES, remediated
+
+An operator review of the branch at `e98d8ed` (source/test inspection; not an executed run — reviewer's container had Go 1.23 vs the 1.25 floor) returned `NEEDS_CHANGES` for the claimed end-to-end development path, with the finite-checking approach itself affirmed. Dispositions, all remediated on this branch:
+
+| Finding | Severity | Disposition |
+|---|---|---|
+| Adapters emitted `Mode: "execution"`; review layer requires `"executed"` (projection predicate, persistence gate, schema CHECK); blocked records lacked `Blocker` | P1 | Fixed in both adapters (`319f6dc`); consumer-boundary regressions added at BOTH real consumers: `review.Project` (toolreg) and `PersistReviewCheckAttempt` against the migrated schema (store, external test package). The measure adapter was prior work by another writer, fixed forward. Root cause of the test gap: the smoke test stopped at record construction — "record constructed" is not "record consumable" |
+| `GateEligible` was an unverified label echo; grid completeness checked against caller-supplied episodes, not the roadmap population (three-episode counterexample passed everything) | P2 | Eligibility is now constitutionally false from `internal/screen`; `RuleSatisfied` requires the roadmap population (12/6/6, ≥2 informative families); `ArithmeticSatisfied` reports the development calculation separately (`d6a848e`). The reviewer's exact counterexample is a regression test |
+| Malformed finite expressions panicked before applicability refusal | P2 | Structure is a checked premise before render/traversal in both assessors and the warrant verifier, with a depth bound (`87db374`) |
+| Cost ledger accepted negative values and unchecked overflow | P2 | Nonnegative validation + checked addition; unit contract documented, unavailable ≠ zero recorded as the future adapter's obligation (`d6a848e`) |
+| Instance certificates rendered "N of 0" and kept a contradictory scope guard on REFUTED | P2 | `DomainSize` populated; the guard follows the outcome — a counterexample refutes the universal domain claim and says so (`87db374`) |
+
+The reviewer's affirmations retained unchanged: `VerifyRuleWarrant`'s consumption checks, the screen's run-summed margins and H0 guard, and the E0 handoff's outstanding-ownership framing. The spending decision remains untouched; no experiment was dispatched.
