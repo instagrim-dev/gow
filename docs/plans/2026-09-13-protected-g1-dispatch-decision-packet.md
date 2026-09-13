@@ -78,13 +78,20 @@ verdicts with `invalid` > `inconclusive-incomplete` > `pass`/
 `evaluated-negative` precedence, a single infrastructure-only retry rule,
 validity preconditions, and the `agent-sealed/v1` grade ceiling.
 
+### Case-provenance format — RECORDED
+
+The [case provenance and exposure-record format](2026-09-13-proposed-g1-case-provenance-format.md)
+was approved as drafted by explicit operator selection on 2026-09-13:
+append-only JSONL sealed with the task manifest before execution, explicit
+per-case exposure declarations with `none` required for protected cases, and
+manifest-consistency rules feeding the approved acceptance matrix.
+
 ### Still open — blocks dispatch
 
 | Row | Why it remains open |
 |---|---|
 | Dispatch authority | The recorded approval scope was "record rows", explicitly not dispatch. Needs approval reference, effective date, permitted commands/outputs, and named outcome recipient. |
 | Content boundary | Protected task/answer storage locations and access-log location do not exist yet; they are created at launch and recorded then. |
-| Case plan provenance format | The 24/16/8 strata and route mix are fixed by `g1-pack/3`; the source/provenance and exposure-record format for custodian-authored cases still needs an operator-accepted format. |
 | Custodian isolation (observed) | Recorded mechanism above; the actual observed boundary is recordable only when the custodian context starts. |
 
 ## Required pre-dispatch artifacts
