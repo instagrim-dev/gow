@@ -116,6 +116,22 @@ func logRun(t *testing.T, name string, out screen.Outcome, traces []EpisodeTrace
 		t.Logf("  condition (%s): satisfied=%v  %d %s %d  — %s", c.Name, c.Satisfied, c.Left, c.Op, c.Right, c.Detail)
 	}
 	t.Logf("  ArithmeticSatisfied=%v RuleSatisfied=%v label=%s", out.ArithmeticSatisfied, out.RuleSatisfied, out.EvidenceLabel)
+	// Cost ledger beside the completion counts: the charged task cost
+	// (candidate rewrites materialized, search + selector probes) and the
+	// probe component separately, so probe accounting is auditable from
+	// the run log without re-running a selector (2026-09-13 external
+	// review finding 1 asked for probe work to be visible, not merely
+	// charged).
+	for _, arm := range []screen.Arm{screen.ArmH0, screen.ArmH1, screen.ArmHG} {
+		var generated int
+		var probe int64
+		for _, tr := range traces {
+			generated += tr.Generated[arm]
+			probe += tr.ProbeWork[arm]
+		}
+		rep := out.Arms[arm]
+		t.Logf("  cost %-3s task=%d (search-generated=%d + probe=%d)  custodyKnown=%v", arm, rep.TaskCost, generated, probe, rep.CustodyKnown)
+	}
 	for _, tr := range traces {
 		if tr.Completed[screen.ArmH0] != tr.Completed[screen.ArmH1] || tr.Completed[screen.ArmH1] != tr.Completed[screen.ArmHG] {
 			t.Logf("  DIFFERS %-8s H0=%v H1=%v HG=%v", tr.EpisodeID, tr.Completed[screen.ArmH0], tr.Completed[screen.ArmH1], tr.Completed[screen.ArmHG])

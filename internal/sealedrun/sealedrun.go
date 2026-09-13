@@ -91,6 +91,15 @@ type EpisodeTrace struct {
 	H1        shape.Decision
 	Completed map[screen.Arm]bool
 	Explored  map[screen.Arm]int
+	// Generated is candidate rewrites materialized per arm — the cost
+	// unit charged to the task ledger, kept beside Explored (the budget
+	// unit) so a reader never has to infer which measure a figure is.
+	Generated map[screen.Arm]int
+	// ProbeWork is the arm's charged pre-search selector probe work
+	// (rule applications + candidates); zero for arms whose selector
+	// runs no probe. Recorded per episode so probe accounting is
+	// auditable without re-running the selector.
+	ProbeWork map[screen.Arm]int64
 }
 
 // Run executes the pack under the default ceiling. See RunWithBudget.

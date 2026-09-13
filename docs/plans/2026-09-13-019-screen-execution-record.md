@@ -105,6 +105,18 @@ add(0, x) --add-comm--> add(x, 0) --add-zero--> x
 
 Corrected reading, and the wording the selector now emits: **"no one-step strict NodeCount decrease from the current start."** Demotion remains a declared heuristic. It is not a proof of permanent uselessness and not a refutation of the history. A regression test fails the build on any rationale containing "can never reduce".
 
+### 5a. What the probe meter shows once the work is charged
+
+The per-arm cost ledger is now logged beside the completion counts (task cost = candidate rewrites materialized, split into search-generated and selector-probe components). At the calibrated budget, run 3 reports:
+
+| Arm | Charged task cost | search-generated | selector probe |
+|---|---:|---:|---:|
+| H0 | 325 | 325 | 0 |
+| H1 | 322 | 322 | 0 |
+| HG (`shape-selector/2`) | **566** | 287 | **279** |
+
+The probe component (279 = 91 rule applications + 188 candidate rewrites) **exceeds** the search work it saves: HG expands the fewest candidates of any arm (287 vs 325) and is nonetheless the **most expensive** arm once its pre-search probes are charged — a 74% cost premium over H1 for its four extra completions. Under the previous accounting HG appeared cheapest. This is a measured consequence of finding 1, not a new experiment: the figures come from the same retained run whose completion counts are unchanged. It sharpens the external review's point that "13 → 16" is not a clean capability gain, and it is the number a spending decision should see beside the margin.
+
 ### 6. Bounded work, and what the first repair left open
 
 The external review showed that a maximum depth of 64 bounds nothing in practice: a depth-30 expression whose `Binary` children share one subexpression value costs 2^31−1 logical node visits while staying far under the depth limit. Search had a related boundary — one counted expansion applies all rules at all positions and materializes every successor, with `not-intro` admitting growth and no ceiling on generated state or term size.

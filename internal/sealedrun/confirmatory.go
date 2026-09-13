@@ -80,7 +80,15 @@ func runWithSelector(p Pack, budget int, hg hgSelector, label string) (screen.Ou
 			screen.ArmH1: probeWork(h1Dec),
 			screen.ArmHG: probeWork(hgDec),
 		}
-		trace := EpisodeTrace{EpisodeID: ep.Decl.ID, HG: hgDec, H1: h1Dec, Completed: map[screen.Arm]bool{}, Explored: map[screen.Arm]int{}}
+		trace := EpisodeTrace{
+			EpisodeID: ep.Decl.ID,
+			HG:        hgDec,
+			H1:        h1Dec,
+			Completed: map[screen.Arm]bool{},
+			Explored:  map[screen.Arm]int{},
+			Generated: map[screen.Arm]int{},
+			ProbeWork: map[screen.Arm]int64{},
+		}
 		for _, arm := range []screen.Arm{screen.ArmH0, screen.ArmH1, screen.ArmHG} {
 			ordered := make([]rewrite.Rule, 0, len(orders[arm]))
 			for _, n := range orders[arm] {
@@ -105,6 +113,8 @@ func runWithSelector(p Pack, budget int, hg hgSelector, label string) (screen.Ou
 			completed := res.BestCost <= ep.TargetCost && res.EndpointVerified
 			trace.Completed[arm] = completed
 			trace.Explored[arm] = res.Explored
+			trace.Generated[arm] = res.Generated
+			trace.ProbeWork[arm] = probeCharge[arm]
 			execs = append(execs, screen.Execution{
 				Arm: arm, EpisodeID: ep.Decl.ID, Run: 1,
 				Completed: completed,
