@@ -57,8 +57,11 @@ section in the attributed correction note appended to
 `docs/plans/2026-09-13-019-screen-execution-record.md`: §1 net-vs-gross
 (finding 4), §2 attribution and §3 cost accounting (finding 1), §4 corpus,
 §5 claim scope (finding 2), §5b input identity (finding 3), §6 bounded
-work (finding 5). §2 and §5 carry per-site retraction tables naming every
-frozen sentence they retract as an explanation.
+work (finding 5). §2, §5, and §7 carry per-site retraction tables naming
+every frozen sentence they retract as an explanation, and §8 records the
+one recorded figure class this work DID change (per-arm task cost, by
+construction of finding 1) rather than leaving it inside a blanket
+"nothing changed" claim.
 
 - **Probe accounting (finding 1):** the selector's pre-search
   strict-reduction probes are now metered on the `Decision`
@@ -148,6 +151,59 @@ note left):
   four sections for six corrections; findings 2 and 5 were absent while
   the changelog asserted five. Sections §5 (claim scope), §6 (bounded
   work) and §7 (controller identity) added.
+
+### Changed — 2026-09-13 independent validator pass over both remediations
+
+An isolated validator re-derived the frozen counts from a clean checkout,
+recomputed the documented snapshot hashes at three revisions, and
+mutation-tested every claimed repair. It confirmed the counts and hashes
+and found eight further defects. Verdict recorded: PASS WITH RESIDUAL
+RISK. All eight closed here.
+
+Two were the *same defect class the prior commit existed to close*, still
+open:
+
+- **`CalibrateH0MinBudgets` read a truncated search as "does not
+  complete"** — production code, same package, feeding the binary search
+  that fixes the frozen `budget = 2` every run is measured at. A resource
+  stop there inverts the search and shifts the budget silently.
+  Calibration now refuses: completion must be monotone in budget, and
+  truncation breaks that premise. Ceilings are injectable
+  (`calibrateH0MinBudgets`) so the guard is reachable from a test.
+- **The runner's abort had no regression guard.** Deleting it passed the
+  entire suite, because the only test exercised the helper in isolation
+  and never the wiring. Search results now become scored cells through
+  one function (`measurementFor`), and `screen.Execution.MeasurementBlocked`
+  finally has a production producer — the guarantee was previously caller
+  discipline, not a mechanism. Both guards are mutation-verified: deleting
+  either fails a test.
+
+- **The versioning rule now has mechanical enforcement.**
+  `shape.go`'s "any change is a new version" was doctrine with nothing
+  checking it, which is exactly how a frozen parameter moved under a fixed
+  label. `shape.frozenSnapshotV2` pins the frozen-parameter hash and a
+  regression test fails when a parameter moves, stating in its failure
+  message that editing the pin alone reproduces the original defect.
+- **A test claimed to be a replacement was a tautology.** The subtest
+  meant to fix a vacuous assertion compared the test's own literal against
+  itself and never called the selector; mutation proved re-adding the
+  dropped hashed field broke nothing. It now asserts the invariant through
+  the acceptance boundary: an input declaring a different task than it
+  probes must be refused.
+- **The probe path is bounded like the search path** — it used the
+  unbounded successor helper, so a growth rule could materialize terms the
+  search would refuse. Dropped successors cannot change a "is anything
+  cheaper" answer, so the bound costs no discrimination; dropped
+  candidates are still charged.
+- **Doc/code drift from the version bump:** a `TaskCost` unit comment
+  naming only probe candidates (the code charges applications too),
+  changelog references to deleted `SelectV1` symbols, and a frozen
+  run-3 line describing a `+v1` label no code path emits — the last
+  retracted per-site in record §7 rather than edited.
+- **Record §8 added:** per-arm task cost is a recorded figure class that
+  this work genuinely changed, by construction of finding 1. It is now
+  stated, with the two accounting limits of the charged unit, instead of
+  living under a blanket "no frozen figures changed" claim.
 
 ### Added — Lean 4 kernel as a deterministic verifier tier
 

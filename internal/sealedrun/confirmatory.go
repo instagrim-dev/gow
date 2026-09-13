@@ -88,6 +88,7 @@ func runWithSelector(p Pack, budget int, hg hgSelector, label string) (screen.Ou
 			Explored:  map[screen.Arm]int{},
 			Generated: map[screen.Arm]int{},
 			ProbeWork: map[screen.Arm]int64{},
+			Blocked:   map[screen.Arm]string{},
 		}
 		for _, arm := range []screen.Arm{screen.ArmH0, screen.ArmH1, screen.ArmHG} {
 			ordered := make([]rewrite.Rule, 0, len(orders[arm]))
@@ -98,36 +99,15 @@ func runWithSelector(p Pack, budget int, hg hgSelector, label string) (screen.Ou
 			if err != nil {
 				return screen.Outcome{}, nil, fmt.Errorf("episode %s arm %s: %w", ep.Decl.ID, arm, err)
 			}
-			// A resource stop is NOT a non-completion: reaching the
-			// state ceiling, refusing an oversize term, or being
-			// cancelled truncates the reachable set, so this cell
-			// measures nothing about the arm's capability. Refuse the
-			// run rather than record it as a miss (2026-09-13
-			// self-review of the finding-5 repair). BudgetExhausted is
-			// deliberately NOT in this set: the budget is the declared
-			// measurement parameter, and stopping on it is the
-			// measurement working as designed.
-			if blocked := searchBlockedReason(res); blocked != "" {
-				return screen.Outcome{}, nil, fmt.Errorf("episode %s arm %s: measurement blocked — %s; the search was truncated by a resource bound, so this cell carries no completion outcome (a resource stop is not a semantic refutation)", ep.Decl.ID, arm, blocked)
-			}
-			completed := res.BestCost <= ep.TargetCost && res.EndpointVerified
-			trace.Completed[arm] = completed
+			cell := measurementFor(arm, ep.Decl.ID, res, ep.TargetCost, probeCharge[arm])
+			trace.Completed[arm] = cell.Completed
 			trace.Explored[arm] = res.Explored
 			trace.Generated[arm] = res.Generated
 			trace.ProbeWork[arm] = probeCharge[arm]
-			execs = append(execs, screen.Execution{
-				Arm: arm, EpisodeID: ep.Decl.ID, Run: 1,
-				Completed: completed,
-				// TaskCost unit: candidate rewrites materialized —
-				// search successors (res.Generated) plus selector probe
-				// candidates. Expansion counts stay in the trace; they
-				// are the budget unit, not the cost (finding 1:
-				// "distinguish expansion counts from full costs").
-				TaskCost: int64(res.Generated) + probeCharge[arm],
-				// Custody costs are not measured by this runner; they
-				// are recorded as unmeasured, never as zero.
-				CustodyMeasured: false,
-			})
+			if cell.MeasurementBlocked {
+				trace.Blocked[arm] = cell.BlockedReason
+			}
+			execs = append(execs, cell)
 		}
 		traces = append(traces, trace)
 	}
@@ -145,6 +125,43 @@ func finishEvaluate(decls []screen.Episode, execs []screen.Execution, traces []E
 		return screen.Outcome{}, nil, err
 	}
 	return out, traces, nil
+}
+
+// measurementFor converts one search result into the cell the screen will
+// score. It is the SINGLE place a search outcome becomes a measurement,
+// so the resource-stop rule cannot be bypassed by a producer that forgets
+// it (2026-09-13 validator findings D2/D3: the previous inline abort had
+// no regression guard, and screen.Execution.MeasurementBlocked had no
+// production producer, leaving the guarantee to caller discipline).
+//
+// A resource stop is NOT a non-completion: reaching the state ceiling,
+// refusing an oversize term, or being cancelled truncates the reachable
+// set, so the cell measures nothing about the arm's capability and is
+// marked blocked — screen.Evaluate then refuses the batch rather than
+// scoring truncation as a miss. BudgetExhausted is deliberately not in
+// that set: the budget is the declared measurement parameter, and
+// stopping on it is the measurement working as designed.
+//
+// TaskCost unit: candidate rewrites materialized — search successors
+// (res.Generated) plus the selector's charged probe work (rule
+// applications AND candidates; see probeWork). Expansion counts stay in
+// the trace; they are the budget unit, not the cost (external review
+// finding 1: "distinguish expansion counts from full costs").
+func measurementFor(arm screen.Arm, episodeID string, res rewrite.Result, target int64, probeCharge int64) screen.Execution {
+	cell := screen.Execution{
+		Arm: arm, EpisodeID: episodeID, Run: 1,
+		TaskCost: int64(res.Generated) + probeCharge,
+		// Custody costs are not measured by this runner; they are
+		// recorded as unmeasured, never as zero.
+		CustodyMeasured: false,
+	}
+	if blocked := searchBlockedReason(res); blocked != "" {
+		cell.MeasurementBlocked = true
+		cell.BlockedReason = blocked
+		return cell // Completed stays false and means "not measured"
+	}
+	cell.Completed = res.BestCost <= target && res.EndpointVerified
+	return cell
 }
 
 func hgV0(in shape.Input, _ finite.Expr, _ finite.Domain, _ []rewrite.Rule) (shape.Decision, error) {

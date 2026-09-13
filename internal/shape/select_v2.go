@@ -261,3 +261,15 @@ func SelectV2(in InputV2) (Decision, error) {
 	dec.Preferences = append(preferred, demoted...)
 	return dec, nil
 }
+
+// frozenSnapshotV2 is the content hash of shape-selector/2's frozen
+// parameters (version, SimilarityThreshold, probeDescription), pinned so
+// a parameter cannot move without a version bump. shape.go's rule ("any
+// change is a new version") was doctrine with no mechanical enforcement
+// until 2026-09-13 validator finding D4; this constant is the
+// enforcement, checked by TestFrozenParametersArePinnedToTheirVersion.
+//
+// Changing a frozen parameter requires bumping the version AND updating
+// this constant in the same change. Updating this constant alone to
+// silence the test reproduces the defect it exists to prevent.
+const frozenSnapshotV2 = "da3e7c650d0d929c23030b8e8587ff9dc11d0839b6a0297dd26966942d2e3d05"

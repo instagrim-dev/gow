@@ -100,6 +100,12 @@ type EpisodeTrace struct {
 	// runs no probe. Recorded per episode so probe accounting is
 	// auditable without re-running the selector.
 	ProbeWork map[screen.Arm]int64
+	// Blocked records, per arm, why a cell carries NO completion
+	// measurement (resource-truncated search). An arm absent from this
+	// map was measured; an arm present in it has a meaningless
+	// Completed value. The run aborts on any blocked cell, so this is a
+	// diagnostic for the failure path, not a scored outcome.
+	Blocked map[screen.Arm]string
 }
 
 // Run executes the pack under the default ceiling. See RunWithBudget.

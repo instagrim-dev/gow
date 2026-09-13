@@ -91,3 +91,96 @@ func TestProbeWorkChargesApplicationsAndCandidates(t *testing.T) {
 		t.Fatalf("a selector that runs no probe charges nothing, got %d", got)
 	}
 }
+
+// The WIRING is what needed a guard, not just the helper: the validator
+// proved (2026-09-13, finding D2) that deleting the runner's entire
+// resource-block abort passed the whole suite, because the only test
+// exercised searchBlockedReason in isolation. measurementFor is now the
+// single place a search result becomes a scored cell, and these pin its
+// behavior; deleting the block inside it fails here.
+func TestMeasurementForBlocksResourceStopsAndScoresBudgetStops(t *testing.T) {
+	// A resource-truncated search: no completion measurement, even though
+	// the cost threshold is nominally met.
+	truncated := rewrite.Result{StateBounded: true, Explored: 4, Generated: 9, BestCost: 1, EndpointVerified: true}
+	cell := measurementFor(screen.ArmHG, "inf-01", truncated, 1, 5)
+	if !cell.MeasurementBlocked {
+		t.Fatal("a resource-truncated search must produce a BLOCKED cell, never a scored one")
+	}
+	if cell.Completed {
+		t.Fatal("a blocked cell must not claim completion")
+	}
+	if cell.BlockedReason == "" {
+		t.Fatal("a blocked cell must carry its reason")
+	}
+	// The blocked cell must be rejected by the scorer it is handed to:
+	// this is the end-to-end contract, not a local flag.
+	if _, err := screen.Evaluate(
+		screen.Design{Episodes: []screen.Episode{{ID: "inf-01", Stratum: screen.StratumInformative, Family: "f"}}, RunsPerCell: 1, EvidenceLabel: "development"},
+		[]screen.Execution{cell},
+	); err == nil {
+		t.Fatal("the screen must refuse a blocked cell")
+	}
+
+	// A budget stop is a MEASUREMENT: the budget is the declared
+	// parameter, so this cell is scored normally.
+	budgetStop := rewrite.Result{BudgetExhausted: true, Explored: 2, Generated: 7, BestCost: 1, EndpointVerified: true}
+	scored := measurementFor(screen.ArmHG, "inf-01", budgetStop, 1, 3)
+	if scored.MeasurementBlocked {
+		t.Fatal("a budget stop is the measurement working as designed, not a block")
+	}
+	if !scored.Completed {
+		t.Fatal("a budget-stopped search meeting the target is a completion")
+	}
+	if scored.TaskCost != 7+3 {
+		t.Fatalf("task cost is search-generated plus probe work: want 10, got %d", scored.TaskCost)
+	}
+	if scored.CustodyMeasured {
+		t.Fatal("this runner meters no custody; it must stay unmeasured, never zero")
+	}
+}
+
+// Calibration is production code that reads a search result the same way
+// the runner does, and the first repair left it unguarded (2026-09-13
+// validator finding D1): a truncated search read as "does not complete"
+// inverts the binary search and silently shifts the calibrated budget the
+// whole screen is measured at. Completion must be monotone in budget;
+// truncation breaks that premise, so calibration must refuse.
+func TestCalibrationRefusesTruncatedSearchesRatherThanGuessing(t *testing.T) {
+	// The guard shares one seam with the runner, so pinning the seam's
+	// polarity pins both consumers.
+	if searchBlockedReason(rewrite.Result{BudgetExhausted: true}) != "" {
+		t.Fatal("a budget stop must not block calibration; it is the parameter being searched over")
+	}
+	for _, res := range []rewrite.Result{
+		{StateBounded: true},
+		{TermSizeBounded: true},
+		{Cancelled: true},
+	} {
+		if searchBlockedReason(res) == "" {
+			t.Fatalf("a resource stop must block calibration: %+v", res)
+		}
+	}
+	// And the real calibration path still resolves the frozen pack,
+	// proving the guard does not fire on legitimate runs.
+	mins, unreachable, err := CalibrateH0MinBudgets(AgentSealedV1(), 500)
+	if err != nil {
+		t.Fatalf("calibration must not refuse a legitimate pack: %v", err)
+	}
+	if len(mins) != 21 || len(unreachable) != 3 {
+		t.Fatalf("frozen calibration shape changed: %d measured, %d unreachable (want 21 and 3)", len(mins), len(unreachable))
+	}
+
+	// The guard itself, induced: squeeze the state ceiling so the same
+	// pack truncates. Without the guard, truncation reads as "does not
+	// complete", the binary search inverts, and a wrong budget is
+	// returned SILENTLY — so the required behavior is an error, not a
+	// number. This is the assertion that fails when the guard is deleted;
+	// pinning the shared seam's polarity above does not cover calibration
+	// USING it (2026-09-13 validator finding D1, and a mutation of the
+	// first repair to this file showed the seam-only test passing).
+	if _, _, err := calibrateH0MinBudgets(AgentSealedV1(), 500, rewrite.Limits{MaxStates: 4}); err == nil {
+		t.Fatal("a resource-truncated calibration must refuse; returning a minimum derived from truncated searches silently shifts the budget the whole screen is measured at")
+	} else if !strings.Contains(err.Error(), "no longer monotone in budget") {
+		t.Fatalf("the refusal must name the broken premise: %v", err)
+	}
+}

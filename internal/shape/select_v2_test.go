@@ -210,17 +210,26 @@ func TestSelectorIdentityContract(t *testing.T) {
 	}
 
 	// (iii) The task is bound by REFUSAL, not by a second hashed copy of
-	// its rendering. This is the discriminating form: the review's
-	// counterexample (hold TaskStart, swap the actual task) is defeated
-	// by (i); a subtest that changes the task AND its rendering, then
-	// asserts the hash moved, passes on the unfixed code too — Input
-	// already contained TaskStart before the repair — so it protected
-	// nothing (2026-09-13 self-review). What is actually guaranteed is
-	// the invariant below: every ACCEPTED input has Render(Task) equal to
-	// TaskStart, so the hashed Input pins the probed expression.
-	accepted := base
-	if got := RenderExpr(accepted.Task); got != accepted.Input.TaskStart {
-		t.Fatalf("accepted input must satisfy Render(Task) == TaskStart; got %q vs %q", got, accepted.Input.TaskStart)
+	// its rendering.
+	//
+	// History of this subtest, because it was twice wrong: it originally
+	// changed the task AND its rendering and asserted the hash moved,
+	// which passes on the unfixed code (Input already carried TaskStart),
+	// so it guarded nothing. The first repair replaced that with a
+	// comparison of the test's own literal against itself — a tautology
+	// that never called SelectV2 (2026-09-13 validator finding C5, proven
+	// by mutation: re-adding the dropped hashed Task field broke no test).
+	//
+	// The invariant that actually holds, and that the dropped field's
+	// removal depends on: for every input the selector ACCEPTS, the
+	// hashed Input pins the probed expression, because acceptance implies
+	// Render(Task) == TaskStart. Assert it through the acceptance
+	// boundary — a task that disagrees is refused (i), so any input whose
+	// decision exists has its task bound by In.TaskStart alone.
+	pinned := base
+	pinned.Input.TaskStart = RenderExpr(nn(nn(v("x")))) // declares a DIFFERENT task
+	if _, err := SelectV2(pinned); err == nil {
+		t.Fatal("acceptance must imply Render(Task) == TaskStart; an input declaring a different task than it probes must be refused, otherwise the hashed Input does not pin the probed expression")
 	}
 	// And the pinning is load-bearing: a different task under its own
 	// correct rendering is a different hashed Input.
@@ -279,5 +288,42 @@ func TestSelectorMetersProbeWork(t *testing.T) {
 	h1 := SelectUngatedFrequency(in.Input)
 	if h1.ProbeRuleApplications != 0 || h1.ProbeCandidates != 0 {
 		t.Fatalf("H1 runs no probe; meter must be zero: %+v", h1)
+	}
+}
+
+// Frozen-parameter pinning (2026-09-13 validator finding D4): shape.go
+// declares "any change is a new version" as governing doctrine, and the
+// external-review remediation violated it — a frozen probe parameter
+// changed while the label stayed shape-selector/1, putting two procedures
+// behind one identifier. Nothing mechanical caught it.
+//
+// This test is that mechanism. The literals below are the identity of
+// shape-selector/2. If a frozen parameter changes, this test fails, and
+// the ONLY correct repairs are: bump ControllerVersionV2 to /3 and update
+// these literals together. Updating the literals alone to make it green
+// re-commits the original defect.
+func TestFrozenParametersArePinnedToTheirVersion(t *testing.T) {
+	const wantVersion = "shape-selector/2"
+	if ControllerVersionV2 != wantVersion {
+		t.Fatalf("the controller version changed to %q: this is lawful ONLY with the frozen-parameter pin below updated in the same change; a version bump and its parameter snapshot move together", ControllerVersionV2)
+	}
+	// The snapshot hash is the content identity of the frozen parameters
+	// (version, similarity threshold, probe description). Compare against
+	// the recorded literal rather than recomputing the same expression,
+	// which would make the test vacuous.
+	task := nn(v("x"))
+	dec, err := SelectV2(InputV2{
+		Input: Input{TaskStart: RenderExpr(task), Target: 1, Catalog: []string{"double-not"}},
+		Task:  task, Domain: finite.Domain{Width: 4, Vars: []string{"x"}},
+		Rules: []rewrite.Rule{admitRule(t, "double-not", nn(v("a")), v("a"))},
+	})
+	if err != nil {
+		t.Fatalf("SelectV2: %v", err)
+	}
+	if dec.SnapshotHash != frozenSnapshotV2 {
+		t.Fatalf("frozen-parameter snapshot moved: got %s, pinned %s.\nA frozen parameter (threshold or probe description) changed. Bump ControllerVersionV2 and update frozenSnapshotV2 TOGETHER — editing the pin alone repeats the 2026-09-13 defect of two procedures under one version label.", dec.SnapshotHash, frozenSnapshotV2)
+	}
+	if dec.ControllerVersion != wantVersion {
+		t.Fatalf("the decision must carry the pinned version, got %q", dec.ControllerVersion)
 	}
 }

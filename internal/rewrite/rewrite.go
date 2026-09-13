@@ -318,8 +318,17 @@ func ProbeStrictReduction(e finite.Expr, r Rule, d finite.Domain, cost CostModel
 		cost = NodeCount
 	}
 	base := cost(e)
-	for _, next := range applyEverywhere(e, r, d) {
-		candidates++
+	// The probe path carries the same successor ceiling the search path
+	// does (2026-09-13 validator finding D8: the probe used the unbounded
+	// form, so a growth rule could materialize terms the search would
+	// refuse). Dropped successors cannot change the answer — the probe
+	// asks whether some successor is CHEAPER than the base, and an
+	// oversize successor is never cheaper — so bounding costs no
+	// discrimination. Dropped candidates are still charged: the work of
+	// constructing them was performed.
+	successors, dropped := applyEverywhereBounded(e, r, d, DefaultMaxTermNodes)
+	candidates = len(successors) + dropped
+	for _, next := range successors {
 		if cost(next) < base {
 			reduces = true
 		}

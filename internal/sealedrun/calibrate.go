@@ -31,6 +31,16 @@ import (
 // HG/H1 behavior it never computes — and run 1 observed zero inter-arm
 // signal, so no directional knowledge existed to steer with.
 func CalibrateH0MinBudgets(p Pack, cap int) (map[string]int, []string, error) {
+	return calibrateH0MinBudgets(p, cap, rewrite.Limits{})
+}
+
+// calibrateH0MinBudgets is CalibrateH0MinBudgets with explicit search
+// ceilings. It exists so the truncation guard below is reachable from a
+// test: with production defaults no pack episode can trip a resource
+// bound, and a guard no test can induce is a guard the 2026-09-13
+// validator was right to call unprotected (finding D1 was found by
+// deleting the guard and watching the suite pass).
+func calibrateH0MinBudgets(p Pack, cap int, lim rewrite.Limits) (map[string]int, []string, error) {
 	menu := Menu()
 	out := map[string]int{}
 	var unreachable []string
@@ -51,9 +61,21 @@ func CalibrateH0MinBudgets(p Pack, cap int) (map[string]int, []string, error) {
 			pool = append(pool, rule)
 		}
 		completes := func(budget int) (bool, error) {
-			res, err := rewrite.Search(ep.Start, domain, pool, rewrite.NodeCount, budget)
+			res, err := rewrite.SearchBounded(ep.Start, domain, pool, rewrite.NodeCount, budget, lim)
 			if err != nil {
 				return false, err
+			}
+			// A resource-truncated search does not answer "does H0
+			// complete at this budget": reading it as "no" inverts the
+			// binary search below and silently shifts the calibrated
+			// budget the screen is then measured at. This is the same
+			// defect class the runner's measurement guard closes, and it
+			// was left open here by the first repair (2026-09-13
+			// validator finding D1). Completion must be monotone in
+			// budget for the search to be valid; truncation breaks that
+			// premise, so calibration refuses rather than guessing.
+			if blocked := searchBlockedReason(res); blocked != "" {
+				return false, fmt.Errorf("calibration at budget %d was truncated by a resource bound (%s); completion is no longer monotone in budget, so no minimum can be derived", budget, blocked)
 			}
 			return res.BestCost <= ep.TargetCost && res.EndpointVerified, nil
 		}
