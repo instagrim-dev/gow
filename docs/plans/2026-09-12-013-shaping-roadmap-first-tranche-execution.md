@@ -40,8 +40,8 @@ Relation-specific contracts, per the roadmap — not a universal promotion ladde
 | Input evidence manifest | `search_policy_provenance` per directive | Bound |
 | Decision trace (snapshot, alternatives, selected, rationale) | Applied-bias log (`frontier_generation_policy`): per-proposal net bias + reason class, keyed to revision | Bound for the rerank lever; a future shaping selector must write the equivalent trace |
 | Mutation record (trigger, before/after, authority) | Idempotent revision creation; inert-proposal ledger | Bound |
-| Controller code/DSL identity | Not applicable yet — no shaping controller exists | **Open obligation**, recorded here rather than assumed satisfied |
-| Prompt/template + provider configuration | `provider_invocations` rows carry role and payload | Bound at invocation level; per-snapshot aggregation open until a controller exists |
+| Controller code/DSL identity | `shape.ControllerVersion` + content-hashed parameter snapshot (`shape.SnapshotHash`) | **Closed by `internal/shape`** (D6 v0): every decision carries version, snapshot hash, and input hash |
+| Prompt/template + provider configuration | `provider_invocations` rows carry role and payload | Bound at invocation level; v0 selector is provider-free, so nothing further owed until a provider-backed successor version exists |
 | Resource limits | Experiment arm budgets (`internal/store` experiment schema) | Bound at experiment level |
 
 Conclusion: the substrate fits; **no parallel policy ledger is needed** (roadmap: reuse after fit check — this is that check). Two open bindings (controller identity, per-snapshot prompt aggregation) attach to the not-yet-built shaping selector, not to existing code.

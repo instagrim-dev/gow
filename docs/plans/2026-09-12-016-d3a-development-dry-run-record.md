@@ -37,6 +37,14 @@ The full loop, end to end, through the real components with no shortcuts:
 
 The test asserts this shape: a dry run that satisfied the spending rule would be a dry-run bug, because nothing that could produce a margin exists yet.
 
+## Addendum: shaped dry run (D6 plan steps 3–4)
+
+After the D6 v0 selector shipped (`internal/shape`, misleadability proven 8-vs-19 expansions both directions), the dry run gained a second, three-arm form (`TestShapedDevelopmentDryRun`): H0 = catalog order, history withheld; H1 = implementer-authored capable comparator (global success-frequency ordering, ungated — sealed runs require non-implementer H1 review per D4); HG = `shape.Select`. Per-episode histories under a 12-expansion budget: informative episodes carry relevant successes plus irrelevant distractor noise (the ungated H1 is misled; HG's relevance gate filters it), misleading episodes carry lying relevant history (both history arms hurt), low-value episodes carry none (all arms equal).
+
+**THE MARGIN IS DESIGNED, NOT DISCOVERED** — the implementer constructed episodes so the arms differ, to validate margin machinery, P0 attribution (every HG decision checked for controller version, snapshot hash, input hash, full ordering), and the screen's positive arithmetic path (rule satisfied on a conforming population). The outcome remains gate-ineligible with the rule satisfied — the exact boundary the screen must hold. No shaping-value claim in any direction; that requires custodian-authored episodes (D3b chain).
+
+P0 status change: the fit-check's two open controller bindings ([`013`](2026-09-12-013-shaping-roadmap-first-tranche-execution.md)) are closed by `internal/shape`.
+
 ## What this run established, and only this
 
 - The plumbing is sound: admission → search → oracle replay → grid → decision arithmetic compose without manual glue, on a conforming population, with real nonzero task-cost metering.
