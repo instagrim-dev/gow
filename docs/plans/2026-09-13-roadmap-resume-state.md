@@ -1,14 +1,20 @@
 # Shaping and typed-claim delivery status
 
 Base and observed remote `main`: `ecb1c668f79784ed372a40ffce56774996ea60c4`.
-The executable tranche is committed locally as
-`46d4afadc6ffca56a041f679935dcf7c7d84ef50`; clean-room dispatch preparation
-is committed locally as `0a007f7c933c2ff868efb3ab6895ef02dbf0fb8f`. Neither
-commit has been published. The current local `HEAD` remains the delivery state
-to verify before any release action.
-The delivered scope is the six review boundaries, a runnable development
-resource diagnostic and typed finite-equivalence, finite-instance and
-observation claim paths through scoped assessment.
+The current local delivery head is
+`79457162cab6f4a421a6315df1169e5b7d4bbd88`, with four unpublished commits:
+
+- `46d4afadc6ffca56a041f679935dcf7c7d84ef50` — executable shaping and typed G1 paths.
+- `0a007f7c933c2ff868efb3ab6895ef02dbf0fb8f` — clean-room dispatch preparation.
+- `19585cf841003610bcf164c03b94a9bce98ff392` — committed delivery checkpoint.
+- `79457162cab6f4a421a6315df1169e5b7d4bbd88` — subject-scoped review assessment and coverage repair.
+
+None of these commits has been published. Reverify the current local `HEAD`
+before any release action.
+The delivered scope is the six shaping review boundaries, a runnable
+development resource diagnostic, typed finite-equivalence, finite-instance and
+observation claim paths through scoped assessment, and subject-isolated review
+assessment/coverage records.
 The supplied handoffs are reference documents; they do not
 grant publication, protected-batch, or next-tranche authority.
 
@@ -22,6 +28,7 @@ grant publication, protected-batch, or next-tranche authority.
 | R4: diagnostic units | `Outcome.Controls` distinguishes episode-aggregate wins/losses from paired episode/repetition wins/losses. The frozen net condition is unchanged. | `internal/screen/paired_test.go`: within-episode reversal, order independence, net reconciliation and r=1 agreement |
 | R5: shared resources | The new four-arm development diagnostic shares each arm's rule/candidate allowance between probes and search, reserves endpoint checking, bounds history input and records setup separately. | `internal/sealedrun/resources_test.go`: a probe consumes capacity otherwise available to search; incomplete probes retain costs and block totals |
 | R6: retained failures | Legacy and new runners retain declared cells, incurred costs, decisions, checked endpoints and reasons when scoring or execution is blocked. | `receipt_test.go`, `resources_test.go`, `cmd/newf/shaping_test.go`: partial execution, blocked score, cancellation, cold inspection and non-overwriting publication |
+| R7: subject-isolated review records | Assessments must cite an applicability decision with the same policy, obligation and exact subject; coverage can project one subject at a time, while whole-policy export remains historical. | `internal/store/review_store_test.go`, `internal/pipeline/review_compatibility_matrix_test.go`, `cmd/newf/review_cli_test.go`: mismatched references rejected by store and trigger; A/B/C subject projections stay independent |
 
 The old eager 21-versus-1 undercount was already repaired at the base commit.
 Streaming may now construct zero or one candidate before a state stop.
@@ -250,6 +257,27 @@ and custody costs remain unmeasured. These records establish the delivery path
 over supplied observations. Their authenticity, source correspondence, underlying
 probabilities and usefulness on a protected pack are not independently verified.
 
+## Subject-scoped review assessment repair
+
+The subject-isolation repair closes the later review packet against the
+normative review layer. `RecordReviewAssessment`/`PersistReviewAssessment` now
+reject an assessment whose cited applicability decision names a different
+policy, obligation or subject, and migration v47 installs the same guard as a
+SQLite trigger for raw inserts. Coverage generation accepts an exact
+`--subject` selector for current decisions, so unrelated applicability and
+assessment records for other subjects cannot contradict or satisfy the named
+subject.
+
+The integrated C1-C8 test now passes the exact subject through coverage
+projection, asserts exact population-set equality after evidence admission, and
+decodes the provider generation request to check typed target membership. The
+retained evidence export is
+[subject-scoped C1-C8 coverage](../reviews/evidence/2026-09-13-c1c8-subject-scoped-coverage.md),
+and the retained focused run log is
+[subject-scoped C1-C8 test log](../reviews/evidence/2026-09-13-c1c8-subject-scoped-test.log).
+Those artifacts are engineering evidence from fixture-backed tests with zero
+provider spend; they are not protected evaluation evidence.
+
 ## Verification
 
 Executed with Go 1.26.6 against the repository's `go 1.25.0` floor:
@@ -294,13 +322,17 @@ The observation slice reruns build, vet and the full test suite, with targeted
 race checks at the changed parser and real CLI/pipeline/store boundaries. See
 the [observation validation record](artifacts/2026-09-13-observation-claim-path/validation.json)
 for the exact commands and results.
+The subject-scoped review repair was validated after commit
+`79457162cab6f4a421a6315df1169e5b7d4bbd88` with `go build ./...`, `go test
+./...`, `go vet ./...`, empty `gofmt -l .`, and `git diff --check`. The focused
+export run `NEWF_REVIEW_COVERAGE_OUT=/Users/jmh/dev/gh/newf/docs/reviews/evidence/2026-09-13-c1c8-subject-scoped-coverage.md go test -v ./internal/pipeline -run TestIntegrationCurrentAssessmentAuthorityObligation -count=1` passed and wrote the retained coverage artifact named above.
 
 ## Roadmap and authority boundary
 
 | Workstream | Engineering status | Evidence status | Authority / next dependency |
 |---|---|---|---|
 | G0 | Repository gates pass for this repair | Instrument regressions and smoke only | Ordinary local engineering |
-| G1 | Finite equivalence, finite-instance evidence, observed-rate comparison, solved-set retention and probability refusal reach explicit scoped assessment through typed CLI inputs and saved receipts; semantic discovery remains intentionally absent | Engineering positive/refusal/failure paths verified; no new protected usefulness gate | Define and approve the intended G1 pack, custody boundary and progression criteria before evaluating it |
+| G1 | Finite equivalence, finite-instance evidence, observed-rate comparison, solved-set retention and probability refusal reach explicit subject-scoped assessment through typed CLI inputs and saved receipts; semantic discovery remains intentionally absent | Engineering positive/refusal/failure paths verified, including subject-isolation regressions and retained C1-C8 coverage export; no new protected usefulness gate | Define and approve the intended G1 pack, custody boundary and progression criteria before evaluating it |
 | T0 | Scoped admission, independent endpoint checking and refusal boundaries tested | Finite-domain evidence only | Actual e-graph withdrawal remains G2 work |
 | P0 | Versioned decisions, task/catalog/budget identities survive process exit in receipts | No fresh controller freeze attested | Freeze the evaluated implementation and all arm identities before authoring protected tasks |
 | E0 | D19 permits agent-native custody; a two-file clean-room brief and data-only interface are prepared | No new isolated pack or answer manifest produced here | Operator-supplied pinned executable, actual isolation/provenance records, protected storage and approved execution ceiling |
@@ -325,9 +357,10 @@ data-only and excludes development examples, review records, tests and protected
 content. It does not establish isolation or authorize a dispatch. The concrete
 operator inputs still needed for that boundary are listed in
 [`2026-09-13-protected-g1-dispatch-decision-packet.md`](2026-09-13-protected-g1-dispatch-decision-packet.md);
-the current dirty checkout is explicitly not an eligible release identity.
+the unpublished local head is not a protected-dispatch release identity until the operator chooses and records it as one.
 
-The local engineering path for the seed tools is complete. The next research
+The local engineering path for the seed tools and subject-scoped review
+projection is complete at the unpublished local delivery head. The next research
 dispatch requires an approved G1 pack, custody boundary and progression criteria;
 existing paths can be rerun with retained input JSON using the operator contract.
 The next research dispatch requires a concrete approved design and fresh custody

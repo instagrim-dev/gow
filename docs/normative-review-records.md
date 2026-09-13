@@ -426,6 +426,10 @@ proving `unexamined` and execution-blocked stay distinguishable.
 Generate the evidence-bundle export from that run with:
 
 ```sh
-NEWF_REVIEW_COVERAGE_OUT=docs/reviews/evidence/COVERAGE.md \
-  go test ./internal/pipeline -run '^TestIntegrationCurrentAssessmentAuthorityObligation$' -count=1
+NEWF_REVIEW_COVERAGE_OUT="$(pwd)/docs/reviews/evidence/COVERAGE.md" \
+  go test -v ./internal/pipeline -run '^TestIntegrationCurrentAssessmentAuthorityObligation$' -count=1
 ```
+
+Use an absolute path or a `$(pwd)`-anchored path here. The Go test process runs
+from the package directory, so a repository-relative export path resolves in the
+wrong place.

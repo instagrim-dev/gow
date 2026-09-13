@@ -1,0 +1,5 @@
+=== RUN   TestIntegrationCurrentAssessmentAuthorityObligation
+    review_obligation_integration_test.go:574: wrote generated coverage to /Users/jmh/dev/gh/newf/docs/reviews/evidence/2026-09-13-c1c8-subject-scoped-coverage.md
+--- PASS: TestIntegrationCurrentAssessmentAuthorityObligation (0.30s)
+PASS
+ok  	github.com/instagrim-dev/newf/internal/pipeline	0.307s
