@@ -1,0 +1,207 @@
+// Development tests for the bounded reference rewriter. Everything here
+// is synthetic development material.
+package rewrite
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/instagrim-dev/newf/internal/finite"
+)
+
+func dom(width int, vars ...string) finite.Domain { return finite.Domain{Width: width, Vars: vars} }
+
+// admit is a test helper that fails the test when admission is refused.
+func admit(t *testing.T, name string, lhs, rhs finite.Expr, d finite.Domain) Rule {
+	t.Helper()
+	cert := finite.AssessEquivalence(finite.Binding{Sentence: name, Domain: d}, lhs, rhs)
+	rule, defects := AdmitRule(name, cert, lhs, rhs, d)
+	if len(defects) > 0 {
+		t.Fatalf("admission of %q refused: %v", name, defects)
+	}
+	return rule
+}
+
+func doubleNot(d finite.Domain) (finite.Expr, finite.Expr) {
+	return finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: finite.Var{Name: "a"}}}, finite.Var{Name: "a"}
+}
+
+// The development loop end-to-end: warrant-admitted rules, bounded
+// search, a cheaper equivalent found, and the endpoint independently
+// replayed by the oracle. Residual (excessive cost) → applicable tool
+// (admitted equalities + bounded search) → executed check (exhaustive
+// replay) → attributed outcome (rule-named step path).
+func TestSearchFindsCheaperEquivalentAndReplaysEndpoint(t *testing.T) {
+	d4a := dom(4, "a")
+	dnLHS, dnRHS := doubleNot(d4a)
+	rules := []Rule{
+		admit(t, "double-not", dnLHS, dnRHS, d4a),
+		admit(t, "xor-self-zero",
+			finite.Binary{Op: finite.OpXor, X: finite.Var{Name: "a"}, Y: finite.Var{Name: "a"}},
+			finite.Const{Value: 0}, d4a),
+	}
+
+	searchDomain := dom(4, "x")
+	nnx := finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: finite.Var{Name: "x"}}}
+	start := finite.Binary{Op: finite.OpXor, X: nnx, Y: nnx}
+
+	res, err := Search(start, searchDomain, rules, NodeCount, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Best != "0" || res.BestCost != 1 {
+		t.Fatalf("expected the constant 0 (cost 1), got %q (cost %d)", res.Best, res.BestCost)
+	}
+	if res.OriginalCost != 7 {
+		t.Fatalf("original cost should be 7 nodes, got %d", res.OriginalCost)
+	}
+	if len(res.Steps) == 0 {
+		t.Fatal("the outcome must be attributed: a named rule path is required")
+	}
+	for _, s := range res.Steps {
+		if s.Rule == "" {
+			t.Fatalf("unattributed step: %+v", s)
+		}
+	}
+	if !res.EndpointVerified || res.Endpoint.Verdict != finite.VerdictHoldsOnDomain {
+		t.Fatalf("the endpoint must be independently replayed and hold: %s (%s)", res.Endpoint.Verdict, res.Endpoint.Reason)
+	}
+	if res.BudgetExhausted {
+		t.Fatal("this small space should close under budget")
+	}
+}
+
+// A false rule cannot become a Rule: admission requires a defect-free
+// warrant, and the shift round-trip's certificate is REFUTED.
+func TestFalseRuleCannotBeAdmitted(t *testing.T) {
+	d := dom(4, "a")
+	lhs := finite.Unary{Op: finite.OpShr, X: finite.Unary{Op: finite.OpShl, X: finite.Var{Name: "a"}}}
+	rhs := finite.Var{Name: "a"}
+	cert := finite.AssessEquivalence(finite.Binding{Sentence: "shift round-trip", Domain: d}, lhs, rhs)
+	if _, defects := AdmitRule("shift-round-trip", cert, lhs, rhs, d); len(defects) == 0 {
+		t.Fatal("a refuted identity must not be admissible as a rewrite rule")
+	}
+}
+
+// A true identity whose RHS uses a variable the LHS never binds is
+// unsubstitutable and refused at admission, even with a valid warrant:
+// mul(a,0) == mul(b,0) holds everywhere, but rewriting with it would
+// have no value for b.
+func TestUnboundRightVariableRefused(t *testing.T) {
+	d := dom(4, "a", "b")
+	lhs := finite.Binary{Op: finite.OpMul, X: finite.Var{Name: "a"}, Y: finite.Const{Value: 0}}
+	rhs := finite.Binary{Op: finite.OpMul, X: finite.Var{Name: "b"}, Y: finite.Const{Value: 0}}
+	cert := finite.AssessEquivalence(finite.Binding{Sentence: "both sides are zero", Domain: d}, lhs, rhs)
+	if cert.Verdict != finite.VerdictHoldsOnDomain {
+		t.Fatalf("setup: identity should hold, got %s", cert.Verdict)
+	}
+	_, defects := AdmitRule("zero-swap", cert, lhs, rhs, d)
+	if len(defects) == 0 {
+		t.Fatal("an unbound right-hand variable must refuse admission")
+	}
+	if !strings.Contains(strings.Join(defects, " | "), `"b"`) {
+		t.Fatalf("the unbound variable must be named: %v", defects)
+	}
+}
+
+// A rule admitted at one width cannot be applied in a search at another:
+// the certificate warrants exactly its domain.
+func TestWidthScopeEnforcedAtSearch(t *testing.T) {
+	d8 := dom(8, "a")
+	lhs, rhs := doubleNot(d8)
+	rule := admit(t, "double-not-w8", lhs, rhs, d8)
+	if _, err := Search(finite.Var{Name: "x"}, dom(4, "x"), []Rule{rule}, NodeCount, 10); err == nil {
+		t.Fatal("a width-8 rule must be refused in a width-4 search")
+	} else if !strings.Contains(err.Error(), "width") {
+		t.Fatalf("refusal must name the width scope: %v", err)
+	}
+}
+
+// A zero-value Rule (never admitted) is refused: rules exist only via
+// AdmitRule.
+func TestUnadmittedRuleRefused(t *testing.T) {
+	if _, err := Search(finite.Var{Name: "x"}, dom(4, "x"), []Rule{{}}, NodeCount, 10); err == nil {
+		t.Fatal("a zero-value rule must be refused")
+	}
+}
+
+// Budget exhaustion is reported as best-found, never as optimality; the
+// endpoint replay still runs on whatever was found.
+func TestBudgetStopIsBestFoundNotOptimal(t *testing.T) {
+	d4a := dom(4, "a")
+	lhs, rhs := doubleNot(d4a)
+	rule := admit(t, "double-not", lhs, rhs, d4a)
+
+	searchDomain := dom(4, "x")
+	nnx := finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: finite.Var{Name: "x"}}}
+	start := finite.Binary{Op: finite.OpXor, X: nnx, Y: nnx}
+
+	res, err := Search(start, searchDomain, []Rule{rule}, NodeCount, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.BudgetExhausted {
+		t.Fatal("a zero budget with pending work must report exhaustion")
+	}
+	if res.Best != res.Original {
+		t.Fatalf("nothing was explored; best must be the original, got %q", res.Best)
+	}
+	if !res.EndpointVerified {
+		t.Fatalf("original == original must still verify: %s", res.Endpoint.Reason)
+	}
+}
+
+// When the oracle cannot exhaust the domain, the result is an UNVERIFIED
+// candidate — stated, not upgraded.
+func TestOversizedDomainLeavesEndpointUnverified(t *testing.T) {
+	d8 := dom(8, "a")
+	lhs, rhs := doubleNot(d8)
+	rule := admit(t, "double-not-w8", lhs, rhs, d8)
+
+	big := dom(8, "a", "b", "c") // 256^3 assignments: above the cap
+	start := finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: finite.Binary{Op: finite.OpAdd, X: finite.Var{Name: "a"}, Y: finite.Binary{Op: finite.OpMul, X: finite.Var{Name: "b"}, Y: finite.Var{Name: "c"}}}}}
+	res, err := Search(start, big, []Rule{rule}, NodeCount, 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.BestCost >= res.OriginalCost {
+		t.Fatalf("the rule should still strip the double negation, got cost %d vs %d", res.BestCost, res.OriginalCost)
+	}
+	if res.EndpointVerified {
+		t.Fatal("an oracle refusal must leave the endpoint unverified")
+	}
+	if res.Endpoint.Verdict != finite.VerdictUnresolved {
+		t.Fatalf("expected the oracle's UNRESOLVED refusal, got %s", res.Endpoint.Verdict)
+	}
+}
+
+// Search is deterministic: identical inputs yield identical results.
+func TestSearchIsDeterministic(t *testing.T) {
+	d4a := dom(4, "a")
+	dnLHS, dnRHS := doubleNot(d4a)
+	rules := []Rule{
+		admit(t, "double-not", dnLHS, dnRHS, d4a),
+		admit(t, "xor-self-zero",
+			finite.Binary{Op: finite.OpXor, X: finite.Var{Name: "a"}, Y: finite.Var{Name: "a"}},
+			finite.Const{Value: 0}, d4a),
+	}
+	searchDomain := dom(4, "x", "y")
+	start := finite.Binary{Op: finite.OpXor,
+		X: finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: finite.Binary{Op: finite.OpAdd, X: finite.Var{Name: "x"}, Y: finite.Var{Name: "y"}}}},
+		Y: finite.Binary{Op: finite.OpAdd, X: finite.Var{Name: "x"}, Y: finite.Var{Name: "y"}},
+	}
+	a, err := Search(start, searchDomain, rules, NodeCount, 200)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := Search(start, searchDomain, rules, NodeCount, 200)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.Best != b.Best || a.BestCost != b.BestCost || a.Explored != b.Explored || len(a.Steps) != len(b.Steps) {
+		t.Fatalf("nondeterministic search: %+v vs %+v", a, b)
+	}
+	if a.Best != "0" {
+		t.Fatalf("xor of identical subexpressions should collapse to 0, got %q", a.Best)
+	}
+}

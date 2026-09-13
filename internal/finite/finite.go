@@ -292,6 +292,23 @@ func validateOps(e Expr) []string {
 	}
 }
 
+// Render returns the canonical rendering of an expression. Callers must
+// have validated structure first (ValidateExpr); rendering a malformed
+// expression is the caller's defect.
+func Render(e Expr) string { return e.render() }
+
+// ValidateExpr reports every structural and domain defect of an
+// expression: nil or malformed nodes, unknown operators, excessive depth,
+// and free variables outside the declared domain. An empty result means
+// the expression is safe to traverse and evaluate within d.
+func ValidateExpr(e Expr, d Domain) []string {
+	defects := structureDefects("expression", e)
+	if len(defects) > 0 {
+		return defects
+	}
+	return validate(e, d)
+}
+
 // enumerate walks every assignment of the domain in canonical order
 // (variables sorted, values ascending, last variable fastest), calling fn
 // until it returns false. Canonical order makes the first counterexample
