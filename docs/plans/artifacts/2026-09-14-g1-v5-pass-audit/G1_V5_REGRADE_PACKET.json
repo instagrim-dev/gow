@@ -1,0 +1,20 @@
+{
+  "schema": "g1-v5-content-free-regrade-packet/1",
+  "dispatch_id": "g1-v5-20260914T024656Z-observation",
+  "release_revision": "c3f0703464c19de1b967ac8351c2c26415c76a1d",
+  "executable_sha256": "c105248752eb2e5e708ebe9c1a48f30d389a822036452e61f4ef41c0c4a93123",
+  "return_packet_sha256": "ac2c61f78be37b88034d926c75e11fcdaa5b8c63c1e150d52ce057510b267afb",
+  "grader_protocol_sha256": "26e75d62999fabcc6f1bfe8e2ae61fbd63307b76a70dafa615eb314721b59178",
+  "verdict": "pass",
+  "evidence_ceiling": "agent-sealed/v1",
+  "reasons": [
+    "Frozen public, executable, return-packet, and grading-protocol identities match.",
+    "Aggregate stratum and route-terminal counts satisfy the frozen acceptance matrix.",
+    "Completion is recorded with zero aggregate blocked, not-executed, refused-applicable, and false-certification counts.",
+    "The permitted aggregate records no access or authority breach and records the zero provider resource ceiling."
+  ],
+  "custody_limitations": [
+    "This is a content-free, custody-limited consistency grade of aggregate records.",
+    "It does not independently establish private-material, human, mathematical, spending, publication, training-lineage, or roadmap authority."
+  ]
+}

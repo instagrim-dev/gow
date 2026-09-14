@@ -1,0 +1,23 @@
+{
+  "dispatch_id": "g1-v5-20260914T024656Z-observation",
+  "evidence_ceiling": "agent-sealed/v1",
+  "initial_grade": {
+    "packet_path": "G1_V5_INITIAL_GRADE_PACKET.json",
+    "sha256": "a5c5f3872cb7bbaad5a8c751beace25f46a6c250925b0b332aac692c654cc4b5",
+    "verdict": "inconclusive-incomplete"
+  },
+  "initial_grade_disposition": "not_adopted",
+  "initial_grade_review": [
+    "The frozen dispatch manifest directly supplies the brief, interface, executable, and grading-protocol digests needed for the permitted packet checks.",
+    "The same manifest records provider_calls and provider_spend_cents as zero; the frozen v5 return schema deliberately provides no provider-result fields to add to the return packet.",
+    "The initial incomplete result therefore did not apply the available public material according to the frozen protocol."
+  ],
+  "operative_regrade": {
+    "packet_path": "G1_V5_REGRADE_PACKET.json",
+    "sha256": "0b051a9a407ef27338527a658d8417382161553ce23a35c45db1f7c7b9f2fa21",
+    "verdict": "pass"
+  },
+  "release_revision": "c3f0703464c19de1b967ac8351c2c26415c76a1d",
+  "schema": "g1-v5-grade-disposition/1",
+  "scope": "Content-free reconciliation of grading records only. It neither reads nor exposes protected material and does not create independent-human, mathematical, spending, publication, training-lineage, or roadmap authority."
+}

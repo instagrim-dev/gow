@@ -1,0 +1,34 @@
+{
+  "acceptance_matrix": {
+    "repository_path": "docs/plans/2026-09-13-proposed-g1-acceptance-matrix.md",
+    "sha256": "9fcf88330e94b17702bee657f6fec2853ddaefe6bb4d5f2e8d42dc6eaebfb0b4"
+  },
+  "authorization_reference": "explicit operator approval in this Codex session on 2026-09-14",
+  "custodian_packet": {
+    "brief_sha256": "de2aa587930f40e2499d9850e3cb2bb91f2c6e8640997930ab2604eb36de0351",
+    "executable_sha256": "c105248752eb2e5e708ebe9c1a48f30d389a822036452e61f4ef41c0c4a93123",
+    "interface_sha256": "a69a62051441fc2cf4a844778c6ab4862a223d67092e4e442c222a4f9b6bde5e"
+  },
+  "custodian_return_packet": {
+    "path": "G1_V5_RETURN_PACKET.json",
+    "sha256": "ac2c61f78be37b88034d926c75e11fcdaa5b8c63c1e150d52ce057510b267afb"
+  },
+  "dispatch_id": "g1-v5-20260914T024656Z-observation",
+  "dispatch_manifest": {
+    "path": "operator-records/DISPATCH_MANIFEST.json",
+    "sha256": "be9943eb8e36d5c076556379ed661442828b91cda282eed5c7eedf695a02d1be"
+  },
+  "grading_protocol": {
+    "repository_path": "docs/plans/G1_V5_CONTENT_FREE_GRADING_PROTOCOL.md",
+    "sha256": "26e75d62999fabcc6f1bfe8e2ae61fbd63307b76a70dafa615eb314721b59178"
+  },
+  "release_revision": "c3f0703464c19de1b967ac8351c2c26415c76a1d",
+  "schema": "g1-v5-freeze-audit/1",
+  "scope": "Content-free audit of the completed v5 clean-room dispatch. It exposes no protected inputs, answers, receipts, case identifiers, or raw outputs.",
+  "separate_grade": {
+    "evidence_grade": "agent-sealed/v1",
+    "grade_disposition_path": "G1_V5_GRADE_DISPOSITION.json",
+    "operative_grade_packet_sha256": "0b051a9a407ef27338527a658d8417382161553ce23a35c45db1f7c7b9f2fa21",
+    "verdict": "pass"
+  }
+}

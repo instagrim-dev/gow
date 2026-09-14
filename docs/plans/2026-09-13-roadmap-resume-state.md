@@ -354,10 +354,10 @@ export run `NEWF_REVIEW_COVERAGE_OUT=/Users/jmh/dev/gh/newf/docs/reviews/evidenc
 | Workstream | Engineering status | Evidence status | Authority / next dependency |
 |---|---|---|---|
 | G0 | Repository gates pass for this repair | Instrument regressions and smoke only | Ordinary local engineering |
-| G1 | Finite equivalence, finite-instance evidence, observed-rate comparison, solved-set retention and probability refusal reach explicit subject-scoped assessment through typed CLI inputs and saved receipts; the data-only protected-pack interface is delivered | Engineering positive/refusal/failure paths verified, including subject-isolation regressions and retained C1-C8 coverage export; attempt 4 is recorded `invalid` for an evaluator-role boundary breach, with no scored usefulness result | A fresh pack, fresh custodian, observed isolation, and a new authorization are required; enumerate permitted evaluator commands and keep any executable analysis in a separate authorized lane |
+| G1 | Finite equivalence, finite-instance evidence, observed-rate comparison, solved-set retention and probability refusal reach explicit subject-scoped assessment through typed CLI inputs and saved receipts; the data-only protected-pack interface is delivered | A fresh V5 clean-room dispatch passed content-free grading at `agent-sealed/v1`, including direct applicable observed-rate holds/refutations and solved-set extension coverage; earlier attempt 4 and V4 remain invalid historical attempts | The specified G1 capability evidence gate is delivered at its shared-host, agent-sealed ceiling; independent-human, training-lineage, mathematical, spending, publication, and broader roadmap authority remain separate |
 | T0 | Scoped admission, independent endpoint checking and refusal boundaries tested | Finite-domain evidence only | Actual e-graph withdrawal remains G2 work |
 | P0 | Versioned decisions, task/catalog/budget identities survive process exit in receipts | No fresh controller freeze attested | Freeze the evaluated implementation and all arm identities before authoring protected tasks |
-| E0 | D19 permits agent-native custody; the semantic v2 packet was separately graded `pass` at `agent-sealed/v1` | Attempts 1–4 retain their historical outcomes; attempt 4 remains exposed and `invalid` | The v2 scope is complete; full G1 capability still needs separately authorized observation-tool evidence beyond its refusal-heavy allocation |
+| E0 | D19 permits agent-native custody; V2 and the fresh V5 packet each have content-free `pass` records at `agent-sealed/v1` | Earlier attempts retain their historical outcomes, including attempt 4 and V4 as `invalid`; V5 is the operative fresh pass | The V5 allocation closes the specified G1 capability evidence gate at its shared-host ceiling; all higher authority remains separately gated |
 | X0 / G4-lite | New diagnostic resource contract executable | Prior development results keep their original interpretation; smoke supplies no history-value evidence | Approve/freeze the next design, vector, comparator, task/answer custody and batch ceilings |
 | G2 | No additional backend work in this repair | No new backend gate result | Explicit investment decision or bounded backend-product pivot |
 | G3 | No composition extension in this repair | No prospective composition result | G2/approved composition slice and task evaluation |
@@ -412,11 +412,17 @@ mislabeling an invalid trace pair as a refutation. These nonprotected records
 are not a rerun or an amendment to the protected v2 score, and they do not
 close the broader roadmap claim.
 
-**Next action:** retain the v2 pass under its frozen scope and the completed
-nonprotected mutation control as development evidence. A future claim of full
-G1 capability needs a separately authorized evidence design that exercises
-fully specified observed-rate and solved-monotonicity inputs alongside refusal
-controls. The nonprotected
+The fresh V5 [pass audit](artifacts/2026-09-14-g1-v5-pass-audit/README.md)
+now supplies that separately authorized design. Its content-free return records
+all 48 cases as completed-valid and directly covers six applicable observed-rate
+inputs (three holds and three refutations) plus four applicable solved-set
+extensions. The V4 clean-room attempt remains `invalid`: a semantic outcome was
+misrecorded as a retryable G1 block, so it was preserved and not reused. The V5
+pass is the operative G1 evidence result at `agent-sealed/v1`; the shared-host
+custody boundary still excludes independent-human and training-lineage claims.
+
+**Next action:** retain the V5 pass at its frozen, agent-sealed scope. Broader
+roadmap progression remains separately authorized. The nonprotected
 host-versus-provider diagnostic remains
 [`2026-09-13-provider-path-reproduction.md`](2026-09-13-provider-path-reproduction.md);
 its availability preflight is incomplete because the inspected Cursor UI did
