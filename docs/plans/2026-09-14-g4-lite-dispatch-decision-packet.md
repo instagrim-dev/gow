@@ -31,7 +31,7 @@ not values this packet may invent.
 | Required decision | Record before dispatch | Why it blocks |
 |---|---|---|
 | Release | Main revision, executable SHA-256, build command, and hashes of this packet and the final public contract | A custodian cannot execute an unpinned binary. |
-| Controller parity | H0, H1, and HG `g4-lite-arm-runtime-identity/1` artifacts that passed `g4 arm-preflight`; model configuration, tool catalog, checker, and H1 non-implementer review | An unreviewed or changed comparator invalidates the comparison. |
+| Controller parity | H0, H1, and HG `g4-lite-arm-runtime-identity/2` artifacts that passed `g4 arm-preflight`, each bound to the executable SHA-256; model configuration, tool catalog, checker, and H1 non-implementer review | An unreviewed or changed executable/comparator invalidates the comparison. |
 | Resource vector | Exact `g4-resource-ceiling/1` bytes, identity, provider-call/spend ceiling, wall-clock ceiling, and custody-metering method | A metadata locator does not define an executable budget. |
 | Run design | `single_run_budget_constrained` and its disclosed constraint, or a separately implemented fixed-seed runner | The shipped executor supports only the former. |
 | Custody | Fresh-context identifier, protected storage locations, access controls, exposure log, and result recipient | Role names do not establish isolation. |

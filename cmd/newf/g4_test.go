@@ -209,6 +209,33 @@ func TestG4V3ExecuteBindsAndAppliesFrozenGenerationProcedure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	executableSHA256, err := g4ExecutableSHA256()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, snapshot := range []struct {
+		path string
+		ref  *g4pack.ManifestRef
+	}{{h0Snapshot, &m.Arms.H0.Snapshot}, {h1Snapshot, &m.Arms.H1.Snapshot}, {hgSnapshot, &m.Arms.HG.Snapshot}} {
+		raw, err := os.ReadFile(snapshot.path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var identity sealedrun.G4ArmRuntimeIdentity
+		if err := json.Unmarshal(raw, &identity); err != nil {
+			t.Fatal(err)
+		}
+		identity.Schema = sealedrun.G4ArmRuntimeIdentitySchema
+		identity.ExecutableSHA256 = executableSHA256
+		raw, err = json.Marshal(identity)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(snapshot.path, raw, 0600); err != nil {
+			t.Fatal(err)
+		}
+		snapshot.ref.SHA256, snapshot.ref.ByteLength = g4pack.Digest(raw), int64(len(raw))
+	}
 	m.Schema = g4pack.Schema
 	m.EpisodeManifest = g4pack.ManifestRef{SHA256: g4pack.Digest(episodeRaw), ByteLength: int64(len(episodeRaw)), Locator: "protected/episodes.json"}
 	m.GenerationProcedureManifest = g4pack.ManifestRef{SHA256: g4calibration.Digest(procedureRaw), ByteLength: int64(len(procedureRaw)), Locator: "frozen/generation-procedure.json"}
@@ -222,6 +249,39 @@ func TestG4V3ExecuteBindsAndAppliesFrozenGenerationProcedure(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	if code := execute(context.Background(), []string{"--json", "g4", "execute", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--h0-snapshot", h0Snapshot, "--h1-snapshot", h1Snapshot, "--hg-snapshot", hgSnapshot, "--generation-procedure", procedurePath, "--out", out}, &stdout, &stderr); code != 0 {
 		t.Fatalf("v3 execute did not bind the frozen procedure: %d %s %s", code, stdout.String(), stderr.String())
+	}
+	h0Raw, err := os.ReadFile(h0Snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var h0Identity sealedrun.G4ArmRuntimeIdentity
+	if err := json.Unmarshal(h0Raw, &h0Identity); err != nil {
+		t.Fatal(err)
+	}
+	h0Identity.ExecutableSHA256 = strings.Repeat("d", 64)
+	h0Raw, err = json.Marshal(h0Identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(h0Snapshot, h0Raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	m.Arms.H0.Snapshot = g4pack.ManifestRef{SHA256: g4pack.Digest(h0Raw), ByteLength: int64(len(h0Raw)), Locator: "frozen/h0.json"}
+	manifestRaw, err = json.Marshal(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(manifest, manifestRaw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	wrongExecutableOut := filepath.Join(filepath.Dir(out), "wrong-executable-receipt.json")
+	stdout.Reset()
+	stderr.Reset()
+	if code := execute(context.Background(), []string{"g4", "execute", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--h0-snapshot", h0Snapshot, "--h1-snapshot", h1Snapshot, "--hg-snapshot", hgSnapshot, "--generation-procedure", procedurePath, "--out", wrongExecutableOut}, &stdout, &stderr); code == 0 || !strings.Contains(stderr.String(), "executable_sha256") {
+		t.Fatalf("v3 execute accepted a snapshot from another executable: %d %s %s", code, stdout.String(), stderr.String())
+	}
+	if _, err := os.Stat(wrongExecutableOut); !os.IsNotExist(err) {
+		t.Fatalf("wrong executable identity prepared a receipt: %v", err)
 	}
 	wrongResource := []byte(strings.Replace(string(g4ValidResourceCeiling), `"expansions":2`, `"expansions":1`, 1))
 	if err := os.WriteFile(resources, wrongResource, 0600); err != nil {
@@ -316,7 +376,7 @@ func TestG4ArmPreflightExportsAndVerifiesCompiledIdentities(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &h1); err != nil {
 		t.Fatal(err)
 	}
-	if h1.Arm != "H1" || h1.ControllerID == "" || h1.DecisionSnapshotSHA256 == "" {
+	if h1.Schema != sealedrun.G4ArmRuntimeIdentitySchema || h1.Arm != "H1" || h1.ControllerID == "" || h1.DecisionSnapshotSHA256 == "" || len(h1.ExecutableSHA256) != 64 {
 		t.Fatalf("runtime identity omitted the compiled H1 binding: %+v", h1)
 	}
 	stdout.Reset()

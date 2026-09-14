@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -309,8 +311,14 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 		if err != nil {
 			return wrapCommandError("g4 runtime-identity", err)
 		}
+		executableSHA256, err := g4ExecutableSHA256()
+		if err != nil {
+			return wrapCommandError("g4 runtime-identity", err)
+		}
 		for _, identity := range identities {
 			if identity.Arm == runtimeArm {
+				identity.Schema = sealedrun.G4ArmRuntimeIdentitySchema
+				identity.ExecutableSHA256 = executableSHA256
 				return writeJSON(stdout, identity)
 			}
 		}
@@ -494,7 +502,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 		if err != nil {
 			return wrapCommandError("g4 arm-preflight", err)
 		}
-		identities, _, err := readAndVerifyG4ArmIdentities(budget, cmd.Context().Done() != nil, preflightH0, preflightH1, preflightHG)
+		identities, _, err := readAndVerifyG4ArmIdentities(budget, cmd.Context().Done() != nil, false, preflightH0, preflightH1, preflightHG)
 		if err != nil {
 			return wrapCommandError("g4 arm-preflight", err)
 		}
@@ -569,7 +577,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 		if frozenProcedure != nil && !frozenProcedure.MatchesPrimaryResource(budget) {
 			return wrapCommandError("g4 execute", errors.New("resource ceiling does not match the generation procedure primary resource choice"))
 		}
-		identities, snapshots, err := readAndVerifyG4ArmIdentities(budget, cmd.Context().Done() != nil, executionH0, executionH1, executionHG)
+		identities, snapshots, err := readAndVerifyG4ArmIdentities(budget, cmd.Context().Done() != nil, m.Schema == g4pack.Schema, executionH0, executionH1, executionHG)
 		if err != nil {
 			return wrapCommandError("g4 execute", err)
 		}
@@ -785,7 +793,7 @@ const maxG4ArmRuntimeIdentityBytes = 64 << 10
 
 func decodeG4ArmRuntimeIdentity(raw []byte, expectedArm string) (sealedrun.G4ArmRuntimeIdentity, error) {
 	var identity sealedrun.G4ArmRuntimeIdentity
-	keys := []string{"schema", "arm", "controller_id", "decision_snapshot_sha256", "decision_snapshot_encoding"}
+	keys := []string{"schema", "arm", "controller_id", "decision_snapshot_sha256", "decision_snapshot_encoding", "executable_sha256"}
 	if err := toolreg.StrictKeys(raw, "G4 arm runtime identity", keys, 2); err != nil {
 		return identity, err
 	}
@@ -806,7 +814,24 @@ func decodeG4ArmRuntimeIdentity(raw []byte, expectedArm string) (sealedrun.G4Arm
 	return identity, nil
 }
 
-func readAndVerifyG4ArmIdentities(budget sealedrun.ResourceBudget, cancellationEnabled bool, h0Path, h1Path, hgPath string) ([]sealedrun.G4ArmRuntimeIdentity, map[string][]byte, error) {
+func g4ExecutableSHA256() (string, error) {
+	path, err := os.Executable()
+	if err != nil {
+		return "", fmt.Errorf("locate current executable: %w", err)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("open current executable: %w", err)
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", fmt.Errorf("hash current executable: %w", err)
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func readAndVerifyG4ArmIdentities(budget sealedrun.ResourceBudget, cancellationEnabled, requireExecutableIdentity bool, h0Path, h1Path, hgPath string) ([]sealedrun.G4ArmRuntimeIdentity, map[string][]byte, error) {
 	paths := []struct {
 		arm  string
 		path string
@@ -828,11 +853,25 @@ func readAndVerifyG4ArmIdentities(budget sealedrun.ResourceBudget, cancellationE
 	if err != nil {
 		return nil, nil, err
 	}
+	executableSHA256, err := g4ExecutableSHA256()
+	if err != nil {
+		return nil, nil, err
+	}
 	for _, identity := range actual {
 		frozen := declared[identity.Arm]
+		if requireExecutableIdentity && frozen.Schema != sealedrun.G4ArmRuntimeIdentitySchema {
+			return nil, nil, fmt.Errorf("G4 %s runtime identity must use schema %q for g4-lite-pack/3 execution", identity.Arm, sealedrun.G4ArmRuntimeIdentitySchema)
+		}
+		if frozen.Schema == sealedrun.G4ArmRuntimeIdentitySchema && frozen.ExecutableSHA256 != executableSHA256 {
+			return nil, nil, fmt.Errorf("G4 %s runtime identity executable_sha256 does not match the running executable", identity.Arm)
+		}
 		if frozen.ControllerID != identity.ControllerID || frozen.DecisionSnapshotSHA256 != identity.DecisionSnapshotSHA256 || frozen.DecisionSnapshotEncoding != identity.DecisionSnapshotEncoding {
 			return nil, nil, fmt.Errorf("G4 %s runtime identity does not match the frozen arm snapshot", identity.Arm)
 		}
+	}
+	for i := range actual {
+		actual[i].Schema = sealedrun.G4ArmRuntimeIdentitySchema
+		actual[i].ExecutableSHA256 = executableSHA256
 	}
 	return actual, rawByArm, nil
 }

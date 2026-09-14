@@ -26,14 +26,15 @@ funding.
 `newf g4 execute` accepts a final `g4-lite-pack/3` manifest, the exact
 separately held `shaping-pack/1` episode artifact, and a bounded
 `g4-resource-ceiling/1` artifact. It also requires the exact three
-content-free runtime-identity artifacts that the final manifest freezes.
+content-free `/2` runtime-identity artifacts that the final manifest freezes.
 For a new `/3` manifest, it also requires the exact frozen generation-procedure
 artifact and checks its protected family namespace, minimum catalog-entry
 count, minimum expression-tree depth, and exact primary resource vector against
 the supplied episode pack. Historical `/2`
 manifests remain readable as completed evidence but cannot carry this binding.
-`g4 runtime-identity` exports the pinned executable's actual H0/H1/HG decision
-identities; `g4 arm-preflight` must match those records before protected
+`g4 runtime-identity` exports the running executable's SHA-256 together with
+its actual H0/H1/HG decision identities; `g4 arm-preflight` must match those
+records before protected
 authoring. Execution repeats the comparison before work, requires the
 24-episode 12/6/6 population, supports only the disclosed
 `single_run_budget_constrained` design, and executes H0/H1/HG only. It writes

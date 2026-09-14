@@ -82,20 +82,23 @@ conform to the frozen design.
 
 Before a custodian authors protected cases, use `g4 runtime-identity` once for
 each arm under the proposed resource ceiling. It emits a content-free
-`g4-lite-arm-runtime-identity/1` record with the compiled controller ID and
-the decision-snapshot hash it will actually use. The field
+`g4-lite-arm-runtime-identity/2` record with the compiled controller ID, the
+SHA-256 of the executable that emitted it, and the decision-snapshot hash it
+will actually use. The field
 `decision_snapshot_sha256` is the compiled controller's frozen-parameter
 identity, encoded as `go-json-sha256/1`; it is deliberately distinct from the
 SHA-256 of the JSON artifact that records it. The latter is what the manifest's
 per-arm `snapshot` reference binds.
 
 Create one such artifact for H0, H1, and HG, then run `g4 arm-preflight` with
-the same resource ceiling. It compares each declared runtime identity against
-the pinned executable before protected authoring begins. A mismatch is a stop,
-not a reason to alter a protected pack. The final manifest must reference those
-exact three artifact bytes. `g4 execute` repeats both checks before it opens a
-receipt, so a changed controller label, decision snapshot, or snapshot artifact
-cannot consume a cell.
+the same resource ceiling. It compares each declared runtime identity and its
+executable SHA-256 against the running executable before protected authoring
+begins. A mismatch is a stop, not a reason to alter a protected pack. The final
+manifest must reference those exact three artifact bytes. `/3` `g4 execute`
+requires `/2` records and repeats both checks before it opens a receipt, so a
+changed executable, controller label, decision snapshot, or snapshot artifact
+cannot consume a cell. Historical `/1` identity records remain readable only
+for historical evidence and `/2` manifests.
 
 `g4 execute` is the public data-only executor for a final manifest with
 `single_run_budget_constrained`. Before doing work it verifies the exact bytes
