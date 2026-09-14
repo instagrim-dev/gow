@@ -48,11 +48,12 @@ stack, not Cursor alone.
 
 ## Availability preflight
 
-At `2026-09-14T00:34:09Z`, a fresh local Cursor chat exposed only `Claude Opus
-4.8 Bedrock (US) 300K` (`us.anthropic.claude-opus-4-8`). The recorded G1 Cursor
-run used `Claude Opus 4.7 Bedrock (US) 300K`. The selected model therefore
-cannot be held constant on the available Cursor route. No approved direct route
-for that historical model was exposed to this task.
+At `2026-09-14T00:34:09Z`, a fresh local Cursor chat displayed `Claude Opus
+4.8 Bedrock (US) 300K` (`us.anthropic.claude-opus-4-8`). The inspected model
+picker did not expose a way to select the recorded G1 model, `Claude Opus 4.7
+Bedrock (US) 300K`. The model therefore could not be held constant through the
+inspected Cursor route. No approved direct route for that historical model was
+exposed to this task.
 
 No synthetic prompt was transmitted, no provider request or spend occurred,
 and no protected material was opened. This is an `incomplete` availability
