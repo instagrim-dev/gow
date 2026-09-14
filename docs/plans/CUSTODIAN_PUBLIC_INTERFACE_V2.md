@@ -1,102 +1,233 @@
 ---
 artifact_kind: prepared-future-custodian-public-interface
 status: prepared_not_authorized
-prepared_date_utc: '2026-09-13'
+prepared_date_utc: '2026-09-14'
 scope: future protected G1 evaluator only
 supersedes: none; CUSTODIAN_PUBLIC_INTERFACE.md remains the frozen attempt-4 interface
 ---
 
 # Custodian public interface v2
 
-This is the data-only executable interface template paired with
-`CUSTODIAN_INTERFACE_BRIEF_V2.md`. Before launch, the operator must replace the
-policy-command placeholder with the frozen command text and pin the resulting
-two-file instance and executable by SHA-256. This template contains no
-protected case or answer material. It does not authorize a provider call,
-protected dispatch, or an assessment.
+This is a preparation template. At dispatch, the operator must replace every
+angle-bracket token with a frozen value, include the paired brief and pinned
+executable, record their SHA-256 identities, and supply an explicit authorization.
+The resulting instance is the only interface a custodian receives. This template
+contains no protected case or answer material and does not itself authorize a
+dispatch, spending, or assessment.
 
-## Command allowlist
 
-After the authorization's one exact executable-SHA-256 check, the evaluator
-may run only the following supplied executable commands. The frozen instance
-of this interface provides the exact `review policy` command and fixes every
-placeholder, including the storage root, policy definition, and resource
-reservations.
+This file is complete for the stated data-only custody role. It defines the
+only executable commands, input schemas, sealed private records, and
+content-free metadata shape. A field or command absent from this document is
+`interface_unrepresentable`; stop rather than inspect the executable or invent
+it.
+
+Only the commands below may operate on the supplied executable after the exact
+integrity command in the paired brief. The storage root is `<dispatch-root>/protected`; the
+database is `<dispatch-root>/protected/custodian.db`; executor is `<custodian-id>`.
+
+## First command: frozen policy definition
+
+Run this command verbatim before authoring a case. Retain its JSON output and
+record the returned policy and obligation IDs. The five `--obligation` IDs map
+to their respective `key` values below.
 
 ```text
-newf --db <custodian-db> --json review policy <exact operator-supplied flags>
-
-newf --json review check-finite \
-  --db <custodian-db> --policy <policy-id> --obligation <obligation-id> \
-  --case <opaque-case-id> --executor <custodian-id> \
-  --max-assignments <0..4096> --input <finite-claim.json>
-
-newf --json review check-finite-instance \
-  --db <custodian-db> --policy <policy-id> --obligation <obligation-id> \
-  --case <opaque-case-id> --executor <custodian-id> \
-  --max-instances <0..4096> --input <finite-instance-claim.json>
-
-newf --json review check-observations \
-  --db <custodian-db> --policy <policy-id> --obligation <obligation-id> \
-  --case <opaque-case-id> --executor <custodian-id> \
-  --max-submissions <0..16384> --input <observation-claim.json>
-
-newf --json review check-show --db <custodian-db> --policy <policy-id> <check-id>
-
-newf --json g1 pack validate --input <g1-metadata.json>
-newf --json g1 pack seal --input <g1-metadata.json> --out <new-seal.json>
-newf --json g1 pack inspect <new-seal.json> --input <g1-metadata.json>
+<dispatch-root>/packet/newf --db <dispatch-root>/protected/custodian.db --json review policy \
+  --key g1-v2-protected-usefulness --revision 1 \
+  --decision-name "protected G1 v2 usefulness progression" \
+  --owner operator --authority "<operator-approval-text>" \
+  --scope "48 fresh custodian-authored cases across five typed claim routes on the pinned executable" \
+  --case-budget 48 --attempt-budget 2 --provider-call-budget 0 \
+  --obligation 'key=finite-equivalence-route;revision=1;requirement=execute finite_equivalence claims exactly as supplied;acceptance=certificate binds exact input bytes and verdict is consistent;applicability=cases declaring kind finite_equivalence;owner=operator;mandatory=true' \
+  --obligation 'key=finite-instance-route;revision=1;requirement=execute finite_instance claims exactly as supplied;acceptance=instance evidence or refutation binds exact input bytes;applicability=cases declaring kind finite_instance;owner=operator;mandatory=true' \
+  --obligation 'key=observed-rate-route;revision=1;requirement=execute observed_rate_invariance claims exactly as supplied;acceptance=result binds exact input bytes and declared comparison;applicability=cases declaring kind observed_rate_invariance;owner=operator;mandatory=true' \
+  --obligation 'key=solved-monotonicity-route;revision=1;requirement=execute solved_monotonicity claims exactly as supplied;acceptance=result binds exact input bytes and verified trace prefixes;applicability=cases declaring kind solved_monotonicity;owner=operator;mandatory=true' \
+  --obligation 'key=probabilistic-routing-route;revision=1;requirement=route probabilistic_property claims to explicit non-assessment;acceptance=NOT_ASSESSED recorded without an invented probability;applicability=cases declaring kind probabilistic_property;owner=operator;mandatory=true'
 ```
 
-The evaluator may create and hash JSON files only inside the approved storage
-root. It may not call any other executable subcommand or inspect the supplied
-binary by another tool. A requested action outside this list is a stop
-condition, not an invitation to infer an alternative interface.
+## Allowed check commands
 
-## Check input contract
+For each authored input, substitute only the retained policy ID, its matching
+obligation ID, and a unique opaque case ID. The input must remain under
+`<dispatch-root>/protected/tasks/`.
 
-Each check input is one UTF-8 JSON object, at most 1 MiB. Unknown,
-case-variant, and duplicate keys are refused. A reservation refusal assesses
-no prefix of the supplied input.
+```text
+<dispatch-root>/packet/newf --db <dispatch-root>/protected/custodian.db --json review check-finite --policy <policy-id> --obligation <finite-equivalence-route-id> --case <opaque-case-id> --executor <custodian-id> --max-assignments <1..4096> --input <finite-claim.json>
+<dispatch-root>/packet/newf --db <dispatch-root>/protected/custodian.db --json review check-finite-instance --policy <policy-id> --obligation <finite-instance-route-id> --case <opaque-case-id> --executor <custodian-id> --max-instances <1..4096> --input <finite-instance-claim.json>
+<dispatch-root>/packet/newf --db <dispatch-root>/protected/custodian.db --json review check-observations --policy <policy-id> --obligation <observed-rate-route-id|solved-monotonicity-route-id|probabilistic-routing-route-id> --case <opaque-case-id> --executor <custodian-id> --max-submissions <1..16384> --input <observation-claim.json>
+<dispatch-root>/packet/newf --db <dispatch-root>/protected/custodian.db --json review check-show --policy <policy-id> <check-id>
+```
 
-| Schema and `kind` | Required fields | Deterministic result boundary |
-|---|---|---|
-| `finite-claim/1`, `finite_equivalence` | `source_ref`, `statement`, `domain`, `left`, `right`; `domain.width` is 1–8 and `domain.variables` is closed | Exhaustive only over the declared finite domain. A counterexample is `REFUTED`; missing/invalid premises and exhausted reservations are blocked. |
-| `finite-instance-claim/1`, `finite_instance` | finite fields plus ordered `assignments`; each assignment has exactly one value for every declared variable | Agreement is `INSTANCE_EVIDENCE_ONLY`, never a domain-equivalence certificate. A supplied disagreement may be `REFUTED`. |
-| `observation-claim/1`, `observed_rate_invariance`, `solved_monotonicity`, or `probabilistic_property` | `source_ref`, `statement`, `binding`, `observations`; binding names population, ordering, stopping rule, `budget_min`, and `budget_max`; observations contain matching conditions, instances, and ordered submissions | Population, order, budgets, IDs, and solved prefixes must bind. A probability claim is `NOT_ASSESSED`, not a probability conclusion. |
+Every claim input is one UTF-8 JSON object no larger than 1 MiB. Unknown,
+case-variant, and duplicate field names are rejected at every nesting level.
+No command assesses a prefix after a resource reservation refusal.
 
-Finite expressions are exactly `var`, `const`, or `op` with `args`; supported
-operators are `not`, `neg`, `shl1`, `shr1`, `and`, `or`, `xor`, `add`, `sub`,
-and `mul`. Observation submissions have `move` and an explicit Boolean
-`success`.
+### Schema 1: finite equivalence
 
-## Content-free `g1-pack/3` metadata contract
+A `finite-claim/1` root has exactly: `schema`, `kind`, `source_ref`,
+`statement`, `domain`, `left`, and `right`.
 
-The metadata is exactly one UTF-8 JSON object, at most 256 KiB. It has these
-top-level fields and no others:
+- `schema` is exactly `finite-claim/1`; `kind` is exactly
+  `finite_equivalence`.
+- `source_ref` and `statement` are nonempty text.
+- `domain` has exactly `width` (integer 1 through 8) and `variables`
+  (a nonempty array of distinct plain-text identifiers, each at most 128 bytes).
+- `left` and `right` are expression objects. Each has exactly one form:
+  `{"var":"name"}`, `{"const":nonnegative-integer}`, or
+  `{"op":"operator","args":[expression]}` /
+  `{"op":"operator","args":[expression,expression]}`.
+  A `var` must name a declared variable. `args` is allowed only with `op`.
+  The unary operators are `not`, `neg`, `shl1`, `shr1`; binary
+  operators are `and`, `or`, `xor`, `add`, `sub`, `mul`.
+  Maximum expression depth is 64 and maximum nodes per side is 4096.
 
-| Field | Exact required shape |
-|---|---|
-| `schema`, `pack_id` | `schema` is `g1-pack/3`; `pack_id` is nonempty and at most 256 bytes. |
-| `task_manifest`, `answer_manifest` | Each has lower-case 64-character `sha256`, positive `byte_length`, and nonempty `locator`; identities must differ. Contents never appear in this metadata. |
-| `custody` | `task_author_exposure` is `unexposed_to_implementation_cases`; `implementer_access` is `no_protected_content`; `answer_separation` is `separate_answer_manifest`; `record_ref` is nonempty. These are declarations, not verified facts. |
-| `case_counts` | Exactly `applicable: 24`, `inapplicable: 16`, and `underspecified: 8`. |
-| `claim_kind_counts` | Exactly five nonzero route fields—`finite_equivalence`, `finite_instance`, `observed_rate_invariance`, `solved_monotonicity`, and `probability_out_of_scope`—summing to 48. This mix is independent of the outcome strata. |
-| `tool_contracts` | Exactly one entry per executed route, each with `kind`, `procedure`, `version`, and a lower-case 64-character `registry_sha256` matching the pinned executable's selected registry entry. |
-| `progression` | `min_applicable_completed: 23`, `max_applicable_false_refusals: 1`, `max_inapplicable_false_certifications: 0`, `require_inapplicable_failed_condition: true`, `require_underspecified_missing_premise: true`, `max_underspecified_definite_conclusions: 0`, and `max_invalid_certified: 0`. |
-| `execution` | Nonempty `resource_ceiling_ref`; nonnegative `provider_call_ceiling` and `provider_spend_cents`; `approval_ref` may be empty but never authorizes anything through metadata alone. |
+```json
+{"schema":"finite-claim/1","kind":"finite_equivalence","source_ref":"custodian:fresh","statement":"x plus zero equals x over this declared four-bit domain","domain":{"width":4,"variables":["x"]},"left":{"op":"add","args":[{"var":"x"},{"const":0}]},"right":{"var":"x"}}
+```
 
-`g1 pack validate`, `seal`, and `inspect` bind this content-free metadata and
-its exact bytes. They never read task or answer contents. A `MATCH` inspection
-or `PREPARED_NOT_AUTHORIZED` result proves neither custody nor dispatch
-authority.
+A fully bound exhaustive agreement is a finite-domain certificate. A found
+counterexample is `REFUTED`; an absent or invalid premise is blocked.
 
-## Outcome recording
+### Schema 2: finite instances
 
-The evaluator records each case as `completed-valid`, `refused-applicable`,
-`false-certification`, `blocked`, or `not-executed` under the separately
-approved acceptance matrix. A blocked or not-executed case is not a refusal.
-`matches_expected` is a custodian diagnostic field, not a case state and not a
-substitute for certificate validity. No stratum arithmetic is reported until
-the collection is complete; an invalid custody or interface breach takes
-precedence over any partial outcome.
+A `finite-instance-claim/1` root has the exact Schema 1 fields plus
+`assignments`. It must use `schema: "finite-instance-claim/1"` and
+`kind: "finite_instance"`. `assignments` is an array of 1 through 4096
+objects. Each assignment has exactly `values`, an array containing exactly
+one `{"var":"declared-name","value":nonnegative-integer}` for every declared
+variable: no extra, missing, or duplicate variables. Assignments must be
+distinct. Values must fit the declared width.
+
+```json
+{"schema":"finite-instance-claim/1","kind":"finite_instance","source_ref":"custodian:fresh","statement":"x plus zero agrees at two declared points","domain":{"width":4,"variables":["x"]},"left":{"op":"add","args":[{"var":"x"},{"const":0}]},"right":{"var":"x"},"assignments":[{"values":[{"var":"x","value":0}]},{"values":[{"var":"x","value":7}]}]}
+```
+
+Agreement is `INSTANCE_EVIDENCE_ONLY`, never an exhaustive-equivalence
+certificate. A disagreement is `REFUTED`.
+
+### Schema 3: observations
+
+An `observation-claim/1` root has exactly `schema`, `kind`, `source_ref`,
+`statement`, `binding`, and `observations`. It uses a `kind` of
+`observed_rate_invariance`, `solved_monotonicity`, or
+`probabilistic_property`.
+
+- `source_ref` and `statement` are nonempty text and each at most 4096 bytes.
+- `binding` has exactly `population`, `ordering`, `stopping_rule`,
+  `budget_min`, and `budget_max`. The labels are nonempty and at most 256
+  bytes; budgets are integers, nonnegative, and ordered.
+- `observations` has 2 through 64 records. Each has exactly `conditions`
+  and `instances`. `conditions` has exactly the matching three labels and
+  one nonnegative `budget`; labels must equal the binding and budgets must
+  strictly increase in input order and remain in the binding range.
+- Each observation has at least one `instances` record. Instance `id` is
+  nonempty, at most 128 bytes, unique within that observation, and the complete
+  ID set must be identical across observations. Each instance has exactly
+  `id` and `submissions`; submissions have exactly nonempty `move` (at
+  most 1024 bytes) and explicit Boolean `success`. Across input there may be
+  at most 4096 instance records and 16384 submissions.
+- `solved_monotonicity` uses exactly two observations and needs an actual
+  extension of every solved trace. `probabilistic_property` routes to
+  `NOT_ASSESSED`; it does not produce a probability conclusion. For the
+  intentionally underspecified probability route, omit `binding` or
+  `observations` only when the expected answer names that exact missing
+  premise; the checker then records a blocked non-assessment rather than
+  inventing a conclusion.
+
+```json
+{"schema":"observation-claim/1","kind":"observed_rate_invariance","source_ref":"custodian:fresh","statement":"The observed success rate is unchanged at the two declared budgets","binding":{"population":"instance a","ordering":"recorded order","stopping_rule":"declared budget","budget_min":1,"budget_max":2},"observations":[{"conditions":{"population":"instance a","ordering":"recorded order","stopping_rule":"declared budget","budget":1},"instances":[{"id":"a","submissions":[{"move":"m1","success":true}]}]},{"conditions":{"population":"instance a","ordering":"recorded order","stopping_rule":"declared budget","budget":2},"instances":[{"id":"a","submissions":[{"move":"m1","success":true},{"move":"m2","success":true}]}]}]}
+```
+
+## Private records sealed before checks
+
+Create these directories: `tasks/`, `answers/`, and `receipts/` beneath
+the storage root. Before the first check, create the following separate JSON
+records. They are protected material and never copied to the return root.
+
+**`tasks/MANIFEST.json`** is one object with exactly
+`{"schema":"g1-v2-task-manifest/1","entries":[...] }`. It has exactly 48
+entries, each with exactly: `case_id`, `input_path`, `input_sha256`,
+`input_bytes`, `stratum`, `claim_route`, `author`, `authored_at_utc`,
+`method`, `exposure`, `derived_from`.
+
+- `case_id` is unique and opaque; `input_path` is a relative `tasks/` path;
+  the SHA-256 is lower-case 64 hex characters; `input_bytes` is positive.
+- `stratum` is one of `applicable`, `inapplicable`, `underspecified`;
+  counts are exactly 24/16/8. `claim_route` is one of `finite_equivalence`,
+  `finite_instance`, `observed_rate_invariance`, `solved_monotonicity`,
+  `probabilistic_property`; route counts are exactly 12/12/8/8/8.
+- `author` is exactly `<custodian-id>`; `method` is exactly
+  `authored-fresh-in-custodian-context`; `exposure` is exactly `none`; and
+  `derived_from` is exactly the empty string.
+
+**`answers/MANIFEST.json`** is one object with exactly
+`{"schema":"g1-v2-answer-manifest/1","entries":[...] }`. It has the same
+48 unique case IDs, each with exactly `case_id`, `answer_path`,
+`answer_sha256`, `answer_bytes`, `sealed_before_execution`. The path is a
+relative `answers/` path, digest/byte fields follow the task rules, and
+`sealed_before_execution` is true.
+
+Each referenced answer is one object with exactly `schema`, `case_id`,
+`expected_certificate_verdict`, `expected_check_outcome`, `rationale`,
+`authored_at_utc`, `author`, `sealed_before_execution`. It uses
+`schema: "g1-v2-expected-answer/1"`, the matching case ID,
+`author: "<custodian-id>"`, and `sealed_before_execution: true`.
+Expected certificate verdict is one of `CERTIFIED`, `REFUTED`,
+`INSTANCE_EVIDENCE_ONLY`, `NOT_ASSESSED`, or `NO_CERTIFICATE`; expected
+check outcome is one of `completed-valid`, `refused-applicable`,
+`false-certification`, `blocked`, or `not-executed`. `rationale` is
+nonempty and explains the declared expected outcome without any external source.
+
+**`case-provenance.jsonl`** has exactly 48 UTF-8 JSON lines, one per case,
+each with exactly: `schema`, `case_id`, `input_sha256`, `input_bytes`,
+`answer_sha256`, `answer_bytes`, `stratum`, `claim_route`, `author`,
+`authored_at_utc`, `method`, `exposure`, `derived_from`. `schema` is
+`g1-v2-case-provenance/1`; values must agree with both manifests.
+
+After creating those records and before any check, write
+`PRE_EXECUTION_SEAL.json` with exactly `schema`, `task_manifest_sha256`,
+`task_manifest_bytes`, `answer_manifest_sha256`, `answer_manifest_bytes`,
+`case_provenance_sha256`, `case_provenance_bytes`, `sealed_at_utc`, and
+`first_check_not_started`. Use `schema: "g1-v2-pre-execution-seal/1"` and
+`first_check_not_started: true`. Its three identities must refer to the exact
+bytes already written. Hash all three records and the seal; enter their
+identities in `ACCESS_LOG.md` before running a check.
+
+## Content-free metadata commands
+
+After both manifests are sealed, create `g1-metadata.json` under the storage
+root and run only:
+
+```text
+<dispatch-root>/packet/newf --json g1 pack validate --input <g1-metadata.json>
+<dispatch-root>/packet/newf --json g1 pack seal --input <g1-metadata.json> --out <dispatch-root>/protected/g1-pack.seal.json
+<dispatch-root>/packet/newf --json g1 pack inspect <dispatch-root>/protected/g1-pack.seal.json --input <g1-metadata.json>
+```
+
+The metadata root has exactly these fields: `schema`, `pack_id`,
+`task_manifest`, `answer_manifest`, `custody`, `case_counts`,
+`claim_kind_counts`, `tool_contracts`, `progression`, and `execution`.
+Use this complete shape, replacing only the manifest identities with actual
+sealed values:
+
+```json
+{"schema":"g1-pack/3","pack_id":"<dispatch-id>","task_manifest":{"sha256":"<actual lower-case SHA-256>","byte_length":<actual positive bytes>,"locator":"custodian://g1-v2/task-manifest"},"answer_manifest":{"sha256":"<actual lower-case SHA-256>","byte_length":<actual positive bytes>,"locator":"custodian://g1-v2/answer-manifest"},"custody":{"task_author_exposure":"unexposed_to_implementation_cases","implementer_access":"no_protected_content","answer_separation":"separate_answer_manifest","record_ref":"custodian://g1-v2/access-log"},"case_counts":{"applicable":24,"inapplicable":16,"underspecified":8},"claim_kind_counts":{"finite_equivalence":12,"finite_instance":12,"observed_rate_invariance":8,"solved_monotonicity":8,"probability_out_of_scope":8},"tool_contracts":[{"kind":"finite_equivalence","procedure":"finite-claim-check/1","version":"finite-equivalence-checker/1","registry_sha256":"95458ca6a49e875342bd7e00bb9da26fcb558df439accf94b3055bffa2313375"},{"kind":"finite_instance","procedure":"finite-instance-claim-check/1","version":"finite-equivalence-checker/1","registry_sha256":"fde8ffc552a3b54c2a4e60192b63d6d7a0ffe0e229c6a29f5bbcb0b1e215f30e"},{"kind":"observed_rate_invariance","procedure":"observation-claim-check/1","version":"measure-checker/1","registry_sha256":"e6c686e5ba1e311b283d164e1b15b1f01aa93a4e94e0ec96e3fb8cec5bfb2ca5"},{"kind":"solved_monotonicity","procedure":"observation-claim-check/1","version":"measure-checker/1","registry_sha256":"94c5b431e32ca5cf04761f8e3a0e963fd7c0e4f9c00dd04433c9b139571e7377"},{"kind":"probabilistic_property","procedure":"observation-claim-check/1","version":"measure-checker/1","registry_sha256":"3b3945ca6a85347ac1ae72e81032a6f33a5ee5e608c31d35576e3394d02c60a5"}],"progression":{"min_applicable_completed":23,"max_applicable_false_refusals":1,"max_inapplicable_false_certifications":0,"require_inapplicable_failed_condition":true,"require_underspecified_missing_premise":true,"max_underspecified_definite_conclusions":0,"max_invalid_certified":0},"execution":{"resource_ceiling_ref":"<dispatch-id>:offline-zero-spend","provider_call_ceiling":0,"provider_spend_cents":0,"approval_ref":"<operator-approval-ref>"}}
+```
+
+Metadata is content-free: do not place task, answer, raw output, expected
+answer, or case result content in it. A MATCH seal binds only exact metadata
+bytes; it does not prove custody or independently authorize execution.
+
+## Content-free return packet
+
+Write `G1_V2_RETURN_PACKET.json` in the return root with exactly
+`schema`, `dispatch_id`, `release_revision`, `executable_sha256`,
+`policy_id`, `obligation_ids`, `manifest_identities`,
+`metadata_identity`, `seal_identity`, `custody_limitations`,
+`blocked_actions`, `stratum_outcome_counts`, `elapsed_seconds`, and
+`completion_state`. All references are strings, number totals, or count-only
+objects. No raw, case-specific, expected-answer, result, or score content is
+allowed. Write `G1_V2_RETURN_PACKET.sha256` containing the SHA-256 of its
+exact JSON bytes. The final response reports only the completion state, both
+return paths, and that digest.
