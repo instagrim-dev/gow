@@ -11,8 +11,10 @@ graded_against: docs/plans/2026-09-13-proposed-g1-acceptance-matrix.md
 ## Verdict: `invalid`
 
 Under the approved acceptance matrix, `invalid` takes precedence over
-`inconclusive-incomplete`, `pass`, and `evaluated-negative`. Two independent
-grounds each independently produce this verdict.
+`inconclusive-incomplete`, `pass`, and `evaluated-negative`. This attempt is
+invalid solely because validity precondition #1 failed. The retained outcome
+summary is preserved below as non-scoring operational evidence; it does not
+create an additional batch verdict.
 
 ## Custodian activity summary
 
@@ -69,7 +71,7 @@ that the custodian did more than that:
 A precondition failure makes the batch `invalid` regardless of case
 outcomes; no stratum arithmetic is computed on that basis.
 
-## Ground 2 — Applicable stratum fails on the custodian's own comparisons
+## Retained outcome discrepancy — not a scored stratum result
 
 The custodian recorded per-case `matches_expected` against expected
 answers it had sealed to `protected/answer-manifest.json` before
@@ -82,18 +84,20 @@ custodian classified as applicable disagreed:
 | g1c-26 | observed_rate_invariance | HOLDS_AT_COMPARED_POINTS | REFUTED | Checker completed; custodian-authored expectation is wrong |
 | g1c-31 | solved_monotonicity | HOLDS_AT_COMPARED_POINTS | INAPPLICABLE (blocked: premises do not match the typed claim binding) | Case was mislabeled applicable |
 
-The approved matrix requires ≥ 23 completed-valid in the applicable
-stratum with ≤ 1 refused-applicable. Even the most charitable mapping —
-treating g1c-31 as a refused-applicable and g1c-25/g1c-26 as
-completed-valid on the strength of the checker's certificate — leaves
-23 completed-valid but two refused-applicable, which still fails the
-stratum. On the plain reading, 21 completed-valid < 23. Either way this
-row fails, which would map to `evaluated-negative` on a complete
-collection — except ground 1 already forces `invalid`.
+`matches_expected` is not an acceptance-matrix case state. A checker result
+whose certificate binds its input and supports its recorded verdict is
+`completed-valid` even if it disagrees with the custodian's expected answer;
+the two completed `REFUTED` results therefore cannot be converted to
+refusals. Conversely, the `INAPPLICABLE` record is explicitly `blocked` and
+is neither a completion nor a refusal. It leaves the collection incomplete
+unless a permitted infrastructure retry supplies a counted result.
 
-The inapplicable (16/16, zero certifications) and underspecified (8/8,
-missing premise named in each) strata are recorded as passing on their
-surface behavior, but that is not scored under an `invalid` verdict.
+Accordingly, absent the validity breach, this evidence would support only an
+`inconclusive-incomplete` collection state, not an `evaluated-negative`
+finding. Because validity precondition #1 failed, the matrix requires no
+stratum arithmetic and this observation earns nothing. The inapplicable and
+underspecified surface counts are retained as operational records, not scored
+strata.
 
 ## What this earns
 
@@ -118,6 +122,20 @@ executable inspection together would have capped it well below
   `/Users/jmh/.cursor/projects/Users-jmh-dev-gh-newf/agent-transcripts/2dce02b2-37e8-4ddb-adaf-4945591aff73/subagents/922a12f1-5921-4969-a3d5-57fffe69aac8.jsonl`
   — the primary evidence for ground 1.
 
+### Decision-critical evidence identity
+
+The retained paths are local evidence locators, not content included in this
+repository. The following SHA-256 and byte-count pairs were recorded on
+2026-09-13 without copying protected task or answer content. They permit a
+later reader to detect drift in the evidence used for this disposition.
+
+| Artifact | SHA-256 | Bytes | Role |
+|---|---|---:|---|
+| `protected/ACCESS_LOG.md` | `f04e9dc2ed85eae89ef605cdb5a2ada1b31e333b25f34ea64d527e4eb173c012` | 2,345 | Custodian-declared record of the out-of-interface command. |
+| `protected/receipts/outcome-summary.json` | `5c42f1233da3a27d307235df1766ca229579e9f437d61a1f31fa845652b6a6d4` | 25,086 | Retained state and `matches_expected` observations; not a score. |
+| `protected/receipts/binary-json-tags.txt` | `f115b48cf8f922d0657798ab31286cfe0426bf079c9cbc9c6a75694af8e2663e` | 16,480 | Artifact created by the out-of-interface `strings` command. |
+| Custodian transcript | `832c9a2559e4ee1d52531442d18adce98b3fed7842378626e8269fb16455fa1c` | 92,291 | Primary record of the later `nm`/`otool` sequence and provider interruption. |
+
 ## Contamination boundary for any future retry
 
 The 48 authored task inputs and their expected answers are now known to
@@ -126,6 +144,7 @@ future protected-pack retry may reuse those cases, their expected
 answers, their provenance IDs, or paraphrases of them. A retry needs a
 new case set authored by a fresh custodian with no access to the
 retained `protected/` tree, and the executable-inspection failure mode
-must be closed by the authorization (a narrower "run only the JSON check
-subcommands" restriction, and an explicit prohibition on binary
-inspection tools).
+must be closed by the authorization: enumerate the permitted data-only
+commands and explicitly prohibit binary inspection tools. That restriction
+applies to the blinded evaluator role; it does not characterize separate,
+authorized analysis of the operator's own executable.

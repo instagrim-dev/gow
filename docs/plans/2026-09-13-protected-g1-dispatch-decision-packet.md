@@ -190,10 +190,11 @@ acceptance matrix these limitations cap the grade at `agent-sealed/v1`
   the custodian moved beyond the data-only public interface into `nm`/
   `otool` disassembly of the pinned executable's `readG1Manifest` and
   `g1 validate` decision paths — the block interrupted that sequence.
-  Under the approved acceptance matrix the batch grades **`invalid`** on
-  two independent grounds: validity precondition #1 (data-only interface)
-  failed, and the custodian's own applicable-stratum
-  `matches_expected` counts are 21/24 < 23. Full grading:
+  Under the approved acceptance matrix the batch grades **`invalid`** because
+  validity precondition #1 (the data-only evaluator interface) failed. The
+  recorded 21/24 `matches_expected` observation is not a matrix case state;
+  its two certificate-backed discrepancies and one blocked record are retained
+  as non-scoring operational evidence. Full grading:
   [`2026-09-13-g1-dispatch-attempt4-grading.md`](2026-09-13-g1-dispatch-attempt4-grading.md).
   Retained protected material stays in `/private/tmp/g1-custodian-ws/`
   and is now exposed to the implementer lane; any retry needs a fresh

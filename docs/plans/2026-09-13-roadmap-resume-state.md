@@ -354,10 +354,10 @@ export run `NEWF_REVIEW_COVERAGE_OUT=/Users/jmh/dev/gh/newf/docs/reviews/evidenc
 | Workstream | Engineering status | Evidence status | Authority / next dependency |
 |---|---|---|---|
 | G0 | Repository gates pass for this repair | Instrument regressions and smoke only | Ordinary local engineering |
-| G1 | Finite equivalence, finite-instance evidence, observed-rate comparison, solved-set retention and probability refusal reach explicit subject-scoped assessment through typed CLI inputs and saved receipts; semantic discovery remains intentionally absent | Engineering positive/refusal/failure paths verified, including subject-isolation regressions and retained C1-C8 coverage export; no new protected usefulness gate | Define the intended G1 pack and custody boundary; separately approve acceptance and dispatch criteria before evaluating it |
+| G1 | Finite equivalence, finite-instance evidence, observed-rate comparison, solved-set retention and probability refusal reach explicit subject-scoped assessment through typed CLI inputs and saved receipts; the data-only protected-pack interface is delivered | Engineering positive/refusal/failure paths verified, including subject-isolation regressions and retained C1-C8 coverage export; attempt 4 is recorded `invalid` for an evaluator-role boundary breach, with no scored usefulness result | A fresh pack, fresh custodian, observed isolation, and a new authorization are required; enumerate permitted evaluator commands and keep any executable analysis in a separate authorized lane |
 | T0 | Scoped admission, independent endpoint checking and refusal boundaries tested | Finite-domain evidence only | Actual e-graph withdrawal remains G2 work |
 | P0 | Versioned decisions, task/catalog/budget identities survive process exit in receipts | No fresh controller freeze attested | Freeze the evaluated implementation and all arm identities before authoring protected tasks |
-| E0 | D19 permits agent-native custody; a two-file clean-room brief and data-only interface are prepared | No new isolated pack or answer manifest produced here | Operator-supplied pinned executable, actual isolation/provenance records, protected storage and approved execution ceiling |
+| E0 | D19 permits agent-native custody; a two-file clean-room brief and data-only interface are prepared | Attempts 1–3 are recorded infrastructure blocks; attempt 4 produced exposed, invalid protected material and no usable G1 result | A fresh custodian without access to retained material, actual isolation/provenance records, protected storage, and a new approved ceiling/dispatch are required |
 | X0 / G4-lite | New diagnostic resource contract executable | Prior development results keep their original interpretation; smoke supplies no history-value evidence | Approve/freeze the next design, vector, comparator, task/answer custody and batch ceilings |
 | G2 | No additional backend work in this repair | No new backend gate result | Explicit investment decision or bounded backend-product pivot |
 | G3 | No composition extension in this repair | No prospective composition result | G2/approved composition slice and task evaluation |
@@ -371,8 +371,9 @@ D19 in [the effective custody memo](2026-09-12-015-custody-staffing-authorizatio
 remains operative; human-only staffing is not reinstated. D3a's older development
 ceilings do not automatically approve a new resource definition or protected
 batch. D3b and D18 remain owner decisions. No arithmetic result grants spending
-authority. The external `ACCEPTANCE_MATRIX.md` was not supplied among the three
-reference files. The current clean-room preparation is
+authority. The operator-approved acceptance matrix is
+[`2026-09-13-proposed-g1-acceptance-matrix.md`](2026-09-13-proposed-g1-acceptance-matrix.md).
+The current clean-room preparation is
 [`CUSTODIAN_INTERFACE_BRIEF.md`](CUSTODIAN_INTERFACE_BRIEF.md) plus its
 [`CUSTODIAN_PUBLIC_INTERFACE.md`](CUSTODIAN_PUBLIC_INTERFACE.md): the pair is
 data-only and excludes development examples, review records, tests and protected
@@ -391,17 +392,14 @@ The next research dispatch requires a concrete approved design and fresh custody
 artifacts; later roadmap stages are not marked complete by these engineering
 repairs.
 
-**Next action:** with the data-only pack input delivered, no further
-engineering is runnable on this path without an operator decision. The
-release identity (revision `0cd7284`, reproducible executable
-`5d052272…9d72690`), a zero-spend resource ceiling, and the cloud-agent
-custodian mechanism are now recorded in the
-[dispatch decision packet](2026-09-13-protected-g1-dispatch-decision-packet.md);
-that recording explicitly did not grant dispatch authority. The remaining
-blockers are the packet's open rows: dispatch authority, acceptance criteria
-(the never-supplied `ACCEPTANCE_MATRIX.md` rows), the case-provenance format,
-and the launch-time content boundary and observed isolation. To re-exercise
-delivered paths meanwhile:
+**Next action:** attempt 4 is preserved as `invalid`; it cannot be rerun or
+rescored in place. The next protected dispatch needs a new explicit operator
+authorization, a fresh custodian without access to the retained tree, observed
+isolation, a fresh case/answer set, and an evaluator command allowlist that
+forbids binary inspection. A nonprotected environment comparison may diagnose
+provider interruption, but it must use a separate, explicitly authorized lane
+and cannot repair the protected batch. To re-exercise delivered paths
+meanwhile:
 `go build -o /tmp/newf ./cmd/newf && /tmp/newf --db <fresh.sqlite> review check-finite --input docs/plans/artifacts/2026-09-13-finite-claim-path/holds-input.json --policy <id> --obligation <id> --case <label> --executor <name> --max-assignments 64`.
 Operator-authored development packs can also run without editing Go, under the
 [shaping pack input contract](../shaping-pack-contract.md):
