@@ -213,7 +213,7 @@ A history-versus-no-history comparison alone confounds method with information. 
 
 | Arm | Inputs and capability | Role |
 |---|---|---|
-| H0: no-history direct search | Current task, tools, checker, same total resource ceiling; no prior-attempt history | Secondary diagnostic of the value of supplying history |
+| H0: no-history direct search | Current task, tools, checker, same task-directed resource ceiling; no prior-attempt history | Secondary diagnostic of the value of supplying history |
 | H1: same-history direct search | Same task, raw history, tools/checker/model access and ceiling as HG; free to infer relationships | Primary capable comparator |
 | HG: GoW shaping | Same raw evidence, explicit versioned shaping procedure, same tools/checker and ceiling | Proposed treatment |
 
@@ -227,11 +227,11 @@ Initial task domain: a pure finite expression language, for example 4-bit words 
 
 **Sensitivity calibration before sealing:** on open development cases, verify that the tool pool can express improvements and a reference procedure can reach them under the proposed budget. Avoid a floor/ceiling where no method can succeed or all succeed immediately. Preserve the calibration policy, not only its successful cases. Calibration is not permission to tune a protected task until HG wins.
 
-**Default proposed primary endpoint:** number of protected tasks meeting the exact objective within the same total resource cap. Report total cost, quality, action trace, and per-stratum outcomes secondarily. Do not switch after seeing data to whichever metric favors HG.
+**Default proposed primary endpoint:** number of protected tasks meeting the exact objective within the same task-directed resource cap. Custody is metered outside that cap and reported with the full-cost decision record; report total cost, quality, action trace, and per-stratum outcomes secondarily. Do not switch after seeing data to whichever metric favors HG.
 
-**Run design and decision governance:** fix the number of runs per arm-episode cell before sealing — default three fixed seeds where providers are stochastic, one run only under a disclosed budget constraint. Thresholds below apply to average completions per run, rounded in the direction of not funding. The sealed batch's recorded outcome governs this tranche decision; separately budgeted repetitions inform the next evaluation revision and can neither rescue nor overturn the recorded decision.
+**Run design and decision governance:** fix the number of runs per arm-episode cell before sealing — default three fixed seeds where providers are stochastic, one run only under a disclosed budget constraint. The evaluator compares exact run-summed integers: condition (b) requires an HG−H1 sum of at least `3 × runs`, and condition (c) permits a net H1−HG low-value/misleading sum of at most `1 × runs`; no separate per-arm rounding occurs. Condition (d) counts informative construction families with a positive run-summed HG advantage. The sealed batch's recorded outcome governs this tranche decision; separately budgeted repetitions inform the next evaluation revision and can neither rescue nor overturn the recorded decision.
 
-**Proposed finite-screen spending rule:** continue to the next shaping tranche only if (a) no invalid result is certified, (b) HG completes at least 3 more of the 24 tasks than H1, (c) HG loses no more than one completion relative to H1 across the 12 low-value/misleading-history tasks, (d) successful differences occur in at least two construction families, and (e) HG completes at least as many protected tasks as H0 overall. Complete the fixed batch under its authorized resource limits and retain all failures. These thresholds are deliberately visible investment judgments, not a power calculation or superiority certificate.
+**Proposed finite-screen spending rule:** continue to the next shaping tranche only if (a) no invalid result is certified, (b) HG's exact run-summed completions exceed H1 by at least `3 × runs`, (c) the net H1−HG run-summed loss across the 12 low-value/misleading-history tasks is at most `1 × runs`, (d) at least two informative construction families contain an episode with positive run-summed HG advantage, and (e) HG's exact run-summed completions are at least H0's overall. Complete the fixed batch under its authorized resource limits and retain all failures. These thresholds are deliberately visible investment judgments, not a power calculation or superiority certificate.
 
 **Disposition:**
 

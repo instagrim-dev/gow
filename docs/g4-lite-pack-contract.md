@@ -1,9 +1,9 @@
-# G4-lite protected-screen freeze contract
+# G4-lite protected-screen final-pack contract
 
-`newf g4 pack` prepares a **content-free** freeze receipt for the protected
-G4-lite shaping screen. It binds the comparison design before protected episode
-or answer material is authored or executed. The command never reads episodes,
-histories, targets, answers, raw model output, traces, or observed results.
+`newf g4 pack` validates and seals the **final, content-free** G4-lite pack
+manifest. It is used only after a custodian has authored and separately sealed
+the protected episode and answer manifests. The command never reads episode
+contents, histories, targets, answers, raw model output, traces, or results.
 
 ```bash
 newf g4 pack validate --input g4-lite-metadata.json
@@ -12,34 +12,45 @@ newf g4 pack bind-execution --pre-execution-seal g4-lite-pack.seal.json --observ
 newf g4 pack inspect g4-lite-pack.seal.json --input g4-lite-metadata.json
 ```
 
-The input schema is `g4-lite-pack/1`. It is one UTF-8 JSON object of at most
-256 KiB. Unknown, duplicate, and case-variant fields are refused. A valid
+The final input schema is `g4-lite-pack/2`. It is one UTF-8 JSON object of at
+most 256 KiB. Unknown, duplicate, and case-variant fields are refused. The
 manifest contains only identity references and declarations:
 
 | Field | Required contract |
 |---|---|
 | `episode_manifest`, `answer_manifest` | Separate lower-case SHA-256 identities, positive byte lengths, and locators. No protected bytes appear in the record. |
-| `calibration_manifest` | Identity of the separately retained open-case sensitivity calibration. Calibration is bound before sealing; it does not permit protected-case tuning. |
+| `calibration_manifest` | Identity of the separately retained open-case sensitivity calibration. It documents pre-seal calibration and does not permit protected-case tuning. |
 | `custody` | Declares `unexposed_to_implementation_cases`, `no_protected_content`, `separate_answer_manifest`, and a custody record. These remain declarations rather than independently verified facts. |
 | `population` | Exactly 24 episodes: 12 `history_informative`, 6 `history_low_value`, and 6 `history_misleading`, with at least two construction families. |
-| `arms` | Three distinct frozen controller snapshots: H0, H1, and HG. They must bind one model configuration digest, one tool-catalog digest, the current finite checker, and one per-arm resource-ceiling identity. H1 requires a recorded `non_implementer` review. Custody work is declared outside the per-arm ceiling and must later be metered. |
-| `run_design` | Either the default three fixed seeds with a seed-manifest identity, or one disclosed budget-constrained run. Two-run or unsealed ad hoc designs are refused. |
-| `endpoint` | The exact objective, including the declared target cost, under the same total resource cap. |
-| `spending_rule` | The roadmap's fixed screen rule: no invalid certification, HG ≥ H1 + 3, HG loses ≤ 1 over low-value/misleading episodes, successful differences in at least two families, HG ≥ H0, and rounding against funding. |
-| `execution` | The same resource-ceiling locator and nonnegative provider ceilings. `approval_ref` is an audit pointer only. |
+| `arms` | Three distinct frozen controller snapshots: H0, H1, and HG. They bind one model configuration digest, one tool-catalog digest, the current finite checker, and one per-arm task-directed resource-ceiling identity. H1 requires a recorded `non_implementer` review. Custody work is outside that ceiling and must later be metered. |
+| `run_design` | Either the default three fixed seeds with a seed-manifest identity, or one disclosed budget-constrained run. Two-run or ad hoc designs are refused. |
+| `endpoint` | The exact objective, including the declared target cost, under the same **task-directed** resource cap. Separately metered custody is excluded from this endpoint and retained for the full-cost decision record. |
+| `spending_rule` | Exact run-summed arithmetic: HG must exceed H1 by at least `3 × runs`; H1 minus HG on low-value/misleading cases is a net run-summed loss of at most `1 × runs`; qualifying family advantages are positive run-summed HG advantages on informative episodes only. The rule also requires no invalid certification and HG at least H0. |
+| `execution` | The same task-directed resource-ceiling locator and nonnegative provider ceilings. `approval_ref` is an audit pointer only. |
 
-The record is intentionally a **freeze**, not an execution or a result. Every
-validation response and seal reports `PREPARED_NOT_AUTHORIZED`,
-`protected_execution_authorized: false`, and `custody_verified: false`. An
-`approval_ref`, a locally matching seal, or a declared provider budget cannot
-change those values.
+## Required sequence
 
-A later authorized custodian must retain the actual episode, answer,
-calibration, arm-snapshot, resource, seed, and execution records at the
-referenced identities. After execution, `bind-execution` writes a separate
-`g4-lite-execution-binding/1` receipt that hashes the pre-execution seal and
-content-free observed metadata; it establishes neither chronology nor custody
-by itself. The custodian must then execute the complete 3 × 24 × runs grid; meter custody
-separately; and submit the retained grid to the existing screen evaluator. A
-screen outcome remains bounded to its sealed batch and cannot become a G4
-confirmatory claim or funding authority through this command.
+1. Freeze the controller, comparator, checker, tool catalog, model access, and
+   resource specification at a pinned release. This is a design-stage
+   reference; it does not include future episode or answer hashes.
+2. The custodian authors the fresh protected episodes and separately seals the
+   episode, answer, calibration, arm-snapshot, resource, and seed artifacts.
+3. The custodian builds and seals the final `g4-lite-pack/2` manifest with
+   those real identities. It must not invent future hashes or mutate a prior
+   final-pack seal.
+4. Under a separate execution authorization, the custodian executes the full
+   3 × 24 × runs grid and meters custody separately.
+5. The custodian records `g4-lite-observed-metadata/1` and runs
+   `bind-execution`. The observed record names the exact pre-execution seal
+   plus content-free arm-execution, resource-ledger, and result-grid manifest
+   identities. The command validates both inputs and their seal binding.
+6. A grader separately compares actual arm/resource records with the frozen
+   manifest and evaluates the grid. `bind-execution` does not perform that
+   comparison, establish chronology, verify custody, or grant authority.
+
+Every final-manifest validation response and seal reports
+`PREPARED_NOT_AUTHORIZED`, `protected_execution_authorized: false`, and
+`custody_verified: false`. An `approval_ref`, locally matching seal, or
+provider budget cannot change those values. A screen outcome remains bounded
+to its sealed batch and cannot become a G4 confirmatory claim or funding
+authority through this command.

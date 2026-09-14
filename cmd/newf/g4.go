@@ -68,11 +68,11 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 
 	var preSeal, observed, bindingOut string
 	bind := &cobra.Command{Use: "bind-execution", Short: "Bind observed metadata to an earlier pre-execution G4-lite seal", Args: cobra.NoArgs, RunE: func(_ *cobra.Command, _ []string) error {
-		pre, err := os.ReadFile(preSeal)
+		pre, err := readG4SealBytes(preSeal)
 		if err != nil {
 			return wrapCommandError("g4 pack bind-execution", err)
 		}
-		obs, err := os.ReadFile(observed)
+		obs, err := readG4ObservedMetadataBytes(observed)
 		if err != nil {
 			return wrapCommandError("g4 pack bind-execution", err)
 		}
@@ -147,7 +147,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 }
 
 func readG4Manifest(path string) (g4pack.Manifest, []byte, error) {
-	raw, err := os.ReadFile(path)
+	raw, err := readG4BoundedFile(path, g4pack.MaxManifestBytes, "G4-lite pack manifest")
 	if err != nil {
 		return g4pack.Manifest{}, nil, err
 	}
@@ -156,19 +156,49 @@ func readG4Manifest(path string) (g4pack.Manifest, []byte, error) {
 }
 
 func readG4Seal(path string) (g4pack.Seal, error) {
-	f, err := os.Open(path)
+	raw, err := readG4SealBytes(path)
 	if err != nil {
 		return g4pack.Seal{}, err
-	}
-	defer f.Close()
-	raw, err := io.ReadAll(io.LimitReader(f, g4pack.MaxSealBytes+1))
-	if err != nil {
-		return g4pack.Seal{}, err
-	}
-	if len(raw) > g4pack.MaxSealBytes {
-		return g4pack.Seal{}, fmt.Errorf("G4-lite pack seal exceeds %d bytes", g4pack.MaxSealBytes)
 	}
 	return g4pack.DecodeSeal(raw)
+}
+
+func readG4SealBytes(path string) ([]byte, error) {
+	raw, err := readG4BoundedFile(path, g4pack.MaxSealBytes, "G4-lite pack seal")
+	if err != nil {
+		return nil, err
+	}
+	if _, err := g4pack.DecodeSeal(raw); err != nil {
+		return nil, err
+	}
+	return raw, nil
+}
+
+func readG4ObservedMetadataBytes(path string) ([]byte, error) {
+	raw, err := readG4BoundedFile(path, g4pack.MaxObservedMetadataBytes, "G4-lite observed metadata")
+	if err != nil {
+		return nil, err
+	}
+	if _, err := g4pack.DecodeObservedMetadata(raw); err != nil {
+		return nil, err
+	}
+	return raw, nil
+}
+
+func readG4BoundedFile(path string, max int, label string) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	raw, err := io.ReadAll(io.LimitReader(f, int64(max)+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(raw) > max {
+		return nil, fmt.Errorf("%s exceeds %d bytes", label, max)
+	}
+	return raw, nil
 }
 
 func writeG4PackResponse(stdout io.Writer, opts *rootOptions, response g4PackResponse) error {

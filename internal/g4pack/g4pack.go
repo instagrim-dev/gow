@@ -1,6 +1,6 @@
-// Package g4pack defines a content-free freeze receipt for the protected
-// G4-lite shaping screen. It binds the fixed screen design without receiving
-// episodes, answers, histories, outputs, or execution records.
+// Package g4pack defines a content-free final-pack receipt for the protected
+// G4-lite shaping screen. It binds the fixed screen design and artifact
+// identities without receiving episodes, answers, histories, outputs, or execution records.
 package g4pack
 
 import (
@@ -20,14 +20,15 @@ import (
 )
 
 const (
-	Schema                = "g4-lite-pack/1"
-	SealSchema            = "g4-lite-pack-seal/1"
-	MaxManifestBytes      = 256 << 10
-	MaxSealBytes          = 64 << 10
-	PreparedNotAuthorized = "PREPARED_NOT_AUTHORIZED"
-	NoProtectedExecution  = "protected execution is not authorized by this manifest or its seal"
-	CustodyNotVerified    = "custody declarations are retained but not independently verified"
-	SealScope             = "metadata-only G4-lite freeze; protected execution remains unauthorized; custody remains unverified"
+	Schema                   = "g4-lite-pack/2"
+	SealSchema               = "g4-lite-pack-seal/2"
+	MaxManifestBytes         = 256 << 10
+	MaxSealBytes             = 64 << 10
+	MaxObservedMetadataBytes = 256 << 10
+	PreparedNotAuthorized    = "PREPARED_NOT_AUTHORIZED"
+	NoProtectedExecution     = "protected execution is not authorized by this manifest or its seal"
+	CustodyNotVerified       = "custody declarations are retained but not independently verified"
+	SealScope                = "metadata-only G4-lite final-pack seal; protected execution remains unauthorized; custody remains unverified"
 
 	RequiredInformative = 12
 	RequiredLowValue    = 6
@@ -103,9 +104,9 @@ type RunDesign struct {
 }
 
 type Endpoint struct {
-	Kind                     string `json:"kind"`
-	IncludesTargetCost       bool   `json:"includes_target_cost"`
-	SameTotalResourceCeiling bool   `json:"same_total_resource_ceiling"`
+	Kind                            string `json:"kind"`
+	IncludesTargetCost              bool   `json:"includes_target_cost"`
+	SameTaskDirectedResourceCeiling bool   `json:"same_task_directed_resource_ceiling"`
 }
 
 type SpendingRule struct {
@@ -114,7 +115,10 @@ type SpendingRule struct {
 	MaxHGLossLowAndMisleading int    `json:"max_hg_loss_low_and_misleading"`
 	MinDifferenceFamilies     int    `json:"min_difference_families"`
 	RequireHGAtLeastH0        bool   `json:"require_hg_at_least_h0"`
-	Rounding                  string `json:"rounding"`
+	DecisionArithmetic        string `json:"decision_arithmetic"`
+	ControlLossArithmetic     string `json:"control_loss_arithmetic"`
+	FamilyAdvantageArithmetic string `json:"family_advantage_arithmetic"`
+	TaskDirectedResourcesOnly bool   `json:"task_directed_resources_only"`
 }
 
 type ExecutionDeclaration struct {
@@ -142,6 +146,21 @@ type Seal struct {
 	Scope          string     `json:"scope"`
 }
 
+// ObservedMetadata is the smallest content-free handoff accepted after a
+// screen execution. Its records identify the actual arm execution, resource
+// ledger, and result grid. Whether those actual records conform to the frozen
+// manifest is a separate grading comparison, deliberately not inferred here.
+type ObservedMetadata struct {
+	Schema                 string      `json:"schema"`
+	PreExecutionSealSHA256 string      `json:"pre_execution_seal_sha256"`
+	PreExecutionSealBytes  int         `json:"pre_execution_seal_bytes"`
+	ArmExecutionManifest   ManifestRef `json:"arm_execution_manifest"`
+	ResourceLedgerManifest ManifestRef `json:"resource_ledger_manifest"`
+	ResultGridManifest     ManifestRef `json:"result_grid_manifest"`
+}
+
+const ObservedMetadataSchema = "g4-lite-observed-metadata/1"
+
 func Decode(raw []byte) (Manifest, error) {
 	var m Manifest
 	if len(raw) == 0 || len(raw) > MaxManifestBytes || !utf8.Valid(raw) {
@@ -153,8 +172,8 @@ func Decode(raw []byte) (Manifest, error) {
 		"total", "history_informative", "history_low_value", "history_misleading", "min_families",
 		"h0", "h1", "hg", "controller_id", "snapshot", "model_config_sha256", "tool_catalog_sha256", "checker_version", "resource_ceiling", "custody_outside_ceiling", "h1_review_ref", "h1_reviewer_role",
 		"runs_per_cell", "seed_policy", "seed_manifest", "budget_constraint_ref",
-		"kind", "includes_target_cost", "same_total_resource_ceiling",
-		"max_invalid_certified", "min_hg_over_h1", "max_hg_loss_low_and_misleading", "min_difference_families", "require_hg_at_least_h0", "rounding",
+		"kind", "includes_target_cost", "same_task_directed_resource_ceiling",
+		"max_invalid_certified", "min_hg_over_h1", "max_hg_loss_low_and_misleading", "min_difference_families", "require_hg_at_least_h0", "decision_arithmetic", "control_loss_arithmetic", "family_advantage_arithmetic", "task_directed_resources_only",
 		"resource_ceiling_ref", "provider_call_ceiling", "provider_spend_cents", "approval_ref",
 	}
 	if err := toolreg.StrictKeys(raw, "G4-lite pack manifest", keys, 8); err != nil {
@@ -220,12 +239,12 @@ func (m Manifest) Validate() error {
 		return fmt.Errorf("seed_policy must be fixed_three_seeds or single_run_budget_constrained")
 	}
 	e := m.Endpoint
-	if e.Kind != "exact_objective_within_same_total_resource_cap" || !e.IncludesTargetCost || !e.SameTotalResourceCeiling {
-		return fmt.Errorf("endpoint must be exact objective including target cost within the same total resource cap")
+	if e.Kind != "exact_objective_within_same_task_directed_resource_cap/1" || !e.IncludesTargetCost || !e.SameTaskDirectedResourceCeiling {
+		return fmt.Errorf("endpoint must be exact objective including target cost within the same task-directed resource cap")
 	}
 	s := m.SpendingRule
-	if s.MaxInvalidCertified != 0 || s.MinHGOverH1 != 3 || s.MaxHGLossLowAndMisleading != 1 || s.MinDifferenceFamilies != 2 || !s.RequireHGAtLeastH0 || s.Rounding != "against_funding" {
-		return fmt.Errorf("spending_rule must retain the fixed G4-lite conditions and unfavorable rounding")
+	if s.MaxInvalidCertified != 0 || s.MinHGOverH1 != 3 || s.MaxHGLossLowAndMisleading != 1 || s.MinDifferenceFamilies != 2 || !s.RequireHGAtLeastH0 || s.DecisionArithmetic != "run_summed_exact/1" || s.ControlLossArithmetic != "net_control_stratum_run_summed/1" || s.FamilyAdvantageArithmetic != "informative_positive_run_summed/1" || !s.TaskDirectedResourcesOnly {
+		return fmt.Errorf("spending_rule must retain the fixed G4-lite conditions, exact run-summed arithmetic, and task-directed resource cap")
 	}
 	x := m.Execution
 	if x.ResourceCeilingRef != a.ResourceCeiling.Locator || x.ResourceCeilingRef == "" || x.ProviderCallCeiling < 0 || x.ProviderSpendCents < 0 || len(x.ApprovalRef) > 4096 {
@@ -271,6 +290,34 @@ func DecodeSeal(raw []byte) (Seal, error) {
 	return s, s.Validate()
 }
 
+func DecodeObservedMetadata(raw []byte) (ObservedMetadata, error) {
+	var m ObservedMetadata
+	if len(raw) == 0 || len(raw) > MaxObservedMetadataBytes || !utf8.Valid(raw) {
+		return m, fmt.Errorf("G4-lite observed metadata is empty, invalid UTF-8, or exceeds %d bytes", MaxObservedMetadataBytes)
+	}
+	keys := []string{"schema", "pre_execution_seal_sha256", "pre_execution_seal_bytes", "arm_execution_manifest", "resource_ledger_manifest", "result_grid_manifest", "sha256", "byte_length", "locator"}
+	if err := toolreg.StrictKeys(raw, "G4-lite observed metadata", keys, 4); err != nil {
+		return m, err
+	}
+	d := json.NewDecoder(bytes.NewReader(raw))
+	d.DisallowUnknownFields()
+	if err := d.Decode(&m); err != nil {
+		return m, err
+	}
+	if _, err := d.Token(); err != io.EOF {
+		return m, fmt.Errorf("G4-lite observed metadata must contain exactly one JSON object")
+	}
+	if m.Schema != ObservedMetadataSchema || !sha256Hex.MatchString(m.PreExecutionSealSHA256) || m.PreExecutionSealBytes < 1 {
+		return m, fmt.Errorf("G4-lite observed metadata has an invalid identity")
+	}
+	for name, ref := range map[string]ManifestRef{"arm_execution_manifest": m.ArmExecutionManifest, "resource_ledger_manifest": m.ResourceLedgerManifest, "result_grid_manifest": m.ResultGridManifest} {
+		if err := validateRef(name, ref); err != nil {
+			return m, err
+		}
+	}
+	return m, nil
+}
+
 func (s Seal) Validate() error {
 	if s.Schema != SealSchema || !sha256Hex.MatchString(s.ManifestSHA256) || s.ManifestBytes < 1 || strings.TrimSpace(s.PackID) == "" {
 		return fmt.Errorf("G4-lite pack seal has an invalid identity")
@@ -313,11 +360,18 @@ type ExecutionBinding struct {
 	ObservedMetadataBytes  int    `json:"observed_metadata_bytes"`
 }
 
-const ExecutionBindingSchema = "g4-lite-execution-binding/1"
+const ExecutionBindingSchema = "g4-lite-execution-binding/2"
 
 func BindExecution(pre, observed []byte, at time.Time) (ExecutionBinding, error) {
-	if len(pre) == 0 || len(observed) == 0 {
-		return ExecutionBinding{}, fmt.Errorf("pre-execution seal and observed metadata are required")
+	if _, err := DecodeSeal(pre); err != nil {
+		return ExecutionBinding{}, fmt.Errorf("pre-execution seal: %w", err)
+	}
+	m, err := DecodeObservedMetadata(observed)
+	if err != nil {
+		return ExecutionBinding{}, fmt.Errorf("observed metadata: %w", err)
+	}
+	if m.PreExecutionSealSHA256 != Digest(pre) || m.PreExecutionSealBytes != len(pre) {
+		return ExecutionBinding{}, fmt.Errorf("observed metadata does not identify the supplied pre-execution seal")
 	}
 	return ExecutionBinding{Schema: ExecutionBindingSchema, CreatedAt: at.UTC().Format(time.RFC3339Nano), PreExecutionSealSHA256: Digest(pre), PreExecutionSealBytes: len(pre), ObservedMetadataSHA256: Digest(observed), ObservedMetadataBytes: len(observed)}, nil
 }
