@@ -93,6 +93,8 @@ newf experiment compare [experiment-id] [--problem <problem-id>] [--baseline <ar
 newf policy mutate --problem <problem-id> [--no-provider]
 newf policy list --problem <problem-id>
 newf policy show [policy-revision-id] [--problem <problem-id>]
+newf composition commit --input <attempt.json> --out <commitment.json>
+newf composition observe <commitment.json> --out <observation.json>
 newf g1 pack validate --input <metadata.json>
 newf g1 pack seal --input <metadata.json> --out <new-seal.json>
 newf g1 pack inspect <seal.json> [--input <metadata.json>]
@@ -116,6 +118,8 @@ By default the CLI stores state in:
 ```
 
 Override the database location with `--db <path>` or `NEWF_DB=<path>`.
+
+For the bounded residual-driven composition path, use `newf composition commit` to create a pre-observation record and `newf composition observe` to replay it and measure the original objective separately. See [`docs/composition.md`](docs/composition.md).
 
 ### Example
 
