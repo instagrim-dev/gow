@@ -6,6 +6,12 @@ nonceiling pack by byte identity, fixes its construction controls and exposure
 separation, and declares two resource vectors before either calibration runs.
 It contains no protected task, answer, result, or custody material.
 
+This receipt is retained as historical preparation evidence. Its former
+procedure executor ran the high-choice diagnostic at H0's derived median (2)
+rather than the declared high vector (4). Use the successor
+[`../2026-09-14-g4-calibration-procedure-exact/`](../2026-09-14-g4-calibration-procedure-exact/)
+for exact-vector readiness evidence.
+
 The command executed every declared choice and retained both results in one
 `g4-lite-sensitivity-calibration-receipt/2`:
 

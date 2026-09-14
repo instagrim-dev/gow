@@ -370,21 +370,29 @@ type ExecutionBinding struct {
 
 const ExecutionBindingSchema = "g4-lite-execution-binding/2"
 
-const SubstantiveGradeSchema = "g4-lite-substantive-grade/1"
+const (
+	// SubstantiveGradeSchema records per-assessment state so an early stop can
+	// be represented without pretending every private artifact was available.
+	SubstantiveGradeSchema       = "g4-lite-substantive-grade/2"
+	LegacySubstantiveGradeSchema = "g4-lite-substantive-grade/1"
+)
 
 // SubstantiveGrade is the content-free return from a grader that was permitted
 // to inspect protected evidence. The CLI validates only the return contract;
-// the four completed checks remain the grader's attributable judgment.
+// the assessment state remains the grader's attributable judgment. Historical
+// /1 judgments remain readable and require all four completed checks.
 type SubstantiveGrade struct {
-	Schema           string            `json:"schema"`
-	GradedAt         string            `json:"graded_at"`
-	GraderRole       string            `json:"grader_role"`
-	ReturnScope      string            `json:"return_scope"`
-	Manifest         ManifestRef       `json:"manifest"`
-	ExecutionReceipt ManifestRef       `json:"execution_receipt"`
-	ExecutionBinding ManifestRef       `json:"execution_binding"`
-	Checks           SubstantiveChecks `json:"checks"`
-	Verdict          string            `json:"verdict"`
+	Schema           string                       `json:"schema"`
+	GradedAt         string                       `json:"graded_at"`
+	GraderRole       string                       `json:"grader_role"`
+	ReturnScope      string                       `json:"return_scope"`
+	Manifest         ManifestRef                  `json:"manifest"`
+	ExecutionReceipt ManifestRef                  `json:"execution_receipt"`
+	ExecutionBinding ManifestRef                  `json:"execution_binding"`
+	Checks           SubstantiveChecks            `json:"checks"`
+	AssessmentStates *SubstantiveAssessmentStates `json:"assessment_states,omitempty"`
+	EarlyStop        *SubstantiveEarlyStop        `json:"early_stop,omitempty"`
+	Verdict          string                       `json:"verdict"`
 }
 
 type SubstantiveChecks struct {
@@ -394,12 +402,27 @@ type SubstantiveChecks struct {
 	SpendingArithmeticAssessed bool `json:"spending_arithmetic_assessed"`
 }
 
+// SubstantiveAssessmentStates says what the protected-evidence grader could
+// assess. ConstructionRouteEvidence is the place for claims about routes,
+// live alternatives, and enabling steps that pack structure cannot infer.
+type SubstantiveAssessmentStates struct {
+	Answers                   string `json:"answers"`
+	ResultQuality             string `json:"result_quality"`
+	ResourceCompliance        string `json:"resource_compliance"`
+	SpendingArithmetic        string `json:"spending_arithmetic"`
+	ConstructionRouteEvidence string `json:"construction_route_evidence"`
+}
+
+type SubstantiveEarlyStop struct {
+	Reason string `json:"reason"`
+}
+
 func DecodeSubstantiveGrade(raw []byte) (SubstantiveGrade, error) {
 	var grade SubstantiveGrade
 	if len(raw) == 0 || len(raw) > MaxManifestBytes || !utf8.Valid(raw) {
 		return grade, fmt.Errorf("G4 substantive grade is empty, invalid UTF-8, or exceeds %d bytes", MaxManifestBytes)
 	}
-	keys := []string{"schema", "graded_at", "grader_role", "return_scope", "manifest", "execution_receipt", "execution_binding", "checks", "verdict", "sha256", "byte_length", "locator", "answers_assessed", "result_quality_assessed", "resource_compliance_assessed", "spending_arithmetic_assessed"}
+	keys := []string{"schema", "graded_at", "grader_role", "return_scope", "manifest", "execution_receipt", "execution_binding", "checks", "assessment_states", "early_stop", "verdict", "sha256", "byte_length", "locator", "answers_assessed", "result_quality_assessed", "resource_compliance_assessed", "spending_arithmetic_assessed", "answers", "result_quality", "resource_compliance", "spending_arithmetic", "construction_route_evidence", "reason"}
 	if err := toolreg.StrictKeys(raw, "G4 substantive grade", keys, 4); err != nil {
 		return grade, err
 	}
@@ -415,12 +438,33 @@ func DecodeSubstantiveGrade(raw []byte) (SubstantiveGrade, error) {
 }
 
 func (g SubstantiveGrade) Validate() error {
-	if g.Schema != SubstantiveGradeSchema || g.GraderRole != "substantive_protected_evidence_grader" || g.ReturnScope != "protected_evidence_inspected_content_free_return" {
-		return fmt.Errorf("substantive grade requires the current schema, protected-evidence grader role, and content-free return scope")
+	if (g.Schema != SubstantiveGradeSchema && g.Schema != LegacySubstantiveGradeSchema) || g.GraderRole != "substantive_protected_evidence_grader" || g.ReturnScope != "protected_evidence_inspected_content_free_return" {
+		return fmt.Errorf("substantive grade requires a supported schema, protected-evidence grader role, and content-free return scope")
 	}
 	if _, err := time.Parse(time.RFC3339Nano, g.GradedAt); err != nil {
 		return fmt.Errorf("substantive grade graded_at must be RFC3339: %w", err)
 	}
+	switch g.Verdict {
+	case "PASS", "EVALUATED_NEGATIVE", "INCONCLUSIVE_INCOMPLETE", "INVALID":
+	default:
+		return fmt.Errorf("substantive grade verdict must be PASS, EVALUATED_NEGATIVE, INCONCLUSIVE_INCOMPLETE, or INVALID")
+	}
+	if g.Schema == LegacySubstantiveGradeSchema {
+		if g.AssessmentStates != nil || g.EarlyStop != nil {
+			return fmt.Errorf("historical substantive grade /1 cannot contain /2 assessment state or early-stop fields")
+		}
+		if err := g.validateCompleteReferences(); err != nil {
+			return err
+		}
+		if !g.Checks.AnswersAssessed || !g.Checks.ResultQualityAssessed || !g.Checks.ResourceComplianceAssessed || !g.Checks.SpendingArithmeticAssessed {
+			return fmt.Errorf("substantive grade /1 must attest to answer, result-quality, resource-compliance, and spending-arithmetic assessment")
+		}
+		return nil
+	}
+	return g.validateV2()
+}
+
+func (g SubstantiveGrade) validateCompleteReferences() error {
 	for name, ref := range map[string]ManifestRef{"manifest": g.Manifest, "execution_receipt": g.ExecutionReceipt, "execution_binding": g.ExecutionBinding} {
 		if err := validateRef(name, ref); err != nil {
 			return err
@@ -429,14 +473,62 @@ func (g SubstantiveGrade) Validate() error {
 	if g.Manifest.SHA256 == g.ExecutionReceipt.SHA256 || g.Manifest.SHA256 == g.ExecutionBinding.SHA256 || g.ExecutionReceipt.SHA256 == g.ExecutionBinding.SHA256 {
 		return fmt.Errorf("substantive grade must identify distinct manifest, execution receipt, and execution binding artifacts")
 	}
-	if !g.Checks.AnswersAssessed || !g.Checks.ResultQualityAssessed || !g.Checks.ResourceComplianceAssessed || !g.Checks.SpendingArithmeticAssessed {
-		return fmt.Errorf("substantive grade must attest to answer, result-quality, resource-compliance, and spending-arithmetic assessment")
+	return nil
+}
+
+func optionalGradeReference(name string, ref ManifestRef) (bool, error) {
+	if ref.SHA256 == "" && ref.ByteLength == 0 && ref.Locator == "" {
+		return false, nil
 	}
-	switch g.Verdict {
-	case "PASS", "EVALUATED_NEGATIVE", "INCONCLUSIVE_INCOMPLETE", "INVALID":
+	if err := validateRef(name, ref); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func validAssessmentState(value string) bool {
+	return value == "ASSESSED" || value == "UNAVAILABLE" || value == "SKIPPED"
+}
+
+func (g SubstantiveGrade) validateV2() error {
+	if g.AssessmentStates == nil {
+		return fmt.Errorf("substantive grade /2 requires assessment_states")
+	}
+	states := []string{g.AssessmentStates.Answers, g.AssessmentStates.ResultQuality, g.AssessmentStates.ResourceCompliance, g.AssessmentStates.SpendingArithmetic, g.AssessmentStates.ConstructionRouteEvidence}
+	allAssessed := true
+	for _, state := range states {
+		if !validAssessmentState(state) {
+			return fmt.Errorf("substantive grade /2 assessment states must be ASSESSED, UNAVAILABLE, or SKIPPED")
+		}
+		allAssessed = allAssessed && state == "ASSESSED"
+	}
+	available := 0
+	for name, ref := range map[string]ManifestRef{"manifest": g.Manifest, "execution_receipt": g.ExecutionReceipt, "execution_binding": g.ExecutionBinding} {
+		present, err := optionalGradeReference(name, ref)
+		if err != nil {
+			return err
+		}
+		if present {
+			available++
+		}
+	}
+	if g.Verdict == "PASS" || g.Verdict == "EVALUATED_NEGATIVE" || allAssessed {
+		if g.EarlyStop != nil {
+			return fmt.Errorf("completed substantive grade /2 cannot contain early_stop")
+		}
+		if !allAssessed {
+			return fmt.Errorf("PASS and EVALUATED_NEGATIVE substantive grade /2 judgments require every assessment")
+		}
+		return g.validateCompleteReferences()
+	}
+	if available == 0 || g.EarlyStop == nil || strings.TrimSpace(g.EarlyStop.Reason) == "" {
+		return fmt.Errorf("early stopped substantive grade /2 requires an available artifact reference and early_stop reason")
+	}
+	switch g.EarlyStop.Reason {
+	case "EXECUTION_INTERRUPTED", "IDENTITY_MISMATCH", "MISSING_ARTIFACT", "RESOURCE_BLOCKED", "CUSTODY_STOP", "GRADER_STOP":
 		return nil
 	default:
-		return fmt.Errorf("substantive grade verdict must be PASS, EVALUATED_NEGATIVE, INCONCLUSIVE_INCOMPLETE, or INVALID")
+		return fmt.Errorf("substantive grade /2 early_stop reason is not recognized")
 	}
 }
 

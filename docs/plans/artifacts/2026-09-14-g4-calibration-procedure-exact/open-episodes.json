@@ -1,0 +1,1213 @@
+{
+  "schema": "shaping-pack/1",
+  "label": "open-nonceiling-candidate",
+  "provenance": "synthetic development calibration candidate; no protected material",
+  "episodes": [
+    {
+      "id": "candidate-00",
+      "stratum": "history_informative",
+      "family": "open-route-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "candidate-01",
+      "stratum": "history_informative",
+      "family": "open-route-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "candidate-02",
+      "stratum": "history_informative",
+      "family": "open-route-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "candidate-03",
+      "stratum": "history_informative",
+      "family": "open-route-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "candidate-04",
+      "stratum": "history_informative",
+      "family": "open-route-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "candidate-05",
+      "stratum": "history_informative",
+      "family": "open-route-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "candidate-06",
+      "stratum": "history_informative",
+      "family": "open-route-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "candidate-07",
+      "stratum": "history_informative",
+      "family": "open-route-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "candidate-08",
+      "stratum": "history_informative",
+      "family": "open-route-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "candidate-09",
+      "stratum": "history_informative",
+      "family": "open-route-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "candidate-10",
+      "stratum": "history_informative",
+      "family": "open-route-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "candidate-11",
+      "stratum": "history_informative",
+      "family": "open-route-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "candidate-12",
+      "stratum": "history_low_value",
+      "family": "open-control-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": []
+    },
+    {
+      "id": "candidate-13",
+      "stratum": "history_low_value",
+      "family": "open-control-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": []
+    },
+    {
+      "id": "candidate-14",
+      "stratum": "history_low_value",
+      "family": "open-control-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": []
+    },
+    {
+      "id": "candidate-15",
+      "stratum": "history_low_value",
+      "family": "open-control-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": []
+    },
+    {
+      "id": "candidate-16",
+      "stratum": "history_low_value",
+      "family": "open-control-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": []
+    },
+    {
+      "id": "candidate-17",
+      "stratum": "history_low_value",
+      "family": "open-control-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": []
+    },
+    {
+      "id": "candidate-18",
+      "stratum": "history_misleading",
+      "family": "open-control-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "candidate-19",
+      "stratum": "history_misleading",
+      "family": "open-control-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "candidate-20",
+      "stratum": "history_misleading",
+      "family": "open-control-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "candidate-21",
+      "stratum": "history_misleading",
+      "family": "open-control-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "candidate-22",
+      "stratum": "history_misleading",
+      "family": "open-control-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "candidate-23",
+      "stratum": "history_misleading",
+      "family": "open-control-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    }
+  ]
+}

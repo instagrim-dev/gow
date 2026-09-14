@@ -28,7 +28,7 @@ manifest contains only identity references and declarations:
 |---|---|
 | `episode_manifest`, `answer_manifest` | Separate lower-case SHA-256 identities, positive byte lengths, and locators. No protected bytes appear in the record. |
 | `calibration_manifest` | Identity of the separately retained open-case sensitivity calibration. It documents pre-seal calibration and does not permit protected-case tuning. |
-| `generation_procedure_manifest` | Identity of the frozen `g4-lite-calibration-procedure/1` used for open calibration and protected authoring. The executor receives those bytes, verifies this identity, and checks the protected pack's family prefix, catalog branching, and rewrite depth against it. |
+| `generation_procedure_manifest` | Identity of the frozen `g4-lite-calibration-procedure/1` used for open calibration and protected authoring. The executor verifies these bytes, the protected family prefix, minimum catalog-entry count, minimum expression-tree depth, and that the resource ceiling is the procedure's primary vector. |
 | `custody` | Declares `unexposed_to_implementation_cases`, `no_protected_content`, `separate_answer_manifest`, and a custody record. These remain declarations rather than independently verified facts. |
 | `population` | Exactly 24 episodes: 12 `history_informative`, 6 `history_low_value`, and 6 `history_misleading`, with at least two construction families. |
 | `arms` | Three distinct frozen controller snapshots: H0, H1, and HG. They bind one model configuration digest, one tool-catalog digest, the current finite checker, and one per-arm task-directed resource-ceiling identity. H1 requires a recorded `non_implementer` review. Custody work is outside that ceiling and must later be metered. |
@@ -101,9 +101,9 @@ cannot consume a cell.
 `single_run_budget_constrained`. Before doing work it verifies the exact bytes
 of the supplied episode, resource, runtime-identity, and (for `/3`) frozen
 generation-procedure artifacts against the identities in the final manifest.
-It uses the procedure only to enforce its protected family namespace, catalog
-branching, and rewrite-depth controls; it does not inspect answers or verify
-custody. The episode artifact is `shaping-pack/1` and
+It uses the procedure only to enforce its protected family namespace, minimum
+catalog-entry count, minimum expression-tree depth, and exact primary resource
+vector; it does not inspect answers or verify custody. The episode artifact is `shaping-pack/1` and
 must contain the fixed 24-episode 12/6/6 population. The resource artifact is
 one strict JSON object:
 
@@ -158,18 +158,24 @@ For a prospective protected cycle, use the versioned
 `g4-lite-calibration-procedure/1` input with `g4 calibrate-procedure`. It
 freezes the exact public pack used for calibration, at least two concrete
 resource vectors, one predeclared primary vector, and the authoring controls:
-minimum rewrite depth, branching alternatives, cost-neutral enabling steps,
-independently verified targets, and an independently specified history method.
+minimum expression-tree depth, minimum catalog-entry count, a declared
+cost-neutral enabling-step count, independently verified targets, and an
+independently specified history method.
 It also declares non-overlapping open/protected family prefixes and the
 required exposure boundary. The procedure must declare that it is frozen
 before protected authoring and that protected targets will not be adjusted
 after targeted performance. The command refuses an open pack whose identity,
-family namespace, catalog alternatives, or expression depth violate that
-procedure.
+family namespace, catalog entry count, or expression-tree depth violate that
+procedure. It does not infer rewrite distance, a live branch on a route, route
+necessity or cost neutrality, target reachability, or independent construction
+from the pack. The custodian retains construction evidence, and the substantive
+grader records its separate assessment of that evidence.
 
-Its `/2` receipt retains every declared resource choice, including a blocked
-attempt, plus two open-only feasibility diagnostics for each completed
-three-arm run: the maximum possible HG-over-H1 advantage (`24 - H1`), which
+Its `/3` receipt retains every declared resource choice, including a blocked
+attempt, plus the H0 reference result and a three-arm diagnostic run at the
+**exact declared vector** for that choice. The reference median is never
+substituted into the diagnostic allowance. Each completed run also retains two
+open-only feasibility diagnostics: the maximum possible HG-over-H1 advantage (`24 - H1`), which
 must be at least three for the one-run margin to be attainable, and the number
 of informative families containing an H1 noncompletion, which must be at
 least two for the family condition to be attainable. These diagnostics do not
@@ -201,9 +207,13 @@ procedure, not a spending, grading, custody, or dispatch decision.
 7. A substantive grader separately compares actual arm/resource records with
    the frozen manifest, assesses the protected answers and result quality,
    verifies resource compliance and spending arithmetic, and returns only a
-   content-free `g4-lite-substantive-grade/1` judgment. Its strict return
-   schema requires attestations for all four assessment dimensions and permits
-   only `PASS`, `EVALUATED_NEGATIVE`, `INCONCLUSIVE_INCOMPLETE`, or `INVALID`.
+   content-free `g4-lite-substantive-grade/2` judgment. Completed `PASS` and
+   `EVALUATED_NEGATIVE` returns require every assessment and all three artifact
+   references. An early `INVALID` or `INCONCLUSIVE_INCOMPLETE` return instead
+   records available references, each assessment as `ASSESSED`, `UNAVAILABLE`,
+   or `SKIPPED`, and a stopping reason. It also records the separate
+   construction-route-evidence assessment. The permitted verdicts are `PASS`,
+   `EVALUATED_NEGATIVE`, `INCONCLUSIVE_INCOMPLETE`, and `INVALID`.
    `g4 grade validate` checks that return contract; it does not inspect the
    protected evidence or replace the grader's judgment. `bind-execution` does not perform that comparison,
    establish chronology, verify custody, or grant authority.

@@ -37,6 +37,7 @@ type g4CalibrationPhase struct {
 	H0UnreachableEpisodes []string                       `json:"h0_unreachable_episodes"`
 	H0Probes              []sealedrun.H0CalibrationProbe `json:"h0_probes"`
 	ProposedExpansions    int                            `json:"proposed_expansions"`
+	DiagnosticExpansions  int                            `json:"diagnostic_expansions"`
 	Error                 string                         `json:"error,omitempty"`
 }
 
@@ -153,7 +154,7 @@ func g4OpenSensitivityHeadroom(pack sealedrun.Pack, diagnostic sealedrun.Resourc
 	}
 }
 
-func runG4OpenCalibration(pack sealedrun.Pack, budget sealedrun.ResourceBudget, cancel <-chan struct{}) (g4CalibrationPhase, *sealedrun.ResourceReceipt, string, *g4SensitivityHeadroom, error) {
+func runG4OpenCalibration(pack sealedrun.Pack, budget sealedrun.ResourceBudget, diagnosticExpansions int, cancel <-chan struct{}) (g4CalibrationPhase, *sealedrun.ResourceReceipt, string, *g4SensitivityHeadroom, error) {
 	limits := rewrite.Limits{MaxStates: budget.MaxStates, MaxTermNodes: budget.MaxTermNodes, Cancel: cancel, Work: &rewrite.WorkBudget{MaxRuleApplications: budget.RuleApplications, MaxCandidates: budget.Candidates}}
 	minimums, unreachable, probes, err := sealedrun.CalibrateH0MinBudgetsWithProbes(pack, budget.Expansions, limits)
 	if err != nil {
@@ -170,12 +171,12 @@ func runG4OpenCalibration(pack sealedrun.Pack, budget sealedrun.ResourceBudget, 
 	if len(positive) > 0 {
 		proposed = positive[len(positive)/2]
 	}
-	phase := g4CalibrationPhase{H0MinimumExpansions: minimums, H0UnreachableEpisodes: unreachable, H0Probes: probes, ProposedExpansions: proposed}
+	phase := g4CalibrationPhase{H0MinimumExpansions: minimums, H0UnreachableEpisodes: unreachable, H0Probes: probes, ProposedExpansions: proposed, DiagnosticExpansions: diagnosticExpansions}
 	if len(positive) == 0 {
 		return phase, nil, g4CalibrationStatus(minimums, unreachable, nil, len(pack.Episodes)), nil, nil
 	}
 	calibrated := budget
-	calibrated.Expansions = proposed
+	calibrated.Expansions = diagnosticExpansions
 	receipt, runErr := sealedrun.RunG4ResourceScreen(pack, calibrated, cancel)
 	if runErr != nil {
 		return phase, &receipt, "DIAGNOSTIC_BLOCKED", nil, runErr
@@ -450,7 +451,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 		responses := make([]g4ProcedureCalibrationResponse, 0, len(procedure.ResourceChoices))
 		blocked := false
 		for _, choice := range procedure.ResourceChoices {
-			phase, diagnostic, status, sensitivity, runErr := runG4OpenCalibration(pack, choice.Budget(), cmd.Context().Done())
+			phase, diagnostic, status, sensitivity, runErr := runG4OpenCalibration(pack, choice.Budget(), choice.Expansions, cmd.Context().Done())
 			response := g4ProcedureCalibrationResponse{ResourceChoice: choice, ReferenceCalibration: phase, Diagnostic: diagnostic, Sensitivity: sensitivity, Status: status}
 			if runErr != nil {
 				response.Error = runErr.Error()
@@ -458,7 +459,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 			}
 			responses = append(responses, response)
 		}
-		receipt := g4ProcedureCalibrationReceipt{Schema: "g4-lite-sensitivity-calibration-receipt/2", SourcePackSHA256: g4pack.Digest(packRaw), SourcePackBytes: len(packRaw), Procedure: g4CalibrationProcedureRef{ProcedureID: procedure.ProcedureID, SHA256: g4calibration.Digest(procedureRaw), ByteLength: len(procedureRaw)}, ResourceResponses: responses, Status: "OPEN_CALIBRATION_RECORDED"}
+		receipt := g4ProcedureCalibrationReceipt{Schema: "g4-lite-sensitivity-calibration-receipt/3", SourcePackSHA256: g4pack.Digest(packRaw), SourcePackBytes: len(packRaw), Procedure: g4CalibrationProcedureRef{ProcedureID: procedure.ProcedureID, SHA256: g4calibration.Digest(procedureRaw), ByteLength: len(procedureRaw)}, ResourceResponses: responses, Status: "OPEN_CALIBRATION_RECORDED"}
 		if blocked {
 			receipt.Status = "OPEN_CALIBRATION_PARTIALLY_BLOCKED"
 		}
@@ -533,6 +534,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 		if err := validateG4EpisodePopulation(pack); err != nil {
 			return wrapCommandError("g4 execute", err)
 		}
+		var frozenProcedure *g4calibration.Procedure
 		if m.Schema == g4pack.Schema {
 			if executionProcedure == "" {
 				return wrapCommandError("g4 execute", errors.New("--generation-procedure is required for g4-lite-pack/3 execution"))
@@ -551,6 +553,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 			if err := procedure.ValidateProtectedPack(pack); err != nil {
 				return wrapCommandError("g4 execute", err)
 			}
+			frozenProcedure = &procedure
 		}
 		resourceRaw, err := readG4BoundedFile(resourceCeiling, 64<<10, "G4-lite resource ceiling")
 		if err != nil {
@@ -562,6 +565,9 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 		budget, err := decodeG4ResourceCeiling(resourceRaw)
 		if err != nil {
 			return wrapCommandError("g4 execute", err)
+		}
+		if frozenProcedure != nil && !frozenProcedure.MatchesPrimaryResource(budget) {
+			return wrapCommandError("g4 execute", errors.New("resource ceiling does not match the generation procedure primary resource choice"))
 		}
 		identities, snapshots, err := readAndVerifyG4ArmIdentities(budget, cmd.Context().Done() != nil, executionH0, executionH1, executionHG)
 		if err != nil {
@@ -649,7 +655,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 			Judgment g4pack.SubstantiveGrade `json:"judgment"`
 		}{true, "g4 grade validate", judgment})
 	}}
-	gradeValidate.Flags().StringVar(&substantiveGradeInput, "input", "", "Content-free g4-lite-substantive-grade/1 returned by the designated grader")
+	gradeValidate.Flags().StringVar(&substantiveGradeInput, "input", "", "Content-free g4-lite-substantive-grade/2 returned by the designated grader; historical /1 is readable")
 	_ = gradeValidate.MarkFlagRequired("input")
 	grade.AddCommand(gradeValidate)
 	pack.AddCommand(validate, seal, bind, inspect)

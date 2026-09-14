@@ -28,8 +28,9 @@ separately held `shaping-pack/1` episode artifact, and a bounded
 `g4-resource-ceiling/1` artifact. It also requires the exact three
 content-free runtime-identity artifacts that the final manifest freezes.
 For a new `/3` manifest, it also requires the exact frozen generation-procedure
-artifact and checks its protected family namespace, catalog branching, and
-rewrite-depth controls against the supplied episode pack. Historical `/2`
+artifact and checks its protected family namespace, minimum catalog-entry
+count, minimum expression-tree depth, and exact primary resource vector against
+the supplied episode pack. Historical `/2`
 manifests remain readable as completed evidence but cannot carry this binding.
 `g4 runtime-identity` exports the pinned executable's actual H0/H1/HG decision
 identities; `g4 arm-preflight` must match those records before protected
@@ -86,10 +87,14 @@ open calibration did not carry enough task-generation/resource pressure into
 that protected population. It is preserved; it is not rerun.
 
 The retained [frozen multi-choice open procedure](artifacts/2026-09-14-g4-calibration-procedure/)
-now applies explicit rewrite-depth, branching, enabling-step, target, history,
-family, exposure, and no-post-target-adjustment controls to that public pack.
-At its predeclared low and high resource vectors, it retained H0/H1/HG results
-of 6/6/6 and 24/6/24 respectively. Both leave a maximum possible HG-over-H1
+records expression-tree depth, catalog-entry count, a declared enabling-step
+count, target/history declarations, family, exposure, and no-post-target-
+adjustment controls. It does not establish rewrite distance, live route
+branching, enabling necessity, or target construction; those need custodian
+evidence and substantive-grader assessment. Its prior `/2` result used the
+derived H0 median for the high-vector diagnostic and remains a historical
+preparation artifact only. The successor [exact-vector calibration](artifacts/2026-09-14-g4-calibration-procedure-exact/)
+retains each declared diagnostic at its own resource vector. Its open results leave a maximum possible HG-over-H1
 advantage of 18 and two informative families with H1 headroom, so the stated
 one-run margin and family thresholds are attainable in this open construction.
 This is stronger preparation, not protected evidence or a dispatch decision.
@@ -119,8 +124,10 @@ preparation for a fresh `/3` custodian pack; it remains non-authorizing.
    ledgers, creates observed metadata, and binds it to the earlier seal.
 6. A substantive grader separately checks artifact identity/parity, protected
    answers and result quality, resource compliance, and spending arithmetic;
-   it returns only a content-free `g4-lite-substantive-grade/1` judgment and
-   retains invalid, incomplete, and blocked outcomes. `g4 grade validate`
+   it returns only a content-free `g4-lite-substantive-grade/2` judgment.
+   Completed pass/negative returns need all assessments; early invalid or
+   incomplete returns retain available identities, assessment state, and a
+   stopping reason. `g4 grade validate`
    verifies the return contract without reading protected evidence.
 
 ## Remaining dispatch inputs

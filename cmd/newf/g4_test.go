@@ -223,6 +223,27 @@ func TestG4V3ExecuteBindsAndAppliesFrozenGenerationProcedure(t *testing.T) {
 	if code := execute(context.Background(), []string{"--json", "g4", "execute", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--h0-snapshot", h0Snapshot, "--h1-snapshot", h1Snapshot, "--hg-snapshot", hgSnapshot, "--generation-procedure", procedurePath, "--out", out}, &stdout, &stderr); code != 0 {
 		t.Fatalf("v3 execute did not bind the frozen procedure: %d %s %s", code, stdout.String(), stderr.String())
 	}
+	wrongResource := []byte(strings.Replace(string(g4ValidResourceCeiling), `"expansions":2`, `"expansions":1`, 1))
+	if err := os.WriteFile(resources, wrongResource, 0600); err != nil {
+		t.Fatal(err)
+	}
+	m.Arms.ResourceCeiling = g4pack.ManifestRef{SHA256: g4pack.Digest(wrongResource), ByteLength: int64(len(wrongResource)), Locator: "protected/resources.json"}
+	manifestRaw, err = json.Marshal(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(manifest, manifestRaw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	wrongOut := filepath.Join(filepath.Dir(out), "wrong-resource-receipt.json")
+	stdout.Reset()
+	stderr.Reset()
+	if code := execute(context.Background(), []string{"g4", "execute", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--h0-snapshot", h0Snapshot, "--h1-snapshot", h1Snapshot, "--hg-snapshot", hgSnapshot, "--generation-procedure", procedurePath, "--out", wrongOut}, &stdout, &stderr); code == 0 || !strings.Contains(stderr.String(), "primary resource choice") {
+		t.Fatalf("v3 execute accepted a manifest-bound non-primary resource vector: %d %s %s", code, stdout.String(), stderr.String())
+	}
+	if _, err := os.Stat(wrongOut); !os.IsNotExist(err) {
+		t.Fatalf("wrong resource vector prepared a receipt: %v", err)
+	}
 }
 
 func TestG4ExecuteRejectsWrongPopulationBeforePreparingReceipt(t *testing.T) {
@@ -357,7 +378,8 @@ func TestG4CalibrationStatusDistinguishesCalibrationAndComparatorBoundaries(t *t
 func TestG4CalibrateProcedureRecordsEveryFrozenResourceChoiceAndHeadroom(t *testing.T) {
 	episodes := g4TestEpisodes()
 	for i := range episodes {
-		episodes[i] = strings.Replace(episodes[i], `"catalog":["double-not"]`, `"catalog":["double-not","not-intro"]`, 1)
+		episodes[i] = strings.Replace(episodes[i], `"start":{"op":"not","args":[{"op":"not","args":[{"var":"x"}]}]}`, `"start":{"op":"not","args":[{"op":"not","args":[{"op":"add","args":[{"var":"x"},{"const":0}]}]}]}`, 1)
+		episodes[i] = strings.Replace(episodes[i], `"catalog":["double-not"]`, `"catalog":["double-not","add-zero","not-intro"]`, 1)
 	}
 	_, episodesPath, _, _, _, _, _ := writeG4ExecuteFixture(t, episodes, g4ValidResourceCeiling)
 	packRaw, err := os.ReadFile(episodesPath)
@@ -367,7 +389,7 @@ func TestG4CalibrateProcedureRecordsEveryFrozenResourceChoiceAndHeadroom(t *test
 	dir := t.TempDir()
 	procedurePath := filepath.Join(dir, "procedure.json")
 	out := filepath.Join(dir, "procedure-receipt.json")
-	procedure := fmt.Sprintf(`{"schema":"g4-lite-calibration-procedure/1","procedure_id":"open-sensitivity-v1","open_calibration_pack":{"sha256":%q,"byte_length":%d},"difficulty":{"min_rewrite_depth":2,"min_branching_alternatives":2,"min_cost_neutral_enabling_steps":1,"targets_independently_verified":true},"history_construction":{"method":"independent authored history schedule","independently_specified":true},"resource_choices":[{"id":"tight","expansions":1,"rule_applications":128,"candidates":256,"history_bytes":65536,"check_assignments":4096,"max_states":1024,"max_term_nodes":1024},{"id":"roomy","expansions":2,"rule_applications":128,"candidates":256,"history_bytes":65536,"check_assignments":4096,"max_states":1024,"max_term_nodes":1024}],"primary_resource_id":"roomy","family_exposure_separation":{"open_family_prefix":"fam-","protected_family_prefix":"protected-","open_exposure":"implementation_exposed_open_calibration","protected_exposure":"custodian_only_unexposed_to_implementation_cases"},"protected_authoring":{"freeze_before_authoring":true,"no_post_target_adjustment":true}}`, g4calibration.Digest(packRaw), len(packRaw))
+	procedure := fmt.Sprintf(`{"schema":"g4-lite-calibration-procedure/1","procedure_id":"open-sensitivity-v1","open_calibration_pack":{"sha256":%q,"byte_length":%d},"difficulty":{"min_rewrite_depth":2,"min_branching_alternatives":2,"min_cost_neutral_enabling_steps":1,"targets_independently_verified":true},"history_construction":{"method":"independent authored history schedule","independently_specified":true},"resource_choices":[{"id":"tight","expansions":2,"rule_applications":128,"candidates":256,"history_bytes":65536,"check_assignments":4096,"max_states":1024,"max_term_nodes":1024},{"id":"roomy","expansions":4,"rule_applications":128,"candidates":256,"history_bytes":65536,"check_assignments":4096,"max_states":1024,"max_term_nodes":1024}],"primary_resource_id":"roomy","family_exposure_separation":{"open_family_prefix":"fam-","protected_family_prefix":"protected-","open_exposure":"implementation_exposed_open_calibration","protected_exposure":"custodian_only_unexposed_to_implementation_cases"},"protected_authoring":{"freeze_before_authoring":true,"no_post_target_adjustment":true}}`, g4calibration.Digest(packRaw), len(packRaw))
 	if err := os.WriteFile(procedurePath, []byte(procedure), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -389,13 +411,19 @@ func TestG4CalibrateProcedureRecordsEveryFrozenResourceChoiceAndHeadroom(t *test
 		if response.Diagnostic == nil || response.Sensitivity == nil || response.Sensitivity.RequiredHGOverH1 != 3 || response.Sensitivity.RequiredInformativeFamilies != 2 {
 			t.Fatalf("procedure response omitted diagnostic headroom: %+v", response)
 		}
+		if response.Diagnostic.Budget.Expansions != response.ResourceChoice.Expansions || response.ReferenceCalibration.DiagnosticExpansions != response.ResourceChoice.Expansions {
+			t.Fatalf("procedure diagnostic did not run at its exact declared vector: %+v", response)
+		}
+		if response.ResourceChoice.ID == "roomy" && (response.ReferenceCalibration.ProposedExpansions != 2 || response.ReferenceCalibration.DiagnosticExpansions != 4) {
+			t.Fatalf("cap-four regression fixture did not preserve derived-two reference and exact-four diagnostic: %+v", response)
+		}
 	}
 	raw, err := os.ReadFile(out)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var receipt g4ProcedureCalibrationReceipt
-	if err := json.Unmarshal(raw, &receipt); err != nil || receipt.Schema != "g4-lite-sensitivity-calibration-receipt/2" || len(receipt.ResourceResponses) != 2 || receipt.Procedure.ProcedureID != "open-sensitivity-v1" {
+	if err := json.Unmarshal(raw, &receipt); err != nil || receipt.Schema != "g4-lite-sensitivity-calibration-receipt/3" || len(receipt.ResourceResponses) != 2 || receipt.Procedure.ProcedureID != "open-sensitivity-v1" {
 		t.Fatalf("procedure receipt lost reproducible provenance: err=%v receipt=%+v", err, receipt)
 	}
 }

@@ -89,8 +89,8 @@ func TestDecodeRetainsHistoricalV2ManifestAndSealReadability(t *testing.T) {
 	}
 }
 
-func TestDecodeSubstantiveGradeRequiresAllPrivateAssessmentDimensions(t *testing.T) {
-	grade := SubstantiveGrade{Schema: SubstantiveGradeSchema, GradedAt: time.Now().UTC().Format(time.RFC3339Nano), GraderRole: "substantive_protected_evidence_grader", ReturnScope: "protected_evidence_inspected_content_free_return", Manifest: testRef("a", 1, "protected/manifest.json"), ExecutionReceipt: testRef("b", 2, "protected/receipt.json"), ExecutionBinding: testRef("c", 3, "protected/binding.json"), Checks: SubstantiveChecks{AnswersAssessed: true, ResultQualityAssessed: true, ResourceComplianceAssessed: true, SpendingArithmeticAssessed: true}, Verdict: "INCONCLUSIVE_INCOMPLETE"}
+func TestDecodeSubstantiveGradeRequiresAllCompletedAssessmentDimensions(t *testing.T) {
+	grade := SubstantiveGrade{Schema: SubstantiveGradeSchema, GradedAt: time.Now().UTC().Format(time.RFC3339Nano), GraderRole: "substantive_protected_evidence_grader", ReturnScope: "protected_evidence_inspected_content_free_return", Manifest: testRef("a", 1, "protected/manifest.json"), ExecutionReceipt: testRef("b", 2, "protected/receipt.json"), ExecutionBinding: testRef("c", 3, "protected/binding.json"), AssessmentStates: &SubstantiveAssessmentStates{Answers: "ASSESSED", ResultQuality: "ASSESSED", ResourceCompliance: "ASSESSED", SpendingArithmetic: "ASSESSED", ConstructionRouteEvidence: "ASSESSED"}, Verdict: "INCONCLUSIVE_INCOMPLETE"}
 	raw, err := json.Marshal(grade)
 	if err != nil {
 		t.Fatal(err)
@@ -98,13 +98,32 @@ func TestDecodeSubstantiveGradeRequiresAllPrivateAssessmentDimensions(t *testing
 	if _, err := DecodeSubstantiveGrade(raw); err != nil {
 		t.Fatalf("valid content-free substantive grade was refused: %v", err)
 	}
-	grade.Checks.AnswersAssessed = false
+	grade.AssessmentStates.Answers = "SKIPPED"
 	raw, err = json.Marshal(grade)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := DecodeSubstantiveGrade(raw); err == nil {
-		t.Fatal("grade without answer assessment was accepted")
+		t.Fatal("completed grade with a skipped assessment was accepted")
+	}
+}
+
+func TestDecodeSubstantiveGradeRetainsEarlyInvalidStop(t *testing.T) {
+	grade := SubstantiveGrade{Schema: SubstantiveGradeSchema, GradedAt: time.Now().UTC().Format(time.RFC3339Nano), GraderRole: "substantive_protected_evidence_grader", ReturnScope: "protected_evidence_inspected_content_free_return", Manifest: testRef("a", 1, "protected/manifest.json"), AssessmentStates: &SubstantiveAssessmentStates{Answers: "SKIPPED", ResultQuality: "UNAVAILABLE", ResourceCompliance: "ASSESSED", SpendingArithmetic: "SKIPPED", ConstructionRouteEvidence: "UNAVAILABLE"}, EarlyStop: &SubstantiveEarlyStop{Reason: "IDENTITY_MISMATCH"}, Verdict: "INVALID"}
+	raw, err := json.Marshal(grade)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeSubstantiveGrade(raw); err != nil {
+		t.Fatalf("early invalid substantive grade was refused: %v", err)
+	}
+	grade.EarlyStop = nil
+	raw, err = json.Marshal(grade)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeSubstantiveGrade(raw); err == nil {
+		t.Fatal("early invalid grade without a reason was accepted")
 	}
 }
 

@@ -41,9 +41,17 @@ type ArtifactRef struct {
 }
 
 type DifficultyControls struct {
-	MinRewriteDepth              int  `json:"min_rewrite_depth"`
-	MinBranchingAlternatives     int  `json:"min_branching_alternatives"`
-	MinCostNeutralEnablingSteps  int  `json:"min_cost_neutral_enabling_steps"`
+	// MinRewriteDepth is the minimum syntactic expression-tree depth. The
+	// historical JSON field name does not claim a measured rewrite distance.
+	MinRewriteDepth int `json:"min_rewrite_depth"`
+	// MinBranchingAlternatives is the minimum number of catalog entries. It
+	// does not establish that those entries are live alternatives on a route.
+	MinBranchingAlternatives int `json:"min_branching_alternatives"`
+	// MinCostNeutralEnablingSteps is an authoring declaration. Structural
+	// validation cannot infer route necessity or cost neutrality from a pack.
+	MinCostNeutralEnablingSteps int `json:"min_cost_neutral_enabling_steps"`
+	// TargetsIndependentlyVerified is an authoring declaration; the executor
+	// does not independently reconstruct target provenance from a pack.
 	TargetsIndependentlyVerified bool `json:"targets_independently_verified"`
 }
 
@@ -117,7 +125,7 @@ func (p Procedure) Validate() error {
 	}
 	d := p.Difficulty
 	if d.MinRewriteDepth < 1 || d.MinBranchingAlternatives < 2 || d.MinCostNeutralEnablingSteps < 1 || !d.TargetsIndependentlyVerified {
-		return fmt.Errorf("difficulty requires positive rewrite depth, at least two branching alternatives, at least one cost-neutral enabling step, and independently verified targets")
+		return fmt.Errorf("difficulty requires positive expression-tree depth, at least two catalog entries, at least one declared cost-neutral enabling step, and independently verified targets")
 	}
 	if strings.TrimSpace(p.History.Method) == "" || !p.History.IndependentlySpecified {
 		return fmt.Errorf("history_construction requires a method and independently_specified=true")
@@ -164,6 +172,12 @@ func (p Procedure) PrimaryResource() ResourceChoice {
 	return ResourceChoice{}
 }
 
+// MatchesPrimaryResource reports whether a decoded resource ceiling is the
+// complete primary vector frozen by the procedure.
+func (p Procedure) MatchesPrimaryResource(b sealedrun.ResourceBudget) bool {
+	return p.PrimaryResource().Budget() == b
+}
+
 func (p Procedure) ValidateOpenPack(raw []byte, pack sealedrun.Pack) error {
 	if Digest(raw) != p.OpenCalibrationPack.SHA256 || len(raw) != p.OpenCalibrationPack.ByteLength {
 		return fmt.Errorf("open calibration pack does not match the procedure's frozen artifact identity")
@@ -173,10 +187,10 @@ func (p Procedure) ValidateOpenPack(raw []byte, pack sealedrun.Pack) error {
 			return fmt.Errorf("episode %q family %q does not use open family prefix %q", ep.Decl.ID, ep.Decl.Family, p.Separation.OpenFamilyPrefix)
 		}
 		if len(ep.CatalogNames) < p.Difficulty.MinBranchingAlternatives {
-			return fmt.Errorf("episode %q has fewer catalog alternatives than the frozen difficulty control", ep.Decl.ID)
+			return fmt.Errorf("episode %q has fewer catalog entries than the frozen difficulty control", ep.Decl.ID)
 		}
 		if expressionDepth(ep.Start) < p.Difficulty.MinRewriteDepth {
-			return fmt.Errorf("episode %q has rewrite depth below the frozen difficulty control", ep.Decl.ID)
+			return fmt.Errorf("episode %q has expression-tree depth below the frozen difficulty control", ep.Decl.ID)
 		}
 	}
 	return nil
@@ -191,10 +205,10 @@ func (p Procedure) ValidateProtectedPack(pack sealedrun.Pack) error {
 			return fmt.Errorf("episode %q family %q does not use protected family prefix %q", ep.Decl.ID, ep.Decl.Family, p.Separation.ProtectedFamilyPrefix)
 		}
 		if len(ep.CatalogNames) < p.Difficulty.MinBranchingAlternatives {
-			return fmt.Errorf("episode %q has fewer catalog alternatives than the frozen difficulty control", ep.Decl.ID)
+			return fmt.Errorf("episode %q has fewer catalog entries than the frozen difficulty control", ep.Decl.ID)
 		}
 		if expressionDepth(ep.Start) < p.Difficulty.MinRewriteDepth {
-			return fmt.Errorf("episode %q has rewrite depth below the frozen difficulty control", ep.Decl.ID)
+			return fmt.Errorf("episode %q has expression-tree depth below the frozen difficulty control", ep.Decl.ID)
 		}
 	}
 	return nil
