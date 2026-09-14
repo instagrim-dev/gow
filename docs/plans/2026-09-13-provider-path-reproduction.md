@@ -1,7 +1,8 @@
 ---
 artifact_kind: nonprotected-provider-path-reproduction
-status: prepared_not_executed
+status: incomplete
 prepared_date_utc: '2026-09-13'
+availability_preflight_utc: '2026-09-14T00:34:09Z'
 scope: host-versus-provider interruption diagnosis
 authorizes: no provider call, spend, protected-material access, or G1 dispatch
 ---
@@ -44,6 +45,20 @@ approved provider route using that same model. If either route cannot offer the
 same model, record `model_unavailable` and do not interpret the comparison as
 an IDE-only test. Changing both host and model measures a combined product
 stack, not Cursor alone.
+
+## Availability preflight
+
+At `2026-09-14T00:34:09Z`, a fresh local Cursor chat exposed only `Claude Opus
+4.8 Bedrock (US) 300K` (`us.anthropic.claude-opus-4-8`). The recorded G1 Cursor
+run used `Claude Opus 4.7 Bedrock (US) 300K`. The selected model therefore
+cannot be held constant on the available Cursor route. No approved direct route
+for that historical model was exposed to this task.
+
+No synthetic prompt was transmitted, no provider request or spend occurred,
+and no protected material was opened. This is an `incomplete` availability
+preflight, not a Cursor control arm or a host-only comparison. A later run must
+use a direct route and a Cursor route that both expose the same recorded model,
+then create one new private evidence record for the paired interaction.
 
 ## Per-arm procedure
 

@@ -403,7 +403,9 @@ packet is [`CUSTODIAN_INTERFACE_BRIEF_V2.md`](CUSTODIAN_INTERFACE_BRIEF_V2.md)
 and [`CUSTODIAN_PUBLIC_INTERFACE_V2.md`](CUSTODIAN_PUBLIC_INTERFACE_V2.md).
 The separate, nonprotected host-versus-provider diagnostic is
 [`2026-09-13-provider-path-reproduction.md`](2026-09-13-provider-path-reproduction.md);
-it is prepared but not executed.
+its availability preflight is incomplete because the current Cursor route does
+not expose the historical model and no approved direct same-model route is
+available to this task. No provider request was sent.
 To re-exercise delivered paths meanwhile:
 `go build -o /tmp/newf ./cmd/newf && /tmp/newf --db <fresh.sqlite> review check-finite --input docs/plans/artifacts/2026-09-13-finite-claim-path/holds-input.json --policy <id> --obligation <id> --case <label> --executor <name> --max-assignments 64`.
 Operator-authored development packs can also run without editing Go, under the
