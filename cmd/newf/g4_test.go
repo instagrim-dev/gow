@@ -100,8 +100,7 @@ func TestG4PackCLIRejectsOversizedObservedMetadataAfterValidSeal(t *testing.T) {
 	}
 }
 
-func TestG4ExecuteVerifiesArtifactsAndRunsOnlyThreeArms(t *testing.T) {
-	dir := t.TempDir()
+func g4TestEpisodes() []string {
 	var episodes []string
 	for i := 0; i < 24; i++ {
 		stratum, family := "history_informative", "fam-a"
@@ -116,8 +115,13 @@ func TestG4ExecuteVerifiesArtifactsAndRunsOnlyThreeArms(t *testing.T) {
 		}
 		episodes = append(episodes, fmt.Sprintf(`{"id":"ep-%02d","stratum":%q,"family":%q,"start":{"op":"not","args":[{"op":"not","args":[{"var":"x"}]}]},"variables":["x"],"catalog":["double-not"],"target_cost":1}`, i, stratum, family))
 	}
+	return episodes
+}
+
+func writeG4ExecuteFixture(t *testing.T, episodes []string, resourceRaw []byte) (manifest, episodesPath, resources, out string) {
+	t.Helper()
+	dir := t.TempDir()
 	packRaw := []byte(`{"schema":"shaping-pack/1","label":"custodian-assertion","provenance":"synthetic CLI boundary fixture","episodes":[` + strings.Join(episodes, ",") + `]}`)
-	resourceRaw := []byte(`{"schema":"g4-resource-ceiling/1","expansions":2,"rule_applications":128,"candidates":256,"history_bytes":65536,"check_assignments":4096,"max_states":1024,"max_term_nodes":1024}`)
 	ref := func(raw []byte, locator string) g4pack.ManifestRef {
 		return g4pack.ManifestRef{SHA256: g4pack.Digest(raw), ByteLength: int64(len(raw)), Locator: locator}
 	}
@@ -126,12 +130,19 @@ func TestG4ExecuteVerifiesArtifactsAndRunsOnlyThreeArms(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	manifest, episodesPath, resources, out := filepath.Join(dir, "manifest.json"), filepath.Join(dir, "episodes.json"), filepath.Join(dir, "resources.json"), filepath.Join(dir, "receipt.json")
+	manifest, episodesPath, resources, out = filepath.Join(dir, "manifest.json"), filepath.Join(dir, "episodes.json"), filepath.Join(dir, "resources.json"), filepath.Join(dir, "receipt.json")
 	for path, raw := range map[string][]byte{manifest: manifestRaw, episodesPath: packRaw, resources: resourceRaw} {
 		if err := os.WriteFile(path, raw, 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
+	return manifest, episodesPath, resources, out
+}
+
+var g4ValidResourceCeiling = []byte(`{"schema":"g4-resource-ceiling/1","expansions":2,"rule_applications":128,"candidates":256,"history_bytes":65536,"check_assignments":4096,"max_states":1024,"max_term_nodes":1024}`)
+
+func TestG4ExecuteVerifiesArtifactsAndRunsOnlyThreeArms(t *testing.T) {
+	manifest, episodesPath, resources, out := writeG4ExecuteFixture(t, g4TestEpisodes(), g4ValidResourceCeiling)
 	var stdout, stderr bytes.Buffer
 	if code := execute(context.Background(), []string{"--json", "g4", "execute", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--out", out}, &stdout, &stderr); code != 0 {
 		t.Fatalf("g4 execute failed: %d %s %s", code, stdout.String(), stderr.String())
@@ -142,5 +153,65 @@ func TestG4ExecuteVerifiesArtifactsAndRunsOnlyThreeArms(t *testing.T) {
 	}
 	if receipt.Version != sealedrun.G4ResourceDesignVersion || receipt.EvidenceLabel != sealedrun.G4ResourceEvidenceLabel || len(receipt.Cells) != 72 || len(receipt.Arms) != 3 {
 		t.Fatalf("wrong G4 receipt: %+v", receipt)
+	}
+}
+
+func TestG4ExecuteRejectsWrongPopulationBeforePreparingReceipt(t *testing.T) {
+	wrongStrata := append([]string(nil), g4TestEpisodes()...)
+	for i := 18; i < 24; i++ {
+		wrongStrata[i] = strings.Replace(wrongStrata[i], `"history_misleading"`, `"history_low_value"`, 1)
+	}
+	oneInformativeFamily := append([]string(nil), g4TestEpisodes()...)
+	for i := 6; i < 12; i++ {
+		oneInformativeFamily[i] = strings.Replace(oneInformativeFamily[i], `"fam-b"`, `"fam-a"`, 1)
+	}
+	for _, tc := range []struct {
+		name     string
+		episodes []string
+		want     string
+	}{
+		{"one episode", g4TestEpisodes()[:1], "requires 24 episodes"},
+		{"wrong strata", wrongStrata, "12/6/6 population"},
+		{"one informative family", oneInformativeFamily, "12/6/6 population"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			manifest, episodesPath, resources, out := writeG4ExecuteFixture(t, tc.episodes, g4ValidResourceCeiling)
+			var stdout, stderr bytes.Buffer
+			if code := execute(context.Background(), []string{"g4", "execute", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--out", out}, &stdout, &stderr); code == 0 || !strings.Contains(stderr.String(), tc.want) {
+				t.Fatalf("invalid population was not refused: code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+			}
+			if _, err := os.Stat(out); !os.IsNotExist(err) {
+				t.Fatalf("invalid population prepared a receipt: %v", err)
+			}
+		})
+	}
+}
+
+func TestG4ExecuteRequiresExplicitResourceCeilings(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		raw  []byte
+	}{
+		{"missing field", []byte(`{"schema":"g4-resource-ceiling/1","rule_applications":128,"candidates":256,"history_bytes":65536,"check_assignments":4096,"max_states":1024,"max_term_nodes":1024}`)},
+		{"null field", []byte(`{"schema":"g4-resource-ceiling/1","expansions":null,"rule_applications":128,"candidates":256,"history_bytes":65536,"check_assignments":4096,"max_states":1024,"max_term_nodes":1024}`)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			manifest, episodesPath, resources, out := writeG4ExecuteFixture(t, g4TestEpisodes(), tc.raw)
+			var stdout, stderr bytes.Buffer
+			if code := execute(context.Background(), []string{"g4", "execute", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--out", out}, &stdout, &stderr); code == 0 || !strings.Contains(stderr.String(), "explicit non-null fields: expansions") {
+				t.Fatalf("underspecified resource ceiling was not refused: code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+			}
+			if _, err := os.Stat(out); !os.IsNotExist(err) {
+				t.Fatalf("underspecified resource ceiling prepared a receipt: %v", err)
+			}
+		})
+	}
+
+	budget, err := decodeG4ResourceCeiling([]byte(`{"schema":"g4-resource-ceiling/1","expansions":0,"rule_applications":0,"candidates":0,"history_bytes":0,"check_assignments":0,"max_states":1,"max_term_nodes":1}`))
+	if err != nil || budget.Expansions != 0 || budget.RuleApplications != 0 || budget.Candidates != 0 || budget.HistoryBytes != 0 || budget.CheckAssignments != 0 {
+		t.Fatalf("explicit zero ceilings must remain representable: budget=%+v err=%v", budget, err)
+	}
+	if _, err := decodeG4ResourceCeiling([]byte(`{"schema":"g4-resource-ceiling/1","expansions":0,"rule_applications":0,"candidates":0,"history_bytes":0,"check_assignments":0,"max_states":0,"max_term_nodes":1}`)); err == nil {
+		t.Fatal("zero max_states must be refused before an execution receipt is prepared")
 	}
 }

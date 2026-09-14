@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -28,11 +29,11 @@ type g4PackResponse struct {
 	Seal           string            `json:"seal,omitempty"`
 }
 
-// newG4Command freezes the G4-lite screen's public metadata. It cannot read
-// protected episodes or answers, execute arms, validate custody, or authorize
-// the spending screen.
+// newG4Command exposes content-free G4-lite pack operations and the bounded
+// three-arm executor. Pack commands never read protected episodes or answers;
+// execution never validates custody or authorizes the spending screen.
 func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
-	cmd := &cobra.Command{Use: "g4", Short: "Validate and seal non-executing protected G4-lite screen metadata", Long: "G4 pack commands bind separate protected manifest identities and the fixed screen design. They do not read protected contents, execute an arm, verify custody, or authorize dispatch."}
+	cmd := &cobra.Command{Use: "g4", Short: "Validate, seal, and boundedly execute G4-lite screen artifacts", Long: "G4 pack commands bind separate protected manifest identities and the fixed screen design without reading protected contents. The execute command runs the fixed H0/H1/HG implementations from an exact, validated episode artifact; neither surface verifies custody or authorizes dispatch."}
 	pack := &cobra.Command{Use: "pack", Short: "Validate and seal G4-lite screen metadata"}
 	var input string
 	validate := &cobra.Command{Use: "validate", Short: "Validate content-free G4-lite metadata without executing it", Args: cobra.NoArgs, RunE: func(_ *cobra.Command, _ []string) error {
@@ -134,6 +135,9 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 		}
 		pack, err := sealedrun.DecodeShapingPack(packRaw)
 		if err != nil {
+			return wrapCommandError("g4 execute", err)
+		}
+		if err := validateG4EpisodePopulation(pack); err != nil {
 			return wrapCommandError("g4 execute", err)
 		}
 		resourceRaw, err := readG4BoundedFile(resourceCeiling, 64<<10, "G4-lite resource ceiling")
@@ -269,13 +273,13 @@ func validateG4EpisodePopulation(pack sealedrun.Pack) error {
 
 type g4ResourceCeiling struct {
 	Schema           string `json:"schema"`
-	Expansions       int    `json:"expansions"`
-	RuleApplications int    `json:"rule_applications"`
-	Candidates       int    `json:"candidates"`
-	HistoryBytes     int    `json:"history_bytes"`
-	CheckAssignments int64  `json:"check_assignments"`
-	MaxStates        int    `json:"max_states"`
-	MaxTermNodes     int    `json:"max_term_nodes"`
+	Expansions       *int   `json:"expansions"`
+	RuleApplications *int   `json:"rule_applications"`
+	Candidates       *int   `json:"candidates"`
+	HistoryBytes     *int   `json:"history_bytes"`
+	CheckAssignments *int64 `json:"check_assignments"`
+	MaxStates        *int   `json:"max_states"`
+	MaxTermNodes     *int   `json:"max_term_nodes"`
 }
 
 func decodeG4ResourceCeiling(raw []byte) (sealedrun.ResourceBudget, error) {
@@ -295,7 +299,36 @@ func decodeG4ResourceCeiling(raw []byte) (sealedrun.ResourceBudget, error) {
 	if c.Schema != "g4-resource-ceiling/1" {
 		return sealedrun.ResourceBudget{}, fmt.Errorf("unsupported resource ceiling schema %q", c.Schema)
 	}
-	return sealedrun.ResourceBudget{Expansions: c.Expansions, RuleApplications: c.RuleApplications, Candidates: c.Candidates, HistoryBytes: c.HistoryBytes, CheckAssignments: c.CheckAssignments, MaxStates: c.MaxStates, MaxTermNodes: c.MaxTermNodes}, nil
+	var missing []string
+	if c.Expansions == nil {
+		missing = append(missing, "expansions")
+	}
+	if c.RuleApplications == nil {
+		missing = append(missing, "rule_applications")
+	}
+	if c.Candidates == nil {
+		missing = append(missing, "candidates")
+	}
+	if c.HistoryBytes == nil {
+		missing = append(missing, "history_bytes")
+	}
+	if c.CheckAssignments == nil {
+		missing = append(missing, "check_assignments")
+	}
+	if c.MaxStates == nil {
+		missing = append(missing, "max_states")
+	}
+	if c.MaxTermNodes == nil {
+		missing = append(missing, "max_term_nodes")
+	}
+	if len(missing) > 0 {
+		return sealedrun.ResourceBudget{}, fmt.Errorf("resource ceiling requires explicit non-null fields: %s", strings.Join(missing, ", "))
+	}
+	budget := sealedrun.ResourceBudget{Expansions: *c.Expansions, RuleApplications: *c.RuleApplications, Candidates: *c.Candidates, HistoryBytes: *c.HistoryBytes, CheckAssignments: *c.CheckAssignments, MaxStates: *c.MaxStates, MaxTermNodes: *c.MaxTermNodes}
+	if err := budget.Validate(); err != nil {
+		return sealedrun.ResourceBudget{}, err
+	}
+	return budget, nil
 }
 
 func readG4BoundedFile(path string, max int, label string) ([]byte, error) {

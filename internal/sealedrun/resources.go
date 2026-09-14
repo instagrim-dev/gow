@@ -33,7 +33,10 @@ type ResourceBudget struct {
 	MaxTermNodes     int
 }
 
-func (b ResourceBudget) validate() error {
+// Validate checks the declared resource vector before an execution allocates a
+// receipt. Callers that decode a public resource artifact use this to reject
+// invalid ceilings before beginning the screen.
+func (b ResourceBudget) Validate() error {
 	if b.Expansions < 0 || b.RuleApplications < 0 || b.Candidates < 0 || b.HistoryBytes < 0 || b.CheckAssignments < 0 || b.MaxStates < 1 || b.MaxTermNodes < 1 || b.MaxTermNodes > finite.MaxExprNodes {
 		return fmt.Errorf("resource allowances must be nonnegative, states positive, and term nodes within 1..%d", finite.MaxExprNodes)
 	}
@@ -137,7 +140,7 @@ func runResourceScreen(p Pack, b ResourceBudget, cancel <-chan struct{}, designV
 		rec.ExecutionError = err.Error()
 		return rec, err
 	}
-	if err := b.validate(); err != nil {
+	if err := b.Validate(); err != nil {
 		return fail(err)
 	}
 	if len(p.Episodes) == 0 || len(p.Episodes) > 24 {
@@ -300,7 +303,7 @@ func (r *ResourceReceipt) Reassess() error {
 		r.Error = "unsupported or mismatched resource receipt identities"
 		return fmt.Errorf("%s", r.Error)
 	}
-	if err := r.Budget.validate(); err != nil {
+	if err := r.Budget.Validate(); err != nil {
 		r.Error = err.Error()
 		return err
 	}
