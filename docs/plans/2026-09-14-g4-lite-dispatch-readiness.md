@@ -100,14 +100,16 @@ advantage of 18 and two informative families with H1 headroom, so the stated
 one-run margin and family thresholds are attainable in this open construction.
 This is stronger preparation, not protected evidence or a dispatch decision.
 
-The [current executable-bound `/3` preflight](artifacts/2026-09-14-g4-runtime-preflight-v5-executable-bound/)
-was built from `ef58ccd` under that procedure's primary resource vector. It
+The [current executable-bound `/3` preflight](artifacts/2026-09-14-g4-runtime-preflight-v6-custodian-return/)
+was built from `fe2edcd` under that procedure's primary resource vector. It
 exports `/2` arm identities that bind H0/H1/HG controller snapshots to
-executable SHA-256 `4f05f1186c1e49a148698c9e02b3c1f969ab97a4b3588e86edb27e133aa80766`
-and passes `g4 arm-preflight`. The prior `/1` identity preflights remain
-historical evidence only; `/3` execution now requires executable-bound `/2`
-records. This completes release and controller-identity preparation for a
-fresh `/3` custodian pack; it remains non-authorizing.
+executable SHA-256 `d8d361d292bfb6e04bf3c95f65cb47ba2b37e6661f880a41b139afd6cabf15e8`
+and passes `g4 arm-preflight`. That same executable validates the bounded
+content-free custodian return before it reaches the substantive grader. The
+prior `/1` identity preflights remain historical evidence only; `/3` execution
+now requires executable-bound `/2` records. This completes release and
+controller-identity preparation for a fresh `/3` custodian pack; it remains
+non-authorizing.
 
 ## Required dispatch sequence
 

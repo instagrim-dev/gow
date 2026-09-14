@@ -1,0 +1,8 @@
+{
+  "schema": "g4-lite-arm-runtime-identity/2",
+  "arm": "H1",
+  "controller_id": "h1-frequency/0",
+  "decision_snapshot_sha256": "42e0729c62806db9b6c9e632420fe69424519b7aa7a31dbceadbc56398c1e096",
+  "decision_snapshot_encoding": "go-json-sha256/1",
+  "executable_sha256": "d8d361d292bfb6e04bf3c95f65cb47ba2b37e6661f880a41b139afd6cabf15e8"
+}
