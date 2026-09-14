@@ -1,0 +1,116 @@
+{
+  "ok": true,
+  "command": "review check-observations",
+  "persisted": true,
+  "check": {
+    "ID": "rchk_01M2EV3Z2JYS92FT8Z6JZQWHSX",
+    "ObligationID": "robl_01M2EV3YR6QEZASYK004DA2MGK",
+    "PolicyID": "rpol_01M2EV3YR6QEZASYK002C7WRED",
+    "CaseLabel": "solved-baseline",
+    "ProcedureRef": "internal/toolreg observation binding -\u003e internal/measure checker",
+    "ProcedureRevision": "observation-claim-check/1+measure-checker/1",
+    "InputsRef": "observation-claim:sha256:a54f0fb7a379ac3e8dd84cb6305865d9d6d4b720dc71ce0f8dac14aee74eef32",
+    "Executor": "local-development-mutation-check",
+    "Environment": "darwin/arm64 go1.26.6; newf dev",
+    "Mode": "executed",
+    "Outcome": "completed",
+    "OutputRef": "{\"schema\":\"observation-claim-check/1\",\"subject_ref\":\"observation-claim:sha256:a54f0fb7a379ac3e8dd84cb6305865d9d6d4b720dc71ce0f8dac14aee74eef32\",\"input_json\":\"{\\\"schema\\\":\\\"observation-claim/1\\\",\\\"kind\\\":\\\"solved_monotonicity\\\",\\\"source_ref\\\":\\\"development:g1-observation-mutation-check:solved\\\",\\\"statement\\\":\\\"A genuine higher-budget trace retains every previously solved instance\\\",\\\"binding\\\":{\\\"population\\\":\\\"instance-a\\\",\\\"ordering\\\":\\\"recorded order\\\",\\\"stopping_rule\\\":\\\"declared budget\\\",\\\"budget_min\\\":1,\\\"budget_max\\\":2},\\\"observations\\\":[{\\\"conditions\\\":{\\\"population\\\":\\\"instance-a\\\",\\\"ordering\\\":\\\"recorded order\\\",\\\"stopping_rule\\\":\\\"declared budget\\\",\\\"budget\\\":1},\\\"instances\\\":[{\\\"id\\\":\\\"a\\\",\\\"submissions\\\":[{\\\"move\\\":\\\"m1\\\",\\\"success\\\":true}]}]},{\\\"conditions\\\":{\\\"population\\\":\\\"instance-a\\\",\\\"ordering\\\":\\\"recorded order\\\",\\\"stopping_rule\\\":\\\"declared budget\\\",\\\"budget\\\":2},\\\"instances\\\":[{\\\"id\\\":\\\"a\\\",\\\"submissions\\\":[{\\\"move\\\":\\\"m1\\\",\\\"success\\\":true},{\\\"move\\\":\\\"m2\\\",\\\"success\\\":false}]}]}]}\\n\",\"input_sha256\":\"a54f0fb7a379ac3e8dd84cb6305865d9d6d4b720dc71ce0f8dac14aee74eef32\",\"source_ref\":\"development:g1-observation-mutation-check:solved\",\"tool\":{\"Kind\":\"solved_monotonicity\",\"Name\":\"solved-set monotonicity under budget extension\",\"Statement\":\"under verified trace-prefix nesting, a larger-budget execution retains every solved instance; the precondition is checked, never assumed\",\"Implementation\":\"internal/measure\",\"ProcedureRevision\":\"measure-checker/1\",\"InputTypes\":[\"measure.Binding\",\"measure.Observation (before)\",\"measure.Observation (after)\"],\"Premises\":[\"per-instance trace-prefix extension with verdict and move retention (aggregate counts cannot establish nesting)\"],\"Quantifier\":\"the one compared before/after pair\",\"Outputs\":[\"REFUTED\",\"HOLDS_AT_COMPARED_POINTS\",\"INAPPLICABLE\"],\"Limits\":[\"a non-nested pair is INAPPLICABLE, not a failure: a budget-aware algorithm may choose differently from the start\"]},\"max_submissions\":3,\"submission_records\":3,\"assessor_invoked\":true,\"elapsed_nanos\":8125,\"certificate\":{\"Binding\":{\"Sentence\":\"A genuine higher-budget trace retains every previously solved instance\",\"MetricNumerator\":\"recorded successful submissions\",\"MetricDenom\":\"recorded submissions\",\"Population\":\"instance-a\",\"Budgets\":{\"Lo\":1,\"Hi\":2,\"Unrestricted\":false},\"Ordering\":\"recorded order\",\"StoppingRule\":\"declared budget\",\"Kind\":\"solved_monotonicity\"},\"ConditionsComparable\":false,\"ConditionNotes\":null,\"TraceExtension\":\"verified\",\"ExtensionViolations\":null,\"Rows\":[{\"Label\":\"budget 1 -\\u003e 2\",\"Before\":{\"Successes\":1,\"Submissions\":1},\"Added\":{\"Successes\":0,\"Submissions\":0},\"After\":{\"Successes\":1,\"Submissions\":2},\"Direction\":0,\"SolvedBefore\":1,\"SolvedAfter\":1,\"SolvedLost\":0,\"MarginalYield\":\"\",\"Accounting\":\"\"}],\"Question\":\"Did the larger-budget execution retain every instance the smaller-budget execution had solved?\",\"Verdict\":\"HOLDS_AT_COMPARED_POINTS\",\"Reason\":\"trace extension and success retention verified; no previously solved instance was lost (successes per submission may still fall — that is a different quantity)\",\"NotAssessed\":[\"Statistical anomaly: NOT ASSESSED\",\"Change in underlying success probability: NOT ASSESSED (two different observed rates do not, by themselves, disprove a constant underlying probability)\",\"Change in uncertainty: NOT ASSESSED (uncertainty is a different quantity requiring its own definition and model)\"]},\"limitations\":[\"typed operator-supplied records; authenticity, source correspondence and truth of success labels not independently verified\",\"fixed metric: recorded successful submissions / recorded submissions; solved instances reported separately\",\"claims concern compared records only; no probability inference, rule admission or automatic assessment\",\"submission reservation bounds input records, not CPU instructions; CPU and custody costs unmeasured; zero provider calls\"]}",
+    "Blocker": "",
+    "StartedAt": "2026-09-14T02:14:42Z",
+    "EndedAt": "2026-09-14T02:14:42Z",
+    "ResourceNote": "submission allowance=3; input submissions=3; assessor_invoked=true; elapsed_ns=8125; provider_calls=0; cpu=unknown; custody=unknown",
+    "CreatedAt": "2026-09-14T02:14:42.514059Z"
+  },
+  "receipt": {
+    "schema": "observation-claim-check/1",
+    "subject_ref": "observation-claim:sha256:a54f0fb7a379ac3e8dd84cb6305865d9d6d4b720dc71ce0f8dac14aee74eef32",
+    "input_json": "{\"schema\":\"observation-claim/1\",\"kind\":\"solved_monotonicity\",\"source_ref\":\"development:g1-observation-mutation-check:solved\",\"statement\":\"A genuine higher-budget trace retains every previously solved instance\",\"binding\":{\"population\":\"instance-a\",\"ordering\":\"recorded order\",\"stopping_rule\":\"declared budget\",\"budget_min\":1,\"budget_max\":2},\"observations\":[{\"conditions\":{\"population\":\"instance-a\",\"ordering\":\"recorded order\",\"stopping_rule\":\"declared budget\",\"budget\":1},\"instances\":[{\"id\":\"a\",\"submissions\":[{\"move\":\"m1\",\"success\":true}]}]},{\"conditions\":{\"population\":\"instance-a\",\"ordering\":\"recorded order\",\"stopping_rule\":\"declared budget\",\"budget\":2},\"instances\":[{\"id\":\"a\",\"submissions\":[{\"move\":\"m1\",\"success\":true},{\"move\":\"m2\",\"success\":false}]}]}]}\n",
+    "input_sha256": "a54f0fb7a379ac3e8dd84cb6305865d9d6d4b720dc71ce0f8dac14aee74eef32",
+    "source_ref": "development:g1-observation-mutation-check:solved",
+    "tool": {
+      "Kind": "solved_monotonicity",
+      "Name": "solved-set monotonicity under budget extension",
+      "Statement": "under verified trace-prefix nesting, a larger-budget execution retains every solved instance; the precondition is checked, never assumed",
+      "Implementation": "internal/measure",
+      "ProcedureRevision": "measure-checker/1",
+      "InputTypes": [
+        "measure.Binding",
+        "measure.Observation (before)",
+        "measure.Observation (after)"
+      ],
+      "Premises": [
+        "per-instance trace-prefix extension with verdict and move retention (aggregate counts cannot establish nesting)"
+      ],
+      "Quantifier": "the one compared before/after pair",
+      "Outputs": [
+        "REFUTED",
+        "HOLDS_AT_COMPARED_POINTS",
+        "INAPPLICABLE"
+      ],
+      "Limits": [
+        "a non-nested pair is INAPPLICABLE, not a failure: a budget-aware algorithm may choose differently from the start"
+      ]
+    },
+    "max_submissions": 3,
+    "submission_records": 3,
+    "assessor_invoked": true,
+    "elapsed_nanos": 8125,
+    "certificate": {
+      "Binding": {
+        "Sentence": "A genuine higher-budget trace retains every previously solved instance",
+        "MetricNumerator": "recorded successful submissions",
+        "MetricDenom": "recorded submissions",
+        "Population": "instance-a",
+        "Budgets": {
+          "Lo": 1,
+          "Hi": 2,
+          "Unrestricted": false
+        },
+        "Ordering": "recorded order",
+        "StoppingRule": "declared budget",
+        "Kind": "solved_monotonicity"
+      },
+      "ConditionsComparable": false,
+      "ConditionNotes": null,
+      "TraceExtension": "verified",
+      "ExtensionViolations": null,
+      "Rows": [
+        {
+          "Label": "budget 1 -\u003e 2",
+          "Before": {
+            "Successes": 1,
+            "Submissions": 1
+          },
+          "Added": {
+            "Successes": 0,
+            "Submissions": 0
+          },
+          "After": {
+            "Successes": 1,
+            "Submissions": 2
+          },
+          "Direction": 0,
+          "SolvedBefore": 1,
+          "SolvedAfter": 1,
+          "SolvedLost": 0,
+          "MarginalYield": "",
+          "Accounting": ""
+        }
+      ],
+      "Question": "Did the larger-budget execution retain every instance the smaller-budget execution had solved?",
+      "Verdict": "HOLDS_AT_COMPARED_POINTS",
+      "Reason": "trace extension and success retention verified; no previously solved instance was lost (successes per submission may still fall — that is a different quantity)",
+      "NotAssessed": [
+        "Statistical anomaly: NOT ASSESSED",
+        "Change in underlying success probability: NOT ASSESSED (two different observed rates do not, by themselves, disprove a constant underlying probability)",
+        "Change in uncertainty: NOT ASSESSED (uncertainty is a different quantity requiring its own definition and model)"
+      ]
+    },
+    "limitations": [
+      "typed operator-supplied records; authenticity, source correspondence and truth of success labels not independently verified",
+      "fixed metric: recorded successful submissions / recorded submissions; solved instances reported separately",
+      "claims concern compared records only; no probability inference, rule admission or automatic assessment",
+      "submission reservation bounds input records, not CPU instructions; CPU and custody costs unmeasured; zero provider calls"
+    ]
+  }
+}

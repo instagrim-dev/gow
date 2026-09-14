@@ -1,0 +1,6 @@
+{
+  "policy_id": "rpol_01M2EV3YR6QEZASYK002C7WRED",
+  "obligation_ids": {
+    "observation-mutation@1": "robl_01M2EV3YR6QEZASYK004DA2MGK"
+  }
+}

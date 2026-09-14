@@ -1,0 +1,71 @@
+{
+  "schema": "g1-observation-mutation-check-summary/1",
+  "scope": "development-level discriminating control; not a protected G1 v2 rerun, score, or full roadmap closure",
+  "revision": "9b896e7cb9281819b7e3f07b24966e924f0e46fb",
+  "provider_calls": 0,
+  "controls": [
+    {
+      "name": "rate-success-flip",
+      "baseline": "rate-baseline",
+      "mutant": "rate-mutant",
+      "changed_paths": [
+        "observations.1.instances.0.submissions.1.success"
+      ],
+      "expected_transition": "HOLDS_AT_COMPARED_POINTS -> REFUTED",
+      "observed_transition": "HOLDS_AT_COMPARED_POINTS -> REFUTED"
+    },
+    {
+      "name": "solved-prefix-break",
+      "baseline": "solved-baseline",
+      "mutant": "solved-mutant",
+      "changed_paths": [
+        "observations.1.instances.0.submissions.0.success"
+      ],
+      "expected_transition": "HOLDS_AT_COMPARED_POINTS with verified trace -> INAPPLICABLE with not_nested trace",
+      "observed_transition": "HOLDS_AT_COMPARED_POINTS with verified trace -> INAPPLICABLE with not_nested trace"
+    }
+  ],
+  "cases": [
+    {
+      "case": "rate-baseline",
+      "input_sha256": "9f9cb5fe8529907aa50d68fae0a22e19aaab9d4a52a7fe642739fb02c677579e",
+      "result_sha256": "ae2b00e99da56084c070fda6b3984762ee0fab6f528a028b94a52189c34ee9e9",
+      "check_id": "rchk_01M2EV3Z1QVX0BGA1H14HGZZWD",
+      "ledger_outcome": "completed",
+      "assessor_invoked": true,
+      "verdict": "HOLDS_AT_COMPARED_POINTS",
+      "trace_extension": "verified"
+    },
+    {
+      "case": "rate-mutant",
+      "input_sha256": "ada71ff15f3ca6bae309a8dd699e4f14d06373e461536896107e7c111c399b6f",
+      "result_sha256": "91ba3eda28396c7755d197b2e9702d91d68dec6421f163e9a649b4e890b18207",
+      "check_id": "rchk_01M2EV3Z24NT094PFZMWS91QRH",
+      "ledger_outcome": "completed",
+      "assessor_invoked": true,
+      "verdict": "REFUTED",
+      "trace_extension": "verified"
+    },
+    {
+      "case": "solved-baseline",
+      "input_sha256": "a54f0fb7a379ac3e8dd84cb6305865d9d6d4b720dc71ce0f8dac14aee74eef32",
+      "result_sha256": "142746ab588339f6c5a0d341feba70546a34f898dcaf4b3b8f7f8867e0837302",
+      "check_id": "rchk_01M2EV3Z2JYS92FT8Z6JZQWHSX",
+      "ledger_outcome": "completed",
+      "assessor_invoked": true,
+      "verdict": "HOLDS_AT_COMPARED_POINTS",
+      "trace_extension": "verified"
+    },
+    {
+      "case": "solved-mutant",
+      "input_sha256": "463f483af4ac78aef9cb0ea6303d8eaf5fec1583e4c15c5ca359fd4e03e459fb",
+      "result_sha256": "c343e4d9eb099fd1188bc88110efb30a63651f8ff9e3aa5abc52d73c7c11c428",
+      "check_id": "rchk_01M2EV3Z2Z75XG6AXWQN4SAB18",
+      "ledger_outcome": "blocked",
+      "assessor_invoked": true,
+      "verdict": "INAPPLICABLE",
+      "trace_extension": "not_nested"
+    }
+  ],
+  "executable_sha256": "450a4313063869692f54360796f835020cbfc2a799bcd3bda57b83a1a67722cd"
+}

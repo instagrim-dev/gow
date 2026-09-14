@@ -404,14 +404,19 @@ finite checking and correctly handled non-certification; it does not alone
 demonstrate useful fully specified execution of both observation tools. A
 separate, nonprotected [observation execution supplement](artifacts/2026-09-14-g1-observation-supplement/README.md)
 records a rate hold, a rate refutation, and two verified solved-trace extensions
-through the real CLI. It is not a rerun or an amendment to the protected v2
-score, and it does not close the broader roadmap claim.
+through the real CLI. Its follow-on [mutation check](artifacts/2026-09-14-g1-observation-mutation-check/README.md)
+changes one observed success value and obtains `REFUTED`, then breaks one
+solved-trace prefix and obtains `INAPPLICABLE` after assessment. The latter
+retains the conditional theorem's genuine-extension premise rather than
+mislabeling an invalid trace pair as a refutation. These nonprotected records
+are not a rerun or an amendment to the protected v2 score, and they do not
+close the broader roadmap claim.
 
-**Next action:** retain the v2 pass under its frozen scope. A future claim of
-full G1 capability needs a separately authorized evidence design that exercises
+**Next action:** retain the v2 pass under its frozen scope and the completed
+nonprotected mutation control as development evidence. A future claim of full
+G1 capability needs a separately authorized evidence design that exercises
 fully specified observed-rate and solved-monotonicity inputs alongside refusal
-controls. A development-level mutation check may establish discriminating
-coverage before consuming another protected pack. The nonprotected
+controls. The nonprotected
 host-versus-provider diagnostic remains
 [`2026-09-13-provider-path-reproduction.md`](2026-09-13-provider-path-reproduction.md);
 its availability preflight is incomplete because the inspected Cursor UI did
