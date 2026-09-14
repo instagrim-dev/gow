@@ -57,13 +57,28 @@ exposed to this task.
 
 This diagnostic task itself runs in Codex. Codex is a separate provider/model
 route from the historical Claude Bedrock route, so it cannot substitute for the
-required same-model direct arm. It was not sent the synthetic prompt.
+required same-model direct arm. A Codex-only control can establish only its own
+public-interface result; it remains unpaired for host-attribution purposes.
 
-No synthetic prompt was transmitted, no provider request or spend occurred,
-and no protected material was opened. This is an `incomplete` availability
-preflight, not a Cursor control arm or a host-only comparison. A later run must
-use a direct route and a Cursor route that both expose the same recorded model,
-then create one new private evidence record for the paired interaction.
+No synthetic prompt was transmitted through Cursor, and no protected material
+was opened. This remains an `incomplete` availability preflight, not a Cursor
+control arm or a host-only comparison. A later run must use a direct route and
+a Cursor route that both expose the same recorded model, then create one new
+private evidence record for the paired interaction.
+
+## Codex-only control
+
+At `2026-09-14T00:53:02Z`, the active Codex task, rather than a separately
+created provider request, selected `g1 pack validate` for the synthetic public
+metadata input. The locally built public CLI then returned `ok: true`,
+`PREPARED_NOT_AUTHORIZED`, and both authorization and custody flags false for
+that metadata. The content-free record is
+[`artifacts/2026-09-13-provider-path-reproduction/codex-unpaired-run.json`](artifacts/2026-09-13-provider-path-reproduction/codex-unpaired-run.json).
+
+This result shows that this Codex task can select and exercise the normal
+data-only validation path. Its model and task context differ from the historical
+Claude run, and the Cursor arm was unavailable, so it does not support an
+IDE-only attribution or change the G1 disposition.
 
 ## Per-arm procedure
 

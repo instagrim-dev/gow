@@ -1,0 +1,57 @@
+{
+  "schema": "provider-path-reproduction/1",
+  "status": "incomplete",
+  "case": {
+    "classification": "synthetic_nonprotected_public_interface",
+    "protected_material": false,
+    "prompt_sha256": "ff7d0b5ee5405fe23d65e92a3617e9e5ff270891928c0e6add2ff17595f532a6",
+    "prompt_bytes": 333,
+    "attachments": [
+      {
+        "sha256": "694ec0c95c73eef0077a1fd6c73c627e9fca67e872317b4a3f26f7c8178ac726",
+        "bytes": 2529,
+        "private_locator": "private://provider-path-reproduction/codex-unpaired/input.json"
+      }
+    ]
+  },
+  "comparison": {
+    "same_prompt": true,
+    "same_attachments": true,
+    "same_model": false,
+    "variable": "host_and_access_route"
+  },
+  "arms": [
+    {
+      "arm": "cursor",
+      "host": "Cursor desktop",
+      "model": "Claude Opus 4.7 Bedrock (US) 300K",
+      "access_route": "Cursor local route availability preflight",
+      "started_at_utc": "2026-09-14T00:34:09Z",
+      "request_id": null,
+      "last_completed_action": null,
+      "next_requested_action": null,
+      "result": "model_unavailable",
+      "private_evidence": {
+        "locator": "private://provider-path-reproduction/cursor/availability-preflight",
+        "response_or_error_sha256": "8947aeb716ad22669c2f55c78da2d625859e12ce13d6e1a7ca6f2ae67002c33e",
+        "response_or_error_bytes": 367
+      }
+    },
+    {
+      "arm": "direct_provider",
+      "host": "Codex current task",
+      "model": "GPT-6 Codex task context",
+      "access_route": "Codex current task",
+      "started_at_utc": "2026-09-14T00:53:02Z",
+      "request_id": null,
+      "last_completed_action": "selected g1 pack validate",
+      "next_requested_action": null,
+      "result": "completed",
+      "private_evidence": {
+        "locator": "private://provider-path-reproduction/codex-unpaired",
+        "response_or_error_sha256": "49f30ffbf56e4ae19db40a645937f1d88cc67c1ebd85f657506c5f4de39c2700",
+        "response_or_error_bytes": 17
+      }
+    }
+  ]
+}
