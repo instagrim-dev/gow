@@ -66,19 +66,19 @@ control arm or a host-only comparison. A later run must use a direct route and
 a Cursor route that both expose the same recorded model, then create one new
 private evidence record for the paired interaction.
 
-## Codex-only control
+## Codex local exercise
 
-At `2026-09-14T00:53:02Z`, the active Codex task, rather than a separately
-created provider request, selected `g1 pack validate` for the synthetic public
-metadata input. The locally built public CLI then returned `ok: true`,
-`PREPARED_NOT_AUTHORIZED`, and both authorization and custody flags false for
-that metadata. The content-free record is
-[`artifacts/2026-09-13-provider-path-reproduction/codex-unpaired-run.json`](artifacts/2026-09-13-provider-path-reproduction/codex-unpaired-run.json).
+At `2026-09-14T00:53:02Z`, the active Codex task selected `g1 pack validate`
+while preparing the synthetic public metadata control. That did not create the
+separate provider request with the fixed interaction identity required by this
+protocol, so it is not a completed direct-provider arm. The locally built public
+CLI did return `ok: true`, `PREPARED_NOT_AUTHORIZED`, and both authorization and
+custody flags false for the metadata. The content-free record is
+[`artifacts/2026-09-13-provider-path-reproduction/codex-local-exercise.json`](artifacts/2026-09-13-provider-path-reproduction/codex-local-exercise.json).
 
-This result shows that this Codex task can select and exercise the normal
-data-only validation path. Its model and task context differ from the historical
-Claude run, and the Cursor arm was unavailable, so it does not support an
-IDE-only attribution or change the G1 disposition.
+The local CLI result confirms the normal data-only command path. The Codex
+provider arm remains `not_run`, and the Cursor arm remains unavailable, so this
+exercise does not support an IDE-only attribution or change the G1 disposition.
 
 ## Per-arm procedure
 

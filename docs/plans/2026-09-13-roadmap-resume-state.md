@@ -405,8 +405,8 @@ The separate, nonprotected host-versus-provider diagnostic is
 [`2026-09-13-provider-path-reproduction.md`](2026-09-13-provider-path-reproduction.md);
 its availability preflight is incomplete because the inspected Cursor UI did
 not expose the historical model and Codex is a different provider/model route,
-not a same-model direct arm. A Codex-only public-interface control completed,
-but it is not a host-only comparison.
+not a same-model direct arm. A Codex local public-interface exercise completed,
+but no direct-provider arm or host-only comparison ran.
 To re-exercise delivered paths meanwhile:
 `go build -o /tmp/newf ./cmd/newf && /tmp/newf --db <fresh.sqlite> review check-finite --input docs/plans/artifacts/2026-09-13-finite-claim-path/holds-input.json --policy <id> --obligation <id> --case <label> --executor <name> --max-assignments 64`.
 Operator-authored development packs can also run without editing Go, under the

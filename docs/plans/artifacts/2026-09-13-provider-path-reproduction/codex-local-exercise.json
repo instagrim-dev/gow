@@ -40,17 +40,17 @@
     {
       "arm": "direct_provider",
       "host": "Codex current task",
-      "model": "GPT-6 Codex task context",
-      "access_route": "Codex current task",
+      "model": "GPT-6 Codex task context (not submitted)",
+      "access_route": "Codex current task; no separate request",
       "started_at_utc": "2026-09-14T00:53:02Z",
       "request_id": null,
-      "last_completed_action": "selected g1 pack validate",
+      "last_completed_action": null,
       "next_requested_action": null,
-      "result": "completed",
+      "result": "not_run",
       "private_evidence": {
-        "locator": "private://provider-path-reproduction/codex-unpaired",
-        "response_or_error_sha256": "49f30ffbf56e4ae19db40a645937f1d88cc67c1ebd85f657506c5f4de39c2700",
-        "response_or_error_bytes": 17
+        "locator": "private://provider-path-reproduction/codex/not-run",
+        "response_or_error_sha256": "f49b0a8032cd197ffd56ec1e8e2e03e1baf4898dbfe5afeaba9a4e12aaeb2bcb",
+        "response_or_error_bytes": 405
       }
     }
   ]
