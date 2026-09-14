@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:newf:provider-path-reproduction:1",
+  "title": "Nonprotected provider-path reproduction record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "case", "comparison", "arms"],
+  "properties": {
+    "schema": { "const": "provider-path-reproduction/1" },
+    "status": { "enum": ["prepared_not_executed", "completed", "incomplete"] },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["classification", "protected_material", "prompt_sha256", "prompt_bytes", "attachments"],
+      "properties": {
+        "classification": { "const": "synthetic_nonprotected_public_interface" },
+        "protected_material": { "const": false },
+        "prompt_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "prompt_bytes": { "type": "integer", "minimum": 1 },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["sha256", "bytes", "private_locator"],
+            "properties": {
+              "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+              "bytes": { "type": "integer", "minimum": 1 },
+              "private_locator": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["same_prompt", "same_attachments", "same_model", "variable"],
+      "properties": {
+        "same_prompt": { "const": true },
+        "same_attachments": { "const": true },
+        "same_model": { "type": "boolean" },
+        "variable": { "const": "host_and_access_route" }
+      }
+    },
+    "arms": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["arm", "host", "model", "access_route", "started_at_utc", "result", "private_evidence"],
+        "properties": {
+          "arm": { "enum": ["cursor", "direct_provider"] },
+          "host": { "type": "string", "minLength": 1 },
+          "model": { "type": "string", "minLength": 1 },
+          "access_route": { "type": "string", "minLength": 1 },
+          "started_at_utc": { "type": "string", "format": "date-time" },
+          "request_id": { "type": ["string", "null"] },
+          "last_completed_action": { "type": ["string", "null"] },
+          "next_requested_action": { "type": ["string", "null"] },
+          "result": { "enum": ["completed", "provider_blocked", "host_error", "transport_error", "model_unavailable", "not_run"] },
+          "private_evidence": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["locator", "response_or_error_sha256", "response_or_error_bytes"],
+            "properties": {
+              "locator": { "type": "string", "minLength": 1 },
+              "response_or_error_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+              "response_or_error_bytes": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

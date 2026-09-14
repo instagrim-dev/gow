@@ -1,0 +1,57 @@
+{
+  "schema": "provider-path-reproduction/1",
+  "status": "prepared_not_executed",
+  "case": {
+    "classification": "synthetic_nonprotected_public_interface",
+    "protected_material": false,
+    "prompt_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+    "prompt_bytes": 256,
+    "attachments": [
+      {
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "bytes": 512,
+        "private_locator": "private://provider-path-reproduction/public-interface-v2"
+      }
+    ]
+  },
+  "comparison": {
+    "same_prompt": true,
+    "same_attachments": true,
+    "same_model": true,
+    "variable": "host_and_access_route"
+  },
+  "arms": [
+    {
+      "arm": "cursor",
+      "host": "Cursor <record-version-at-execution>",
+      "model": "<same-model-required>",
+      "access_route": "Cursor <record-access-path-at-execution>",
+      "started_at_utc": "2026-09-13T00:00:00Z",
+      "request_id": null,
+      "last_completed_action": null,
+      "next_requested_action": null,
+      "result": "not_run",
+      "private_evidence": {
+        "locator": "private://provider-path-reproduction/cursor/not-run",
+        "response_or_error_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "response_or_error_bytes": 1
+      }
+    },
+    {
+      "arm": "direct_provider",
+      "host": "direct approved provider route <record-version-at-execution>",
+      "model": "<same-model-required>",
+      "access_route": "approved direct route <record-at-execution>",
+      "started_at_utc": "2026-09-13T00:00:00Z",
+      "request_id": null,
+      "last_completed_action": null,
+      "next_requested_action": null,
+      "result": "not_run",
+      "private_evidence": {
+        "locator": "private://provider-path-reproduction/direct/not-run",
+        "response_or_error_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "response_or_error_bytes": 1
+      }
+    }
+  ]
+}
