@@ -63,6 +63,15 @@ Every claim input is one UTF-8 JSON object no larger than 1 MiB. Unknown,
 case-variant, and duplicate field names are rejected at every nesting level.
 No command assesses a prefix after a resource reservation refusal.
 
+For a successfully persisted check response, the opaque identity required by
+`check-show` is the exact JSON field `check.ID`. Preserve the complete response
+in protected storage, record `check.ID`, `check.Outcome`, `check.Blocker`, and
+`receipt.certificate.Verdict` when present, then use that exact `check.ID` in
+`check-show`. `persisted: true` confirms storage only; it does not make an
+assessment or a certificate verdict. A command error or a response without a
+persisted check has no `check.ID`; retain it as an interruption or blocked
+receipt and do not fabricate an ID.
+
 ### Schema 1: finite equivalence
 
 A `finite-claim/1` root has exactly: `schema`, `kind`, `source_ref`,
@@ -173,11 +182,19 @@ Each referenced answer is one object with exactly `schema`, `case_id`,
 `authored_at_utc`, `author`, `sealed_before_execution`. It uses
 `schema: "g1-v2-expected-answer/1"`, the matching case ID,
 `author: "<custodian-id>"`, and `sealed_before_execution: true`.
-Expected certificate verdict is one of `CERTIFIED`, `REFUTED`,
-`INSTANCE_EVIDENCE_ONLY`, `NOT_ASSESSED`, or `NO_CERTIFICATE`; expected
-check outcome is one of `completed-valid`, `refused-applicable`,
-`false-certification`, `blocked`, or `not-executed`. `rationale` is
-nonempty and explains the declared expected outcome without any external source.
+`expected_certificate_verdict` is the exact checker value expected from the
+protected response: finite equivalence uses one of `HOLDS_ON_DECLARED_DOMAIN`,
+`REFUTED`, `UNRESOLVED`, or `INAPPLICABLE`; finite instance uses one of
+`INSTANCE_EVIDENCE_ONLY`, `REFUTED`, `UNRESOLVED`, or `INAPPLICABLE`; observation
+uses one of `HOLDS_AT_COMPARED_POINTS`, `REFUTED`, `UNRESOLVED`, `INAPPLICABLE`,
+or `NOT_ASSESSED`; use `NONE` only when the expected response has no certificate.
+`expected_check_outcome` is the custodian's intended case classification—one of
+`completed-valid`, `refused-applicable`, `false-certification`, `blocked`, or
+`not-executed`—rather than the CLI's ledger word. For a persisted CLI response,
+compare the expected certificate with `receipt.certificate.Verdict`, and retain
+its separate ledger state from `check.Outcome` (`completed` or `blocked`).
+`rationale` is nonempty and explains the declared expectation using only the
+case's typed data.
 
 **`case-provenance.jsonl`** has exactly 48 UTF-8 JSON lines, one per case,
 each with exactly: `schema`, `case_id`, `input_sha256`, `input_bytes`,
@@ -221,13 +238,18 @@ bytes; it does not prove custody or independently authorize execution.
 
 ## Content-free return packet
 
-Write `G1_V2_RETURN_PACKET.json` in the return root with exactly
-`schema`, `dispatch_id`, `release_revision`, `executable_sha256`,
-`policy_id`, `obligation_ids`, `manifest_identities`,
-`metadata_identity`, `seal_identity`, `custody_limitations`,
-`blocked_actions`, `stratum_outcome_counts`, `elapsed_seconds`, and
-`completion_state`. All references are strings, number totals, or count-only
-objects. No raw, case-specific, expected-answer, result, or score content is
-allowed. Write `G1_V2_RETURN_PACKET.sha256` containing the SHA-256 of its
-exact JSON bytes. The final response reports only the completion state, both
-return paths, and that digest.
+Write `G1_V2_RETURN_PACKET.json` in the return root using this content-free
+shape. Replace angle-bracket values only; do not add fields.
+
+```json
+{"schema":"g1-v2-return-packet/1","dispatch_id":"<dispatch-id>","release_revision":"<pinned-revision>","executable_sha256":"<pinned-sha256>","policy_id":"<policy-id>","obligation_ids":{"finite-equivalence-route@1":"<id>","finite-instance-route@1":"<id>","observed-rate-route@1":"<id>","solved-monotonicity-route@1":"<id>","probabilistic-routing-route@1":"<id>"},"manifest_identities":{"task_manifest":{"sha256":"<lower-case sha256>","byte_length":<positive>},"answer_manifest":{"sha256":"<lower-case sha256>","byte_length":<positive>},"case_provenance":{"sha256":"<lower-case sha256>","byte_length":<positive>},"pre_execution_seal":{"sha256":"<lower-case sha256>","byte_length":<positive>}},"metadata_identity":{"sha256":"<lower-case sha256>","byte_length":<positive>},"seal_identity":{"sha256":"<lower-case sha256>","byte_length":<positive>},"custody_limitations":["<content-free limitation>"],"blocked_actions":["<content-free action or empty list>"],"stratum_outcome_counts":{"applicable":{"completed-valid":<nonnegative>,"refused-applicable":<nonnegative>,"false-certification":<nonnegative>,"blocked":<nonnegative>,"not-executed":<nonnegative>},"inapplicable":{"completed-valid":<nonnegative>,"refused-applicable":<nonnegative>,"false-certification":<nonnegative>,"blocked":<nonnegative>,"not-executed":<nonnegative>},"underspecified":{"completed-valid":<nonnegative>,"refused-applicable":<nonnegative>,"false-certification":<nonnegative>,"blocked":<nonnegative>,"not-executed":<nonnegative>}},"elapsed_seconds":<nonnegative>,"completion_state":"<completed|interface_unrepresentable|execution_interrupted|resource_exhausted|verification_blocked>"}
+```
+
+Each stratum object totals its frozen population (24, 16, or 8). If metadata or
+a seal was never created because the interface was terminally unrepresentable,
+use a zero-byte identity with an all-zero SHA-256 and include the reason in
+`blocked_actions`; never replace the identity object with a raw explanation.
+No raw, case-specific, expected-answer, result, or score content is allowed.
+Write `G1_V2_RETURN_PACKET.sha256` containing the SHA-256 of its exact JSON
+bytes. The final response reports only the completion state, both return paths,
+and that digest.
