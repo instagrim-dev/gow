@@ -8,10 +8,13 @@ supersedes: none; CUSTODIAN_PUBLIC_INTERFACE.md remains the frozen attempt-4 int
 
 # Custodian public interface v3
 
-This is a preparation template. At dispatch, the operator must replace every
-angle-bracket token with a frozen value, include the paired brief and pinned
-executable, record their SHA-256 identities, and supply an explicit authorization.
-The resulting instance is the only interface a custodian receives. This template
+This is a preparation template. At dispatch, the operator must replace the
+identity placeholders for the dispatch root, custodian ID, operator approval,
+release revision, and pinned executable; include the paired brief and pinned
+executable; record their SHA-256 identities; and supply explicit authorization.
+The custodian fills manifest, receipt, check, and runtime-result placeholders
+only from its own sealed private records at the named procedure step. The
+resulting instance is the only interface a custodian receives. This template
 contains no protected case or answer material and does not itself authorize a
 dispatch, spending, or assessment.
 
