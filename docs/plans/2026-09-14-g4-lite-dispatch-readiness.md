@@ -48,6 +48,12 @@ value; adjust only the open task-generation/resource procedure, record the
 new calibration, and repeat the identity preflight before a new protected
 design is frozen.
 
+The retained [public CLI smoke](artifacts/2026-09-14-g4-calibration-cli/)
+exercised this path on the published `a632086` executable: it retained 72 H0
+reference probes and 72 diagnostic cells. Its deliberately simple open pack
+ended 24/24/24 with `COMPLETION_CEILING`, so it verifies receipt retention and
+status classification only. It is not the required non-ceiling calibration.
+
 ## Required dispatch sequence
 
 1. Pin the release; export and preflight the actual H0, H1, and HG runtime

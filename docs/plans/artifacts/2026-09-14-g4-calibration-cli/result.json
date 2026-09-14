@@ -1,0 +1,43 @@
+{
+  "schema": "g4-lite-sensitivity-calibration/1",
+  "source_pack_sha256": "732f36ec209bb387685f970c77a1ce1dc6bb3eb57027d7ac548c070279eb7217",
+  "source_pack_bytes": 10683,
+  "input_resource_sha256": "863cedc444740eb5a7663dc2c114eda857bc7e0f91f62617e23213e388c08dcb",
+  "input_resource_bytes": 211,
+  "h0_minimum_expansions": {
+    "open-00": 1,
+    "open-01": 1,
+    "open-02": 1,
+    "open-03": 1,
+    "open-04": 1,
+    "open-05": 1,
+    "open-06": 1,
+    "open-07": 1,
+    "open-08": 1,
+    "open-09": 1,
+    "open-10": 1,
+    "open-11": 1,
+    "open-12": 1,
+    "open-13": 1,
+    "open-14": 1,
+    "open-15": 1,
+    "open-16": 1,
+    "open-17": 1,
+    "open-18": 1,
+    "open-19": 1,
+    "open-20": 1,
+    "open-21": 1,
+    "open-22": 1,
+    "open-23": 1
+  },
+  "h0_unreachable_episodes": [],
+  "proposed_expansions": 1,
+  "arm_completions": {
+    "H0": 24,
+    "H1": 24,
+    "HG": 24
+  },
+  "status": "COMPLETION_CEILING",
+  "receipt": "/Users/jmh/dev/gh/newf/docs/plans/artifacts/2026-09-14-g4-calibration-cli/calibration-receipt.json",
+  "protected_dispatch_ready": false
+}

@@ -1,0 +1,607 @@
+{
+  "schema": "shaping-pack/1",
+  "label": "open-calibration-cli-smoke",
+  "provenance": "synthetic open CLI artifact; not protected material",
+  "episodes": [
+    {
+      "id": "open-00",
+      "stratum": "history_informative",
+      "family": "open-fam-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-01",
+      "stratum": "history_informative",
+      "family": "open-fam-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-02",
+      "stratum": "history_informative",
+      "family": "open-fam-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-03",
+      "stratum": "history_informative",
+      "family": "open-fam-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-04",
+      "stratum": "history_informative",
+      "family": "open-fam-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-05",
+      "stratum": "history_informative",
+      "family": "open-fam-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-06",
+      "stratum": "history_informative",
+      "family": "open-fam-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-07",
+      "stratum": "history_informative",
+      "family": "open-fam-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-08",
+      "stratum": "history_informative",
+      "family": "open-fam-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-09",
+      "stratum": "history_informative",
+      "family": "open-fam-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-10",
+      "stratum": "history_informative",
+      "family": "open-fam-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-11",
+      "stratum": "history_informative",
+      "family": "open-fam-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-12",
+      "stratum": "history_low_value",
+      "family": "open-fam-c",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-13",
+      "stratum": "history_low_value",
+      "family": "open-fam-c",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-14",
+      "stratum": "history_low_value",
+      "family": "open-fam-c",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-15",
+      "stratum": "history_low_value",
+      "family": "open-fam-c",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-16",
+      "stratum": "history_low_value",
+      "family": "open-fam-c",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-17",
+      "stratum": "history_low_value",
+      "family": "open-fam-c",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-18",
+      "stratum": "history_misleading",
+      "family": "open-fam-d",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-19",
+      "stratum": "history_misleading",
+      "family": "open-fam-d",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-20",
+      "stratum": "history_misleading",
+      "family": "open-fam-d",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-21",
+      "stratum": "history_misleading",
+      "family": "open-fam-d",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-22",
+      "stratum": "history_misleading",
+      "family": "open-fam-d",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    },
+    {
+      "id": "open-23",
+      "stratum": "history_misleading",
+      "family": "open-fam-d",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not"
+      ],
+      "target_cost": 1
+    }
+  ]
+}
