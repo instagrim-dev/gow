@@ -1,0 +1,10 @@
+{
+  "schema": "g4-resource-ceiling/1",
+  "expansions": 4,
+  "rule_applications": 128,
+  "candidates": 256,
+  "history_bytes": 65536,
+  "check_assignments": 4096,
+  "max_states": 1024,
+  "max_term_nodes": 1024
+}

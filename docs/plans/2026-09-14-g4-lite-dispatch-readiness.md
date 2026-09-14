@@ -94,6 +94,13 @@ advantage of 18 and two informative families with H1 headroom, so the stated
 one-run margin and family thresholds are attainable in this open construction.
 This is stronger preparation, not protected evidence or a dispatch decision.
 
+The current [/3 runtime preflight](artifacts/2026-09-14-g4-runtime-preflight-v3/)
+was then rebuilt from `65d37b5` under that procedure's primary resource vector.
+It exported H0/H1/HG from executable SHA-256
+`83b97a87807a8a513dfec58032d02d7b4ac2548ae6ed11c3b7e0f1307831c4de` and
+passed `g4 arm-preflight`. This completes the release and controller-identity
+preparation for a fresh `/3` custodian pack; it remains non-authorizing.
+
 ## Required dispatch sequence
 
 1. Freeze and retain a fresh procedure before protected authoring, then pin
@@ -118,10 +125,10 @@ This is stronger preparation, not protected evidence or a dispatch decision.
 
 ## Remaining dispatch inputs
 
-The generation/resource procedure and its open multi-choice calibration are
-delivered. The remaining inputs are a fresh custodian-held pack authored under
-that frozen procedure, real arm/resource/seed artifacts, explicit execution
-authorization, separately metered custody, and the substantive grader. Repeat
-runtime preflight if the executable or resource vector changes. The
-deterministic one-run executor does not supply a multi-seed implementation or
-any external-evidence authority.
+The generation/resource procedure, open multi-choice calibration, and current
+runtime preflight are delivered. The remaining external gate is a fresh
+custodian-held pack authored under that frozen procedure, followed by explicit
+execution authorization, separately metered custody, and the substantive
+grader. Repeat runtime preflight if the executable or resource vector changes.
+The deterministic one-run executor does not supply a multi-seed implementation
+or any external-evidence authority.
