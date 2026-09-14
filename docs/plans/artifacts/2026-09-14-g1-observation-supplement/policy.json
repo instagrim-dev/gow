@@ -1,0 +1,7 @@
+{
+  "policy_id": "rpol_01M2ETQ21VRQW0PPSGZFZB8R9Z",
+  "obligation_ids": {
+    "observed-rate-route@1": "robl_01M2ETQ21VRQW0PPSGZGMRS9F0",
+    "solved-monotonicity-route@1": "robl_01M2ETQ21VRQW0PPSGZH11BGM5"
+  }
+}

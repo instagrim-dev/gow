@@ -1,0 +1,47 @@
+{
+  "cases": [
+    {
+      "assessor_invoked": true,
+      "case": "rate-holds",
+      "check_id": "rchk_01M2ETQ27AC861RSZSS3NBZS5Z",
+      "input_sha256": "6d50c0dc19c645d894e976cf42d2b04013b09abda70b6a23252a9fc29688449f",
+      "ledger_outcome": "completed",
+      "result_sha256": "35a556161ec607450a237c9855860ca85c9e1eaa44408396503361ea90b6e5c0",
+      "trace_extension": "verified",
+      "verdict": "HOLDS_AT_COMPARED_POINTS"
+    },
+    {
+      "assessor_invoked": true,
+      "case": "rate-refuted",
+      "check_id": "rchk_01M2ETQ27R9HRYEG25J919J9SM",
+      "input_sha256": "f7fc4d3fba2faddac26f11aa9c2e7ab665e608fbc9b63c7edf49efd266568f3d",
+      "ledger_outcome": "completed",
+      "result_sha256": "dae6f94a6a5977f7e053d8a4fbabc920848d97f7c2dd93fd7a78f17d08b3cfd3",
+      "trace_extension": "verified",
+      "verdict": "REFUTED"
+    },
+    {
+      "assessor_invoked": true,
+      "case": "solved-retained",
+      "check_id": "rchk_01M2ETQ2850AVYFWPF3JSQ8QXH",
+      "input_sha256": "3196bd84b4e9948888e2c12012f1b51f5b6ab49307de5eab56c1000f79bae8f1",
+      "ledger_outcome": "completed",
+      "result_sha256": "863191ade84a36cbe9e4956acc73c00b3ba48133bbe8973441eb7881af85e7b6",
+      "trace_extension": "verified",
+      "verdict": "HOLDS_AT_COMPARED_POINTS"
+    },
+    {
+      "assessor_invoked": true,
+      "case": "solved-unsolved",
+      "check_id": "rchk_01M2ETQ28K13Q01G51PYG0XWTE",
+      "input_sha256": "81b46937f8363b8741a2ee4515ddfd3bec7b607516bb75850200f982fe1a6ad5",
+      "ledger_outcome": "completed",
+      "result_sha256": "486a2f0b7b5a0a1757dce5ad06849b0d7e614cb1d55f4685b72bb0a1c433145a",
+      "trace_extension": "verified",
+      "verdict": "HOLDS_AT_COMPARED_POINTS"
+    }
+  ],
+  "provider_calls": 0,
+  "schema": "g1-observation-supplement-summary/1",
+  "scope": "development-level supplementary evidence; not a protected G1 v2 rerun or score"
+}
