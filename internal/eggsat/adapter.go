@@ -102,10 +102,18 @@ type Result struct {
 // the named admitted rule. Direction is forward for lhs→rhs and backward for
 // rhs→lhs under the same equality warrant.
 type ProofStep struct {
-	Before       string
-	After        string
-	RuleIdentity string
-	Direction    string
+	Before        string
+	After         string
+	RuleIdentity  string
+	Direction     string
+	Substitutions []ProofBinding
+}
+
+// ProofBinding is one reported metavariable assignment whose term was checked
+// against the local positional replay.
+type ProofBinding struct {
+	Variable string
+	Term     string
 }
 
 type request struct {
@@ -116,9 +124,10 @@ type request struct {
 }
 
 type requestRule struct {
-	ID  string `json:"id"`
-	LHS string `json:"lhs"`
-	RHS string `json:"rhs"`
+	ID     string   `json:"id"`
+	LHS    string   `json:"lhs"`
+	RHS    string   `json:"rhs"`
+	Guards []string `json:"guards"`
 }
 
 type requestLimits struct {
@@ -143,10 +152,17 @@ type response struct {
 }
 
 type wireProofStep struct {
-	Before    string `json:"before"`
-	After     string `json:"after"`
-	RuleID    string `json:"rule_id"`
-	Direction string `json:"direction"`
+	Before        string             `json:"before"`
+	After         string             `json:"after"`
+	RuleID        string             `json:"rule_id"`
+	Direction     string             `json:"direction"`
+	Substitutions []wireSubstitution `json:"substitutions"`
+	Guards        []string           `json:"guards"`
+}
+
+type wireSubstitution struct {
+	Variable string `json:"variable"`
+	Term     string `json:"term"`
 }
 
 // Optimize asks the bounded external e-graph to extract a cheap equivalent
@@ -193,7 +209,7 @@ func (c Client) Optimize(ctx context.Context, start finite.Expr, d finite.Domain
 		if err != nil {
 			return Result{}, fmt.Errorf("encode rule %q right side: %w", exported.Name, err)
 		}
-		req.Rules = append(req.Rules, requestRule{ID: exported.Identity, LHS: lhs, RHS: rhs})
+		req.Rules = append(req.Rules, requestRule{ID: exported.Identity, LHS: lhs, RHS: rhs, Guards: []string{}})
 		rulesByID[exported.Identity] = rule
 	}
 
@@ -320,14 +336,33 @@ func replayProof(start, best string, source finite.Expr, proof []wireProofStep, 
 		if defects := finite.ValidateExpr(next, d); len(defects) > 0 {
 			return nil, fmt.Errorf("step %d target is invalid: %v", index, defects)
 		}
-		matches, err := rule.ReplaysOneStep(current, next, d, reverse)
+		if len(step.Guards) != 0 {
+			return nil, fmt.Errorf("step %d carries guards but the finite G2 language admits no conditional rules", index)
+		}
+		bindings := make([]rewrite.StepBinding, 0, len(step.Substitutions))
+		proofBindings := make([]ProofBinding, 0, len(step.Substitutions))
+		for bindingIndex, binding := range step.Substitutions {
+			if binding.Variable == "" {
+				return nil, fmt.Errorf("step %d substitution %d has an empty variable", index, bindingIndex)
+			}
+			term, err := decodeTerm(binding.Term)
+			if err != nil {
+				return nil, fmt.Errorf("step %d substitution %q: %w", index, binding.Variable, err)
+			}
+			if defects := finite.ValidateExpr(term, d); len(defects) > 0 {
+				return nil, fmt.Errorf("step %d substitution %q is invalid: %v", index, binding.Variable, defects)
+			}
+			bindings = append(bindings, rewrite.StepBinding{Variable: binding.Variable, Term: term})
+			proofBindings = append(proofBindings, ProofBinding{Variable: binding.Variable, Term: finite.Render(term)})
+		}
+		matches, err := rule.ReplaysOneStepWithBindings(current, next, d, reverse, bindings)
 		if err != nil {
 			return nil, fmt.Errorf("step %d replay: %w", index, err)
 		}
 		if !matches {
 			return nil, fmt.Errorf("step %d is not an application of its admitted rule", index)
 		}
-		checked = append(checked, ProofStep{Before: finite.Render(current), After: finite.Render(next), RuleIdentity: step.RuleID, Direction: step.Direction})
+		checked = append(checked, ProofStep{Before: finite.Render(current), After: finite.Render(next), RuleIdentity: step.RuleID, Direction: step.Direction, Substitutions: proofBindings})
 		currentWire, current = step.After, next
 	}
 	if currentWire != best {

@@ -33,7 +33,7 @@ func TestOptimizeReplaysAnExternalExtraction(t *testing.T) {
 	if !result.EndpointVerified || result.Endpoint.Verdict != finite.VerdictHoldsOnDomain {
 		t.Fatalf("endpoint was not independently verified: %+v", result.Endpoint)
 	}
-	if !strings.Contains(result.EngineExplanation, rule.Identity()) || len(result.Proof) != 1 || result.Proof[0].RuleIdentity != rule.Identity() {
+	if !strings.Contains(result.EngineExplanation, rule.Identity()) || len(result.Proof) != 1 || result.Proof[0].RuleIdentity != rule.Identity() || len(result.Proof[0].Substitutions) != 1 || result.Proof[0].Substitutions[0] != (ProofBinding{Variable: "a", Term: "x"}) {
 		t.Fatalf("engine explanation was not replayed against the admitted rule: %+v", result)
 	}
 }
@@ -52,6 +52,45 @@ func TestOptimizeRejectsAForgedEngineProofBeforeEndpointReplay(t *testing.T) {
 	}
 	if result.Endpoint.Verdict != "" {
 		t.Fatalf("a forged proof must not reach endpoint replay: %+v", result.Endpoint)
+	}
+}
+
+func TestOptimizeRejectsAForgedSubstitution(t *testing.T) {
+	t.Setenv("NEWF_EGGSAT_TEST_HELPER", "1")
+	t.Setenv("NEWF_EGGSAT_TEST_BAD_SUBSTITUTION", "1")
+	domain := finite.Domain{Width: 4, Vars: []string{"a"}}
+	lhs := finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: finite.Var{Name: "a"}}}
+	rule := admitted(t, "double-not", lhs, finite.Var{Name: "a"}, domain)
+	start := finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: finite.Var{Name: "x"}}}
+	client := Client{Binary: os.Args[0]}
+	if _, err := client.Optimize(context.Background(), start, finite.Domain{Width: 4, Vars: []string{"x"}}, []rewrite.Rule{rule}, Limits{Timeout: time.Second}); !errors.Is(err, ErrMalformedResponse) {
+		t.Fatalf("expected forged substitution rejection, got %v", err)
+	}
+}
+
+func TestOptimizeRejectsAForgedProofSource(t *testing.T) {
+	t.Setenv("NEWF_EGGSAT_TEST_HELPER", "1")
+	t.Setenv("NEWF_EGGSAT_TEST_BAD_SOURCE", "1")
+	domain := finite.Domain{Width: 4, Vars: []string{"a"}}
+	lhs := finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: finite.Var{Name: "a"}}}
+	rule := admitted(t, "double-not", lhs, finite.Var{Name: "a"}, domain)
+	start := finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: finite.Var{Name: "x"}}}
+	client := Client{Binary: os.Args[0]}
+	if _, err := client.Optimize(context.Background(), start, finite.Domain{Width: 4, Vars: []string{"x"}}, []rewrite.Rule{rule}, Limits{Timeout: time.Second}); !errors.Is(err, ErrMalformedResponse) {
+		t.Fatalf("expected forged source rejection, got %v", err)
+	}
+}
+
+func TestOptimizeRejectsAConditionalGuard(t *testing.T) {
+	t.Setenv("NEWF_EGGSAT_TEST_HELPER", "1")
+	t.Setenv("NEWF_EGGSAT_TEST_GUARD", "1")
+	domain := finite.Domain{Width: 4, Vars: []string{"a"}}
+	lhs := finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: finite.Var{Name: "a"}}}
+	rule := admitted(t, "double-not", lhs, finite.Var{Name: "a"}, domain)
+	start := finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: finite.Var{Name: "x"}}}
+	client := Client{Binary: os.Args[0]}
+	if _, err := client.Optimize(context.Background(), start, finite.Domain{Width: 4, Vars: []string{"x"}}, []rewrite.Rule{rule}, Limits{Timeout: time.Second}); !errors.Is(err, ErrMalformedResponse) {
+		t.Fatalf("expected unsupported guard rejection, got %v", err)
 	}
 }
 
@@ -132,10 +171,12 @@ func runHelper() {
 			BestCost:     1,
 			Explanation:  "(Rewrite=> " + req.Rules[0].ID + " 0)",
 			Proof: []wireProofStep{{
-				Before:    req.Start,
-				After:     "0",
-				RuleID:    req.Rules[0].ID,
-				Direction: "forward",
+				Before:        req.Start,
+				After:         "0",
+				RuleID:        req.Rules[0].ID,
+				Direction:     "forward",
+				Substitutions: []wireSubstitution{},
+				Guards:        []string{},
 			}},
 		})
 		return
@@ -143,6 +184,18 @@ func runHelper() {
 	if len(req.Rules) != 1 {
 		fmt.Fprint(os.Stderr, "expected one admitted rule")
 		os.Exit(2)
+	}
+	substitution := "x"
+	if os.Getenv("NEWF_EGGSAT_TEST_BAD_SUBSTITUTION") == "1" {
+		substitution = "0"
+	}
+	proofBefore := req.Start
+	if os.Getenv("NEWF_EGGSAT_TEST_BAD_SOURCE") == "1" {
+		proofBefore = "x"
+	}
+	guards := []string{}
+	if os.Getenv("NEWF_EGGSAT_TEST_GUARD") == "1" {
+		guards = []string{"invented-guard"}
 	}
 	_ = json.NewEncoder(os.Stdout).Encode(response{
 		Schema:       ResponseSchema,
@@ -157,10 +210,15 @@ func runHelper() {
 		EGraphNodes:  3,
 		Explanation:  "(Rewrite=> " + req.Rules[0].ID + " x)",
 		Proof: []wireProofStep{{
-			Before:    req.Start,
+			Before:    proofBefore,
 			After:     "x",
 			RuleID:    req.Rules[0].ID,
 			Direction: "forward",
+			Substitutions: []wireSubstitution{{
+				Variable: "a",
+				Term:     substitution,
+			}},
+			Guards: guards,
 		}},
 	})
 }

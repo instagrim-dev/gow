@@ -57,6 +57,14 @@ type EngineRule struct {
 	Right    finite.Expr
 }
 
+// StepBinding is one pattern metavariable assignment cited by an external
+// engine explanation. It stays expression-typed so callers cannot make an
+// unchecked string look like a replayed substitution.
+type StepBinding struct {
+	Variable string
+	Term     finite.Expr
+}
+
 // Name returns the rule's admission name.
 func (r Rule) Name() string { return r.name }
 
@@ -483,6 +491,18 @@ func (r Rule) Identity() string {
 // it preserves all possible matching positions and stops after finding the
 // claimed target.
 func (r Rule) ReplaysOneStep(before, after finite.Expr, d finite.Domain, reverse bool) (bool, error) {
+	return r.replaysOneStep(before, after, d, reverse, nil)
+}
+
+// ReplaysOneStepWithBindings additionally requires the reported pattern
+// substitution to be exactly the one used by a positional rewrite. It checks
+// source, target, direction, and substitutions as one proof step; no wire
+// metadata becomes trusted merely because the endpoint later holds.
+func (r Rule) ReplaysOneStepWithBindings(before, after finite.Expr, d finite.Domain, reverse bool, bindings []StepBinding) (bool, error) {
+	return r.replaysOneStep(before, after, d, reverse, &bindings)
+}
+
+func (r Rule) replaysOneStep(before, after finite.Expr, d finite.Domain, reverse bool, expected *[]StepBinding) (bool, error) {
 	if defects := finite.ValidateExpr(before, d); len(defects) > 0 {
 		return false, fmt.Errorf("invalid replay source: %v", defects)
 	}
@@ -498,20 +518,63 @@ func (r Rule) ReplaysOneStep(before, after finite.Expr, d finite.Domain, reverse
 	}
 	target := finite.Render(after)
 	found := false
-	stats := visitSuccessors(before, oriented, d, Limits{MaxTermNodes: finite.MaxExprNodes}, func(next finite.Expr, refused bool) bool {
-		if refused {
-			return true
+	root := indexTerm(before, nil)
+	var walk func(*termInfo, []ancestor) bool
+	walk = func(at *termInfo, path []ancestor) bool {
+		actual := map[string]*termInfo{}
+		if matchTerm(oriented.lhs, at, d, actual, nil) {
+			remaining := finite.MaxExprNodes - (root.nodes - at.nodes)
+			depthBounded := false
+			if measureSubstitution(oriented.rhs, actual, &remaining, len(path), &depthBounded, nil) {
+				next := instantiate(oriented.rhs, actual, d, nil)
+				for i := len(path) - 1; i >= 0; i-- {
+					parent := path[i]
+					switch p := parent.expr.(type) {
+					case finite.Unary:
+						next = finite.Unary{Op: p.Op, X: next}
+					case finite.Binary:
+						if parent.right {
+							next = finite.Binary{Op: p.Op, X: p.X, Y: next}
+						} else {
+							next = finite.Binary{Op: p.Op, X: next, Y: p.Y}
+						}
+					}
+				}
+				if finite.Render(next) == target && (expected == nil || bindingsMatch(actual, *expected)) {
+					found = true
+					return false
+				}
+			}
 		}
-		if finite.Render(next) == target {
-			found = true
+		if at.x != nil && !walk(at.x, append(path, ancestor{expr: at.expr})) {
 			return false
 		}
-		return true
-	})
-	if stats.Cancelled || stats.ResourceBudgetExhausted {
-		return false, fmt.Errorf("explanation replay stopped before completion")
+		return at.y == nil || walk(at.y, append(path, ancestor{expr: at.expr, right: true}))
 	}
+	walk(root, nil)
 	return found, nil
+}
+
+func bindingsMatch(actual map[string]*termInfo, expected []StepBinding) bool {
+	if len(actual) != len(expected) {
+		return false
+	}
+	seen := make(map[string]bool, len(expected))
+	for _, binding := range expected {
+		if binding.Variable == "" || seen[binding.Variable] {
+			return false
+		}
+		seen[binding.Variable] = true
+		actualTerm, ok := actual[binding.Variable]
+		if !ok || binding.Term == nil {
+			return false
+		}
+		expectedTerm := indexTerm(binding.Term, nil)
+		if expectedTerm == nil || !equalTerms(actualTerm, expectedTerm, nil) {
+			return false
+		}
+	}
+	return true
 }
 
 func freeVars(e finite.Expr) map[string]bool {

@@ -3,6 +3,7 @@ use egg::{
     define_language,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::io::{self, Read};
 use std::time::Duration;
 
@@ -42,6 +43,7 @@ struct RuleRequest {
     id: String,
     lhs: String,
     rhs: String,
+    guards: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -74,6 +76,14 @@ struct ProofStep {
     after: String,
     rule_id: String,
     direction: &'static str,
+    substitutions: Vec<Substitution>,
+    guards: Vec<String>,
+}
+
+#[derive(Debug, Serialize, PartialEq, Eq)]
+struct Substitution {
+    variable: String,
+    term: String,
 }
 
 fn parse_expr(raw: &str, field: &str) -> Result<RecExpr<WordLang>, String> {
@@ -85,6 +95,12 @@ fn parse_rule(rule: &RuleRequest) -> Result<Rewrite<WordLang, ()>, String> {
     if rule.id.is_empty() {
         return Err("rule id is empty".to_owned());
     }
+    if !rule.guards.is_empty() {
+        return Err(format!(
+            "rule {} carries conditional guards, which are outside the finite G2 language",
+            rule.id
+        ));
+    }
     let lhs: Pattern<WordLang> = rule
         .lhs
         .parse()
@@ -95,6 +111,211 @@ fn parse_rule(rule: &RuleRequest) -> Result<Rewrite<WordLang, ()>, String> {
         .map_err(|err| format!("invalid right pattern for rule {}: {err}", rule.id))?;
     Rewrite::new(rule.id.clone(), lhs, rhs)
         .map_err(|err| format!("invalid rule {}: {err}", rule.id))
+}
+
+// SExpr is a deliberately tiny syntax tree used only to disclose the
+// substitution underlying an egg explanation step. It is not a second search
+// engine: egg still decides saturation; this parser merely reconstructs the
+// concrete pattern match the engine says it used.
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum SExpr {
+    Atom(String),
+    List(Vec<SExpr>),
+}
+
+impl SExpr {
+    fn render(&self) -> String {
+        match self {
+            Self::Atom(atom) => atom.clone(),
+            Self::List(items) => format!(
+                "({})",
+                items.iter().map(Self::render).collect::<Vec<_>>().join(" ")
+            ),
+        }
+    }
+}
+
+fn parse_sexpr(raw: &str) -> Result<SExpr, String> {
+    struct Parser<'a> {
+        raw: &'a str,
+        at: usize,
+    }
+    impl<'a> Parser<'a> {
+        fn space(&mut self) {
+            while self.at < self.raw.len() && self.raw.as_bytes()[self.at].is_ascii_whitespace() {
+                self.at += 1;
+            }
+        }
+
+        fn expr(&mut self) -> Result<SExpr, String> {
+            self.space();
+            if self.at >= self.raw.len() {
+                return Err("unexpected end of expression".to_owned());
+            }
+            if self.raw.as_bytes()[self.at] != b'(' {
+                let start = self.at;
+                while self.at < self.raw.len()
+                    && !self.raw.as_bytes()[self.at].is_ascii_whitespace()
+                    && self.raw.as_bytes()[self.at] != b'('
+                    && self.raw.as_bytes()[self.at] != b')'
+                {
+                    self.at += 1;
+                }
+                if start == self.at {
+                    return Err(format!("invalid atom at byte {}", start));
+                }
+                return Ok(SExpr::Atom(self.raw[start..self.at].to_owned()));
+            }
+            self.at += 1;
+            let mut items = Vec::new();
+            loop {
+                self.space();
+                if self.at >= self.raw.len() {
+                    return Err("unterminated list".to_owned());
+                }
+                if self.raw.as_bytes()[self.at] == b')' {
+                    self.at += 1;
+                    return if items.is_empty() {
+                        Err("empty list".to_owned())
+                    } else {
+                        Ok(SExpr::List(items))
+                    };
+                }
+                items.push(self.expr()?);
+            }
+        }
+    }
+
+    let mut parser = Parser { raw, at: 0 };
+    let expr = parser.expr()?;
+    parser.space();
+    if parser.at != raw.len() {
+        return Err(format!("unexpected input at byte {}", parser.at));
+    }
+    Ok(expr)
+}
+
+fn match_pattern(pattern: &SExpr, subject: &SExpr, bindings: &mut BTreeMap<String, SExpr>) -> bool {
+    match pattern {
+        SExpr::Atom(variable) if variable.starts_with('?') => {
+            let Some(name) = variable.strip_prefix('?') else {
+                return false;
+            };
+            if name.is_empty() {
+                return false;
+            }
+            if let Some(previous) = bindings.get(name) {
+                previous == subject
+            } else {
+                bindings.insert(name.to_owned(), subject.clone());
+                true
+            }
+        }
+        SExpr::Atom(_) => pattern == subject,
+        SExpr::List(pattern_items) => match subject {
+            SExpr::List(subject_items) if pattern_items.len() == subject_items.len() => {
+                pattern_items
+                    .iter()
+                    .zip(subject_items)
+                    .all(|(pattern, subject)| match_pattern(pattern, subject, bindings))
+            }
+            _ => false,
+        },
+    }
+}
+
+fn instantiate(template: &SExpr, bindings: &BTreeMap<String, SExpr>) -> Result<SExpr, String> {
+    match template {
+        SExpr::Atom(variable) if variable.starts_with('?') => {
+            let name = variable.strip_prefix('?').expect("starts_with checked");
+            bindings
+                .get(name)
+                .cloned()
+                .ok_or_else(|| format!("unbound template variable ?{name}"))
+        }
+        SExpr::Atom(_) => Ok(template.clone()),
+        SExpr::List(items) => items
+            .iter()
+            .map(|item| instantiate(item, bindings))
+            .collect::<Result<Vec<_>, _>>()
+            .map(SExpr::List),
+    }
+}
+
+fn replace_at(root: &SExpr, path: &[usize], replacement: &SExpr) -> SExpr {
+    if path.is_empty() {
+        return replacement.clone();
+    }
+    match root {
+        SExpr::List(items) => {
+            let mut copy = items.clone();
+            copy[path[0]] = replace_at(&copy[path[0]], &path[1..], replacement);
+            SExpr::List(copy)
+        }
+        SExpr::Atom(_) => unreachable!("paths name list children only"),
+    }
+}
+
+fn derive_substitutions(
+    before: &str,
+    after: &str,
+    rule: &RuleRequest,
+    direction: &str,
+) -> Result<Vec<Substitution>, String> {
+    let before = parse_sexpr(before)?;
+    let after = parse_sexpr(after)?;
+    let (pattern, template) = match direction {
+        "forward" => (parse_sexpr(&rule.lhs)?, parse_sexpr(&rule.rhs)?),
+        "backward" => (parse_sexpr(&rule.rhs)?, parse_sexpr(&rule.lhs)?),
+        _ => return Err(format!("unsupported explanation direction {direction}")),
+    };
+
+    fn search(
+        root: &SExpr,
+        current: &SExpr,
+        path: &mut Vec<usize>,
+        pattern: &SExpr,
+        template: &SExpr,
+        after: &SExpr,
+    ) -> Result<Option<BTreeMap<String, SExpr>>, String> {
+        let mut bindings = BTreeMap::new();
+        if match_pattern(pattern, current, &mut bindings) {
+            let replacement = instantiate(template, &bindings)?;
+            if replace_at(root, path, &replacement) == *after {
+                return Ok(Some(bindings));
+            }
+        }
+        if let SExpr::List(items) = current {
+            // The first list item is the language operator, not an e-class
+            // child that a pattern variable can rewrite.
+            for (index, child) in items.iter().enumerate().skip(1) {
+                path.push(index);
+                let found = search(root, child, path, pattern, template, after)?;
+                path.pop();
+                if found.is_some() {
+                    return Ok(found);
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    let bindings = search(
+        &before,
+        &before,
+        &mut Vec::new(),
+        &pattern,
+        &template,
+        &after,
+    )?
+    .ok_or_else(|| format!("cannot reconstruct substitution for rule {}", rule.id))?;
+    Ok(bindings
+        .into_iter()
+        .map(|(variable, term)| Substitution {
+            variable,
+            term: term.render(),
+        })
+        .collect())
 }
 
 fn run(request: Request) -> Result<Response, String> {
@@ -133,11 +354,21 @@ fn run(request: Request) -> Result<Response, String> {
     let mut proof = Vec::with_capacity(flat.len().saturating_sub(1));
     for index in 1..flat.len() {
         let (rule_id, direction) = step_annotation(&flat[index])?;
+        let rule = request
+            .rules
+            .iter()
+            .find(|rule| rule.id == rule_id)
+            .ok_or_else(|| format!("explanation names unknown input rule {rule_id}"))?;
+        let before = flat[index - 1].get_recexpr().to_string();
+        let after = flat[index].get_recexpr().to_string();
+        let substitutions = derive_substitutions(&before, &after, rule, direction)?;
         proof.push(ProofStep {
-            before: flat[index - 1].get_recexpr().to_string(),
-            after: flat[index].get_recexpr().to_string(),
+            before,
+            after,
             rule_id,
             direction,
+            substitutions,
+            guards: Vec::new(),
         });
     }
     let explanation = flat
@@ -225,6 +456,7 @@ mod tests {
                 id: "double-not".to_owned(),
                 lhs: "(not (not ?a))".to_owned(),
                 rhs: "?a".to_owned(),
+                guards: Vec::new(),
             }],
             limits: Limits {
                 iterations: 10,
@@ -239,6 +471,13 @@ mod tests {
         assert!(response.explanation.contains("double-not"));
         assert_eq!(response.proof.len(), 1);
         assert_eq!(response.proof[0].direction, "forward");
+        assert_eq!(
+            response.proof[0].substitutions,
+            vec![Substitution {
+                variable: "a".to_owned(),
+                term: "x".to_owned(),
+            }]
+        );
     }
 
     #[test]
@@ -250,6 +489,7 @@ mod tests {
                 id: "unsafe".to_owned(),
                 lhs: "?a".to_owned(),
                 rhs: "?b".to_owned(),
+                guards: Vec::new(),
             }],
             limits: Limits {
                 iterations: 1,

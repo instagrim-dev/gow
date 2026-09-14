@@ -12,10 +12,13 @@ The wire contract is deliberately small. `internal/eggsat.Client` sends a
 `newf-eggsat-request/1` with a finite start term, already admitted rewrite
 rules, and iteration/node/time limits. The subprocess returns one
 `newf-eggsat-response/1` with its bounded stop reason, extraction cost, a flat
-engine explanation, and a structured sequence of rule steps. The adapter
-rejects a wrong schema, tool version, changed start term, malformed expression,
-inconsistent cost, missing admitted-rule attribution, a broken proof chain, an
-unreplayable rule step, or oversized output before the result reaches a caller.
+engine explanation, and a structured sequence of rule steps. Each step names
+its rule direction and concrete metavariable substitutions; it also carries an
+explicit empty guard list because the finite G2 language has no conditional
+rules. The adapter rejects a wrong schema, tool version, changed start term,
+malformed expression, inconsistent cost, missing admitted-rule attribution, a
+broken proof chain, an unreplayable rule step, a mismatched substitution, a
+nonempty guard list, or oversized output before the result reaches a caller.
 
 An admitted `rewrite.Rule` is the sole source of a sent rule. The adapter does
 not accept rule-shaped input directly, so a finite instance certificate or an
@@ -25,13 +28,14 @@ boundary: the engine receives a capability that has already been warranted; it
 does not decide which equalities are warranted.
 
 For each structured step, Go checks the source and target chain, resolves the
-reported identity to an admitted `rewrite.Rule`, and replays exactly one
-forward or reverse positional rewrite. The flat engine explanation remains
-provenance. For every returned endpoint, Go separately decodes the finite term
-and runs `finite.AssessEquivalence` over the declared domain. A refuted
-endpoint is rejected; an unresolved endpoint remains unverified. A budget stop
-is reported as bounded best-found work and never as saturation, optimality, or
-a global minimum.
+reported identity to an admitted `rewrite.Rule`, validates the reported binding
+against the local match, and replays exactly one forward or reverse positional
+rewrite. The flat engine explanation remains provenance. For every returned
+endpoint, Go separately decodes the finite term and runs
+`finite.AssessEquivalence` over the declared domain. A refuted endpoint is
+rejected; an unresolved endpoint remains unverified. A budget stop is reported
+as bounded best-found work and never as saturation, optimality, or a global
+minimum.
 
 Build and test the adapter from its directory:
 
@@ -43,8 +47,9 @@ cargo build
   go test ./internal/eggsat -run TestExternalEngineE2E -count=1)
 ```
 
-The G2 ingress is intentionally narrower than the G2 exit. It replays rule
-steps but does not yet carry explicit substitutions or conditional-rule guards
-in the wire protocol. Mutation coverage for those fields, persisted
-graph/dependency records, and the admit-union-withdraw-rebuild-reassess test
-remain required before calling G2 complete.
+The G2 ingress is intentionally narrower than the G2 exit. It rejects mutations
+of a rule, source, target, substitution, or guard scope, but it does not yet
+persist graph/dependency records or distinguish predicted extraction cost from
+measured execution cost. The durable
+admit-union-withdraw-rebuild-reassess test remains required before calling G2
+complete.
