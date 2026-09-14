@@ -398,8 +398,10 @@ authorization, a fresh custodian without access to the retained tree, observed
 isolation, a fresh case/answer set, and an evaluator command allowlist that
 forbids binary inspection. A nonprotected environment comparison may diagnose
 provider interruption, but it must use a separate, explicitly authorized lane
-and cannot repair the protected batch. To re-exercise delivered paths
-meanwhile:
+and cannot repair the protected batch. The prepared, non-authorizing future
+packet is [`CUSTODIAN_INTERFACE_BRIEF_V2.md`](CUSTODIAN_INTERFACE_BRIEF_V2.md)
+and [`CUSTODIAN_PUBLIC_INTERFACE_V2.md`](CUSTODIAN_PUBLIC_INTERFACE_V2.md).
+To re-exercise delivered paths meanwhile:
 `go build -o /tmp/newf ./cmd/newf && /tmp/newf --db <fresh.sqlite> review check-finite --input docs/plans/artifacts/2026-09-13-finite-claim-path/holds-input.json --policy <id> --obligation <id> --case <label> --executor <name> --max-assignments 64`.
 Operator-authored development packs can also run without editing Go, under the
 [shaping pack input contract](../shaping-pack-contract.md):
