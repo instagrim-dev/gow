@@ -55,6 +55,10 @@ Bedrock (US) 300K`. The model therefore could not be held constant through the
 inspected Cursor route. No approved direct route for that historical model was
 exposed to this task.
 
+This diagnostic task itself runs in Codex. Codex is a separate provider/model
+route from the historical Claude Bedrock route, so it cannot substitute for the
+required same-model direct arm. It was not sent the synthetic prompt.
+
 No synthetic prompt was transmitted, no provider request or spend occurred,
 and no protected material was opened. This is an `incomplete` availability
 preflight, not a Cursor control arm or a host-only comparison. A later run must

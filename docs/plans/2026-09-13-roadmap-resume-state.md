@@ -404,8 +404,8 @@ and [`CUSTODIAN_PUBLIC_INTERFACE_V2.md`](CUSTODIAN_PUBLIC_INTERFACE_V2.md).
 The separate, nonprotected host-versus-provider diagnostic is
 [`2026-09-13-provider-path-reproduction.md`](2026-09-13-provider-path-reproduction.md);
 its availability preflight is incomplete because the inspected Cursor UI did
-not expose the historical model and no approved direct same-model route is
-available to this task. No provider request was sent.
+not expose the historical model and Codex is a different provider/model route,
+not a same-model direct arm. No provider request was sent.
 To re-exercise delivered paths meanwhile:
 `go build -o /tmp/newf ./cmd/newf && /tmp/newf --db <fresh.sqlite> review check-finite --input docs/plans/artifacts/2026-09-13-finite-claim-path/holds-input.json --policy <id> --obligation <id> --case <label> --executor <name> --max-assignments 64`.
 Operator-authored development packs can also run without editing Go, under the
