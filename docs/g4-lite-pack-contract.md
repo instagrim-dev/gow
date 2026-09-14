@@ -61,7 +61,19 @@ The strict open episode input is `shaping-pack/1`: its top-level keys are
 `schema`, `label`, `provenance`, and `episodes`; every episode requires `id`,
 `stratum`, `family`, `start`, `variables`, `catalog`, and `target_cost`.
 Included history records require `start`, `rules_applied`, `final_cost`,
-`target`, `completed`, and `endpoint`.
+`target`, `completed`, and `endpoint`; `history[].start` is the canonical
+rendered expression **string**, whereas the episode `start` is a finite
+expression JSON object. `history[].endpoint` is likewise an oracle-verdict
+string (for example, `HOLDS_ON_DECLARED_DOMAIN`), not a Boolean.
+
+Observed metadata uses `schema: "g4-lite-observed-metadata/1"`, the exact
+pre-execution seal's `pre_execution_seal_sha256` and
+`pre_execution_seal_bytes`, and three content references named
+`arm_execution_manifest`, `resource_ledger_manifest`, and
+`result_grid_manifest`. Each of those three values uses the same `sha256`,
+`byte_length`, `locator` shape. `g4 pack bind-execution` validates and binds
+those byte identities; it does not establish that their private contents
+conform to the frozen design.
 
 ## Deterministic one-run executor
 
