@@ -118,33 +118,49 @@ func g4TestEpisodes() []string {
 	return episodes
 }
 
-func writeG4ExecuteFixture(t *testing.T, episodes []string, resourceRaw []byte) (manifest, episodesPath, resources, out string) {
+func writeG4ExecuteFixture(t *testing.T, episodes []string, resourceRaw []byte) (manifest, episodesPath, resources, h0Snapshot, h1Snapshot, hgSnapshot, out string) {
 	t.Helper()
 	dir := t.TempDir()
 	packRaw := []byte(`{"schema":"shaping-pack/1","label":"custodian-assertion","provenance":"synthetic CLI boundary fixture","episodes":[` + strings.Join(episodes, ",") + `]}`)
 	ref := func(raw []byte, locator string) g4pack.ManifestRef {
 		return g4pack.ManifestRef{SHA256: g4pack.Digest(raw), ByteLength: int64(len(raw)), Locator: locator}
 	}
-	m := g4pack.Manifest{Schema: g4pack.Schema, PackID: "g4-execute-cli", EpisodeManifest: ref(packRaw, "protected/episodes.json"), AnswerManifest: g4pack.ManifestRef{SHA256: strings.Repeat("a", 64), ByteLength: 1, Locator: "protected/answers.json"}, CalibrationManifest: g4pack.ManifestRef{SHA256: strings.Repeat("b", 64), ByteLength: 1, Locator: "protected/calibration.json"}, Custody: g4pack.CustodyDeclaration{EpisodeAuthorExposure: "unexposed_to_implementation_cases", ImplementerAccess: "no_protected_content", AnswerSeparation: "separate_answer_manifest", RecordRef: "protected/custody.json"}, Population: g4pack.Population{Total: 24, HistoryInformative: 12, HistoryLowValue: 6, HistoryMisleading: 6, MinFamilies: 2}, Arms: g4pack.ArmContract{H0: g4pack.ArmSnapshot{ControllerID: "catalog-order/1", Snapshot: g4pack.ManifestRef{SHA256: strings.Repeat("c", 64), ByteLength: 1, Locator: "h0"}}, H1: g4pack.ArmSnapshot{ControllerID: "same-history-direct/1", Snapshot: g4pack.ManifestRef{SHA256: strings.Repeat("d", 64), ByteLength: 1, Locator: "h1"}}, HG: g4pack.ArmSnapshot{ControllerID: "shaping-policy/1", Snapshot: g4pack.ManifestRef{SHA256: strings.Repeat("e", 64), ByteLength: 1, Locator: "hg"}}, ModelConfigSHA256: strings.Repeat("f", 64), ToolCatalogSHA256: strings.Repeat("1", 64), CheckerVersion: "finite-equivalence-checker/1", ResourceCeiling: ref(resourceRaw, "protected/resources.json"), CustodyOutsideCeiling: true, H1ReviewRef: "review://h1", H1ReviewerRole: "non_implementer"}, RunDesign: g4pack.RunDesign{RunsPerCell: 1, SeedPolicy: "single_run_budget_constrained", BudgetConstraintRef: "budget://one-run"}, Endpoint: g4pack.Endpoint{Kind: "exact_objective_within_same_task_directed_resource_cap/1", IncludesTargetCost: true, SameTaskDirectedResourceCeiling: true}, SpendingRule: g4pack.SpendingRule{MaxInvalidCertified: 0, MinHGOverH1: 3, MaxHGLossLowAndMisleading: 1, MinDifferenceFamilies: 2, RequireHGAtLeastH0: true, DecisionArithmetic: "run_summed_exact/1", ControlLossArithmetic: "net_control_stratum_run_summed/1", FamilyAdvantageArithmetic: "informative_positive_run_summed/1", TaskDirectedResourcesOnly: true}, Execution: g4pack.ExecutionDeclaration{ResourceCeilingRef: "protected/resources.json"}}
+	budget, err := decodeG4ResourceCeiling(g4ValidResourceCeiling)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identities, err := sealedrun.G4RuntimeArmIdentities(budget, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshotRaw := map[string][]byte{}
+	for _, identity := range identities {
+		raw, err := json.Marshal(identity)
+		if err != nil {
+			t.Fatal(err)
+		}
+		snapshotRaw[identity.Arm] = raw
+	}
+	m := g4pack.Manifest{Schema: g4pack.Schema, PackID: "g4-execute-cli", EpisodeManifest: ref(packRaw, "protected/episodes.json"), AnswerManifest: g4pack.ManifestRef{SHA256: strings.Repeat("a", 64), ByteLength: 1, Locator: "protected/answers.json"}, CalibrationManifest: g4pack.ManifestRef{SHA256: strings.Repeat("b", 64), ByteLength: 1, Locator: "protected/calibration.json"}, Custody: g4pack.CustodyDeclaration{EpisodeAuthorExposure: "unexposed_to_implementation_cases", ImplementerAccess: "no_protected_content", AnswerSeparation: "separate_answer_manifest", RecordRef: "protected/custody.json"}, Population: g4pack.Population{Total: 24, HistoryInformative: 12, HistoryLowValue: 6, HistoryMisleading: 6, MinFamilies: 2}, Arms: g4pack.ArmContract{H0: g4pack.ArmSnapshot{ControllerID: identities[0].ControllerID, Snapshot: ref(snapshotRaw["H0"], "frozen/h0.json")}, H1: g4pack.ArmSnapshot{ControllerID: identities[1].ControllerID, Snapshot: ref(snapshotRaw["H1"], "frozen/h1.json")}, HG: g4pack.ArmSnapshot{ControllerID: identities[2].ControllerID, Snapshot: ref(snapshotRaw["HG"], "frozen/hg.json")}, ModelConfigSHA256: strings.Repeat("f", 64), ToolCatalogSHA256: strings.Repeat("1", 64), CheckerVersion: "finite-equivalence-checker/1", ResourceCeiling: ref(resourceRaw, "protected/resources.json"), CustodyOutsideCeiling: true, H1ReviewRef: "review://h1", H1ReviewerRole: "non_implementer"}, RunDesign: g4pack.RunDesign{RunsPerCell: 1, SeedPolicy: "single_run_budget_constrained", BudgetConstraintRef: "budget://one-run"}, Endpoint: g4pack.Endpoint{Kind: "exact_objective_within_same_task_directed_resource_cap/1", IncludesTargetCost: true, SameTaskDirectedResourceCeiling: true}, SpendingRule: g4pack.SpendingRule{MaxInvalidCertified: 0, MinHGOverH1: 3, MaxHGLossLowAndMisleading: 1, MinDifferenceFamilies: 2, RequireHGAtLeastH0: true, DecisionArithmetic: "run_summed_exact/1", ControlLossArithmetic: "net_control_stratum_run_summed/1", FamilyAdvantageArithmetic: "informative_positive_run_summed/1", TaskDirectedResourcesOnly: true}, Execution: g4pack.ExecutionDeclaration{ResourceCeilingRef: "protected/resources.json"}}
 	manifestRaw, err := json.Marshal(m)
 	if err != nil {
 		t.Fatal(err)
 	}
-	manifest, episodesPath, resources, out = filepath.Join(dir, "manifest.json"), filepath.Join(dir, "episodes.json"), filepath.Join(dir, "resources.json"), filepath.Join(dir, "receipt.json")
-	for path, raw := range map[string][]byte{manifest: manifestRaw, episodesPath: packRaw, resources: resourceRaw} {
+	manifest, episodesPath, resources, h0Snapshot, h1Snapshot, hgSnapshot, out = filepath.Join(dir, "manifest.json"), filepath.Join(dir, "episodes.json"), filepath.Join(dir, "resources.json"), filepath.Join(dir, "h0.json"), filepath.Join(dir, "h1.json"), filepath.Join(dir, "hg.json"), filepath.Join(dir, "receipt.json")
+	for path, raw := range map[string][]byte{manifest: manifestRaw, episodesPath: packRaw, resources: resourceRaw, h0Snapshot: snapshotRaw["H0"], h1Snapshot: snapshotRaw["H1"], hgSnapshot: snapshotRaw["HG"]} {
 		if err := os.WriteFile(path, raw, 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
-	return manifest, episodesPath, resources, out
+	return manifest, episodesPath, resources, h0Snapshot, h1Snapshot, hgSnapshot, out
 }
 
 var g4ValidResourceCeiling = []byte(`{"schema":"g4-resource-ceiling/1","expansions":2,"rule_applications":128,"candidates":256,"history_bytes":65536,"check_assignments":4096,"max_states":1024,"max_term_nodes":1024}`)
 
 func TestG4ExecuteVerifiesArtifactsAndRunsOnlyThreeArms(t *testing.T) {
-	manifest, episodesPath, resources, out := writeG4ExecuteFixture(t, g4TestEpisodes(), g4ValidResourceCeiling)
+	manifest, episodesPath, resources, h0Snapshot, h1Snapshot, hgSnapshot, out := writeG4ExecuteFixture(t, g4TestEpisodes(), g4ValidResourceCeiling)
 	var stdout, stderr bytes.Buffer
-	if code := execute(context.Background(), []string{"--json", "g4", "execute", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--out", out}, &stdout, &stderr); code != 0 {
+	if code := execute(context.Background(), []string{"--json", "g4", "execute", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--h0-snapshot", h0Snapshot, "--h1-snapshot", h1Snapshot, "--hg-snapshot", hgSnapshot, "--out", out}, &stdout, &stderr); code != 0 {
 		t.Fatalf("g4 execute failed: %d %s %s", code, stdout.String(), stderr.String())
 	}
 	receipt, err := readShapingReceipt(out)
@@ -175,9 +191,9 @@ func TestG4ExecuteRejectsWrongPopulationBeforePreparingReceipt(t *testing.T) {
 		{"one informative family", oneInformativeFamily, "12/6/6 population"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			manifest, episodesPath, resources, out := writeG4ExecuteFixture(t, tc.episodes, g4ValidResourceCeiling)
+			manifest, episodesPath, resources, h0Snapshot, h1Snapshot, hgSnapshot, out := writeG4ExecuteFixture(t, tc.episodes, g4ValidResourceCeiling)
 			var stdout, stderr bytes.Buffer
-			if code := execute(context.Background(), []string{"g4", "execute", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--out", out}, &stdout, &stderr); code == 0 || !strings.Contains(stderr.String(), tc.want) {
+			if code := execute(context.Background(), []string{"g4", "execute", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--h0-snapshot", h0Snapshot, "--h1-snapshot", h1Snapshot, "--hg-snapshot", hgSnapshot, "--out", out}, &stdout, &stderr); code == 0 || !strings.Contains(stderr.String(), tc.want) {
 				t.Fatalf("invalid population was not refused: code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
 			}
 			if _, err := os.Stat(out); !os.IsNotExist(err) {
@@ -196,9 +212,9 @@ func TestG4ExecuteRequiresExplicitResourceCeilings(t *testing.T) {
 		{"null field", []byte(`{"schema":"g4-resource-ceiling/1","expansions":null,"rule_applications":128,"candidates":256,"history_bytes":65536,"check_assignments":4096,"max_states":1024,"max_term_nodes":1024}`)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			manifest, episodesPath, resources, out := writeG4ExecuteFixture(t, g4TestEpisodes(), tc.raw)
+			manifest, episodesPath, resources, h0Snapshot, h1Snapshot, hgSnapshot, out := writeG4ExecuteFixture(t, g4TestEpisodes(), tc.raw)
 			var stdout, stderr bytes.Buffer
-			if code := execute(context.Background(), []string{"g4", "execute", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--out", out}, &stdout, &stderr); code == 0 || !strings.Contains(stderr.String(), "explicit non-null fields: expansions") {
+			if code := execute(context.Background(), []string{"g4", "execute", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--h0-snapshot", h0Snapshot, "--h1-snapshot", h1Snapshot, "--hg-snapshot", hgSnapshot, "--out", out}, &stdout, &stderr); code == 0 || !strings.Contains(stderr.String(), "explicit non-null fields: expansions") {
 				t.Fatalf("underspecified resource ceiling was not refused: code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
 			}
 			if _, err := os.Stat(out); !os.IsNotExist(err) {
@@ -213,5 +229,83 @@ func TestG4ExecuteRequiresExplicitResourceCeilings(t *testing.T) {
 	}
 	if _, err := decodeG4ResourceCeiling([]byte(`{"schema":"g4-resource-ceiling/1","expansions":0,"rule_applications":0,"candidates":0,"history_bytes":0,"check_assignments":0,"max_states":0,"max_term_nodes":1}`)); err == nil {
 		t.Fatal("zero max_states must be refused before an execution receipt is prepared")
+	}
+}
+
+func TestG4ArmPreflightExportsAndVerifiesCompiledIdentities(t *testing.T) {
+	_, _, resources, h0Snapshot, h1Snapshot, hgSnapshot, _ := writeG4ExecuteFixture(t, g4TestEpisodes(), g4ValidResourceCeiling)
+	var stdout, stderr bytes.Buffer
+	if code := execute(context.Background(), []string{"--json", "g4", "runtime-identity", "--resource-ceiling", resources, "--arm", "H1"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("runtime identity failed: %d %s %s", code, stdout.String(), stderr.String())
+	}
+	var h1 sealedrun.G4ArmRuntimeIdentity
+	if err := json.Unmarshal(stdout.Bytes(), &h1); err != nil {
+		t.Fatal(err)
+	}
+	if h1.Arm != "H1" || h1.ControllerID == "" || h1.DecisionSnapshotSHA256 == "" {
+		t.Fatalf("runtime identity omitted the compiled H1 binding: %+v", h1)
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := execute(context.Background(), []string{"--json", "g4", "arm-preflight", "--resource-ceiling", resources, "--h0-snapshot", h0Snapshot, "--h1-snapshot", h1Snapshot, "--hg-snapshot", hgSnapshot}, &stdout, &stderr); code != 0 || !bytes.Contains(stdout.Bytes(), []byte(`"ok": true`)) {
+		t.Fatalf("matching arm preflight failed: %d %s %s", code, stdout.String(), stderr.String())
+	}
+}
+
+func TestG4CalibrateReportsCompletionCeilingWithoutGrantingDispatch(t *testing.T) {
+	_, episodesPath, resources, _, _, _, _ := writeG4ExecuteFixture(t, g4TestEpisodes(), g4ValidResourceCeiling)
+	var stdout, stderr bytes.Buffer
+	if code := execute(context.Background(), []string{"--json", "g4", "calibrate", "--episode-pack", episodesPath, "--resource-ceiling", resources}, &stdout, &stderr); code != 0 {
+		t.Fatalf("open calibration failed: %d %s %s", code, stdout.String(), stderr.String())
+	}
+	var result struct {
+		Status                 string         `json:"status"`
+		ArmCompletions         map[string]int `json:"arm_completions"`
+		ProtectedDispatchReady bool           `json:"protected_dispatch_ready"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != "COMPLETION_CEILING" || result.ProtectedDispatchReady || result.ArmCompletions["H0"] != 24 || result.ArmCompletions["H1"] != 24 || result.ArmCompletions["HG"] != 24 {
+		t.Fatalf("saturated open pack was not reported conservatively: %+v", result)
+	}
+}
+
+func TestG4ExecuteRejectsChangedArmIdentityBeforePreparingReceipt(t *testing.T) {
+	for _, arm := range []struct {
+		name string
+		path func(string, string, string) string
+	}{
+		{"H0", func(h0, _, _ string) string { return h0 }},
+		{"H1", func(_, h1, _ string) string { return h1 }},
+		{"HG", func(_, _, hg string) string { return hg }},
+	} {
+		t.Run(arm.name, func(t *testing.T) {
+			manifest, episodesPath, resources, h0Snapshot, h1Snapshot, hgSnapshot, out := writeG4ExecuteFixture(t, g4TestEpisodes(), g4ValidResourceCeiling)
+			path := arm.path(h0Snapshot, h1Snapshot, hgSnapshot)
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var identity sealedrun.G4ArmRuntimeIdentity
+			if err := json.Unmarshal(raw, &identity); err != nil {
+				t.Fatal(err)
+			}
+			identity.ControllerID += "-changed"
+			changed, err := json.Marshal(identity)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path, changed, 0600); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := execute(context.Background(), []string{"g4", "execute", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--h0-snapshot", h0Snapshot, "--h1-snapshot", h1Snapshot, "--hg-snapshot", hgSnapshot, "--out", out}, &stdout, &stderr); code == 0 || !strings.Contains(stderr.String(), "runtime identity does not match") {
+				t.Fatalf("changed %s identity was not refused: code=%d stdout=%s stderr=%s", arm.name, code, stdout.String(), stderr.String())
+			}
+			if _, err := os.Stat(out); !os.IsNotExist(err) {
+				t.Fatalf("changed %s identity prepared a receipt: %v", arm.name, err)
+			}
+		})
 	}
 }

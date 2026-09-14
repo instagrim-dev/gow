@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -117,7 +118,127 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 	_ = bind.MarkFlagRequired("observed-metadata")
 	_ = bind.MarkFlagRequired("out")
 
-	var executionManifest, episodePack, resourceCeiling, executionOut string
+	var runtimeResource, runtimeArm string
+	runtimeIdentity := &cobra.Command{Use: "runtime-identity", Short: "Export one compiled G4-lite arm identity", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+		raw, err := readG4BoundedFile(runtimeResource, 64<<10, "G4-lite resource ceiling")
+		if err != nil {
+			return wrapCommandError("g4 runtime-identity", err)
+		}
+		budget, err := decodeG4ResourceCeiling(raw)
+		if err != nil {
+			return wrapCommandError("g4 runtime-identity", err)
+		}
+		identities, err := sealedrun.G4RuntimeArmIdentities(budget, cmd.Context().Done() != nil)
+		if err != nil {
+			return wrapCommandError("g4 runtime-identity", err)
+		}
+		for _, identity := range identities {
+			if identity.Arm == runtimeArm {
+				return writeJSON(stdout, identity)
+			}
+		}
+		return wrapCommandError("g4 runtime-identity", fmt.Errorf("arm must be H0, H1, or HG, got %q", runtimeArm))
+	}}
+	runtimeIdentity.Flags().StringVar(&runtimeResource, "resource-ceiling", "", "Exact g4-resource-ceiling/1 artifact")
+	runtimeIdentity.Flags().StringVar(&runtimeArm, "arm", "", "Compiled arm to describe: H0, H1, or HG")
+	_ = runtimeIdentity.MarkFlagRequired("resource-ceiling")
+	_ = runtimeIdentity.MarkFlagRequired("arm")
+
+	var calibrationPack, calibrationResource string
+	calibrate := &cobra.Command{Use: "calibrate", Short: "Measure open-pack completion sensitivity before a G4-lite freeze", Args: cobra.NoArgs, RunE: func(_ *cobra.Command, _ []string) error {
+		packRaw, err := readG4BoundedFile(calibrationPack, sealedrun.MaxShapingPackBytes, "G4-lite open calibration pack")
+		if err != nil {
+			return wrapCommandError("g4 calibrate", err)
+		}
+		pack, err := sealedrun.DecodeShapingPack(packRaw)
+		if err != nil {
+			return wrapCommandError("g4 calibrate", err)
+		}
+		if err := validateG4EpisodePopulation(pack); err != nil {
+			return wrapCommandError("g4 calibrate", err)
+		}
+		resourceRaw, err := readG4BoundedFile(calibrationResource, 64<<10, "G4-lite resource ceiling")
+		if err != nil {
+			return wrapCommandError("g4 calibrate", err)
+		}
+		budget, err := decodeG4ResourceCeiling(resourceRaw)
+		if err != nil {
+			return wrapCommandError("g4 calibrate", err)
+		}
+		minimums, unreachable, err := sealedrun.CalibrateH0MinBudgets(pack, budget.Expansions)
+		if err != nil {
+			return wrapCommandError("g4 calibrate", err)
+		}
+		var positive []int
+		for _, minimum := range minimums {
+			if minimum > 0 {
+				positive = append(positive, minimum)
+			}
+		}
+		sort.Ints(positive)
+		proposed := 0
+		if len(positive) > 0 {
+			proposed = positive[len(positive)/2]
+		}
+		calibrated := budget
+		calibrated.Expansions = proposed
+		receipt, err := sealedrun.RunG4ResourceScreen(pack, calibrated, nil)
+		if err != nil {
+			return wrapCommandError("g4 calibrate", err)
+		}
+		status := "SENSITIVE_OPEN_CALIBRATION"
+		if len(positive) == 0 {
+			status = "H0_COMPLETION_CEILING"
+		} else if receipt.Completions["H1"] == len(pack.Episodes) || receipt.Completions["HG"] == len(pack.Episodes) {
+			status = "COMPLETION_CEILING"
+		}
+		return writeJSON(stdout, struct {
+			Schema                 string         `json:"schema"`
+			SourcePackSHA256       string         `json:"source_pack_sha256"`
+			SourcePackBytes        int            `json:"source_pack_bytes"`
+			InputResourceSHA256    string         `json:"input_resource_sha256"`
+			InputResourceBytes     int            `json:"input_resource_bytes"`
+			H0MinimumExpansions    map[string]int `json:"h0_minimum_expansions"`
+			H0UnreachableEpisodes  []string       `json:"h0_unreachable_episodes"`
+			ProposedExpansions     int            `json:"proposed_expansions"`
+			ArmCompletions         map[string]int `json:"arm_completions"`
+			Status                 string         `json:"status"`
+			ProtectedDispatchReady bool           `json:"protected_dispatch_ready"`
+		}{"g4-lite-sensitivity-calibration/1", g4pack.Digest(packRaw), len(packRaw), g4pack.Digest(resourceRaw), len(resourceRaw), minimums, unreachable, proposed, receipt.Completions, status, false})
+	}}
+	calibrate.Flags().StringVar(&calibrationPack, "episode-pack", "", "Open shaping-pack/1 calibration input")
+	calibrate.Flags().StringVar(&calibrationResource, "resource-ceiling", "", "Exact g4-resource-ceiling/1 calibration input")
+	_ = calibrate.MarkFlagRequired("episode-pack")
+	_ = calibrate.MarkFlagRequired("resource-ceiling")
+
+	var preflightResource, preflightH0, preflightH1, preflightHG string
+	preflight := &cobra.Command{Use: "arm-preflight", Short: "Verify frozen arm identities before protected authoring", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+		raw, err := readG4BoundedFile(preflightResource, 64<<10, "G4-lite resource ceiling")
+		if err != nil {
+			return wrapCommandError("g4 arm-preflight", err)
+		}
+		budget, err := decodeG4ResourceCeiling(raw)
+		if err != nil {
+			return wrapCommandError("g4 arm-preflight", err)
+		}
+		identities, _, err := readAndVerifyG4ArmIdentities(budget, cmd.Context().Done() != nil, preflightH0, preflightH1, preflightHG)
+		if err != nil {
+			return wrapCommandError("g4 arm-preflight", err)
+		}
+		return writeJSON(stdout, struct {
+			OK   bool                             `json:"ok"`
+			Arms []sealedrun.G4ArmRuntimeIdentity `json:"arms"`
+		}{true, identities})
+	}}
+	preflight.Flags().StringVar(&preflightResource, "resource-ceiling", "", "Exact g4-resource-ceiling/1 artifact")
+	preflight.Flags().StringVar(&preflightH0, "h0-snapshot", "", "Content-free H0 runtime-identity artifact")
+	preflight.Flags().StringVar(&preflightH1, "h1-snapshot", "", "Content-free H1 runtime-identity artifact")
+	preflight.Flags().StringVar(&preflightHG, "hg-snapshot", "", "Content-free HG runtime-identity artifact")
+	for _, name := range []string{"resource-ceiling", "h0-snapshot", "h1-snapshot", "hg-snapshot"} {
+		_ = preflight.MarkFlagRequired(name)
+	}
+
+	var executionManifest, episodePack, resourceCeiling, executionH0, executionH1, executionHG, executionOut string
 	execute := &cobra.Command{Use: "execute", Short: "Execute a bounded three-arm G4-lite screen from sealed artifacts", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 		m, _, err := readG4Manifest(executionManifest)
 		if err != nil {
@@ -151,6 +272,13 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 		if err != nil {
 			return wrapCommandError("g4 execute", err)
 		}
+		identities, snapshots, err := readAndVerifyG4ArmIdentities(budget, cmd.Context().Done() != nil, executionH0, executionH1, executionHG)
+		if err != nil {
+			return wrapCommandError("g4 execute", err)
+		}
+		if err := verifyG4ManifestArmIdentities(m, identities, snapshots); err != nil {
+			return wrapCommandError("g4 execute", err)
+		}
 		path, pending, err := prepareShapingReceipt(executionOut)
 		if err != nil {
 			return wrapCommandError("g4 execute", err)
@@ -173,8 +301,11 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 	execute.Flags().StringVar(&executionManifest, "manifest", "", "Final g4-lite-pack/2 metadata")
 	execute.Flags().StringVar(&episodePack, "episode-pack", "", "Exact separately held shaping-pack/1 episode artifact")
 	execute.Flags().StringVar(&resourceCeiling, "resource-ceiling", "", "Exact separately held g4-resource-ceiling/1 artifact")
+	execute.Flags().StringVar(&executionH0, "h0-snapshot", "", "Exact separately held H0 runtime-identity artifact")
+	execute.Flags().StringVar(&executionH1, "h1-snapshot", "", "Exact separately held H1 runtime-identity artifact")
+	execute.Flags().StringVar(&executionHG, "hg-snapshot", "", "Exact separately held HG runtime-identity artifact")
 	execute.Flags().StringVar(&executionOut, "out", "", "New custodian-local execution receipt")
-	for _, name := range []string{"manifest", "episode-pack", "resource-ceiling", "out"} {
+	for _, name := range []string{"manifest", "episode-pack", "resource-ceiling", "h0-snapshot", "h1-snapshot", "hg-snapshot", "out"} {
 		_ = execute.MarkFlagRequired(name)
 	}
 
@@ -209,7 +340,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 	}}
 	inspect.Flags().StringVar(&inspectInput, "input", "", "Optional metadata JSON to compare by exact bytes; protected content is never read")
 	pack.AddCommand(validate, seal, bind, inspect)
-	cmd.AddCommand(execute)
+	cmd.AddCommand(runtimeIdentity, calibrate, preflight, execute)
 	cmd.AddCommand(pack)
 	return cmd
 }
@@ -329,6 +460,77 @@ func decodeG4ResourceCeiling(raw []byte) (sealedrun.ResourceBudget, error) {
 		return sealedrun.ResourceBudget{}, err
 	}
 	return budget, nil
+}
+
+const maxG4ArmRuntimeIdentityBytes = 64 << 10
+
+func decodeG4ArmRuntimeIdentity(raw []byte, expectedArm string) (sealedrun.G4ArmRuntimeIdentity, error) {
+	var identity sealedrun.G4ArmRuntimeIdentity
+	keys := []string{"schema", "arm", "controller_id", "decision_snapshot_sha256", "decision_snapshot_encoding"}
+	if err := toolreg.StrictKeys(raw, "G4 arm runtime identity", keys, 2); err != nil {
+		return identity, err
+	}
+	d := json.NewDecoder(bytes.NewReader(raw))
+	d.DisallowUnknownFields()
+	if err := d.Decode(&identity); err != nil {
+		return identity, err
+	}
+	if err := d.Decode(new(any)); err != io.EOF {
+		return identity, errors.New("G4 arm runtime identity must contain exactly one JSON object")
+	}
+	if err := identity.Validate(); err != nil {
+		return identity, err
+	}
+	if identity.Arm != expectedArm {
+		return identity, fmt.Errorf("G4 arm runtime identity names %q, want %q", identity.Arm, expectedArm)
+	}
+	return identity, nil
+}
+
+func readAndVerifyG4ArmIdentities(budget sealedrun.ResourceBudget, cancellationEnabled bool, h0Path, h1Path, hgPath string) ([]sealedrun.G4ArmRuntimeIdentity, map[string][]byte, error) {
+	paths := []struct {
+		arm  string
+		path string
+	}{{"H0", h0Path}, {"H1", h1Path}, {"HG", hgPath}}
+	declared := make(map[string]sealedrun.G4ArmRuntimeIdentity, len(paths))
+	rawByArm := make(map[string][]byte, len(paths))
+	for _, input := range paths {
+		raw, err := readG4BoundedFile(input.path, maxG4ArmRuntimeIdentityBytes, "G4 "+input.arm+" runtime identity")
+		if err != nil {
+			return nil, nil, err
+		}
+		identity, err := decodeG4ArmRuntimeIdentity(raw, input.arm)
+		if err != nil {
+			return nil, nil, err
+		}
+		declared[input.arm], rawByArm[input.arm] = identity, raw
+	}
+	actual, err := sealedrun.G4RuntimeArmIdentities(budget, cancellationEnabled)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, identity := range actual {
+		frozen := declared[identity.Arm]
+		if frozen.ControllerID != identity.ControllerID || frozen.DecisionSnapshotSHA256 != identity.DecisionSnapshotSHA256 || frozen.DecisionSnapshotEncoding != identity.DecisionSnapshotEncoding {
+			return nil, nil, fmt.Errorf("G4 %s runtime identity does not match the frozen arm snapshot", identity.Arm)
+		}
+	}
+	return actual, rawByArm, nil
+}
+
+func verifyG4ManifestArmIdentities(m g4pack.Manifest, identities []sealedrun.G4ArmRuntimeIdentity, rawByArm map[string][]byte) error {
+	contracts := map[string]g4pack.ArmSnapshot{"H0": m.Arms.H0, "H1": m.Arms.H1, "HG": m.Arms.HG}
+	for _, identity := range identities {
+		contract := contracts[identity.Arm]
+		raw := rawByArm[identity.Arm]
+		if g4pack.Digest(raw) != contract.Snapshot.SHA256 || int64(len(raw)) != contract.Snapshot.ByteLength {
+			return fmt.Errorf("G4 %s runtime identity artifact does not match the final manifest snapshot identity", identity.Arm)
+		}
+		if contract.ControllerID != identity.ControllerID {
+			return fmt.Errorf("G4 %s final manifest controller_id does not match the frozen runtime identity", identity.Arm)
+		}
+	}
+	return nil
 }
 
 func readG4BoundedFile(path string, max int, label string) ([]byte, error) {

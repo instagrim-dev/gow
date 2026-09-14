@@ -10,8 +10,12 @@ newf g4 pack validate --input g4-lite-metadata.json
 newf g4 pack seal --input g4-lite-metadata.json --out g4-lite-pack.seal.json
 newf g4 pack bind-execution --pre-execution-seal g4-lite-pack.seal.json --observed-metadata observed.json --out execution-binding.json
 newf g4 pack inspect g4-lite-pack.seal.json --input g4-lite-metadata.json
+newf g4 runtime-identity --resource-ceiling resource.json --arm H0
+newf g4 calibrate --episode-pack open-episodes.json --resource-ceiling resource.json
+newf g4 arm-preflight --resource-ceiling resource.json --h0-snapshot h0.json --h1-snapshot h1.json --hg-snapshot hg.json
 newf g4 execute --manifest g4-lite-metadata.json --episode-pack episodes.json \
-  --resource-ceiling resource.json --out protected/execution-receipt.json
+  --resource-ceiling resource.json --h0-snapshot h0.json --h1-snapshot h1.json \
+  --hg-snapshot hg.json --out protected/execution-receipt.json
 ```
 
 The final input schema is `g4-lite-pack/2`. It is one UTF-8 JSON object of at
@@ -32,12 +36,29 @@ manifest contains only identity references and declarations:
 
 ## Deterministic one-run executor
 
+Before a custodian authors protected cases, use `g4 runtime-identity` once for
+each arm under the proposed resource ceiling. It emits a content-free
+`g4-lite-arm-runtime-identity/1` record with the compiled controller ID and
+the decision-snapshot hash it will actually use. The field
+`decision_snapshot_sha256` is the compiled controller's frozen-parameter
+identity, encoded as `go-json-sha256/1`; it is deliberately distinct from the
+SHA-256 of the JSON artifact that records it. The latter is what the manifest's
+per-arm `snapshot` reference binds.
+
+Create one such artifact for H0, H1, and HG, then run `g4 arm-preflight` with
+the same resource ceiling. It compares each declared runtime identity against
+the pinned executable before protected authoring begins. A mismatch is a stop,
+not a reason to alter a protected pack. The final manifest must reference those
+exact three artifact bytes. `g4 execute` repeats both checks before it opens a
+receipt, so a changed controller label, decision snapshot, or snapshot artifact
+cannot consume a cell.
+
 `g4 execute` is the public data-only executor for a final manifest with
 `single_run_budget_constrained`. Before doing work it verifies the exact bytes
-of the supplied episode and resource artifacts against the identities in the
-final manifest. The episode artifact is `shaping-pack/1` and must contain the
-fixed 24-episode 12/6/6 population. The resource artifact is one strict JSON
-object:
+of the supplied episode, resource, and runtime-identity artifacts against the
+identities in the final manifest. The episode artifact is `shaping-pack/1` and
+must contain the fixed 24-episode 12/6/6 population. The resource artifact is
+one strict JSON object:
 
 ```json
 {"schema":"g4-resource-ceiling/1","expansions":1,"rule_applications":1,"candidates":1,"history_bytes":1,"check_assignments":1,"max_states":1,"max_term_nodes":1}
@@ -49,11 +70,30 @@ and HG, writes a new custodian-local receipt, and labels it
 `protected-execution/custody-unverified`. It never reads answers, establishes
 custody, validates an authorization reference, or scores/funds the batch.
 
+## Open sensitivity calibration
+
+`g4 calibrate` accepts an **open** 24-episode 12/6/6 `shaping-pack/1` and a
+candidate resource vector. It first finds each H0 minimum expansion allowance
+without evaluating H1 or HG, then uses the median positive H0 minimum as a
+fixed proposed expansion allowance for one disclosed three-arm diagnostic. Its
+JSON output binds the open input and resource bytes, records all H0 minima and
+unreachable episodes, reports completions for each arm, and never grants
+protected-dispatch readiness.
+
+`H0_COMPLETION_CEILING` means every H0 completion minimum was zero. A
+`COMPLETION_CEILING` means H1 or HG completes every open episode at the
+proposed allowance. Either status is an inconclusive sensitivity diagnostic:
+it provides no shaping-value conclusion and must be resolved with the open
+task-generation/resource procedure before a successor protected design is
+frozen. Record both successful and failed calibrations; do not tune a fresh
+protected pack from completion counts.
+
 ## Required sequence
 
-1. Freeze the controller, comparator, checker, tool catalog, model access, and
-   resource specification at a pinned release. This is a design-stage
-   reference; it does not include future episode or answer hashes.
+1. Freeze the resource specification at a pinned release. Export H0, H1, and
+   HG runtime identities from that executable, record the three content-free
+   runtime-identity artifacts, and make `g4 arm-preflight` pass. This is a
+   design-stage reference; it does not include future episode or answer hashes.
 2. The custodian authors the fresh protected episodes and separately seals the
    episode, answer, calibration, arm-snapshot, resource, and seed artifacts.
 3. The custodian builds and seals the final `g4-lite-pack/2` manifest with

@@ -10,6 +10,13 @@ import (
 // controller, so pack authorship cannot be conditioned on either arm.
 const ComparatorVersion = "h1-frequency/0"
 
+// ComparatorSnapshotHash identifies the frozen H1 parameters. It is exposed
+// for a caller that needs to freeze the compiled controller before accepting
+// protected evaluation input; it is not a hash of an arbitrary snapshot file.
+func ComparatorSnapshotHash() string {
+	return hashOf(struct{ Version string }{ComparatorVersion})
+}
+
 // SelectUngatedFrequency is the H1 arm: a capable deterministic use of
 // the same History bytes with NO relevance gate — rules ordered by global
 // success frequency (rules seen in any completed attempt, however
@@ -40,7 +47,7 @@ func SelectUngatedFrequency(in Input) Decision {
 
 	dec := Decision{
 		ControllerVersion: ComparatorVersion,
-		SnapshotHash:      hashOf(struct{ Version string }{ComparatorVersion}),
+		SnapshotHash:      ComparatorSnapshotHash(),
 		InputHash:         hashOf(in),
 	}
 

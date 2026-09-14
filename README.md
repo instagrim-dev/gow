@@ -106,7 +106,10 @@ newf g4 pack validate --input <metadata.json>
 newf g4 pack seal --input <metadata.json> --out <new-seal.json>
 newf g4 pack bind-execution --pre-execution-seal <seal.json> --observed-metadata <metadata.json> --out <binding.json>
 newf g4 pack inspect <seal.json> [--input <metadata.json>]
-newf g4 execute --manifest <metadata.json> --episode-pack <episodes.json> --resource-ceiling <resource.json> --out <receipt.json>
+newf g4 runtime-identity --resource-ceiling <resource.json> --arm <H0|H1|HG>
+newf g4 calibrate --episode-pack <open-episodes.json> --resource-ceiling <resource.json>
+newf g4 arm-preflight --resource-ceiling <resource.json> --h0-snapshot <h0.json> --h1-snapshot <h1.json> --hg-snapshot <hg.json>
+newf g4 execute --manifest <metadata.json> --episode-pack <episodes.json> --resource-ceiling <resource.json> --h0-snapshot <h0.json> --h1-snapshot <h1.json> --hg-snapshot <hg.json> --out <receipt.json>
 ```
 
 Requires **Go 1.25 or newer**. The floor is declared once, by the `go` directive

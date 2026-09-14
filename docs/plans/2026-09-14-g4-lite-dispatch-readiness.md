@@ -18,8 +18,12 @@ funding.
 
 `newf g4 execute` accepts a final `g4-lite-pack/2` manifest, the exact
 separately held `shaping-pack/1` episode artifact, and a bounded
-`g4-resource-ceiling/1` artifact. It verifies both content identities before
-work, requires the 24-episode 12/6/6 population, supports only the disclosed
+`g4-resource-ceiling/1` artifact. It also requires the exact three
+content-free runtime-identity artifacts that the final manifest freezes.
+`g4 runtime-identity` exports the pinned executable's actual H0/H1/HG decision
+identities; `g4 arm-preflight` must match those records before protected
+authoring. Execution repeats the comparison before work, requires the
+24-episode 12/6/6 population, supports only the disclosed
 `single_run_budget_constrained` design, and executes H0/H1/HG only. It writes
 a custodian-local `g4-lite-three-arm-execution/1` receipt with the explicit
 label `protected-execution/custody-unverified`.
@@ -30,10 +34,17 @@ authority, or make a funding decision. Multi-seed execution remains a separate
 extension. `shaping diagnose` remains the unrelated four-arm development
 diagnostic.
 
+Before a successor protected dispatch, run `g4 calibrate` on an open 24-case
+pack and preserve its JSON output. A completion-ceiling status is inconclusive
+for shaping value; adjust only the open task-generation/resource procedure,
+record the new calibration, and repeat the identity preflight before a new
+protected design is frozen.
+
 ## Required dispatch sequence
 
-1. Pin the release that exposes `g4 execute` and freeze the H0, H1, HG, checker, tool, model, and task-directed resource
-   identities.
+1. Pin the release; export and preflight the actual H0, H1, and HG runtime
+   identities under the task-directed resource ceiling; then freeze those exact
+   snapshot artifacts with the checker, tool, and model identities.
 2. A fresh custodian context authors 24 protected episodes and separate answer,
    calibration, arm-snapshot, resource, and seed artifacts. The custodian
    records actual isolation, access controls, exposure history, and H1 review.

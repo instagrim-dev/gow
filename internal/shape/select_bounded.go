@@ -39,10 +39,7 @@ type boundedSnapshot struct {
 	CancellationEnabled                   bool
 }
 
-func selectBounded(in InputV2, lim rewrite.Limits, taskOnly bool) (Decision, error) {
-	if err := lim.Validate(); err != nil {
-		return Decision{}, err
-	}
+func newBoundedSnapshot(lim rewrite.Limits, taskOnly bool) boundedSnapshot {
 	version := ControllerVersionV2Bounded
 	threshold := SimilarityThreshold
 	if taskOnly {
@@ -55,13 +52,37 @@ func selectBounded(in InputV2, lim rewrite.Limits, taskOnly bool) (Decision, err
 		DefaultMaxStates: rewrite.DefaultMaxStates, DefaultMaxTermNodes: rewrite.DefaultMaxTermNodes,
 		WorkLimited: lim.Work != nil, CancellationEnabled: lim.Cancel != nil,
 	}
+	if lim.Work != nil {
+		snapshot.MaxRuleApplications = lim.Work.MaxRuleApplications
+		snapshot.MaxCandidates = lim.Work.MaxCandidates
+	}
+	return snapshot
+}
+
+// BoundedSnapshotHash returns the actual HG or task-only decision-snapshot
+// identity for an already validated execution limit. The hash covers the
+// compiled policy parameters and the resource limits that alter its behavior.
+func BoundedSnapshotHash(lim rewrite.Limits, taskOnly bool) (string, error) {
+	if err := lim.Validate(); err != nil {
+		return "", err
+	}
+	return hashOf(newBoundedSnapshot(lim, taskOnly)), nil
+}
+
+func selectBounded(in InputV2, lim rewrite.Limits, taskOnly bool) (Decision, error) {
+	if err := lim.Validate(); err != nil {
+		return Decision{}, err
+	}
+	version := ControllerVersionV2Bounded
+	if taskOnly {
+		version = TaskProbeControllerVersion
+	}
+	snapshot := newBoundedSnapshot(lim, taskOnly)
 	// Capture entry consumption before the probe mutates the shared
 	// ledger. Limits identify the frozen policy; prior consumption is an
 	// input because it changes the remaining allowance for this decision.
 	var usedRules, usedCandidates int
 	if lim.Work != nil {
-		snapshot.MaxRuleApplications = lim.Work.MaxRuleApplications
-		snapshot.MaxCandidates = lim.Work.MaxCandidates
 		usedRules, usedCandidates = lim.Work.RuleApplications, lim.Work.Candidates
 	}
 	return selectV2(in, func(task finite.Expr, rule rewrite.Rule, domain finite.Domain) (rewrite.ProbeResult, error) {
