@@ -199,3 +199,84 @@ func TestExecutionBindingRequiresValidLinkedArtifacts(t *testing.T) {
 		t.Fatal("unknown observed metadata schema was accepted")
 	}
 }
+
+func custodianArtifact(ch string, n int64) *ArtifactIdentity {
+	return &ArtifactIdentity{SHA256: strings.Repeat(ch, 64), ByteLength: n}
+}
+
+func validCustodianReturn() CustodianReturn {
+	return CustodianReturn{
+		Schema:             CustodianReturnSchema,
+		DispatchID:         "g4-dispatch-001",
+		ReleaseRevision:    strings.Repeat("a", 40),
+		ExecutableSHA256:   strings.Repeat("b", 64),
+		Procedure:          custodianArtifact("c", 1),
+		Manifest:           custodianArtifact("d", 2),
+		PreExecutionSeal:   custodianArtifact("e", 3),
+		ExecutionReceipt:   custodianArtifact("f", 4),
+		ObservedMetadata:   custodianArtifact("1", 5),
+		ExecutionBinding:   custodianArtifact("2", 6),
+		CompletionState:    "completed",
+		CustodyLimitations: []string{"SHARED_HOST_DECLARED"},
+		BlockedActions:     []string{},
+	}
+}
+
+func TestDecodeCustodianReturnRequiresCompleteOrStoppedArtifactChain(t *testing.T) {
+	completed := validCustodianReturn()
+	raw, err := json.Marshal(completed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeCustodianReturn(raw); err != nil {
+		t.Fatalf("completed content-free custodian return was refused: %v", err)
+	}
+
+	incomplete := completed
+	incomplete.ExecutionBinding = nil
+	raw, err = json.Marshal(incomplete)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeCustodianReturn(raw); err == nil {
+		t.Fatal("completed custodian return without binding was accepted")
+	}
+
+	interrupted := validCustodianReturn()
+	interrupted.CompletionState = "execution_interrupted"
+	interrupted.ObservedMetadata = nil
+	interrupted.ExecutionBinding = nil
+	interrupted.BlockedActions = []string{"CANCELLATION_SIGNAL"}
+	raw, err = json.Marshal(interrupted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeCustodianReturn(raw); err != nil {
+		t.Fatalf("interrupted custodian return with retained receipt was refused: %v", err)
+	}
+
+	interrupted.ExecutionReceipt = nil
+	raw, err = json.Marshal(interrupted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeCustodianReturn(raw); err == nil {
+		t.Fatal("interrupted custodian return without receipt was accepted")
+	}
+}
+
+func TestDecodeCustodianReturnRejectsPrivateOrUnknownFields(t *testing.T) {
+	returned := validCustodianReturn()
+	raw, err := json.Marshal(returned)
+	if err != nil {
+		t.Fatal(err)
+	}
+	private := strings.Replace(string(raw), `"blocked_actions":[]`, `"blocked_actions":["private result text"]`, 1)
+	if _, err := DecodeCustodianReturn([]byte(private)); err == nil {
+		t.Fatal("custodian return accepted non-code blocked action")
+	}
+	unknown := strings.Replace(string(raw), `"schema":`, `"episode_contents":"leak","schema":`, 1)
+	if _, err := DecodeCustodianReturn([]byte(unknown)); err == nil {
+		t.Fatal("custodian return accepted unknown content-bearing field")
+	}
+}

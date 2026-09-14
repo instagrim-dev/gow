@@ -27,6 +27,7 @@ const (
 	MaxManifestBytes         = 256 << 10
 	MaxSealBytes             = 64 << 10
 	MaxObservedMetadataBytes = 256 << 10
+	MaxCustodianReturnBytes  = 64 << 10
 	PreparedNotAuthorized    = "PREPARED_NOT_AUTHORIZED"
 	NoProtectedExecution     = "protected execution is not authorized by this manifest or its seal"
 	CustodyNotVerified       = "custody declarations are retained but not independently verified"
@@ -38,7 +39,12 @@ const (
 	RequiredTotal       = RequiredInformative + RequiredLowValue + RequiredMisleading
 )
 
-var sha256Hex = regexp.MustCompile(`^[0-9a-f]{64}$`)
+var (
+	sha256Hex        = regexp.MustCompile(`^[0-9a-f]{64}$`)
+	shortRevisionHex = regexp.MustCompile(`^[0-9a-f]{40}([0-9a-f]{24})?$`)
+	returnID         = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`)
+	contentFreeCode  = regexp.MustCompile(`^[A-Z][A-Z0-9_]{0,63}$`)
+)
 
 type Manifest struct {
 	Schema                      string               `json:"schema"`
@@ -369,6 +375,118 @@ type ExecutionBinding struct {
 }
 
 const ExecutionBindingSchema = "g4-lite-execution-binding/2"
+
+const CustodianReturnSchema = "g4-custodian-return/1"
+
+// CustodianReturn is the bounded, content-free handoff from a protected G4
+// custodian. It records only public dispatch identifiers and artifact byte
+// identities. It neither attests to custody nor replaces the substantive
+// protected-evidence grade.
+type CustodianReturn struct {
+	Schema             string            `json:"schema"`
+	DispatchID         string            `json:"dispatch_id"`
+	ReleaseRevision    string            `json:"release_revision"`
+	ExecutableSHA256   string            `json:"executable_sha256"`
+	Procedure          *ArtifactIdentity `json:"procedure,omitempty"`
+	Manifest           *ArtifactIdentity `json:"manifest,omitempty"`
+	PreExecutionSeal   *ArtifactIdentity `json:"pre_execution_seal,omitempty"`
+	ExecutionReceipt   *ArtifactIdentity `json:"execution_receipt,omitempty"`
+	ObservedMetadata   *ArtifactIdentity `json:"observed_metadata,omitempty"`
+	ExecutionBinding   *ArtifactIdentity `json:"execution_binding,omitempty"`
+	CompletionState    string            `json:"completion_state"`
+	CustodyLimitations []string          `json:"custody_limitations"`
+	BlockedActions     []string          `json:"blocked_actions"`
+}
+
+// ArtifactIdentity deliberately omits a locator: the custodian return is an
+// outward content-free handoff and must not disclose protected storage paths.
+type ArtifactIdentity struct {
+	SHA256     string `json:"sha256"`
+	ByteLength int64  `json:"byte_length"`
+}
+
+func DecodeCustodianReturn(raw []byte) (CustodianReturn, error) {
+	var returned CustodianReturn
+	if len(raw) == 0 || len(raw) > MaxCustodianReturnBytes || !utf8.Valid(raw) {
+		return returned, fmt.Errorf("G4 custodian return is empty, invalid UTF-8, or exceeds %d bytes", MaxCustodianReturnBytes)
+	}
+	keys := []string{
+		"schema", "dispatch_id", "release_revision", "executable_sha256", "procedure", "manifest", "pre_execution_seal", "execution_receipt", "observed_metadata", "execution_binding", "completion_state", "custody_limitations", "blocked_actions", "sha256", "byte_length",
+	}
+	if err := toolreg.StrictKeys(raw, "G4 custodian return", keys, 2); err != nil {
+		return returned, err
+	}
+	d := json.NewDecoder(bytes.NewReader(raw))
+	d.DisallowUnknownFields()
+	if err := d.Decode(&returned); err != nil {
+		return returned, err
+	}
+	if err := d.Decode(new(any)); err != io.EOF {
+		return returned, fmt.Errorf("G4 custodian return must contain exactly one JSON object")
+	}
+	return returned, returned.Validate()
+}
+
+func (r CustodianReturn) Validate() error {
+	if r.Schema != CustodianReturnSchema || !returnID.MatchString(r.DispatchID) || !shortRevisionHex.MatchString(r.ReleaseRevision) || !sha256Hex.MatchString(r.ExecutableSHA256) {
+		return fmt.Errorf("custodian return requires schema, dispatch ID, pinned release revision, and executable SHA-256")
+	}
+	refs := map[string]*ArtifactIdentity{
+		"procedure": r.Procedure, "manifest": r.Manifest, "pre_execution_seal": r.PreExecutionSeal,
+		"execution_receipt": r.ExecutionReceipt, "observed_metadata": r.ObservedMetadata, "execution_binding": r.ExecutionBinding,
+	}
+	for name, ref := range refs {
+		if ref != nil && (!sha256Hex.MatchString(ref.SHA256) || ref.ByteLength < 1) {
+			return fmt.Errorf("custodian return %s has an invalid artifact identity", name)
+		}
+	}
+	if r.ExecutionBinding != nil && (r.PreExecutionSeal == nil || r.ObservedMetadata == nil || r.ExecutionReceipt == nil) {
+		return fmt.Errorf("custodian return execution_binding requires pre_execution_seal, observed_metadata, and execution_receipt")
+	}
+	if r.ObservedMetadata != nil && r.PreExecutionSeal == nil {
+		return fmt.Errorf("custodian return observed_metadata requires pre_execution_seal")
+	}
+	if r.ExecutionReceipt != nil && (r.Procedure == nil || r.Manifest == nil || r.PreExecutionSeal == nil) {
+		return fmt.Errorf("custodian return execution_receipt requires procedure, manifest, and pre_execution_seal")
+	}
+	for label, values := range map[string][]string{"custody_limitations": r.CustodyLimitations, "blocked_actions": r.BlockedActions} {
+		if len(values) > 32 {
+			return fmt.Errorf("custodian return %s has too many entries", label)
+		}
+		seen := make(map[string]struct{}, len(values))
+		for _, value := range values {
+			if !contentFreeCode.MatchString(value) {
+				return fmt.Errorf("custodian return %s must contain uppercase content-free codes", label)
+			}
+			if _, duplicate := seen[value]; duplicate {
+				return fmt.Errorf("custodian return %s must not repeat a code", label)
+			}
+			seen[value] = struct{}{}
+		}
+	}
+	switch r.CompletionState {
+	case "completed":
+		for name, ref := range refs {
+			if ref == nil {
+				return fmt.Errorf("completed custodian return requires %s", name)
+			}
+		}
+	case "execution_interrupted", "resource_exhausted":
+		if r.Procedure == nil || r.Manifest == nil || r.PreExecutionSeal == nil || r.ExecutionReceipt == nil {
+			return fmt.Errorf("%s custodian return requires procedure, manifest, pre_execution_seal, and execution_receipt", r.CompletionState)
+		}
+		if len(r.BlockedActions) == 0 {
+			return fmt.Errorf("%s custodian return requires a blocked action", r.CompletionState)
+		}
+	case "verification_blocked", "interface_unrepresentable":
+		if len(r.BlockedActions) == 0 {
+			return fmt.Errorf("%s custodian return requires a blocked action", r.CompletionState)
+		}
+	default:
+		return fmt.Errorf("custodian return completion_state is not recognized")
+	}
+	return nil
+}
 
 const (
 	// SubstantiveGradeSchema records per-assessment state so an early stop can

@@ -60,6 +60,9 @@ After the integrity hash check, the only executable commands are:
   --pre-execution-seal <dispatch-root>/protected/g4-pack.seal.json \
   --observed-metadata <dispatch-root>/protected/observed-metadata.json \
   --out <dispatch-root>/protected/execution-binding.json
+
+<dispatch-root>/packet/newf --json g4 custodian-return validate \
+  --input <dispatch-root>/protected/custodian-return.json
 ```
 
 The authorization must separately name whether the `g4 execute` command is
@@ -98,7 +101,7 @@ those private contents.
 Send only this content-free record to the named grader:
 
 ```json
-{"schema":"g4-custodian-return/1","dispatch_id":"<dispatch-id>","release_revision":"<pinned-revision>","executable_sha256":"<pinned-sha256>","procedure":{"sha256":"<sha256>","byte_length":<positive>},"manifest":{"sha256":"<sha256>","byte_length":<positive>},"pre_execution_seal":{"sha256":"<sha256>","byte_length":<positive>},"execution_receipt":{"sha256":"<sha256>","byte_length":<positive>},"observed_metadata":{"sha256":"<sha256>","byte_length":<positive>},"execution_binding":{"sha256":"<sha256>","byte_length":<positive>},"completion_state":"<completed|execution_interrupted|resource_exhausted|verification_blocked|interface_unrepresentable>","custody_limitations":["<content-free limitation>"],"blocked_actions":["<content-free action>"]}
+{"schema":"g4-custodian-return/1","dispatch_id":"<dispatch-id>","release_revision":"<pinned-revision>","executable_sha256":"<pinned-sha256>","procedure":{"sha256":"<sha256>","byte_length":<positive>},"manifest":{"sha256":"<sha256>","byte_length":<positive>},"pre_execution_seal":{"sha256":"<sha256>","byte_length":<positive>},"execution_receipt":{"sha256":"<sha256>","byte_length":<positive>},"observed_metadata":{"sha256":"<sha256>","byte_length":<positive>},"execution_binding":{"sha256":"<sha256>","byte_length":<positive>},"completion_state":"<completed|execution_interrupted|resource_exhausted|verification_blocked|interface_unrepresentable>","custody_limitations":["<UPPERCASE_CONTENT_FREE_CODE>"],"blocked_actions":["<UPPERCASE_CONTENT_FREE_CODE>"]}
 ```
 
 For a pre-execution stop, retain the identities that exist, omit unavailable

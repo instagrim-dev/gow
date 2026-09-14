@@ -17,6 +17,7 @@ newf g4 arm-preflight --resource-ceiling resource.json --h0-snapshot h0.json --h
 newf g4 execute --manifest g4-lite-metadata.json --episode-pack episodes.json \
   --resource-ceiling resource.json --h0-snapshot h0.json --h1-snapshot h1.json \
   --hg-snapshot hg.json --generation-procedure procedure.json --out protected/execution-receipt.json
+newf g4 custodian-return validate --input content-free-custodian-return.json
 newf g4 grade validate --input content-free-substantive-grade.json
 ```
 
@@ -77,6 +78,23 @@ pre-execution seal's `pre_execution_seal_sha256` and
 `byte_length`, `locator` shape. `g4 pack bind-execution` validates and binds
 those byte identities; it does not establish that their private contents
 conform to the frozen design.
+
+## Custodian return
+
+`g4 custodian-return validate` accepts only a strict bounded
+`g4-custodian-return/1` document. Its fields are a dispatch identifier, pinned
+release and executable identities, optional artifact byte identities, a
+completion state, and uppercase content-free limitation or blocked-action
+codes. It has no locators or protected content fields.
+
+A `completed` return requires procedure, final manifest, pre-execution seal,
+execution receipt, observed metadata, and execution-binding identities. An
+`execution_interrupted` or `resource_exhausted` return requires the procedure,
+manifest, seal, and retained receipt plus a blocked-action code. A
+`verification_blocked` or `interface_unrepresentable` return records at least
+one blocked-action code and only the identities that exist. The command checks
+syntax and internal artifact-chain presence; it does not validate artifact
+bytes, establish custody, or grade results.
 
 ## Deterministic one-run executor
 

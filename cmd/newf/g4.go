@@ -646,6 +646,27 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 	}}
 	inspect.Flags().StringVar(&inspectInput, "input", "", "Optional metadata JSON to compare by exact bytes; protected content is never read")
 
+	var custodianReturnInput string
+	custodianReturn := &cobra.Command{Use: "custodian-return", Short: "Validate a custodian's content-free G4 handoff"}
+	custodianReturnValidate := &cobra.Command{Use: "validate", Short: "Validate a bounded content-free G4 custodian return", Args: cobra.NoArgs, RunE: func(_ *cobra.Command, _ []string) error {
+		raw, err := readG4BoundedFile(custodianReturnInput, g4pack.MaxCustodianReturnBytes, "G4 custodian return")
+		if err != nil {
+			return wrapCommandError("g4 custodian-return validate", err)
+		}
+		returned, err := g4pack.DecodeCustodianReturn(raw)
+		if err != nil {
+			return wrapCommandError("g4 custodian-return validate", err)
+		}
+		return writeJSON(stdout, struct {
+			OK       bool                   `json:"ok"`
+			Command  string                 `json:"command"`
+			Returned g4pack.CustodianReturn `json:"return"`
+		}{true, "g4 custodian-return validate", returned})
+	}}
+	custodianReturnValidate.Flags().StringVar(&custodianReturnInput, "input", "", "Content-free g4-custodian-return/1 from the protected custodian")
+	_ = custodianReturnValidate.MarkFlagRequired("input")
+	custodianReturn.AddCommand(custodianReturnValidate)
+
 	var substantiveGradeInput string
 	grade := &cobra.Command{Use: "grade", Short: "Validate a substantive grader's content-free G4 judgment"}
 	gradeValidate := &cobra.Command{Use: "validate", Short: "Validate the content-free return from a protected-evidence grader", Args: cobra.NoArgs, RunE: func(_ *cobra.Command, _ []string) error {
@@ -667,7 +688,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 	_ = gradeValidate.MarkFlagRequired("input")
 	grade.AddCommand(gradeValidate)
 	pack.AddCommand(validate, seal, bind, inspect)
-	cmd.AddCommand(runtimeIdentity, calibrate, calibrateProcedure, preflight, execute, grade)
+	cmd.AddCommand(runtimeIdentity, calibrate, calibrateProcedure, preflight, execute, custodianReturn, grade)
 	cmd.AddCommand(pack)
 	return cmd
 }

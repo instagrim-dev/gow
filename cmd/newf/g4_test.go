@@ -648,3 +648,45 @@ func TestG4ExecuteRejectsChangedArmIdentityBeforePreparingReceipt(t *testing.T) 
 		})
 	}
 }
+
+func TestG4CustodianReturnCLIValidatesContentFreeHandoff(t *testing.T) {
+	dir := t.TempDir()
+	input := filepath.Join(dir, "custodian-return.json")
+	artifact := func(ch string, n int64) *g4pack.ArtifactIdentity {
+		return &g4pack.ArtifactIdentity{SHA256: strings.Repeat(ch, 64), ByteLength: n}
+	}
+	returned := g4pack.CustodianReturn{
+		Schema:             g4pack.CustodianReturnSchema,
+		DispatchID:         "g4-dispatch-001",
+		ReleaseRevision:    strings.Repeat("a", 40),
+		ExecutableSHA256:   strings.Repeat("b", 64),
+		Procedure:          artifact("c", 1),
+		Manifest:           artifact("d", 2),
+		PreExecutionSeal:   artifact("e", 3),
+		ExecutionReceipt:   artifact("f", 4),
+		ObservedMetadata:   artifact("1", 5),
+		ExecutionBinding:   artifact("2", 6),
+		CompletionState:    "completed",
+		CustodyLimitations: []string{"SHARED_HOST_DECLARED"},
+		BlockedActions:     []string{},
+	}
+	raw, err := json.Marshal(returned)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(input, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := execute(context.Background(), []string{"--json", "g4", "custodian-return", "validate", "--input", input}, &stdout, &stderr); code != 0 || !bytes.Contains(stdout.Bytes(), []byte(`"ok": true`)) {
+		t.Fatalf("custodian return validation failed: %d %s %s", code, stdout.String(), stderr.String())
+	}
+	if err := os.WriteFile(input, []byte(strings.Replace(string(raw), `"blocked_actions":[]`, `"blocked_actions":["private trace"]`, 1)), 0600); err != nil {
+		t.Fatal(err)
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := execute(context.Background(), []string{"g4", "custodian-return", "validate", "--input", input}, &stdout, &stderr); code == 0 || !strings.Contains(stderr.String(), "content-free") {
+		t.Fatalf("content-bearing custodian return was accepted: %d %s %s", code, stdout.String(), stderr.String())
+	}
+}
