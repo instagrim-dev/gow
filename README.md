@@ -102,6 +102,9 @@ newf g1 pack inspect <seal.json> [--input <metadata.json>]
 newf g3 pack validate --input <metadata.json>
 newf g3 pack seal --input <metadata.json> --out <new-seal.json>
 newf g3 pack inspect <seal.json> [--input <metadata.json>]
+newf g4 pack validate --input <metadata.json>
+newf g4 pack seal --input <metadata.json> --out <new-seal.json>
+newf g4 pack inspect <seal.json> [--input <metadata.json>]
 ```
 
 Requires **Go 1.25 or newer**. The floor is declared once, by the `go` directive
@@ -123,7 +126,7 @@ By default the CLI stores state in:
 
 Override the database location with `--db <path>` or `NEWF_DB=<path>`.
 
-For the bounded residual-driven composition path, a task author can issue a `composition-task/1` file and a proposer can return a task-digest-bound `composition-candidate/1` file. `newf composition commit --task ... --candidate ...` creates the pre-observation record; `newf composition observe` replays it and measures the original objective separately. `newf g3 pack` seals only the separately held task and answer manifest identities. See [`docs/composition.md`](docs/composition.md) and [`docs/g3-protected-pack.md`](docs/g3-protected-pack.md).
+For the bounded residual-driven composition path, a task author can issue a `composition-task/1` file and a proposer can return a task-digest-bound `composition-candidate/1` file. `newf composition commit --task ... --candidate ...` creates the pre-observation record; `newf composition observe` replays it and measures the original objective separately. `newf g3 pack` seals only the separately held task and answer manifest identities. See [`docs/composition.md`](docs/composition.md), [`docs/g3-protected-pack.md`](docs/g3-protected-pack.md), and [`docs/g4-lite-pack-contract.md`](docs/g4-lite-pack-contract.md).
 
 ### Example
 
