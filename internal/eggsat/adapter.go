@@ -96,6 +96,11 @@ type Result struct {
 	Proof             []ProofStep
 	Endpoint          finite.Certificate
 	EndpointVerified  bool
+	// MeasuredExecution is the finite interpreter work for Best. It is
+	// separate from BestCost (the engine's AST-size extraction objective) and
+	// is unknown when the declared domain cannot be exhausted.
+	MeasuredExecution      finite.ExecutionCost
+	MeasuredExecutionKnown bool
 }
 
 // ProofStep is one engine-reported rewrite that the Go checker replayed using
@@ -188,6 +193,7 @@ func (c Client) Optimize(ctx context.Context, start finite.Expr, d finite.Domain
 	req := request{
 		Schema: RequestSchema,
 		Start:  startWire,
+		Rules:  make([]requestRule, 0, len(rules)),
 		Limits: requestLimits{Iterations: limits.Iterations, NodeLimit: limits.NodeLimit, TimeLimit: limits.Timeout.Milliseconds()},
 	}
 	rulesByID := make(map[string]rewrite.Rule, len(rules))
@@ -268,6 +274,10 @@ func (c Client) Optimize(ctx context.Context, start finite.Expr, d finite.Domain
 		Proof:             proof,
 		Endpoint:          endpoint,
 		EndpointVerified:  endpoint.Verdict == finite.VerdictHoldsOnDomain,
+	}
+	if cost, err := finite.MeasureExecutionCost(best, d); err == nil {
+		result.MeasuredExecution = cost
+		result.MeasuredExecutionKnown = true
 	}
 	if endpoint.Verdict == finite.VerdictRefuted {
 		return result, fmt.Errorf("%w: %s", ErrEndpointRefuted, endpoint.Reason)

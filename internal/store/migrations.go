@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const currentSchemaVersion = 47
+const currentSchemaVersion = 48
 
 // reviewAssessmentReferenceScopeSQL closes the review-ledger subject-binding
 // gap for existing stores. Fresh stores also get this trigger from v44's
@@ -1309,6 +1309,15 @@ END;
 		// manifest citation; the Go store performs the same check to return a
 		// clear error before SQLite aborts the insert.
 		sql: reviewAssessmentReferenceScopeSQL,
+	},
+	{
+		version: 48,
+		// v48 (G2): immutable equality-graph custody. Rules are admitted under
+		// a graph once; later union, withdrawal, rebuild, and reassessment
+		// events append to the same dependency history. Active scope is derived
+		// from admissions minus withdrawals, so a process restart cannot retain
+		// a hidden union from a withdrawn rule.
+		sql: equalityGraphLedgerSQL,
 	},
 }
 
@@ -4289,6 +4298,77 @@ func migrateV43RefutedBoundaryDirectives(ctx context.Context, tx *sql.Tx) error 
 //     mandatory set) policy is detectable rather than silently granting
 //     eligibility, and `scope_justification` on the policy is NOT NULL/non-empty
 //     so an authorized affirmative scope must be stated.
+const equalityGraphLedgerSQL = `
+CREATE TABLE IF NOT EXISTS equality_graphs (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL REFERENCES problems(id),
+  domain_json TEXT NOT NULL CHECK (length(domain_json) > 0),
+  start_term TEXT NOT NULL CHECK (length(start_term) > 0),
+  engine_ref TEXT NOT NULL CHECK (length(engine_ref) > 0),
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS equality_graph_rules (
+  graph_id TEXT NOT NULL REFERENCES equality_graphs(id),
+  rule_identity TEXT NOT NULL,
+  rule_name TEXT NOT NULL CHECK (length(rule_name) > 0),
+  left_term TEXT NOT NULL CHECK (length(left_term) > 0),
+  right_term TEXT NOT NULL CHECK (length(right_term) > 0),
+  warrant_json TEXT NOT NULL CHECK (length(warrant_json) > 0),
+  created_at TEXT NOT NULL,
+  PRIMARY KEY(graph_id, rule_identity)
+);
+
+CREATE TABLE IF NOT EXISTS equality_graph_events (
+  id TEXT PRIMARY KEY,
+  graph_id TEXT NOT NULL REFERENCES equality_graphs(id),
+  ordinal INTEGER NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('union','withdraw','rebuild','reassess')),
+  rule_identity TEXT NOT NULL DEFAULT '',
+  dependency_json TEXT NOT NULL DEFAULT '[]',
+  predicted_extraction_cost INTEGER,
+  measured_execution_visits INTEGER,
+  measurement_known INTEGER NOT NULL DEFAULT 0 CHECK (measurement_known IN (0,1)),
+  result_json TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  UNIQUE(graph_id, ordinal)
+);
+
+CREATE INDEX IF NOT EXISTS idx_equality_graph_rules_graph ON equality_graph_rules(graph_id);
+CREATE INDEX IF NOT EXISTS idx_equality_graph_events_graph ON equality_graph_events(graph_id, ordinal);
+
+CREATE TRIGGER IF NOT EXISTS equality_graphs_immutable_update
+BEFORE UPDATE ON equality_graphs
+BEGIN
+  SELECT RAISE(ABORT, 'equality graphs are immutable; append a graph event');
+END;
+CREATE TRIGGER IF NOT EXISTS equality_graphs_immutable_delete
+BEFORE DELETE ON equality_graphs
+BEGIN
+  SELECT RAISE(ABORT, 'equality graphs are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS equality_graph_rules_immutable_update
+BEFORE UPDATE ON equality_graph_rules
+BEGIN
+  SELECT RAISE(ABORT, 'equality graph rules are immutable; append a graph event');
+END;
+CREATE TRIGGER IF NOT EXISTS equality_graph_rules_immutable_delete
+BEFORE DELETE ON equality_graph_rules
+BEGIN
+  SELECT RAISE(ABORT, 'equality graph rules are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS equality_graph_events_immutable_update
+BEFORE UPDATE ON equality_graph_events
+BEGIN
+  SELECT RAISE(ABORT, 'equality graph events are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS equality_graph_events_immutable_delete
+BEFORE DELETE ON equality_graph_events
+BEGIN
+  SELECT RAISE(ABORT, 'equality graph events are immutable');
+END;
+`
+
 const reviewLedgerSQL = `
 CREATE TABLE IF NOT EXISTS review_policies (
   id TEXT PRIMARY KEY,

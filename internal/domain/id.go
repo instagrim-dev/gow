@@ -54,6 +54,8 @@ const (
 	SearchPolicyRevisionIDPrefix  = "spr_"
 	SearchPolicyDirectiveIDPrefix = "spd_"
 	InterpretationClaimIDPrefix   = "icl_"
+	EqualityGraphIDPrefix         = "egr_"
+	EqualityGraphEventIDPrefix    = "ege_"
 	// Normative review records (G1, 2026-09-12 review-flow run). These are the
 	// review contract's four record responsibilities. They are NOT scientific
 	// domain records: a normative obligation requires a property, whereas a
@@ -108,6 +110,8 @@ var (
 	ErrInvalidExperimentID            = errors.New("invalid experiment id")
 	ErrInvalidSearchPolicyRevisionID  = errors.New("invalid search policy revision id")
 	ErrInvalidSearchPolicyDirectiveID = errors.New("invalid search policy directive id")
+	ErrInvalidEqualityGraphID         = errors.New("invalid equality graph id")
+	ErrInvalidEqualityGraphEventID    = errors.New("invalid equality graph event id")
 
 	ErrInvalidReviewPolicyID                = errors.New("invalid review policy id")
 	ErrInvalidReviewObligationID            = errors.New("invalid review obligation id")
@@ -329,6 +333,18 @@ func ValidateInvariantClaimFormID(id string) error {
 }
 
 func NewEpisodeID(now time.Time) string { return newID(EpisodeIDPrefix, now) }
+
+func NewEqualityGraphID(now time.Time) string { return newID(EqualityGraphIDPrefix, now) }
+
+func ValidateEqualityGraphID(id string) error {
+	return validateID(id, EqualityGraphIDPrefix, ErrInvalidEqualityGraphID)
+}
+
+func NewEqualityGraphEventID(now time.Time) string { return newID(EqualityGraphEventIDPrefix, now) }
+
+func ValidateEqualityGraphEventID(id string) error {
+	return validateID(id, EqualityGraphEventIDPrefix, ErrInvalidEqualityGraphEventID)
+}
 
 func ValidateEpisodeID(id string) error {
 	return validateID(id, EpisodeIDPrefix, ErrInvalidEpisodeID)

@@ -78,4 +78,4 @@ jobs:
           cargo +1.97.1 build
 
       - name: Go adapter against the compiled engine
-        run: NEWF_EGGSAT_BINARY="$GITHUB_WORKSPACE/tools/eggsat/target/debug/newf-eggsat" go test ./internal/eggsat -run TestExternalEngineE2E -count=1
+        run: NEWF_EGGSAT_BINARY="$GITHUB_WORKSPACE/tools/eggsat/target/debug/newf-eggsat" go test ./internal/eggsat -run TestExternal -count=1

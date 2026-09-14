@@ -43,6 +43,7 @@ type Rule struct {
 	name     string
 	domain   finite.Domain
 	lhs, rhs finite.Expr
+	warrant  finite.Certificate
 }
 
 // EngineRule is the immutable, admitted rule material an external equality
@@ -55,6 +56,7 @@ type EngineRule struct {
 	Domain   finite.Domain
 	Left     finite.Expr
 	Right    finite.Expr
+	Warrant  finite.Certificate
 }
 
 // StepBinding is one pattern metavariable assignment cited by an external
@@ -79,8 +81,9 @@ func (r Rule) Export() EngineRule {
 			Width: r.domain.Width,
 			Vars:  append([]string(nil), r.domain.Vars...),
 		},
-		Left:  r.lhs,
-		Right: r.rhs,
+		Left:    r.lhs,
+		Right:   r.rhs,
+		Warrant: cloneCertificate(r.warrant),
 	}
 }
 
@@ -132,7 +135,19 @@ func AdmitRule(name string, cert finite.Certificate, lhs, rhs finite.Expr, d fin
 	if len(defects) > 0 {
 		return Rule{}, defects
 	}
-	return Rule{name: name, domain: d, lhs: lhs, rhs: rhs}, nil
+	return Rule{name: name, domain: d, lhs: lhs, rhs: rhs, warrant: cloneCertificate(cert)}, nil
+}
+
+func cloneCertificate(cert finite.Certificate) finite.Certificate {
+	clone := cert
+	clone.Binding.Domain.Vars = append([]string(nil), cert.Binding.Domain.Vars...)
+	clone.PremiseFailures = append([]string(nil), cert.PremiseFailures...)
+	clone.NotAssessed = append([]string(nil), cert.NotAssessed...)
+	if cert.Counterexample != nil {
+		counterexample := *cert.Counterexample
+		clone.Counterexample = &counterexample
+	}
+	return clone
 }
 
 // CostModel assigns a nonnegative cost to an expression. Ties are broken

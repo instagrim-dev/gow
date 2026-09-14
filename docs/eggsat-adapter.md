@@ -48,8 +48,19 @@ cargo build
 ```
 
 The G2 ingress is intentionally narrower than the G2 exit. It rejects mutations
-of a rule, source, target, substitution, or guard scope, but it does not yet
-persist graph/dependency records or distinguish predicted extraction cost from
-measured execution cost. The durable
-admit-union-withdraw-rebuild-reassess test remains required before calling G2
-complete.
+of a rule, source, target, substitution, or guard scope. `eggsat.Graph` holds
+the Go-owned logical active-rule set; `internal/store` persists the immutable
+graph root, warranted dependencies, and `union`, `withdraw`, `rebuild`, and
+`reassess` events. Active scope is derived from admitted rules minus recorded
+withdrawals. Rebuild always starts a new subprocess from that derived scope.
+
+Each recorded rebuild/reassessment keeps the engine's AST-size extraction cost
+separate from the finite interpreter's measured node visits over the declared
+domain. A missing measurement remains unknown and is refused for a durable
+rebuild/reassessment record. The compiled-engine integration test exercises
+admit → union → rebuild → withdraw → rebuild → reassess across a fresh SQLite
+store and verifies that the withdrawn rule no longer contributes a reduction.
+
+This completes the bounded G2 exit for the guard-free finite seed language. It
+does not establish a learned geometry claim, a broader conditional-rule
+language, or an incremental in-process e-graph implementation.
