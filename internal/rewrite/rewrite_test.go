@@ -366,6 +366,27 @@ func TestRuleIdentityBindsContent(t *testing.T) {
 	}
 }
 
+func TestReplaysOneStepChecksBothDirections(t *testing.T) {
+	d := dom(4, "a")
+	lhs, rhs := doubleNot(d)
+	rule := admit(t, "double-not", lhs, rhs, d)
+	searchDomain := dom(4, "x")
+	start := finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: finite.Var{Name: "x"}}}
+
+	forward, err := rule.ReplaysOneStep(start, finite.Var{Name: "x"}, searchDomain, false)
+	if err != nil || !forward {
+		t.Fatalf("forward replay must succeed, got match=%t err=%v", forward, err)
+	}
+	backward, err := rule.ReplaysOneStep(finite.Var{Name: "x"}, start, searchDomain, true)
+	if err != nil || !backward {
+		t.Fatalf("backward replay must succeed, got match=%t err=%v", backward, err)
+	}
+	forged, err := rule.ReplaysOneStep(finite.Var{Name: "x"}, finite.Const{Value: 0}, searchDomain, true)
+	if err != nil || forged {
+		t.Fatalf("forged replay must fail, got match=%t err=%v", forged, err)
+	}
+}
+
 // Search still counts generated candidates for the cost ledger.
 func TestSearchCountsGeneratedCandidates(t *testing.T) {
 	d4a := dom(4, "a")

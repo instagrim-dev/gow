@@ -1,0 +1,11 @@
+[package]
+name = "newf-eggsat"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+publish = false
+
+[dependencies]
+egg = { version = "=0.11.0", features = ["deterministic"] }
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = "=1.0.149"

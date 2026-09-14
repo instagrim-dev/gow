@@ -20,6 +20,10 @@ docs/reviews
 # as /newf, and because a binary built on one runner's GOARCH is useless on another.
 /bin/
 
+# The pinned G2 equality-saturation adapter is a Rust tool. Cargo's target
+# directory is host-specific build output; its manifest and lockfile are tracked.
+tools/eggsat/target/
+
 # Repo-local tool and Tectonic caches populated by `make paper`.
 .cache/
 

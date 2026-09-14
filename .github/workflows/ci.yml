@@ -55,3 +55,27 @@ jobs:
       # all four arms. Exit status is the gate.
       - name: Run M7 blinded benchmark
         run: bash corpus/experiments/m7-blinded-run/run.sh
+
+  eggsat:
+    name: G2 pinned equality-saturation adapter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.97.1 --profile minimal --component rustfmt
+
+      - name: Rust formatter and unit tests
+        working-directory: tools/eggsat
+        run: |
+          cargo +1.97.1 fmt --check
+          cargo +1.97.1 test
+          cargo +1.97.1 build
+
+      - name: Go adapter against the compiled engine
+        run: NEWF_EGGSAT_BINARY="$GITHUB_WORKSPACE/tools/eggsat/target/debug/newf-eggsat" go test ./internal/eggsat -run TestExternalEngineE2E -count=1

@@ -45,8 +45,36 @@ type Rule struct {
 	lhs, rhs finite.Expr
 }
 
+// EngineRule is the immutable, admitted rule material an external equality
+// engine may receive. It is intentionally produced only by Rule.Export: an
+// engine adapter never accepts an arbitrary rule-shaped payload as authority
+// to union terms.
+type EngineRule struct {
+	Name     string
+	Identity string
+	Domain   finite.Domain
+	Left     finite.Expr
+	Right    finite.Expr
+}
+
 // Name returns the rule's admission name.
 func (r Rule) Name() string { return r.name }
+
+// Export returns the rule's admitted definition for a bounded external engine.
+// The returned domain slice is copied so callers cannot mutate the Rule's
+// identity through the exported view.
+func (r Rule) Export() EngineRule {
+	return EngineRule{
+		Name:     r.name,
+		Identity: r.Identity(),
+		Domain: finite.Domain{
+			Width: r.domain.Width,
+			Vars:  append([]string(nil), r.domain.Vars...),
+		},
+		Left:  r.lhs,
+		Right: r.rhs,
+	}
+}
 
 // ValidateForDomain checks the admission boundary before rendering,
 // matching, or hashing a rule. Pattern variables are metavariables and
@@ -446,6 +474,44 @@ func nodeCountCost(cost CostModel) bool {
 // to names only misses rule-content changes).
 func (r Rule) Identity() string {
 	return fmt.Sprintf("%s|w%d|vars=%v|%s=>%s", r.name, r.domain.Width, r.domain.Vars, finite.Render(r.lhs), finite.Render(r.rhs))
+}
+
+// ReplaysOneStep reports whether after is reachable from before by exactly one
+// positional application of this admitted rule. Reverse is safe only because
+// Rule exists after an equality warrant; it asks the same scoped equality in
+// the opposite direction. This is an explanation checker, not a search API:
+// it preserves all possible matching positions and stops after finding the
+// claimed target.
+func (r Rule) ReplaysOneStep(before, after finite.Expr, d finite.Domain, reverse bool) (bool, error) {
+	if defects := finite.ValidateExpr(before, d); len(defects) > 0 {
+		return false, fmt.Errorf("invalid replay source: %v", defects)
+	}
+	if defects := finite.ValidateExpr(after, d); len(defects) > 0 {
+		return false, fmt.Errorf("invalid replay target: %v", defects)
+	}
+	if err := r.ValidateForDomain(d); err != nil {
+		return false, err
+	}
+	oriented := r
+	if reverse {
+		oriented.lhs, oriented.rhs = r.rhs, r.lhs
+	}
+	target := finite.Render(after)
+	found := false
+	stats := visitSuccessors(before, oriented, d, Limits{MaxTermNodes: finite.MaxExprNodes}, func(next finite.Expr, refused bool) bool {
+		if refused {
+			return true
+		}
+		if finite.Render(next) == target {
+			found = true
+			return false
+		}
+		return true
+	})
+	if stats.Cancelled || stats.ResourceBudgetExhausted {
+		return false, fmt.Errorf("explanation replay stopped before completion")
+	}
+	return found, nil
 }
 
 func freeVars(e finite.Expr) map[string]bool {
