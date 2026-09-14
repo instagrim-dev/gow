@@ -112,8 +112,9 @@ This is stronger preparation, not protected evidence or a dispatch decision.
    ledgers, creates observed metadata, and binds it to the earlier seal.
 6. A substantive grader separately checks artifact identity/parity, protected
    answers and result quality, resource compliance, and spending arithmetic;
-   it returns only a content-free judgment and retains invalid, incomplete,
-   and blocked outcomes.
+   it returns only a content-free `g4-lite-substantive-grade/1` judgment and
+   retains invalid, incomplete, and blocked outcomes. `g4 grade validate`
+   verifies the return contract without reading protected evidence.
 
 ## Remaining dispatch inputs
 

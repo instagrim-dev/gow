@@ -89,6 +89,25 @@ func TestDecodeRetainsHistoricalV2ManifestAndSealReadability(t *testing.T) {
 	}
 }
 
+func TestDecodeSubstantiveGradeRequiresAllPrivateAssessmentDimensions(t *testing.T) {
+	grade := SubstantiveGrade{Schema: SubstantiveGradeSchema, GradedAt: time.Now().UTC().Format(time.RFC3339Nano), GraderRole: "substantive_protected_evidence_grader", ReturnScope: "protected_evidence_inspected_content_free_return", Manifest: testRef("a", 1, "protected/manifest.json"), ExecutionReceipt: testRef("b", 2, "protected/receipt.json"), ExecutionBinding: testRef("c", 3, "protected/binding.json"), Checks: SubstantiveChecks{AnswersAssessed: true, ResultQualityAssessed: true, ResourceComplianceAssessed: true, SpendingArithmeticAssessed: true}, Verdict: "INCONCLUSIVE_INCOMPLETE"}
+	raw, err := json.Marshal(grade)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeSubstantiveGrade(raw); err != nil {
+		t.Fatalf("valid content-free substantive grade was refused: %v", err)
+	}
+	grade.Checks.AnswersAssessed = false
+	raw, err = json.Marshal(grade)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeSubstantiveGrade(raw); err == nil {
+		t.Fatal("grade without answer assessment was accepted")
+	}
+}
+
 func TestDecodeRejectsG4LiteTuningAndAuthorityUpgrade(t *testing.T) {
 	raw := validManifest(t)
 	for name, mutation := range map[string]string{

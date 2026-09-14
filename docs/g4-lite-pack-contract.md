@@ -17,6 +17,7 @@ newf g4 arm-preflight --resource-ceiling resource.json --h0-snapshot h0.json --h
 newf g4 execute --manifest g4-lite-metadata.json --episode-pack episodes.json \
   --resource-ceiling resource.json --h0-snapshot h0.json --h1-snapshot h1.json \
   --hg-snapshot hg.json --generation-procedure procedure.json --out protected/execution-receipt.json
+newf g4 grade validate --input content-free-substantive-grade.json
 ```
 
 The final input schema is `g4-lite-pack/3`. It is one UTF-8 JSON object of at
@@ -200,7 +201,11 @@ procedure, not a spending, grading, custody, or dispatch decision.
 7. A substantive grader separately compares actual arm/resource records with
    the frozen manifest, assesses the protected answers and result quality,
    verifies resource compliance and spending arithmetic, and returns only a
-   content-free judgment. `bind-execution` does not perform that comparison,
+   content-free `g4-lite-substantive-grade/1` judgment. Its strict return
+   schema requires attestations for all four assessment dimensions and permits
+   only `PASS`, `EVALUATED_NEGATIVE`, `INCONCLUSIVE_INCOMPLETE`, or `INVALID`.
+   `g4 grade validate` checks that return contract; it does not inspect the
+   protected evidence or replace the grader's judgment. `bind-execution` does not perform that comparison,
    establish chronology, verify custody, or grant authority.
 
 Every final-manifest validation response and seal reports

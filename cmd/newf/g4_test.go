@@ -54,6 +54,19 @@ func TestG4PackCLISealsAndInspectsContentFreeFreeze(t *testing.T) {
 	}
 }
 
+func TestG4GradeCLIRequiresSubstantiveContentFreeReturn(t *testing.T) {
+	dir := t.TempDir()
+	input := filepath.Join(dir, "grade.json")
+	raw := []byte(`{"schema":"g4-lite-substantive-grade/1","graded_at":"2026-09-14T00:00:00Z","grader_role":"substantive_protected_evidence_grader","return_scope":"protected_evidence_inspected_content_free_return","manifest":{"sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","byte_length":1,"locator":"protected/manifest.json"},"execution_receipt":{"sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","byte_length":1,"locator":"protected/receipt.json"},"execution_binding":{"sha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","byte_length":1,"locator":"protected/binding.json"},"checks":{"answers_assessed":true,"result_quality_assessed":true,"resource_compliance_assessed":true,"spending_arithmetic_assessed":true},"verdict":"INCONCLUSIVE_INCOMPLETE"}`)
+	if err := os.WriteFile(input, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := execute(context.Background(), []string{"--json", "g4", "grade", "validate", "--input", input}, &stdout, &stderr); code != 0 || !bytes.Contains(stdout.Bytes(), []byte(`"ok": true`)) {
+		t.Fatalf("substantive grade validation failed: %d %s %s", code, stdout.String(), stderr.String())
+	}
+}
+
 func TestG4PackCLIRejectsMalformedAndOversizedBindingInputs(t *testing.T) {
 	dir := t.TempDir()
 	manifest := filepath.Join(dir, "oversized-manifest.json")

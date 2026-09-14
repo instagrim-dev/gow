@@ -370,6 +370,76 @@ type ExecutionBinding struct {
 
 const ExecutionBindingSchema = "g4-lite-execution-binding/2"
 
+const SubstantiveGradeSchema = "g4-lite-substantive-grade/1"
+
+// SubstantiveGrade is the content-free return from a grader that was permitted
+// to inspect protected evidence. The CLI validates only the return contract;
+// the four completed checks remain the grader's attributable judgment.
+type SubstantiveGrade struct {
+	Schema           string            `json:"schema"`
+	GradedAt         string            `json:"graded_at"`
+	GraderRole       string            `json:"grader_role"`
+	ReturnScope      string            `json:"return_scope"`
+	Manifest         ManifestRef       `json:"manifest"`
+	ExecutionReceipt ManifestRef       `json:"execution_receipt"`
+	ExecutionBinding ManifestRef       `json:"execution_binding"`
+	Checks           SubstantiveChecks `json:"checks"`
+	Verdict          string            `json:"verdict"`
+}
+
+type SubstantiveChecks struct {
+	AnswersAssessed            bool `json:"answers_assessed"`
+	ResultQualityAssessed      bool `json:"result_quality_assessed"`
+	ResourceComplianceAssessed bool `json:"resource_compliance_assessed"`
+	SpendingArithmeticAssessed bool `json:"spending_arithmetic_assessed"`
+}
+
+func DecodeSubstantiveGrade(raw []byte) (SubstantiveGrade, error) {
+	var grade SubstantiveGrade
+	if len(raw) == 0 || len(raw) > MaxManifestBytes || !utf8.Valid(raw) {
+		return grade, fmt.Errorf("G4 substantive grade is empty, invalid UTF-8, or exceeds %d bytes", MaxManifestBytes)
+	}
+	keys := []string{"schema", "graded_at", "grader_role", "return_scope", "manifest", "execution_receipt", "execution_binding", "checks", "verdict", "sha256", "byte_length", "locator", "answers_assessed", "result_quality_assessed", "resource_compliance_assessed", "spending_arithmetic_assessed"}
+	if err := toolreg.StrictKeys(raw, "G4 substantive grade", keys, 4); err != nil {
+		return grade, err
+	}
+	d := json.NewDecoder(bytes.NewReader(raw))
+	d.DisallowUnknownFields()
+	if err := d.Decode(&grade); err != nil {
+		return grade, err
+	}
+	if _, err := d.Token(); err != io.EOF {
+		return grade, fmt.Errorf("G4 substantive grade must contain exactly one JSON object")
+	}
+	return grade, grade.Validate()
+}
+
+func (g SubstantiveGrade) Validate() error {
+	if g.Schema != SubstantiveGradeSchema || g.GraderRole != "substantive_protected_evidence_grader" || g.ReturnScope != "protected_evidence_inspected_content_free_return" {
+		return fmt.Errorf("substantive grade requires the current schema, protected-evidence grader role, and content-free return scope")
+	}
+	if _, err := time.Parse(time.RFC3339Nano, g.GradedAt); err != nil {
+		return fmt.Errorf("substantive grade graded_at must be RFC3339: %w", err)
+	}
+	for name, ref := range map[string]ManifestRef{"manifest": g.Manifest, "execution_receipt": g.ExecutionReceipt, "execution_binding": g.ExecutionBinding} {
+		if err := validateRef(name, ref); err != nil {
+			return err
+		}
+	}
+	if g.Manifest.SHA256 == g.ExecutionReceipt.SHA256 || g.Manifest.SHA256 == g.ExecutionBinding.SHA256 || g.ExecutionReceipt.SHA256 == g.ExecutionBinding.SHA256 {
+		return fmt.Errorf("substantive grade must identify distinct manifest, execution receipt, and execution binding artifacts")
+	}
+	if !g.Checks.AnswersAssessed || !g.Checks.ResultQualityAssessed || !g.Checks.ResourceComplianceAssessed || !g.Checks.SpendingArithmeticAssessed {
+		return fmt.Errorf("substantive grade must attest to answer, result-quality, resource-compliance, and spending-arithmetic assessment")
+	}
+	switch g.Verdict {
+	case "PASS", "EVALUATED_NEGATIVE", "INCONCLUSIVE_INCOMPLETE", "INVALID":
+		return nil
+	default:
+		return fmt.Errorf("substantive grade verdict must be PASS, EVALUATED_NEGATIVE, INCONCLUSIVE_INCOMPLETE, or INVALID")
+	}
+}
+
 func BindExecution(pre, observed []byte, at time.Time) (ExecutionBinding, error) {
 	if _, err := DecodeSeal(pre); err != nil {
 		return ExecutionBinding{}, fmt.Errorf("pre-execution seal: %w", err)

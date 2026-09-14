@@ -631,8 +631,29 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 		return err
 	}}
 	inspect.Flags().StringVar(&inspectInput, "input", "", "Optional metadata JSON to compare by exact bytes; protected content is never read")
+
+	var substantiveGradeInput string
+	grade := &cobra.Command{Use: "grade", Short: "Validate a substantive grader's content-free G4 judgment"}
+	gradeValidate := &cobra.Command{Use: "validate", Short: "Validate the content-free return from a protected-evidence grader", Args: cobra.NoArgs, RunE: func(_ *cobra.Command, _ []string) error {
+		raw, err := readG4BoundedFile(substantiveGradeInput, g4pack.MaxManifestBytes, "G4 substantive grade")
+		if err != nil {
+			return wrapCommandError("g4 grade validate", err)
+		}
+		judgment, err := g4pack.DecodeSubstantiveGrade(raw)
+		if err != nil {
+			return wrapCommandError("g4 grade validate", err)
+		}
+		return writeJSON(stdout, struct {
+			OK       bool                    `json:"ok"`
+			Command  string                  `json:"command"`
+			Judgment g4pack.SubstantiveGrade `json:"judgment"`
+		}{true, "g4 grade validate", judgment})
+	}}
+	gradeValidate.Flags().StringVar(&substantiveGradeInput, "input", "", "Content-free g4-lite-substantive-grade/1 returned by the designated grader")
+	_ = gradeValidate.MarkFlagRequired("input")
+	grade.AddCommand(gradeValidate)
 	pack.AddCommand(validate, seal, bind, inspect)
-	cmd.AddCommand(runtimeIdentity, calibrate, calibrateProcedure, preflight, execute)
+	cmd.AddCommand(runtimeIdentity, calibrate, calibrateProcedure, preflight, execute, grade)
 	cmd.AddCommand(pack)
 	return cmd
 }
