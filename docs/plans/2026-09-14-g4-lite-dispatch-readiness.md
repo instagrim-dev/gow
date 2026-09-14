@@ -115,9 +115,13 @@ fresh `/3` custodian pack; it remains non-authorizing.
    the release and export/preflight the actual H0, H1, and HG runtime
    identities under the task-directed resource ceiling; then freeze those exact
    snapshot artifacts with the checker, tool, and model identities.
-2. A fresh custodian context authors 24 protected episodes and separate answer,
-   calibration, arm-snapshot, resource, and seed artifacts. The custodian
-   records actual isolation, access controls, exposure history, and H1 review.
+2. The operator freezes [the G4 custodian brief](G4_CUSTODIAN_INTERFACE_BRIEF_V1.md)
+   and [public interface](G4_CUSTODIAN_PUBLIC_INTERFACE_V1.md), records their
+   hashes in the authorization, and gives the fresh custodian only that packet,
+   the pinned executable, and empty protected storage. The custodian authors
+   24 protected episodes and separate answer, calibration, arm-snapshot,
+   resource, and seed artifacts, then records actual isolation, access
+   controls, exposure history, and H1 review.
 3. The custodian creates and seals the final `g4-lite-pack/3` metadata using
    those real identities.
 4. The operator supplies an explicit authorization naming the executable hash,

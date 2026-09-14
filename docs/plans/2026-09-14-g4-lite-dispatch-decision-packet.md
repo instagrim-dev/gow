@@ -22,6 +22,7 @@ metadata, so even a documentation-only revision can produce different bytes.
 | Primary resource vector | [`resource ceiling`](artifacts/2026-09-14-g4-runtime-preflight-v5-executable-bound/resource-ceiling.json), SHA-256 `0c387b4e1b9a3bda04281ed17dda5063fa6b34dc36c638c48da23163092d83d2` |
 | Controller parity | [`arm preflight`](artifacts/2026-09-14-g4-runtime-preflight-v5-executable-bound/preflight.json), SHA-256 `3e3643d3a218137ec5ea7cf53fb379da3bcf8c5b21e059cb76872a388746f196` |
 | Grader return | `g4-lite-substantive-grade/2`; completed pass/negative returns require all assessments and identities, while early invalid/incomplete returns require assessment state and a stop reason |
+| Custodian interface | [G4 custodian brief](G4_CUSTODIAN_INTERFACE_BRIEF_V1.md) and [public interface](G4_CUSTODIAN_PUBLIC_INTERFACE_V1.md); freeze and hash both into a future authorization |
 
 The custodian, protected population, answer/calibration manifests, final pack,
 authorization reference, output location, cancellation rule, and outcome
@@ -39,8 +40,9 @@ not values this packet may invent.
 | Authority | Effective operator reference, permitted command and output paths, stop conditions, and cancellation rule | An `approval_ref` in the manifest cannot self-authorize. |
 | Grading | Named grader, supplied artifact set, parity checks, invalid/incomplete precedence, and recipient | Binding is not grading. |
 
-The custodian sequence is fixed: pin the release; record the design/resource
-artifacts; author protected material under the frozen procedure; seal the final `g4-lite-pack/3`; execute
+The custodian sequence is fixed: pin the release and freeze the paired public
+custodian interface; record the design/resource artifacts; author protected
+material under the frozen procedure; seal the final `g4-lite-pack/3`; execute
 `g4 execute`; create observed metadata; bind it to the pre-execution seal; and
 send only the authorized return packet to the grader. Stop for a hash mismatch,
 missing value, unexpected artifact, resource truncation, exposure boundary
