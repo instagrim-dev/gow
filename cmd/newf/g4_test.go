@@ -67,6 +67,14 @@ func TestG4GradeCLIRequiresSubstantiveContentFreeReturn(t *testing.T) {
 	}
 }
 
+func TestG4RuntimeIdentityRetainsHistoricalV1Readability(t *testing.T) {
+	raw := []byte(`{"schema":"g4-lite-arm-runtime-identity/1","arm":"H0","controller_id":"catalog-order/1","decision_snapshot_sha256":"70efc9f7ef8059d1d1c6ee64874439a00048f7e4dbeefa4d75b5daddcc0282f4","decision_snapshot_encoding":"go-json-sha256/1"}`)
+	identity, err := decodeG4ArmRuntimeIdentity(raw, "H0")
+	if err != nil || identity.Schema != sealedrun.LegacyG4ArmRuntimeIdentitySchema || identity.ExecutableSHA256 != "" {
+		t.Fatalf("historical runtime identity became unreadable: identity=%+v err=%v", identity, err)
+	}
+}
+
 func TestG4PackCLIRejectsMalformedAndOversizedBindingInputs(t *testing.T) {
 	dir := t.TempDir()
 	manifest := filepath.Join(dir, "oversized-manifest.json")
@@ -147,8 +155,14 @@ func writeG4ExecuteFixture(t *testing.T, episodes []string, resourceRaw []byte) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	executableSHA256, err := g4ExecutableSHA256()
+	if err != nil {
+		t.Fatal(err)
+	}
 	snapshotRaw := map[string][]byte{}
 	for _, identity := range identities {
+		identity.Schema = sealedrun.G4ArmRuntimeIdentitySchema
+		identity.ExecutableSHA256 = executableSHA256
 		raw, err := json.Marshal(identity)
 		if err != nil {
 			t.Fatal(err)

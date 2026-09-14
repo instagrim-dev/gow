@@ -502,7 +502,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 		if err != nil {
 			return wrapCommandError("g4 arm-preflight", err)
 		}
-		identities, _, err := readAndVerifyG4ArmIdentities(budget, cmd.Context().Done() != nil, false, preflightH0, preflightH1, preflightHG)
+		identities, _, err := readAndVerifyG4ArmIdentities(budget, cmd.Context().Done() != nil, true, preflightH0, preflightH1, preflightHG)
 		if err != nil {
 			return wrapCommandError("g4 arm-preflight", err)
 		}
