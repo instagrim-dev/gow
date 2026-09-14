@@ -34,6 +34,35 @@ manifest contains only identity references and declarations:
 | `spending_rule` | Exact run-summed arithmetic: HG must exceed H1 by at least `3 × runs`; H1 minus HG on low-value/misleading cases is a net run-summed loss of at most `1 × runs`; qualifying family advantages are positive run-summed HG advantages on informative episodes only. The rule also requires no invalid certification and HG at least H0. |
 | `execution` | The same task-directed resource-ceiling locator and nonnegative provider ceilings. `approval_ref` is an audit pointer only. |
 
+### Exact manifest field names
+
+The final manifest decoder rejects unknown keys. In particular, the custody
+declarations are **values** under these four keys; the declaration words are
+not JSON field names:
+
+```json
+"custody": {
+  "episode_author_exposure": "unexposed_to_implementation_cases",
+  "implementer_access": "no_protected_content",
+  "answer_separation": "separate_answer_manifest",
+  "record_ref": "protected/custody.json"
+}
+```
+
+Every content reference uses `sha256`, `byte_length`, and `locator`. For the
+disclosed deterministic one-run design, `run_design` must use
+`runs_per_cell: 1`, `seed_policy: "single_run_budget_constrained"`, one
+nonempty `budget_constraint_ref`, and **omit** `seed_manifest`. The
+`execution.resource_ceiling_ref` must equal `arms.resource_ceiling.locator`.
+The required `population` keys are `total`, `history_informative`,
+`history_low_value`, `history_misleading`, and `min_families` (with values
+24, 12, 6, 6, and at least 2, respectively).
+The strict open episode input is `shaping-pack/1`: its top-level keys are
+`schema`, `label`, `provenance`, and `episodes`; every episode requires `id`,
+`stratum`, `family`, `start`, `variables`, `catalog`, and `target_cost`.
+Included history records require `start`, `rules_applied`, `final_cost`,
+`target`, `completed`, and `endpoint`.
+
 ## Deterministic one-run executor
 
 Before a custodian authors protected cases, use `g4 runtime-identity` once for
