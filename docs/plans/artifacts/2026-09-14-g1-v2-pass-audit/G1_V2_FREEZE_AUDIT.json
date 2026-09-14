@@ -1,0 +1,31 @@
+{
+  "acceptance_matrix": {
+    "release_revision": "d60499b3288f5c2538af7333f3e543585a18d81a",
+    "repository_path": "docs/plans/2026-09-13-proposed-g1-acceptance-matrix.md",
+    "sha256": "9fcf88330e94b17702bee657f6fec2853ddaefe6bb4d5f2e8d42dc6eaebfb0b4"
+  },
+  "authorization_reference": "explicit operator approval in this Codex session on 2026-09-14",
+  "custodian_packet": {
+    "brief_sha256": "597f3c9d40f47539edc8c0bb770f7b407cbe8aa71d6d6bd54d17fddd90f35c52",
+    "executable_sha256": "c105248752eb2e5e708ebe9c1a48f30d389a822036452e61f4ef41c0c4a93123",
+    "interface_sha256": "b4d214c2ca9d7921a39cb3139a3bede2987cd218e9bceceb8d902e7a90e1430b"
+  },
+  "custodian_return_packet": {
+    "path": "G1_V2_CUSTODIAN_RETURN_PACKET.json",
+    "sha256": "bf9ff244e110273f393211ed6a42eb2d373db43b369cc7d0b5822a1e81f3ab36"
+  },
+  "dispatch_id": "g1-v2-20260914T013604Z-semantic",
+  "pre_execution_seal": {
+    "byte_length": 471,
+    "sha256": "8f9b72d18c50ec247933ec93a42bf343202920d5d4669b38f15c04ce4b798e47"
+  },
+  "release_revision": "d60499b3288f5c2538af7333f3e543585a18d81a",
+  "schema": "g1-v2-freeze-audit/1",
+  "scope": "Content-free audit of the completed v2 dispatch. It does not expose protected inputs, answers, or receipts; it does not claim full G1 capability closure.",
+  "separate_grade": {
+    "evidence_grade": "agent-sealed/v1",
+    "grade_packet_sha256": "9b118865be9b7d8235282c83f224837bf8607f334c2b82e5375fcabec8ca5fe7",
+    "grader_brief_sha256": "41db0e05cc5311c9fb8d33b67252723cd167c261606e6ddd28eaab4c9ce07af1",
+    "verdict": "pass"
+  }
+}

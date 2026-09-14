@@ -357,7 +357,7 @@ export run `NEWF_REVIEW_COVERAGE_OUT=/Users/jmh/dev/gh/newf/docs/reviews/evidenc
 | G1 | Finite equivalence, finite-instance evidence, observed-rate comparison, solved-set retention and probability refusal reach explicit subject-scoped assessment through typed CLI inputs and saved receipts; the data-only protected-pack interface is delivered | Engineering positive/refusal/failure paths verified, including subject-isolation regressions and retained C1-C8 coverage export; attempt 4 is recorded `invalid` for an evaluator-role boundary breach, with no scored usefulness result | A fresh pack, fresh custodian, observed isolation, and a new authorization are required; enumerate permitted evaluator commands and keep any executable analysis in a separate authorized lane |
 | T0 | Scoped admission, independent endpoint checking and refusal boundaries tested | Finite-domain evidence only | Actual e-graph withdrawal remains G2 work |
 | P0 | Versioned decisions, task/catalog/budget identities survive process exit in receipts | No fresh controller freeze attested | Freeze the evaluated implementation and all arm identities before authoring protected tasks |
-| E0 | D19 permits agent-native custody; a two-file clean-room brief and data-only interface are prepared | Attempts 1–3 are recorded infrastructure blocks; attempt 4 produced exposed, invalid protected material and no usable G1 result | A fresh custodian without access to retained material, actual isolation/provenance records, protected storage, and a new approved ceiling/dispatch are required |
+| E0 | D19 permits agent-native custody; the semantic v2 packet was separately graded `pass` at `agent-sealed/v1` | Attempts 1–4 retain their historical outcomes; attempt 4 remains exposed and `invalid` | The v2 scope is complete; full G1 capability still needs separately authorized observation-tool evidence beyond its refusal-heavy allocation |
 | X0 / G4-lite | New diagnostic resource contract executable | Prior development results keep their original interpretation; smoke supplies no history-value evidence | Approve/freeze the next design, vector, comparator, task/answer custody and batch ceilings |
 | G2 | No additional backend work in this repair | No new backend gate result | Explicit investment decision or bounded backend-product pivot |
 | G3 | No composition extension in this repair | No prospective composition result | G2/approved composition slice and task evaluation |
@@ -385,33 +385,39 @@ dispatch, the operator must resolve and record the then-current immutable
 release identity live; no prior checkpoint in this document supplies it.
 
 The local engineering path for the seed tools and subject-scoped review
-projection is recorded as delivered. The next research dispatch requires an
-approved G1 pack, custody boundary, acceptance criteria and dispatch authority;
-existing paths can be rerun with retained input JSON using the operator contract.
-The next research dispatch requires a concrete approved design and fresh custody
-artifacts; later roadmap stages are not marked complete by these engineering
-repairs.
+projection is delivered. Attempt 4 remains `invalid` and cannot be rerun or
+rescored in place.
 
-**Next action:** attempt 4 is preserved as `invalid`; it cannot be rerun or
-rescored in place. The next protected dispatch needs a new explicit operator
-authorization, a fresh custodian without access to the retained tree, observed
-isolation, a fresh case/answer set, and an evaluator command allowlist that
-forbids binary inspection. A nonprotected environment comparison may diagnose
-provider interruption, but it must use a separate, explicitly authorized lane
-and cannot repair the protected batch. The prepared, non-authorizing future
-packet is [`CUSTODIAN_INTERFACE_BRIEF_V2.md`](CUSTODIAN_INTERFACE_BRIEF_V2.md)
-and [`CUSTODIAN_PUBLIC_INTERFACE_V2.md`](CUSTODIAN_PUBLIC_INTERFACE_V2.md).
-The separate, nonprotected host-versus-provider diagnostic is
+### Current G1 evidence
+
+A separately authorized semantic v2 dispatch completed at `d60499b`. Its
+content-free [freeze audit](artifacts/2026-09-14-g1-v2-pass-audit/G1_V2_FREEZE_AUDIT.json)
+binds the dispatch ID, custodian brief and interface hashes, executable hash,
+authorization reference, acceptance-matrix revision, and pre-execution seal.
+The [custodian return packet](artifacts/2026-09-14-g1-v2-pass-audit/G1_V2_CUSTODIAN_RETURN_PACKET.json)
+and separately produced [grade packet](artifacts/2026-09-14-g1-v2-pass-audit/G1_V2_GRADE_PACKET.json)
+record a `pass` at `agent-sealed/v1`. The shared-host custody boundary is
+procedural, so this is not independent-human or training-lineage evidence.
+
+That pass remains scoped to its frozen 48-case allocation. It demonstrates
+finite checking and correctly handled non-certification; it does not alone
+demonstrate useful fully specified execution of both observation tools. A
+separate, nonprotected [observation execution supplement](artifacts/2026-09-14-g1-observation-supplement/README.md)
+records a rate hold, a rate refutation, and two verified solved-trace extensions
+through the real CLI. It is not a rerun or an amendment to the protected v2
+score, and it does not close the broader roadmap claim.
+
+**Next action:** retain the v2 pass under its frozen scope. A future claim of
+full G1 capability needs a separately authorized evidence design that exercises
+fully specified observed-rate and solved-monotonicity inputs alongside refusal
+controls. A development-level mutation check may establish discriminating
+coverage before consuming another protected pack. The nonprotected
+host-versus-provider diagnostic remains
 [`2026-09-13-provider-path-reproduction.md`](2026-09-13-provider-path-reproduction.md);
 its availability preflight is incomplete because the inspected Cursor UI did
 not expose the historical model and Codex is a different provider/model route,
-not a same-model direct arm. A Codex local public-interface exercise completed,
-but no direct-provider arm or host-only comparison ran.
-To re-exercise delivered paths meanwhile:
-`go build -o /tmp/newf ./cmd/newf && /tmp/newf --db <fresh.sqlite> review check-finite --input docs/plans/artifacts/2026-09-13-finite-claim-path/holds-input.json --policy <id> --obligation <id> --case <label> --executor <name> --max-assignments 64`.
-Operator-authored development packs can also run without editing Go, under the
-[shaping pack input contract](../shaping-pack-contract.md):
-`/tmp/newf shaping diagnose --pack-file <pack.json> --out <new-receipt.json> --expansions 2 --rule-applications 128 --candidates 256 --history-bytes 65536 --check-assignments 4096 --max-states 1024 --max-term-nodes 1024`.
+not a same-model direct arm.
+
 
 ### G1 pack metadata preparation
 
