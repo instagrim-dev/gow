@@ -73,7 +73,7 @@ func calibrateH0MinBudgets(p Pack, cap int, lim rewrite.Limits) (map[string]int,
 func calibrateH0MinBudgetsWithProbes(p Pack, cap int, lim rewrite.Limits) (map[string]int, []string, []H0CalibrationProbe, error) {
 	menu := Menu()
 	out := map[string]int{}
-	var unreachable []string
+	unreachable := []string{}
 	var probes []H0CalibrationProbe
 	for _, ep := range p.Episodes {
 		domain := finite.Domain{Width: 4, Vars: ep.Vars}
