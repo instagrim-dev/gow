@@ -1,0 +1,51 @@
+{
+  "schema": "g4-lite-calibration-procedure/1",
+  "procedure_id": "g4-open-sensitivity-v1",
+  "open_calibration_pack": {
+    "sha256": "2a7d72d668163d883ec307b308ba76e1b47e1239dcfc7ff67503ede08e2ba99e",
+    "byte_length": 25486
+  },
+  "difficulty": {
+    "min_rewrite_depth": 2,
+    "min_branching_alternatives": 2,
+    "min_cost_neutral_enabling_steps": 1,
+    "targets_independently_verified": true
+  },
+  "history_construction": {
+    "method": "independently specified negative and distractor history schedule",
+    "independently_specified": true
+  },
+  "resource_choices": [
+    {
+      "id": "low-expansion-1",
+      "expansions": 1,
+      "rule_applications": 128,
+      "candidates": 256,
+      "history_bytes": 65536,
+      "check_assignments": 4096,
+      "max_states": 1024,
+      "max_term_nodes": 1024
+    },
+    {
+      "id": "high-expansion-4",
+      "expansions": 4,
+      "rule_applications": 128,
+      "candidates": 256,
+      "history_bytes": 65536,
+      "check_assignments": 4096,
+      "max_states": 1024,
+      "max_term_nodes": 1024
+    }
+  ],
+  "primary_resource_id": "high-expansion-4",
+  "family_exposure_separation": {
+    "open_family_prefix": "open-",
+    "protected_family_prefix": "protected-",
+    "open_exposure": "implementation_exposed_open_calibration",
+    "protected_exposure": "custodian_only_unexposed_to_implementation_cases"
+  },
+  "protected_authoring": {
+    "freeze_before_authoring": true,
+    "no_post_target_adjustment": true
+  }
+}
