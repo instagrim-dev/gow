@@ -10,6 +10,8 @@ newf g4 pack validate --input g4-lite-metadata.json
 newf g4 pack seal --input g4-lite-metadata.json --out g4-lite-pack.seal.json
 newf g4 pack bind-execution --pre-execution-seal g4-lite-pack.seal.json --observed-metadata observed.json --out execution-binding.json
 newf g4 pack inspect g4-lite-pack.seal.json --input g4-lite-metadata.json
+newf g4 execute --manifest g4-lite-metadata.json --episode-pack episodes.json \
+  --resource-ceiling resource.json --out protected/execution-receipt.json
 ```
 
 The final input schema is `g4-lite-pack/2`. It is one UTF-8 JSON object of at
@@ -27,6 +29,25 @@ manifest contains only identity references and declarations:
 | `endpoint` | The exact objective, including the declared target cost, under the same **task-directed** resource cap. Separately metered custody is excluded from this endpoint and retained for the full-cost decision record. |
 | `spending_rule` | Exact run-summed arithmetic: HG must exceed H1 by at least `3 × runs`; H1 minus HG on low-value/misleading cases is a net run-summed loss of at most `1 × runs`; qualifying family advantages are positive run-summed HG advantages on informative episodes only. The rule also requires no invalid certification and HG at least H0. |
 | `execution` | The same task-directed resource-ceiling locator and nonnegative provider ceilings. `approval_ref` is an audit pointer only. |
+
+## Deterministic one-run executor
+
+`g4 execute` is the public data-only executor for a final manifest with
+`single_run_budget_constrained`. Before doing work it verifies the exact bytes
+of the supplied episode and resource artifacts against the identities in the
+final manifest. The episode artifact is `shaping-pack/1` and must contain the
+fixed 24-episode 12/6/6 population. The resource artifact is one strict JSON
+object:
+
+```json
+{"schema":"g4-resource-ceiling/1","expansions":1,"rule_applications":1,"candidates":1,"history_bytes":1,"check_assignments":1,"max_states":1,"max_term_nodes":1}
+```
+
+All numeric values are explicit nonnegative ceilings except `max_states` and
+`max_term_nodes`, which must be positive. The command executes only H0, H1,
+and HG, writes a new custodian-local receipt, and labels it
+`protected-execution/custody-unverified`. It never reads answers, establishes
+custody, validates an authorization reference, or scores/funds the batch.
 
 ## Required sequence
 
