@@ -137,16 +137,47 @@ An `observation-claim/1` root has exactly `schema`, `kind`, `source_ref`,
   most 1024 bytes) and explicit Boolean `success`. Across input there may be
   at most 4096 instance records and 16384 submissions.
 - `solved_monotonicity` uses exactly two observations and needs an actual
-  extension of every solved trace. `probabilistic_property` routes to
-  `NOT_ASSESSED`; it does not produce a probability conclusion. For the
-  intentionally underspecified probability route, omit `binding` or
-  `observations` only when the expected answer names that exact missing
-  premise; the checker then records a blocked non-assessment rather than
-  inventing a conclusion.
+  extension of every solved trace. `probabilistic_property` is an unconditional
+  `NOT_ASSESSED` route: it does not inspect a sample or produce a probability
+  conclusion. Do not use that route for an underspecified case, because absent
+  `binding` or `observations` does not change the refusal's `NOT_ASSESSED`
+  verdict. An underspecified case must instead use a nonprobabilistic
+  observation claim with a genuinely absent `binding` or `observations`, which
+  records `UNRESOLVED` and names the missing premise.
 
 ```json
 {"schema":"observation-claim/1","kind":"observed_rate_invariance","source_ref":"custodian:fresh","statement":"The observed success rate is unchanged at the two declared budgets","binding":{"population":"instance a","ordering":"recorded order","stopping_rule":"declared budget","budget_min":1,"budget_max":2},"observations":[{"conditions":{"population":"instance a","ordering":"recorded order","stopping_rule":"declared budget","budget":1},"instances":[{"id":"a","submissions":[{"move":"m1","success":true}]}]},{"conditions":{"population":"instance a","ordering":"recorded order","stopping_rule":"declared budget","budget":2},"instances":[{"id":"a","submissions":[{"move":"m1","success":true},{"move":"m2","success":true}]}]}]}
 ```
+
+## Frozen case allocation and case-state mapping
+
+Use this exact cross-stratum allocation; it leaves no discretionary route or
+stratum pairing:
+
+| Stratum | Route and count | Required terminal result |
+|---|---|---|
+| Applicable (24) | 12 `finite_equivalence`, 4 `finite_instance`, 8 `probabilistic_property` | The finite routes use fully bound inputs. The probability routes expect `NOT_ASSESSED`; this is a correct terminal nonassessment, not a refusal to run the public route. |
+| Inapplicable (16) | 8 `finite_instance`, 8 `solved_monotonicity` | Supply a typed premise defect so the retained verdict is `INAPPLICABLE` and names the defect. It must never certify the claim. |
+| Underspecified (8) | 8 `observed_rate_invariance` | Omit one real required premise (`binding` or `observations`) so the retained verdict is `UNRESOLVED` and names that exact absence. |
+
+This allocation totals the frozen 12/12/8/8/8 route composition and 24/16/8
+strata. Do not repurpose a reservation refusal, malformed JSON rejected before
+persistence, cancellation, or storage failure as an inapplicable or
+underspecified case.
+
+The G1 case-state and the review ledger outcome have separate meanings. Assign
+`completed-valid` whenever the routed public command persists a receipt whose
+exact input binding and terminal verdict match the sealed expected answer,
+including `NOT_ASSESSED` for the probability route, `INAPPLICABLE` for an
+inapplicable input, and `UNRESOLVED` that names the sealed missing premise. The
+CLI records these three semantic non-certifications as `check.Outcome: "blocked"`;
+that ledger word does **not** make the G1 case-state `blocked`. Reserve the G1
+case-state `blocked` only for a resource stop, cancellation, process
+interruption, or storage failure. Assign `false-certification` only if an
+inapplicable case is certified or the receipt contradicts its exact input;
+assign `refused-applicable` only if an otherwise applicable public route is
+actually declined. For a matching run under this allocation, all 48 case states
+are `completed-valid`.
 
 ## Private records sealed before checks
 
@@ -178,8 +209,9 @@ relative `answers/` path, digest/byte fields follow the task rules, and
 `sealed_before_execution` is true.
 
 Each referenced answer is one object with exactly `schema`, `case_id`,
-`expected_certificate_verdict`, `expected_check_outcome`, `rationale`,
-`authored_at_utc`, `author`, `sealed_before_execution`. It uses
+`expected_certificate_verdict`, `expected_ledger_outcome`,
+`expected_check_outcome`, `rationale`, `authored_at_utc`, `author`,
+`sealed_before_execution`. It uses
 `schema: "g1-v2-expected-answer/1"`, the matching case ID,
 `author: "<custodian-id>"`, and `sealed_before_execution: true`.
 `expected_certificate_verdict` is the exact checker value expected from the
@@ -188,13 +220,14 @@ protected response: finite equivalence uses one of `HOLDS_ON_DECLARED_DOMAIN`,
 `INSTANCE_EVIDENCE_ONLY`, `REFUTED`, `UNRESOLVED`, or `INAPPLICABLE`; observation
 uses one of `HOLDS_AT_COMPARED_POINTS`, `REFUTED`, `UNRESOLVED`, `INAPPLICABLE`,
 or `NOT_ASSESSED`; use `NONE` only when the expected response has no certificate.
-`expected_check_outcome` is the custodian's intended case classification—one of
-`completed-valid`, `refused-applicable`, `false-certification`, `blocked`, or
-`not-executed`—rather than the CLI's ledger word. For a persisted CLI response,
-compare the expected certificate with `receipt.certificate.Verdict`, and retain
-its separate ledger state from `check.Outcome` (`completed` or `blocked`).
-`rationale` is nonempty and explains the declared expectation using only the
-case's typed data.
+`expected_ledger_outcome` is exactly `completed` or `blocked` and records the
+expected CLI ledger word separately. `expected_check_outcome` is the
+custodian's intended G1 case classification—one of `completed-valid`,
+`refused-applicable`, `false-certification`, `blocked`, or `not-executed`.
+For a persisted CLI response, compare the expected certificate with
+`receipt.certificate.Verdict` and compare the expected ledger word with
+`check.Outcome`; then apply the frozen case-state mapping above. `rationale` is
+nonempty and explains the declared expectation using only the case's typed data.
 
 **`case-provenance.jsonl`** has exactly 48 UTF-8 JSON lines, one per case,
 each with exactly: `schema`, `case_id`, `input_sha256`, `input_bytes`,
