@@ -1,0 +1,43 @@
+{
+  "schema": "g4-lite-sensitivity-calibration/1",
+  "source_pack_sha256": "2a7d72d668163d883ec307b308ba76e1b47e1239dcfc7ff67503ede08e2ba99e",
+  "source_pack_bytes": 25486,
+  "input_resource_sha256": "0c387b4e1b9a3bda04281ed17dda5063fa6b34dc36c638c48da23163092d83d2",
+  "input_resource_bytes": 210,
+  "h0_minimum_expansions": {
+    "candidate-00": 2,
+    "candidate-01": 2,
+    "candidate-02": 2,
+    "candidate-03": 2,
+    "candidate-04": 2,
+    "candidate-05": 2,
+    "candidate-06": 2,
+    "candidate-07": 2,
+    "candidate-08": 2,
+    "candidate-09": 2,
+    "candidate-10": 2,
+    "candidate-11": 2,
+    "candidate-12": 1,
+    "candidate-13": 1,
+    "candidate-14": 1,
+    "candidate-15": 1,
+    "candidate-16": 1,
+    "candidate-17": 1,
+    "candidate-18": 2,
+    "candidate-19": 2,
+    "candidate-20": 2,
+    "candidate-21": 2,
+    "candidate-22": 2,
+    "candidate-23": 2
+  },
+  "h0_unreachable_episodes": [],
+  "proposed_expansions": 2,
+  "arm_completions": {
+    "H0": 24,
+    "H1": 6,
+    "HG": 24
+  },
+  "status": "COMPARATOR_HEADROOM_REMAINS",
+  "receipt": "/Users/jmh/dev/gh/newf/docs/plans/artifacts/2026-09-14-g4-calibration-nonceiling/calibration-receipt.json",
+  "protected_dispatch_ready": false
+}

@@ -54,6 +54,14 @@ reference probes and 72 diagnostic cells. Its deliberately simple open pack
 ended 24/24/24 with `COMPLETION_CEILING`, so it verifies receipt retention and
 status classification only. It is not the required non-ceiling calibration.
 
+The retained [non-ceiling open calibration](artifacts/2026-09-14-g4-calibration-nonceiling/)
+then exercised `b6f3e4a` with a synthetic, openly stored 12/6/6 development
+pack. Its arm-blind H0 median was two expansions; the fixed diagnostic was
+H0=24, H1=6, HG=24, with 78 retained reference probes and 72 diagnostic
+cells. This satisfies the development calibration prerequisite for that exact
+executable and resource vector. It remains construction-exposed calibration
+evidence, never a protected-evaluation or shaping-value result.
+
 ## Required dispatch sequence
 
 1. Pin the release; export and preflight the actual H0, H1, and HG runtime
@@ -74,8 +82,10 @@ status classification only. It is not the required non-ceiling calibration.
 
 ## Remaining dispatch inputs
 
-First retain a non-ceiling open sensitivity calibration and pass runtime-identity
-preflight for the successor release. Then a fresh custodian-held pack, real
+Pin the successor release and pass runtime-identity preflight under its chosen
+resource vector. Retain a fresh open calibration if either controller or the
+resource vector changes; otherwise the retained non-ceiling calibration above
+is the development calibration record. A fresh custodian-held pack, real
 arm/resource/seed artifacts, explicit execution authorization, separately
 metered custody, and a grader remain required. The deterministic one-run
 executor does not supply a multi-seed implementation or any external-evidence
