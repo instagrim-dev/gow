@@ -14,6 +14,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/instagrim-dev/newf/internal/g4calibration"
 	"github.com/instagrim-dev/newf/internal/g4pack"
 	"github.com/instagrim-dev/newf/internal/rewrite"
 	"github.com/instagrim-dev/newf/internal/screen"
@@ -50,8 +51,45 @@ type g4CalibrationReceipt struct {
 	InputResourceBytes   int                        `json:"input_resource_bytes"`
 	ReferenceCalibration g4CalibrationPhase         `json:"reference_calibration"`
 	Diagnostic           *sealedrun.ResourceReceipt `json:"diagnostic,omitempty"`
+	Sensitivity          *g4SensitivityHeadroom     `json:"sensitivity,omitempty"`
 	Status               string                     `json:"status"`
 	Error                string                     `json:"error,omitempty"`
+}
+
+type g4CalibrationProcedureRef struct {
+	ProcedureID string `json:"procedure_id"`
+	SHA256      string `json:"sha256"`
+	ByteLength  int    `json:"byte_length"`
+}
+
+// g4SensitivityHeadroom is a diagnostic of whether this public pack leaves
+// enough theoretical space for the later margin and two-family conditions.
+// It neither scores a protected run nor compares HG with H0.
+type g4SensitivityHeadroom struct {
+	MaximumPossibleHGOverH1         int      `json:"maximum_possible_hg_over_h1"`
+	RequiredHGOverH1                int      `json:"required_hg_over_h1"`
+	MarginAttainable                bool     `json:"margin_attainable"`
+	InformativeFamiliesWithHeadroom []string `json:"informative_families_with_headroom"`
+	RequiredInformativeFamilies     int      `json:"required_informative_families"`
+	FamilyHeadroomAttainable        bool     `json:"family_headroom_attainable"`
+}
+
+type g4ProcedureCalibrationResponse struct {
+	ResourceChoice       g4calibration.ResourceChoice `json:"resource_choice"`
+	ReferenceCalibration g4CalibrationPhase           `json:"reference_calibration"`
+	Diagnostic           *sealedrun.ResourceReceipt   `json:"diagnostic,omitempty"`
+	Sensitivity          *g4SensitivityHeadroom       `json:"sensitivity,omitempty"`
+	Status               string                       `json:"status"`
+	Error                string                       `json:"error,omitempty"`
+}
+
+type g4ProcedureCalibrationReceipt struct {
+	Schema            string                           `json:"schema"`
+	SourcePackSHA256  string                           `json:"source_pack_sha256"`
+	SourcePackBytes   int                              `json:"source_pack_bytes"`
+	Procedure         g4CalibrationProcedureRef        `json:"procedure"`
+	ResourceResponses []g4ProcedureCalibrationResponse `json:"resource_responses"`
+	Status            string                           `json:"status"`
 }
 
 func g4CalibrationStatus(minimums map[string]int, unreachable []string, completions map[string]int, total int) string {
@@ -83,25 +121,89 @@ func g4CalibrationStatus(minimums map[string]int, unreachable []string, completi
 	return "SENSITIVITY_CRITERION_UNMET"
 }
 
-func writeG4CalibrationResponse(stdout io.Writer, packRaw, resourceRaw []byte, phase g4CalibrationPhase, diagnostic *sealedrun.ResourceReceipt, status, receipt string) error {
+func g4OpenSensitivityHeadroom(pack sealedrun.Pack, diagnostic sealedrun.ResourceReceipt) g4SensitivityHeadroom {
+	familyByEpisode := make(map[string]string, len(pack.Episodes))
+	for _, ep := range pack.Episodes {
+		if ep.Decl.Stratum == screen.StratumInformative {
+			familyByEpisode[ep.Decl.ID] = ep.Decl.Family
+		}
+	}
+	families := map[string]bool{}
+	for _, cell := range diagnostic.Cells {
+		if cell.Arm != "H1" || cell.Completed {
+			continue
+		}
+		if family, ok := familyByEpisode[cell.EpisodeID]; ok {
+			families[family] = true
+		}
+	}
+	withHeadroom := make([]string, 0, len(families))
+	for family := range families {
+		withHeadroom = append(withHeadroom, family)
+	}
+	sort.Strings(withHeadroom)
+	maximum := len(pack.Episodes) - diagnostic.Completions["H1"]
+	return g4SensitivityHeadroom{
+		MaximumPossibleHGOverH1:         maximum,
+		RequiredHGOverH1:                3,
+		MarginAttainable:                maximum >= 3,
+		InformativeFamiliesWithHeadroom: withHeadroom,
+		RequiredInformativeFamilies:     2,
+		FamilyHeadroomAttainable:        len(withHeadroom) >= 2,
+	}
+}
+
+func runG4OpenCalibration(pack sealedrun.Pack, budget sealedrun.ResourceBudget, cancel <-chan struct{}) (g4CalibrationPhase, *sealedrun.ResourceReceipt, string, *g4SensitivityHeadroom, error) {
+	limits := rewrite.Limits{MaxStates: budget.MaxStates, MaxTermNodes: budget.MaxTermNodes, Cancel: cancel, Work: &rewrite.WorkBudget{MaxRuleApplications: budget.RuleApplications, MaxCandidates: budget.Candidates}}
+	minimums, unreachable, probes, err := sealedrun.CalibrateH0MinBudgetsWithProbes(pack, budget.Expansions, limits)
+	if err != nil {
+		return g4CalibrationPhase{H0MinimumExpansions: minimums, H0UnreachableEpisodes: unreachable, H0Probes: probes, Error: err.Error()}, nil, "CALIBRATION_BLOCKED", nil, err
+	}
+	positive := make([]int, 0, len(minimums))
+	for _, minimum := range minimums {
+		if minimum > 0 {
+			positive = append(positive, minimum)
+		}
+	}
+	sort.Ints(positive)
+	proposed := 0
+	if len(positive) > 0 {
+		proposed = positive[len(positive)/2]
+	}
+	phase := g4CalibrationPhase{H0MinimumExpansions: minimums, H0UnreachableEpisodes: unreachable, H0Probes: probes, ProposedExpansions: proposed}
+	if len(positive) == 0 {
+		return phase, nil, g4CalibrationStatus(minimums, unreachable, nil, len(pack.Episodes)), nil, nil
+	}
+	calibrated := budget
+	calibrated.Expansions = proposed
+	receipt, runErr := sealedrun.RunG4ResourceScreen(pack, calibrated, cancel)
+	if runErr != nil {
+		return phase, &receipt, "DIAGNOSTIC_BLOCKED", nil, runErr
+	}
+	headroom := g4OpenSensitivityHeadroom(pack, receipt)
+	return phase, &receipt, g4CalibrationStatus(minimums, unreachable, receipt.Completions, len(pack.Episodes)), &headroom, nil
+}
+
+func writeG4CalibrationResponse(stdout io.Writer, packRaw, resourceRaw []byte, phase g4CalibrationPhase, diagnostic *sealedrun.ResourceReceipt, sensitivity *g4SensitivityHeadroom, status, receipt string) error {
 	completions := map[string]int(nil)
 	if diagnostic != nil {
 		completions = diagnostic.Completions
 	}
 	return writeJSON(stdout, struct {
-		Schema                 string         `json:"schema"`
-		SourcePackSHA256       string         `json:"source_pack_sha256"`
-		SourcePackBytes        int            `json:"source_pack_bytes"`
-		InputResourceSHA256    string         `json:"input_resource_sha256"`
-		InputResourceBytes     int            `json:"input_resource_bytes"`
-		H0MinimumExpansions    map[string]int `json:"h0_minimum_expansions"`
-		H0UnreachableEpisodes  []string       `json:"h0_unreachable_episodes"`
-		ProposedExpansions     int            `json:"proposed_expansions"`
-		ArmCompletions         map[string]int `json:"arm_completions,omitempty"`
-		Status                 string         `json:"status"`
-		Receipt                string         `json:"receipt"`
-		ProtectedDispatchReady bool           `json:"protected_dispatch_ready"`
-	}{"g4-lite-sensitivity-calibration/1", g4pack.Digest(packRaw), len(packRaw), g4pack.Digest(resourceRaw), len(resourceRaw), phase.H0MinimumExpansions, phase.H0UnreachableEpisodes, phase.ProposedExpansions, completions, status, receipt, false})
+		Schema                 string                 `json:"schema"`
+		SourcePackSHA256       string                 `json:"source_pack_sha256"`
+		SourcePackBytes        int                    `json:"source_pack_bytes"`
+		InputResourceSHA256    string                 `json:"input_resource_sha256"`
+		InputResourceBytes     int                    `json:"input_resource_bytes"`
+		H0MinimumExpansions    map[string]int         `json:"h0_minimum_expansions"`
+		H0UnreachableEpisodes  []string               `json:"h0_unreachable_episodes"`
+		ProposedExpansions     int                    `json:"proposed_expansions"`
+		ArmCompletions         map[string]int         `json:"arm_completions,omitempty"`
+		Sensitivity            *g4SensitivityHeadroom `json:"sensitivity,omitempty"`
+		Status                 string                 `json:"status"`
+		Receipt                string                 `json:"receipt"`
+		ProtectedDispatchReady bool                   `json:"protected_dispatch_ready"`
+	}{"g4-lite-sensitivity-calibration/1", g4pack.Digest(packRaw), len(packRaw), g4pack.Digest(resourceRaw), len(resourceRaw), phase.H0MinimumExpansions, phase.H0UnreachableEpisodes, phase.ProposedExpansions, completions, sensitivity, status, receipt, false})
 }
 
 // newG4Command exposes content-free G4-lite pack operations and the bounded
@@ -245,7 +347,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 			return wrapCommandError("g4 calibrate", err)
 		}
 		defer pending.Close()
-		publish := func(phase g4CalibrationPhase, diagnostic *sealedrun.ResourceReceipt, status string, runErr error) error {
+		publish := func(phase g4CalibrationPhase, diagnostic *sealedrun.ResourceReceipt, sensitivity *g4SensitivityHeadroom, status string, runErr error) error {
 			receipt := g4CalibrationReceipt{
 				Schema:               "g4-lite-sensitivity-calibration-receipt/1",
 				SourcePackSHA256:     g4pack.Digest(packRaw),
@@ -254,6 +356,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 				InputResourceBytes:   len(resourceRaw),
 				ReferenceCalibration: phase,
 				Diagnostic:           diagnostic,
+				Sensitivity:          sensitivity,
 				Status:               status,
 			}
 			if runErr != nil {
@@ -264,7 +367,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 		minimums, unreachable, probes, err := sealedrun.CalibrateH0MinBudgetsWithProbes(pack, budget.Expansions, limits)
 		if err != nil {
 			phase := g4CalibrationPhase{H0MinimumExpansions: minimums, H0UnreachableEpisodes: unreachable, H0Probes: probes, Error: err.Error()}
-			if publishErr := publish(phase, nil, "CALIBRATION_BLOCKED", err); publishErr != nil {
+			if publishErr := publish(phase, nil, nil, "CALIBRATION_BLOCKED", err); publishErr != nil {
 				return wrapCommandError("g4 calibrate", publishErr)
 			}
 			return wrapCommandError("g4 calibrate", fmt.Errorf("reference calibration blocked; receipt saved at %s: %w", path, err))
@@ -283,10 +386,10 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 		phase := g4CalibrationPhase{H0MinimumExpansions: minimums, H0UnreachableEpisodes: unreachable, H0Probes: probes, ProposedExpansions: proposed}
 		if len(positive) == 0 {
 			status := g4CalibrationStatus(minimums, unreachable, nil, len(pack.Episodes))
-			if err := publish(phase, nil, status, nil); err != nil {
+			if err := publish(phase, nil, nil, status, nil); err != nil {
 				return wrapCommandError("g4 calibrate", err)
 			}
-			return writeG4CalibrationResponse(stdout, packRaw, resourceRaw, phase, nil, status, path)
+			return writeG4CalibrationResponse(stdout, packRaw, resourceRaw, phase, nil, nil, status, path)
 		}
 		calibrated := budget
 		calibrated.Expansions = proposed
@@ -295,13 +398,18 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 		if runErr != nil {
 			status = "DIAGNOSTIC_BLOCKED"
 		}
-		if err := publish(phase, &receipt, status, runErr); err != nil {
+		var sensitivity *g4SensitivityHeadroom
+		if runErr == nil {
+			measured := g4OpenSensitivityHeadroom(pack, receipt)
+			sensitivity = &measured
+		}
+		if err := publish(phase, &receipt, sensitivity, status, runErr); err != nil {
 			return wrapCommandError("g4 calibrate", err)
 		}
 		if runErr != nil {
 			return wrapCommandError("g4 calibrate", fmt.Errorf("open diagnostic blocked; receipt saved at %s: %w", path, runErr))
 		}
-		return writeG4CalibrationResponse(stdout, packRaw, resourceRaw, phase, &receipt, status, path)
+		return writeG4CalibrationResponse(stdout, packRaw, resourceRaw, phase, &receipt, sensitivity, status, path)
 	}}
 	calibrate.Flags().StringVar(&calibrationPack, "episode-pack", "", "Open shaping-pack/1 calibration input")
 	calibrate.Flags().StringVar(&calibrationResource, "resource-ceiling", "", "Exact g4-resource-ceiling/1 calibration input")
@@ -309,6 +417,71 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 	_ = calibrate.MarkFlagRequired("episode-pack")
 	_ = calibrate.MarkFlagRequired("resource-ceiling")
 	_ = calibrate.MarkFlagRequired("out")
+
+	var procedurePack, procedureInput, procedureOut string
+	calibrateProcedure := &cobra.Command{Use: "calibrate-procedure", Short: "Run every frozen open-calibration resource choice", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+		packRaw, err := readG4BoundedFile(procedurePack, sealedrun.MaxShapingPackBytes, "G4-lite open calibration pack")
+		if err != nil {
+			return wrapCommandError("g4 calibrate-procedure", err)
+		}
+		pack, err := sealedrun.DecodeShapingPack(packRaw)
+		if err != nil {
+			return wrapCommandError("g4 calibrate-procedure", err)
+		}
+		if err := validateG4EpisodePopulation(pack); err != nil {
+			return wrapCommandError("g4 calibrate-procedure", err)
+		}
+		procedureRaw, err := readG4BoundedFile(procedureInput, g4calibration.MaxProcedureBytes, "G4-lite calibration procedure")
+		if err != nil {
+			return wrapCommandError("g4 calibrate-procedure", err)
+		}
+		procedure, err := g4calibration.Decode(procedureRaw)
+		if err != nil {
+			return wrapCommandError("g4 calibrate-procedure", err)
+		}
+		if err := procedure.ValidateOpenPack(packRaw, pack); err != nil {
+			return wrapCommandError("g4 calibrate-procedure", err)
+		}
+		path, pending, err := prepareShapingReceipt(procedureOut)
+		if err != nil {
+			return wrapCommandError("g4 calibrate-procedure", err)
+		}
+		defer pending.Close()
+		responses := make([]g4ProcedureCalibrationResponse, 0, len(procedure.ResourceChoices))
+		blocked := false
+		for _, choice := range procedure.ResourceChoices {
+			phase, diagnostic, status, sensitivity, runErr := runG4OpenCalibration(pack, choice.Budget(), cmd.Context().Done())
+			response := g4ProcedureCalibrationResponse{ResourceChoice: choice, ReferenceCalibration: phase, Diagnostic: diagnostic, Sensitivity: sensitivity, Status: status}
+			if runErr != nil {
+				response.Error = runErr.Error()
+				blocked = true
+			}
+			responses = append(responses, response)
+		}
+		receipt := g4ProcedureCalibrationReceipt{Schema: "g4-lite-sensitivity-calibration-receipt/2", SourcePackSHA256: g4pack.Digest(packRaw), SourcePackBytes: len(packRaw), Procedure: g4CalibrationProcedureRef{ProcedureID: procedure.ProcedureID, SHA256: g4calibration.Digest(procedureRaw), ByteLength: len(procedureRaw)}, ResourceResponses: responses, Status: "OPEN_CALIBRATION_RECORDED"}
+		if blocked {
+			receipt.Status = "OPEN_CALIBRATION_PARTIALLY_BLOCKED"
+		}
+		if err := publishJSONReceipt(pending, path, receipt); err != nil {
+			return wrapCommandError("g4 calibrate-procedure", err)
+		}
+		if blocked {
+			return wrapCommandError("g4 calibrate-procedure", fmt.Errorf("one or more frozen open-calibration choices were blocked; receipt saved at %s", path))
+		}
+		return writeJSON(stdout, struct {
+			Schema                 string                           `json:"schema"`
+			Procedure              g4CalibrationProcedureRef        `json:"procedure"`
+			ResourceResponses      []g4ProcedureCalibrationResponse `json:"resource_responses"`
+			Receipt                string                           `json:"receipt"`
+			ProtectedDispatchReady bool                             `json:"protected_dispatch_ready"`
+		}{"g4-lite-sensitivity-calibration/2", receipt.Procedure, responses, path, false})
+	}}
+	calibrateProcedure.Flags().StringVar(&procedurePack, "episode-pack", "", "Open shaping-pack/1 whose identity is frozen by the procedure")
+	calibrateProcedure.Flags().StringVar(&procedureInput, "procedure", "", "Frozen g4-lite-calibration-procedure/1 input")
+	calibrateProcedure.Flags().StringVar(&procedureOut, "out", "", "New multi-choice open calibration receipt path")
+	_ = calibrateProcedure.MarkFlagRequired("episode-pack")
+	_ = calibrateProcedure.MarkFlagRequired("procedure")
+	_ = calibrateProcedure.MarkFlagRequired("out")
 
 	var preflightResource, preflightH0, preflightH1, preflightHG string
 	preflight := &cobra.Command{Use: "arm-preflight", Short: "Verify frozen arm identities before protected authoring", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
@@ -439,7 +612,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 	}}
 	inspect.Flags().StringVar(&inspectInput, "input", "", "Optional metadata JSON to compare by exact bytes; protected content is never read")
 	pack.AddCommand(validate, seal, bind, inspect)
-	cmd.AddCommand(runtimeIdentity, calibrate, preflight, execute)
+	cmd.AddCommand(runtimeIdentity, calibrate, calibrateProcedure, preflight, execute)
 	cmd.AddCommand(pack)
 	return cmd
 }

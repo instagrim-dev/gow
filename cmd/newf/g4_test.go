@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/instagrim-dev/newf/internal/g4calibration"
 	"github.com/instagrim-dev/newf/internal/g4pack"
 	"github.com/instagrim-dev/newf/internal/sealedrun"
 )
@@ -259,15 +260,16 @@ func TestG4CalibrateReportsCompletionCeilingWithoutGrantingDispatch(t *testing.T
 		t.Fatalf("open calibration failed: %d %s %s", code, stdout.String(), stderr.String())
 	}
 	var result struct {
-		Status                 string         `json:"status"`
-		ArmCompletions         map[string]int `json:"arm_completions"`
-		ProtectedDispatchReady bool           `json:"protected_dispatch_ready"`
-		Receipt                string         `json:"receipt"`
+		Status                 string                 `json:"status"`
+		ArmCompletions         map[string]int         `json:"arm_completions"`
+		Sensitivity            *g4SensitivityHeadroom `json:"sensitivity"`
+		ProtectedDispatchReady bool                   `json:"protected_dispatch_ready"`
+		Receipt                string                 `json:"receipt"`
 	}
 	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
 		t.Fatal(err)
 	}
-	if result.Status != "COMPLETION_CEILING" || result.ProtectedDispatchReady || result.Receipt != out || result.ArmCompletions["H0"] != 24 || result.ArmCompletions["H1"] != 24 || result.ArmCompletions["HG"] != 24 {
+	if result.Status != "COMPLETION_CEILING" || result.ProtectedDispatchReady || result.Receipt != out || result.ArmCompletions["H0"] != 24 || result.ArmCompletions["H1"] != 24 || result.ArmCompletions["HG"] != 24 || result.Sensitivity == nil || result.Sensitivity.MarginAttainable || result.Sensitivity.FamilyHeadroomAttainable {
 		t.Fatalf("saturated open pack was not reported conservatively: %+v", result)
 	}
 	var receipt g4CalibrationReceipt
@@ -297,6 +299,52 @@ func TestG4CalibrationStatusDistinguishesCalibrationAndComparatorBoundaries(t *t
 				t.Fatalf("status=%s, want %s", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestG4CalibrateProcedureRecordsEveryFrozenResourceChoiceAndHeadroom(t *testing.T) {
+	episodes := g4TestEpisodes()
+	for i := range episodes {
+		episodes[i] = strings.Replace(episodes[i], `"catalog":["double-not"]`, `"catalog":["double-not","not-intro"]`, 1)
+	}
+	_, episodesPath, _, _, _, _, _ := writeG4ExecuteFixture(t, episodes, g4ValidResourceCeiling)
+	packRaw, err := os.ReadFile(episodesPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	procedurePath := filepath.Join(dir, "procedure.json")
+	out := filepath.Join(dir, "procedure-receipt.json")
+	procedure := fmt.Sprintf(`{"schema":"g4-lite-calibration-procedure/1","procedure_id":"open-sensitivity-v1","open_calibration_pack":{"sha256":%q,"byte_length":%d},"difficulty":{"min_rewrite_depth":2,"min_branching_alternatives":2,"min_cost_neutral_enabling_steps":1,"targets_independently_verified":true},"history_construction":{"method":"independent authored history schedule","independently_specified":true},"resource_choices":[{"id":"tight","expansions":1,"rule_applications":128,"candidates":256,"history_bytes":65536,"check_assignments":4096,"max_states":1024,"max_term_nodes":1024},{"id":"roomy","expansions":2,"rule_applications":128,"candidates":256,"history_bytes":65536,"check_assignments":4096,"max_states":1024,"max_term_nodes":1024}],"primary_resource_id":"roomy","family_exposure_separation":{"open_family_prefix":"fam-","protected_family_prefix":"protected-","open_exposure":"implementation_exposed_open_calibration","protected_exposure":"custodian_only_unexposed_to_implementation_cases"},"protected_authoring":{"freeze_before_authoring":true,"no_post_target_adjustment":true}}`, g4calibration.Digest(packRaw), len(packRaw))
+	if err := os.WriteFile(procedurePath, []byte(procedure), 0600); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := execute(context.Background(), []string{"--json", "g4", "calibrate-procedure", "--episode-pack", episodesPath, "--procedure", procedurePath, "--out", out}, &stdout, &stderr); code != 0 {
+		t.Fatalf("procedure calibration failed: %d %s %s", code, stdout.String(), stderr.String())
+	}
+	var result struct {
+		ResourceResponses      []g4ProcedureCalibrationResponse `json:"resource_responses"`
+		ProtectedDispatchReady bool                             `json:"protected_dispatch_ready"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.ProtectedDispatchReady || len(result.ResourceResponses) != 2 {
+		t.Fatalf("procedure result lost frozen choices or scope: %+v", result)
+	}
+	for _, response := range result.ResourceResponses {
+		if response.Diagnostic == nil || response.Sensitivity == nil || response.Sensitivity.RequiredHGOverH1 != 3 || response.Sensitivity.RequiredInformativeFamilies != 2 {
+			t.Fatalf("procedure response omitted diagnostic headroom: %+v", response)
+		}
+	}
+	raw, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var receipt g4ProcedureCalibrationReceipt
+	if err := json.Unmarshal(raw, &receipt); err != nil || receipt.Schema != "g4-lite-sensitivity-calibration-receipt/2" || len(receipt.ResourceResponses) != 2 || receipt.Procedure.ProcedureID != "open-sensitivity-v1" {
+		t.Fatalf("procedure receipt lost reproducible provenance: err=%v receipt=%+v", err, receipt)
 	}
 }
 

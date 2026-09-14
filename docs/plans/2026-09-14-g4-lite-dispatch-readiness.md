@@ -41,14 +41,17 @@ authority, or make a funding decision. Multi-seed execution remains a separate
 extension. `shaping diagnose` remains the unrelated four-arm development
 diagnostic.
 
-Before a successor protected dispatch, run `g4 calibrate` on an open 24-case
-pack with a new `--out` receipt path. Its receipt retains the H0 reference
-calibration and any three-arm diagnostic independently, including partial
-work and stop reasons. An H0 no-positive-sample outcome, an all-arm
-completion ceiling, or a saturated H1 baseline is inconclusive for shaping
-value; adjust only the open task-generation/resource procedure, record the
-new calibration, and repeat the identity preflight before a new protected
-design is frozen.
+Before a successor protected dispatch, freeze a
+`g4-lite-calibration-procedure/1` and run `g4 calibrate-procedure` on its
+open 24-case pack. It fixes the generation controls, open/protected family and
+exposure separation, and every resource vector before the command executes.
+Its receipt retains each H0 reference calibration and three-arm diagnostic,
+including partial work and stop reasons, and reports whether the one-run
+margin and two-informative-family conditions are even attainable on the open
+design. An H0 no-positive-sample outcome, an all-arm completion ceiling, a
+saturated H1 baseline, or failed open headroom is inconclusive for shaping
+value; revise only a new open procedure and repeat identity preflight before
+a new protected design is frozen.
 
 The retained [public CLI smoke](artifacts/2026-09-14-g4-calibration-cli/)
 exercised this path on the published `a632086` executable: it retained 72 H0
@@ -76,12 +79,21 @@ HG=24. The independent content-free grade found no artifact or identity
 invalidity, but classified the result `INCONCLUSIVE_INCOMPLETE` because the
 one-run ceiling produced no discriminating evaluation outcome. The retained
 open calibration did not carry enough task-generation/resource pressure into
-that protected population. Its resolution is a new open generation/resource
-procedure and fresh calibration, not a V2S rerun.
+that protected population. It is preserved; it is not rerun.
+
+The retained [frozen multi-choice open procedure](artifacts/2026-09-14-g4-calibration-procedure/)
+now applies explicit rewrite-depth, branching, enabling-step, target, history,
+family, exposure, and no-post-target-adjustment controls to that public pack.
+At its predeclared low and high resource vectors, it retained H0/H1/HG results
+of 6/6/6 and 24/6/24 respectively. Both leave a maximum possible HG-over-H1
+advantage of 18 and two informative families with H1 headroom, so the stated
+one-run margin and family thresholds are attainable in this open construction.
+This is stronger preparation, not protected evidence or a dispatch decision.
 
 ## Required dispatch sequence
 
-1. Pin the release; export and preflight the actual H0, H1, and HG runtime
+1. Freeze and retain a fresh procedure before protected authoring, then pin
+   the release and export/preflight the actual H0, H1, and HG runtime
    identities under the task-directed resource ceiling; then freeze those exact
    snapshot artifacts with the checker, tool, and model identities.
 2. A fresh custodian context authors 24 protected episodes and separate answer,
@@ -94,15 +106,17 @@ procedure and fresh calibration, not a V2S rerun.
    recipient, run design, and stop conditions.
 5. The custodian executes the complete grid, retains all cells and cost
    ledgers, creates observed metadata, and binds it to the earlier seal.
-6. A grader separately checks artifact identity/parity and evaluates the fixed
-   screen rule. It must retain invalid, incomplete, and blocked outcomes.
+6. A substantive grader separately checks artifact identity/parity, protected
+   answers and result quality, resource compliance, and spending arithmetic;
+   it returns only a content-free judgment and retains invalid, incomplete,
+   and blocked outcomes.
 
 ## Remaining dispatch inputs
 
-Define and retain a fresh non-ceiling open calibration from a revised
-task-generation/resource procedure, then repeat runtime preflight if the
-controller or resource vector changes. Only then may a fresh custodian-held
-pack, real arm/resource/seed artifacts, explicit execution authorization,
-separately metered custody, and a grader be assembled. The deterministic
-one-run executor does not supply a multi-seed implementation or any
-external-evidence authority.
+The generation/resource procedure and its open multi-choice calibration are
+delivered. The remaining inputs are a fresh custodian-held pack authored under
+that frozen procedure, real arm/resource/seed artifacts, explicit execution
+authorization, separately metered custody, and the substantive grader. Repeat
+runtime preflight if the executable or resource vector changes. The
+deterministic one-run executor does not supply a multi-seed implementation or
+any external-evidence authority.

@@ -12,6 +12,7 @@ newf g4 pack bind-execution --pre-execution-seal g4-lite-pack.seal.json --observ
 newf g4 pack inspect g4-lite-pack.seal.json --input g4-lite-metadata.json
 newf g4 runtime-identity --resource-ceiling resource.json --arm H0
 newf g4 calibrate --episode-pack open-episodes.json --resource-ceiling resource.json --out calibration-receipt.json
+newf g4 calibrate-procedure --episode-pack open-episodes.json --procedure procedure.json --out calibration-receipt.json
 newf g4 arm-preflight --resource-ceiling resource.json --h0-snapshot h0.json --h1-snapshot h1.json --hg-snapshot hg.json
 newf g4 execute --manifest g4-lite-metadata.json --episode-pack episodes.json \
   --resource-ceiling resource.json --h0-snapshot h0.json --h1-snapshot h1.json \
@@ -144,28 +145,59 @@ comparator headroom. `SENSITIVITY_CRITERION_UNMET` means the positive H0
 sample exists but H1 is saturated without an all-arm ceiling. Every status is
 diagnostic only and never grants protected-dispatch readiness. Record both
 successful and failed calibrations; do not tune a fresh protected pack from
-completion counts.
+completion counts. Whenever its three-arm diagnostic completes, the legacy
+receipt also records the open margin and informative-family headroom fields;
+the status label itself remains the older comparator-only classification.
+
+For a prospective protected cycle, use the versioned
+`g4-lite-calibration-procedure/1` input with `g4 calibrate-procedure`. It
+freezes the exact public pack used for calibration, at least two concrete
+resource vectors, one predeclared primary vector, and the authoring controls:
+minimum rewrite depth, branching alternatives, cost-neutral enabling steps,
+independently verified targets, and an independently specified history method.
+It also declares non-overlapping open/protected family prefixes and the
+required exposure boundary. The procedure must declare that it is frozen
+before protected authoring and that protected targets will not be adjusted
+after targeted performance. The command refuses an open pack whose identity,
+family namespace, catalog alternatives, or expression depth violate that
+procedure.
+
+Its `/2` receipt retains every declared resource choice, including a blocked
+attempt, plus two open-only feasibility diagnostics for each completed
+three-arm run: the maximum possible HG-over-H1 advantage (`24 - H1`), which
+must be at least three for the one-run margin to be attainable, and the number
+of informative families containing an H1 noncompletion, which must be at
+least two for the family condition to be attainable. These diagnostics do not
+require H0 failure or HG-over-H0 success and do not add rules to an already
+sealed or executed protected batch. They are a design check for a fresh
+procedure, not a spending, grading, custody, or dispatch decision.
 
 ## Required sequence
 
-1. Freeze the resource specification at a pinned release. Export H0, H1, and
+1. Freeze the generation/resource procedure before protected authoring. Run it
+   against an implementation-exposed, family-separated open pack and retain
+   every resource response. This fixes the protected construction controls and
+   does not disclose a future protected pack.
+2. Freeze the resource specification at a pinned release. Export H0, H1, and
    HG runtime identities from that executable, record the three content-free
    runtime-identity artifacts, and make `g4 arm-preflight` pass. This is a
    design-stage reference; it does not include future episode or answer hashes.
-2. The custodian authors the fresh protected episodes and separately seals the
+3. The custodian authors the fresh protected episodes and separately seals the
    episode, answer, calibration, arm-snapshot, resource, and seed artifacts.
-3. The custodian builds and seals the final `g4-lite-pack/2` manifest with
+4. The custodian builds and seals the final `g4-lite-pack/2` manifest with
    those real identities. It must not invent future hashes or mutate a prior
    final-pack seal.
-4. Under a separate execution authorization, the custodian executes the full
+5. Under a separate execution authorization, the custodian executes the full
    3 × 24 × runs grid and meters custody separately.
-5. The custodian records `g4-lite-observed-metadata/1` and runs
+6. The custodian records `g4-lite-observed-metadata/1` and runs
    `bind-execution`. The observed record names the exact pre-execution seal
    plus content-free arm-execution, resource-ledger, and result-grid manifest
    identities. The command validates both inputs and their seal binding.
-6. A grader separately compares actual arm/resource records with the frozen
-   manifest and evaluates the grid. `bind-execution` does not perform that
-   comparison, establish chronology, verify custody, or grant authority.
+7. A substantive grader separately compares actual arm/resource records with
+   the frozen manifest, assesses the protected answers and result quality,
+   verifies resource compliance and spending arithmetic, and returns only a
+   content-free judgment. `bind-execution` does not perform that comparison,
+   establish chronology, verify custody, or grant authority.
 
 Every final-manifest validation response and seal reports
 `PREPARED_NOT_AUTHORIZED`, `protected_execution_authorized: false`, and
