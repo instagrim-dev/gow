@@ -211,6 +211,18 @@ func TestTaskOnlyContractRefusesCandidateField(t *testing.T) {
 	}
 }
 
+func TestResponseIndependentObjectiveGuaranteesAreBounded(t *testing.T) {
+	task, _ := splitAttemptForTest(t, []byte(validAttempt))
+	met := strings.Replace(string(task), `"max_node_visits":16`, `"max_node_visits":65536,"guarantee":"response-independent-met"`, 1)
+	if _, err := DecodeTaskInput([]byte(met)); err != nil {
+		t.Fatalf("maximal finite ceiling should guarantee met for any valid endpoint: %v", err)
+	}
+	tooLow := strings.Replace(met, `"max_node_visits":65536`, `"max_node_visits":16`, 1)
+	if _, err := DecodeTaskInput([]byte(tooLow)); err == nil {
+		t.Fatal("under-ceiling met guarantee was accepted")
+	}
+}
+
 func splitAttemptForTest(t *testing.T, raw []byte) ([]byte, []byte) {
 	t.Helper()
 	var attempt map[string]json.RawMessage

@@ -49,7 +49,7 @@ type wireCandidateInput struct {
 
 var taskInputKeys = []string{
 	"schema", "task", "residual", "capability_requirement", "initial_capabilities", "action_menu", "intervention_schemas",
-	"id", "family", "source_ref", "authoring_provenance", "domain", "start", "objective", "width", "variables", "kind", "max_node_visits",
+	"id", "family", "source_ref", "authoring_provenance", "domain", "start", "objective", "width", "variables", "kind", "max_node_visits", "guarantee",
 	"detail", "statement", "delivers", "requires", "provides", "left", "right", "var", "const", "op", "args",
 }
 

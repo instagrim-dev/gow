@@ -64,6 +64,7 @@ type Task struct {
 
 type Objective struct {
 	MaxNodeVisits int64
+	Guarantee     string
 }
 
 type Residual struct {
@@ -373,6 +374,7 @@ type wireDomain struct {
 type wireObjective struct {
 	Kind          string `json:"kind"`
 	MaxNodeVisits *int64 `json:"max_node_visits"`
+	Guarantee     string `json:"guarantee"`
 }
 
 type wireResidual struct {
@@ -405,7 +407,7 @@ type wireCandidateStep struct {
 
 var attemptKeys = []string{
 	"schema", "task", "residual", "capability_requirement", "initial_capabilities", "action_menu", "intervention_schemas", "candidate",
-	"id", "family", "source_ref", "authoring_provenance", "domain", "start", "objective", "width", "variables", "kind", "max_node_visits",
+	"id", "family", "source_ref", "authoring_provenance", "domain", "start", "objective", "width", "variables", "kind", "max_node_visits", "guarantee",
 	"detail", "statement", "delivers", "requires", "provides", "left", "right", "schema_id", "direction", "before", "after",
 	"var", "const", "op", "args",
 }
@@ -507,10 +509,27 @@ func compileTask(w wireTask) (Task, error) {
 	if w.Objective.Kind != "execution-cost-at-most" || w.Objective.MaxNodeVisits == nil || *w.Objective.MaxNodeVisits < 0 {
 		return Task{}, fmt.Errorf("task.objective must declare kind execution-cost-at-most and a nonnegative max_node_visits")
 	}
+	if w.Objective.Guarantee != "" {
+		if d.Size() < 1 || d.Size() > finite.ExhaustiveCap {
+			return Task{}, fmt.Errorf("task.objective.guarantee requires an exhaustively measurable task.domain")
+		}
+		switch w.Objective.Guarantee {
+		case "response-independent-met":
+			if *w.Objective.MaxNodeVisits < int64(finite.MaxExprNodes)*d.Size() {
+				return Task{}, fmt.Errorf("response-independent-met guarantee requires max_node_visits at least the declared finite expression ceiling")
+			}
+		case "response-independent-miss":
+			if *w.Objective.MaxNodeVisits != 0 {
+				return Task{}, fmt.Errorf("response-independent-miss guarantee requires max_node_visits 0")
+			}
+		default:
+			return Task{}, fmt.Errorf("task.objective.guarantee must be response-independent-met or response-independent-miss")
+		}
+	}
 	return Task{
 		ID: strings.TrimSpace(w.ID), Family: strings.TrimSpace(w.Family), SourceRef: strings.TrimSpace(w.SourceRef),
 		AuthoringProvenance: strings.TrimSpace(w.AuthoringProvenance), Domain: d, Start: start,
-		Objective: Objective{MaxNodeVisits: *w.Objective.MaxNodeVisits},
+		Objective: Objective{MaxNodeVisits: *w.Objective.MaxNodeVisits, Guarantee: w.Objective.Guarantee},
 	}, nil
 }
 

@@ -63,6 +63,13 @@ pre-observation receipt and applies the same structural checks.
 The legacy combined format is retained below as a development convenience.
 It is not a protected-task authoring interface.
 
+For response-independent coverage, `task.objective.guarantee` may be
+`response-independent-met` or `response-independent-miss`. A met guarantee
+requires `max_node_visits` at least `4096 * declared assignment count`, the
+finite expression ceiling; a miss guarantee requires zero. Thus every valid,
+structurally faithful endpoint respectively meets or misses the objective,
+without relying on a custodian's hidden candidate witness.
+
 ## Legacy development attempt contract
 
 `composition-attempt/1` is strict data-only JSON, limited to 1 MiB. Unknown,
