@@ -8,6 +8,7 @@ histories, targets, answers, raw model output, traces, or observed results.
 ```bash
 newf g4 pack validate --input g4-lite-metadata.json
 newf g4 pack seal --input g4-lite-metadata.json --out g4-lite-pack.seal.json
+newf g4 pack bind-execution --pre-execution-seal g4-lite-pack.seal.json --observed-metadata observed.json --out execution-binding.json
 newf g4 pack inspect g4-lite-pack.seal.json --input g4-lite-metadata.json
 ```
 
@@ -35,7 +36,10 @@ change those values.
 
 A later authorized custodian must retain the actual episode, answer,
 calibration, arm-snapshot, resource, seed, and execution records at the
-referenced identities; execute the complete 3 × 24 × runs grid; meter custody
+referenced identities. After execution, `bind-execution` writes a separate
+`g4-lite-execution-binding/1` receipt that hashes the pre-execution seal and
+content-free observed metadata; it establishes neither chronology nor custody
+by itself. The custodian must then execute the complete 3 × 24 × runs grid; meter custody
 separately; and submit the retained grid to the existing screen evaluator. A
 screen outcome remains bounded to its sealed batch and cannot become a G4
 confirmatory claim or funding authority through this command.

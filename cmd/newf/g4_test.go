@@ -14,12 +14,24 @@ func TestG4PackCLISealsAndInspectsContentFreeFreeze(t *testing.T) {
 	dir := t.TempDir()
 	input := filepath.Join(dir, "g4-pack.json")
 	seal := filepath.Join(dir, "g4-seal.json")
+	observed := filepath.Join(dir, "observed.json")
+	binding := filepath.Join(dir, "binding.json")
 	if err := os.WriteFile(input, []byte(g4CLIPack), 0600); err != nil {
 		t.Fatal(err)
 	}
 	var stdout, stderr bytes.Buffer
 	if code := execute(context.Background(), []string{"--json", "g4", "pack", "seal", "--input", input, "--out", seal}, &stdout, &stderr); code != 0 {
 		t.Fatalf("seal failed: code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	if err := os.WriteFile(observed, []byte(`{"schema":"g4-lite-observed-metadata/1"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	stdout.Reset()
+	if code := execute(context.Background(), []string{"--json", "g4", "pack", "bind-execution", "--pre-execution-seal", seal, "--observed-metadata", observed, "--out", binding}, &stdout, &stderr); code != 0 {
+		t.Fatalf("binding failed: code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	if !bytes.Contains(stdout.Bytes(), []byte(`"schema": "g4-lite-execution-binding/1"`)) {
+		t.Fatalf("binding did not record the artifact-chain receipt: %s", stdout.String())
 	}
 	stdout.Reset()
 	if code := execute(context.Background(), []string{"--json", "g4", "pack", "inspect", seal, "--input", input}, &stdout, &stderr); code != 0 {

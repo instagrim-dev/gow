@@ -301,3 +301,37 @@ func contains(values []string, want string) bool {
 	}
 	return false
 }
+
+// ExecutionBinding links later observed metadata to an earlier G4-lite seal
+// without receiving protected episode, answer, trace, or output contents.
+type ExecutionBinding struct {
+	Schema                 string `json:"schema"`
+	CreatedAt              string `json:"created_at"`
+	PreExecutionSealSHA256 string `json:"pre_execution_seal_sha256"`
+	PreExecutionSealBytes  int    `json:"pre_execution_seal_bytes"`
+	ObservedMetadataSHA256 string `json:"observed_metadata_sha256"`
+	ObservedMetadataBytes  int    `json:"observed_metadata_bytes"`
+}
+
+const ExecutionBindingSchema = "g4-lite-execution-binding/1"
+
+func BindExecution(pre, observed []byte, at time.Time) (ExecutionBinding, error) {
+	if len(pre) == 0 || len(observed) == 0 {
+		return ExecutionBinding{}, fmt.Errorf("pre-execution seal and observed metadata are required")
+	}
+	return ExecutionBinding{Schema: ExecutionBindingSchema, CreatedAt: at.UTC().Format(time.RFC3339Nano), PreExecutionSealSHA256: Digest(pre), PreExecutionSealBytes: len(pre), ObservedMetadataSHA256: Digest(observed), ObservedMetadataBytes: len(observed)}, nil
+}
+
+func (b ExecutionBinding) Validate() error {
+	if b.Schema != ExecutionBindingSchema || !sha256Hex.MatchString(b.PreExecutionSealSHA256) || !sha256Hex.MatchString(b.ObservedMetadataSHA256) || b.PreExecutionSealBytes < 1 || b.ObservedMetadataBytes < 1 {
+		return fmt.Errorf("execution binding has an invalid identity")
+	}
+	if _, err := time.Parse(time.RFC3339Nano, b.CreatedAt); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b ExecutionBinding) Matches(pre, observed []byte) bool {
+	return b.PreExecutionSealSHA256 == Digest(pre) && b.PreExecutionSealBytes == len(pre) && b.ObservedMetadataSHA256 == Digest(observed) && b.ObservedMetadataBytes == len(observed)
+}

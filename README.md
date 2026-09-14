@@ -104,6 +104,7 @@ newf g3 pack seal --input <metadata.json> --out <new-seal.json>
 newf g3 pack inspect <seal.json> [--input <metadata.json>]
 newf g4 pack validate --input <metadata.json>
 newf g4 pack seal --input <metadata.json> --out <new-seal.json>
+newf g4 pack bind-execution --pre-execution-seal <seal.json> --observed-metadata <metadata.json> --out <binding.json>
 newf g4 pack inspect <seal.json> [--input <metadata.json>]
 ```
 

@@ -93,3 +93,16 @@ func TestDecodeRejectsG4LiteTuningAndAuthorityUpgrade(t *testing.T) {
 		t.Fatal("authority-upgraded seal was accepted")
 	}
 }
+
+func TestExecutionBindingBindsExactPreSealAndObservedMetadata(t *testing.T) {
+	binding, err := BindExecution([]byte("pre-seal"), []byte("observed"), time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := binding.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if !binding.Matches([]byte("pre-seal"), []byte("observed")) || binding.Matches([]byte("other"), []byte("observed")) {
+		t.Fatal("binding did not retain exact input identities")
+	}
+}
