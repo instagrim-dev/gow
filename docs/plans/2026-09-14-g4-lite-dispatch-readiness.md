@@ -40,10 +40,13 @@ extension. `shaping diagnose` remains the unrelated four-arm development
 diagnostic.
 
 Before a successor protected dispatch, run `g4 calibrate` on an open 24-case
-pack and preserve its JSON output. A completion-ceiling status is inconclusive
-for shaping value; adjust only the open task-generation/resource procedure,
-record the new calibration, and repeat the identity preflight before a new
-protected design is frozen.
+pack with a new `--out` receipt path. Its receipt retains the H0 reference
+calibration and any three-arm diagnostic independently, including partial
+work and stop reasons. An H0 no-positive-sample outcome, an all-arm
+completion ceiling, or a saturated H1 baseline is inconclusive for shaping
+value; adjust only the open task-generation/resource procedure, record the
+new calibration, and repeat the identity preflight before a new protected
+design is frozen.
 
 ## Required dispatch sequence
 

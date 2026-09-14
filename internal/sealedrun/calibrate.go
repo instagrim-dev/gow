@@ -34,6 +34,31 @@ func CalibrateH0MinBudgets(p Pack, cap int) (map[string]int, []string, error) {
 	return calibrateH0MinBudgets(p, cap, rewrite.Limits{})
 }
 
+// CalibrateH0MinBudgetsWithLimits runs the same arm-blind calibration under
+// declared non-expansion limits. Each binary-search probe receives a fresh
+// work allowance; prior probes must not consume a later probe's budget.
+func CalibrateH0MinBudgetsWithLimits(p Pack, cap int, lim rewrite.Limits) (map[string]int, []string, error) {
+	return calibrateH0MinBudgets(p, cap, lim)
+}
+
+// H0CalibrationProbe records one arm-blind reference search. It is retained
+// separately from the fixed three-arm diagnostic so a blocked calibration can
+// be audited without suggesting that its partial results are a comparison.
+type H0CalibrationProbe struct {
+	EpisodeID  string         `json:"episode_id"`
+	Expansions int            `json:"expansions"`
+	Completed  bool           `json:"completed"`
+	Search     rewrite.Result `json:"search"`
+	Error      string         `json:"error,omitempty"`
+}
+
+// CalibrateH0MinBudgetsWithProbes runs the declared reference procedure and
+// returns every attempted probe, including the probe that encountered a
+// secondary resource stop or cancellation.
+func CalibrateH0MinBudgetsWithProbes(p Pack, cap int, lim rewrite.Limits) (map[string]int, []string, []H0CalibrationProbe, error) {
+	return calibrateH0MinBudgetsWithProbes(p, cap, lim)
+}
+
 // calibrateH0MinBudgets is CalibrateH0MinBudgets with explicit search
 // ceilings. It exists so the truncation guard below is reachable from a
 // test: with production defaults no pack episode can trip a resource
@@ -41,28 +66,39 @@ func CalibrateH0MinBudgets(p Pack, cap int) (map[string]int, []string, error) {
 // validator was right to call unprotected (finding D1 was found by
 // deleting the guard and watching the suite pass).
 func calibrateH0MinBudgets(p Pack, cap int, lim rewrite.Limits) (map[string]int, []string, error) {
+	minimums, unreachable, _, err := calibrateH0MinBudgetsWithProbes(p, cap, lim)
+	return minimums, unreachable, err
+}
+
+func calibrateH0MinBudgetsWithProbes(p Pack, cap int, lim rewrite.Limits) (map[string]int, []string, []H0CalibrationProbe, error) {
 	menu := Menu()
 	out := map[string]int{}
 	var unreachable []string
+	var probes []H0CalibrationProbe
 	for _, ep := range p.Episodes {
 		domain := finite.Domain{Width: 4, Vars: ep.Vars}
 		pool := make([]rewrite.Rule, 0, len(ep.CatalogNames))
 		for _, name := range ep.CatalogNames {
 			def, ok := menu[name]
 			if !ok {
-				return nil, nil, fmt.Errorf("episode %s: off-menu rule %q", ep.Decl.ID, name)
+				return out, unreachable, probes, fmt.Errorf("episode %s: off-menu rule %q", ep.Decl.ID, name)
 			}
 			d := finite.Domain{Width: 4, Vars: def.domainVars}
 			cert := finite.AssessEquivalence(finite.Binding{Sentence: name, Domain: d}, def.lhs, def.rhs)
 			rule, defects := rewrite.AdmitRule(name, cert, def.lhs, def.rhs, d)
 			if len(defects) > 0 {
-				return nil, nil, fmt.Errorf("episode %s: rule %q refused: %v", ep.Decl.ID, name, defects)
+				return out, unreachable, probes, fmt.Errorf("episode %s: rule %q refused: %v", ep.Decl.ID, name, defects)
 			}
 			pool = append(pool, rule)
 		}
 		completes := func(budget int) (bool, error) {
-			res, err := rewrite.SearchBounded(ep.Start, domain, pool, rewrite.NodeCount, budget, lim)
+			probeLimits := lim
+			if lim.Work != nil {
+				probeLimits.Work = &rewrite.WorkBudget{MaxRuleApplications: lim.Work.MaxRuleApplications, MaxCandidates: lim.Work.MaxCandidates}
+			}
+			res, err := rewrite.SearchBounded(ep.Start, domain, pool, rewrite.NodeCount, budget, probeLimits)
 			if err != nil {
+				probes = append(probes, H0CalibrationProbe{EpisodeID: ep.Decl.ID, Expansions: budget, Search: res, Error: err.Error()})
 				return false, err
 			}
 			// A resource-truncated search does not answer "does H0
@@ -75,13 +111,17 @@ func calibrateH0MinBudgets(p Pack, cap int, lim rewrite.Limits) (map[string]int,
 			// budget for the search to be valid; truncation breaks that
 			// premise, so calibration refuses rather than guessing.
 			if blocked := searchBlockedReason(res); blocked != "" {
-				return false, fmt.Errorf("calibration at budget %d was truncated by a resource bound (%s); completion is no longer monotone in budget, so no minimum can be derived", budget, blocked)
+				err := fmt.Errorf("calibration at budget %d was truncated by a resource bound (%s); completion is no longer monotone in budget, so no minimum can be derived", budget, blocked)
+				probes = append(probes, H0CalibrationProbe{EpisodeID: ep.Decl.ID, Expansions: budget, Search: res, Error: err.Error()})
+				return false, err
 			}
-			return res.BestCost <= ep.TargetCost && res.EndpointVerified, nil
+			completed := res.BestCost <= ep.TargetCost && res.EndpointVerified
+			probes = append(probes, H0CalibrationProbe{EpisodeID: ep.Decl.ID, Expansions: budget, Completed: completed, Search: res})
+			return completed, nil
 		}
 		ok, err := completes(cap)
 		if err != nil {
-			return nil, nil, fmt.Errorf("episode %s: %w", ep.Decl.ID, err)
+			return out, unreachable, probes, fmt.Errorf("episode %s: %w", ep.Decl.ID, err)
 		}
 		if !ok {
 			unreachable = append(unreachable, ep.Decl.ID)
@@ -92,7 +132,7 @@ func calibrateH0MinBudgets(p Pack, cap int, lim rewrite.Limits) (map[string]int,
 			mid := (lo + hi) / 2
 			done, err := completes(mid)
 			if err != nil {
-				return nil, nil, fmt.Errorf("episode %s: %w", ep.Decl.ID, err)
+				return out, unreachable, probes, fmt.Errorf("episode %s: %w", ep.Decl.ID, err)
 			}
 			if done {
 				hi = mid
@@ -102,5 +142,5 @@ func calibrateH0MinBudgets(p Pack, cap int, lim rewrite.Limits) (map[string]int,
 		}
 		out[ep.Decl.ID] = hi
 	}
-	return out, unreachable, nil
+	return out, unreachable, probes, nil
 }

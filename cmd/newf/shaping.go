@@ -153,6 +153,13 @@ func prepareShapingReceipt(out string) (string, *os.File, error) {
 // would overwrite a concurrently published receipt. A failed publication keeps
 // the completed temporary receipt and reports its location for recovery.
 func publishShapingReceipt(pending *os.File, path string, receipt sealedrun.ResourceReceipt) error {
+	return publishJSONReceipt(pending, path, receipt)
+}
+
+// publishJSONReceipt atomically publishes a complete JSON receipt without
+// replacing an existing file. Callers use it for distinct receipt schemas;
+// the publication guarantee is deliberately independent of receipt content.
+func publishJSONReceipt(pending *os.File, path string, receipt any) error {
 	retained := pending.Name()
 	if err := writeJSON(pending, receipt); err != nil {
 		return fmt.Errorf("writing receipt failed; partial file retained at %s: %w", retained, err)

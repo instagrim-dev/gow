@@ -253,21 +253,158 @@ func TestG4ArmPreflightExportsAndVerifiesCompiledIdentities(t *testing.T) {
 }
 
 func TestG4CalibrateReportsCompletionCeilingWithoutGrantingDispatch(t *testing.T) {
-	_, episodesPath, resources, _, _, _, _ := writeG4ExecuteFixture(t, g4TestEpisodes(), g4ValidResourceCeiling)
+	_, episodesPath, resources, _, _, _, out := writeG4ExecuteFixture(t, g4TestEpisodes(), g4ValidResourceCeiling)
 	var stdout, stderr bytes.Buffer
-	if code := execute(context.Background(), []string{"--json", "g4", "calibrate", "--episode-pack", episodesPath, "--resource-ceiling", resources}, &stdout, &stderr); code != 0 {
+	if code := execute(context.Background(), []string{"--json", "g4", "calibrate", "--episode-pack", episodesPath, "--resource-ceiling", resources, "--out", out}, &stdout, &stderr); code != 0 {
 		t.Fatalf("open calibration failed: %d %s %s", code, stdout.String(), stderr.String())
 	}
 	var result struct {
 		Status                 string         `json:"status"`
 		ArmCompletions         map[string]int `json:"arm_completions"`
 		ProtectedDispatchReady bool           `json:"protected_dispatch_ready"`
+		Receipt                string         `json:"receipt"`
 	}
 	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
 		t.Fatal(err)
 	}
-	if result.Status != "COMPLETION_CEILING" || result.ProtectedDispatchReady || result.ArmCompletions["H0"] != 24 || result.ArmCompletions["H1"] != 24 || result.ArmCompletions["HG"] != 24 {
+	if result.Status != "COMPLETION_CEILING" || result.ProtectedDispatchReady || result.Receipt != out || result.ArmCompletions["H0"] != 24 || result.ArmCompletions["H1"] != 24 || result.ArmCompletions["HG"] != 24 {
 		t.Fatalf("saturated open pack was not reported conservatively: %+v", result)
+	}
+	var receipt g4CalibrationReceipt
+	raw, err := os.ReadFile(out)
+	if err != nil || json.Unmarshal(raw, &receipt) != nil || receipt.Diagnostic == nil || receipt.Diagnostic.Completions["HG"] != 24 {
+		t.Fatalf("calibration receipt did not retain its completed diagnostic: err=%v receipt=%+v", err, receipt)
+	}
+}
+
+func TestG4CalibrationStatusDistinguishesCalibrationAndComparatorBoundaries(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		minimums    map[string]int
+		unreachable []string
+		completions map[string]int
+		want        string
+	}{
+		{"all starts already meet target", map[string]int{"a": 0}, nil, nil, "H0_COMPLETION_CEILING"},
+		{"all unreachable under cap", nil, []string{"a"}, nil, "H0_UNREACHABLE_WITHIN_CAP"},
+		{"mixed no positive sample", map[string]int{"a": 0}, []string{"b"}, nil, "H0_NO_POSITIVE_CALIBRATION_SAMPLE"},
+		{"all three arms saturated", map[string]int{"a": 1}, nil, map[string]int{"H0": 24, "H1": 24, "HG": 24}, "COMPLETION_CEILING"},
+		{"HG saturation with H1 headroom", map[string]int{"a": 1}, nil, map[string]int{"H0": 24, "H1": 21, "HG": 24}, "COMPARATOR_HEADROOM_REMAINS"},
+		{"H1 saturation without all-arm ceiling", map[string]int{"a": 1}, nil, map[string]int{"H0": 24, "H1": 24, "HG": 23}, "SENSITIVITY_CRITERION_UNMET"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := g4CalibrationStatus(tc.minimums, tc.unreachable, tc.completions, 24); got != tc.want {
+				t.Fatalf("status=%s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestG4CalibrateRetainsBlockedReferenceCalibration(t *testing.T) {
+	_, episodesPath, resources, _, _, _, out := writeG4ExecuteFixture(t, g4TestEpisodes(), g4ValidResourceCeiling)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	var stdout, stderr bytes.Buffer
+	if code := execute(ctx, []string{"--json", "g4", "calibrate", "--episode-pack", episodesPath, "--resource-ceiling", resources, "--out", out}, &stdout, &stderr); code == 0 || !strings.Contains(stdout.String()+stderr.String(), "reference calibration blocked") {
+		t.Fatalf("cancelled calibration did not report the bounded stop: code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	raw, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("cancelled calibration lost its receipt: %v", err)
+	}
+	var receipt g4CalibrationReceipt
+	if err := json.Unmarshal(raw, &receipt); err != nil || receipt.Status != "CALIBRATION_BLOCKED" || receipt.ReferenceCalibration.Error == "" || receipt.Diagnostic != nil {
+		t.Fatalf("cancelled calibration receipt omitted its reference-phase stop: err=%v receipt=%+v", err, receipt)
+	}
+}
+
+func TestG4CalibrateRetainsResourceBlockedDiagnostic(t *testing.T) {
+	limited := []byte(`{"schema":"g4-resource-ceiling/1","expansions":2,"rule_applications":128,"candidates":256,"history_bytes":0,"check_assignments":4096,"max_states":1024,"max_term_nodes":1024}`)
+	episodes := g4TestEpisodes()
+	for i := range episodes {
+		episodes[i] = strings.Replace(episodes[i], `"target_cost":1}`, `"target_cost":1,"history":[{"start":"(not (not x))","rules_applied":["double-not"],"final_cost":1,"target":1,"completed":true,"endpoint":"HOLDS_ON_DECLARED_DOMAIN"}]}`, 1)
+	}
+	_, episodesPath, resources, _, _, _, out := writeG4ExecuteFixture(t, episodes, limited)
+	var stdout, stderr bytes.Buffer
+	code := execute(context.Background(), []string{"--json", "g4", "calibrate", "--episode-pack", episodesPath, "--resource-ceiling", resources, "--out", out}, &stdout, &stderr)
+	if code == 0 || !strings.Contains(stdout.String()+stderr.String(), "open diagnostic blocked") {
+		t.Fatalf("diagnostic did not stop under the declared resource vector: code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	raw, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("resource-blocked diagnostic lost its receipt: %v", err)
+	}
+	var receipt g4CalibrationReceipt
+	if err := json.Unmarshal(raw, &receipt); err != nil || receipt.Diagnostic == nil || receipt.Error == "" || receipt.Status != "DIAGNOSTIC_BLOCKED" {
+		t.Fatalf("resource-blocked diagnostic receipt omitted its diagnostic phase: err=%v receipt=%+v", err, receipt)
+	}
+}
+
+func TestG4CalibrateGivesEachReferenceProbeFreshDeclaredWork(t *testing.T) {
+	limited := []byte(`{"schema":"g4-resource-ceiling/1","expansions":2,"rule_applications":1,"candidates":1,"history_bytes":65536,"check_assignments":4096,"max_states":1024,"max_term_nodes":1024}`)
+	_, episodesPath, resources, _, _, _, out := writeG4ExecuteFixture(t, g4TestEpisodes(), limited)
+	var stdout, stderr bytes.Buffer
+	if code := execute(context.Background(), []string{"--json", "g4", "calibrate", "--episode-pack", episodesPath, "--resource-ceiling", resources, "--out", out}, &stdout, &stderr); code != 0 {
+		t.Fatalf("fresh-work calibration failed: code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	raw, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var receipt g4CalibrationReceipt
+	if err := json.Unmarshal(raw, &receipt); err != nil {
+		t.Fatal(err)
+	}
+	if len(receipt.ReferenceCalibration.H0MinimumExpansions) != 24 || len(receipt.ReferenceCalibration.H0Probes) != 72 {
+		t.Fatalf("reference probes were not retained independently: %+v", receipt.ReferenceCalibration)
+	}
+	for _, probe := range receipt.ReferenceCalibration.H0Probes {
+		if probe.Search.RuleApplications > 1 || probe.Search.Generated > 1 {
+			t.Fatalf("probe exceeded its fresh declared work allowance: %+v", probe)
+		}
+	}
+}
+
+func TestG4CalibrateDistinguishesZeroMinimumsFromUnreachableEpisodes(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		target    string
+		want      string
+		wantMins  int
+		wantUnmet int
+	}{
+		{"all starts already meet their target", `"target_cost":3`, "H0_COMPLETION_CEILING", 24, 0},
+		{"all episodes are unreachable within cap", `"target_cost":0`, "H0_UNREACHABLE_WITHIN_CAP", 0, 24},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			episodes := g4TestEpisodes()
+			for i := range episodes {
+				episodes[i] = strings.Replace(episodes[i], `"target_cost":1`, tc.target, 1)
+			}
+			_, episodesPath, resources, _, _, _, out := writeG4ExecuteFixture(t, episodes, g4ValidResourceCeiling)
+			var stdout, stderr bytes.Buffer
+			if code := execute(context.Background(), []string{"--json", "g4", "calibrate", "--episode-pack", episodesPath, "--resource-ceiling", resources, "--out", out}, &stdout, &stderr); code != 0 {
+				t.Fatalf("calibration failed: code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+			}
+			var result struct {
+				Status                string         `json:"status"`
+				H0MinimumExpansions   map[string]int `json:"h0_minimum_expansions"`
+				H0UnreachableEpisodes []string       `json:"h0_unreachable_episodes"`
+				ArmCompletions        map[string]int `json:"arm_completions"`
+				Receipt               string         `json:"receipt"`
+			}
+			if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+				t.Fatal(err)
+			}
+			if result.Status != tc.want || len(result.H0MinimumExpansions) != tc.wantMins || len(result.H0UnreachableEpisodes) != tc.wantUnmet || result.Receipt != out || result.ArmCompletions != nil {
+				t.Fatalf("calibration did not preserve the distinct empty-median condition: %+v", result)
+			}
+			var receipt g4CalibrationReceipt
+			raw, err := os.ReadFile(out)
+			if err != nil || json.Unmarshal(raw, &receipt) != nil || receipt.Diagnostic != nil || receipt.Status != tc.want {
+				t.Fatalf("calibration receipt lost its no-diagnostic boundary: err=%v receipt=%+v", err, receipt)
+			}
+		})
 	}
 }
 

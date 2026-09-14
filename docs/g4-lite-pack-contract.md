@@ -11,7 +11,7 @@ newf g4 pack seal --input g4-lite-metadata.json --out g4-lite-pack.seal.json
 newf g4 pack bind-execution --pre-execution-seal g4-lite-pack.seal.json --observed-metadata observed.json --out execution-binding.json
 newf g4 pack inspect g4-lite-pack.seal.json --input g4-lite-metadata.json
 newf g4 runtime-identity --resource-ceiling resource.json --arm H0
-newf g4 calibrate --episode-pack open-episodes.json --resource-ceiling resource.json
+newf g4 calibrate --episode-pack open-episodes.json --resource-ceiling resource.json --out calibration-receipt.json
 newf g4 arm-preflight --resource-ceiling resource.json --h0-snapshot h0.json --h1-snapshot h1.json --hg-snapshot hg.json
 newf g4 execute --manifest g4-lite-metadata.json --episode-pack episodes.json \
   --resource-ceiling resource.json --h0-snapshot h0.json --h1-snapshot h1.json \
@@ -72,21 +72,38 @@ custody, validates an authorization reference, or scores/funds the batch.
 
 ## Open sensitivity calibration
 
-`g4 calibrate` accepts an **open** 24-episode 12/6/6 `shaping-pack/1` and a
-candidate resource vector. It first finds each H0 minimum expansion allowance
-without evaluating H1 or HG, then uses the median positive H0 minimum as a
-fixed proposed expansion allowance for one disclosed three-arm diagnostic. Its
-JSON output binds the open input and resource bytes, records all H0 minima and
-unreachable episodes, reports completions for each arm, and never grants
-protected-dispatch readiness.
+`g4 calibrate` accepts an **open** 24-episode 12/6/6 `shaping-pack/1`, a
+candidate resource vector, and a new `--out` path. It first finds each H0
+minimum expansion allowance without evaluating H1 or HG, under the declared
+state, term, rule-application, candidate, and cancellation limits. Every
+independent binary-search probe gets a fresh rule/candidate allowance. The
+median positive H0 minimum becomes the fixed proposed expansion allowance for
+one disclosed three-arm diagnostic.
 
-`H0_COMPLETION_CEILING` means every H0 completion minimum was zero. A
-`COMPLETION_CEILING` means H1 or HG completes every open episode at the
-proposed allowance. Either status is an inconclusive sensitivity diagnostic:
-it provides no shaping-value conclusion and must be resolved with the open
-task-generation/resource procedure before a successor protected design is
-frozen. Record both successful and failed calibrations; do not tune a fresh
-protected pack from completion counts.
+The output path receives an atomic
+`g4-lite-sensitivity-calibration-receipt/1` record. It retains every H0
+reference probe with its bounded search result, alongside minimums,
+unreachable episodes, proposed allowance, and any reference-phase stop. If the
+diagnostic starts, it is retained as a distinct nested resource receipt,
+including cells, decisions, work records, and any stop reason. A
+blocked phase returns a command error after its receipt is saved; it cannot
+support a favorable sensitivity conclusion (`CALIBRATION_BLOCKED` or
+`DIAGNOSTIC_BLOCKED`).
+
+No positive H0 minimum exists when every start already meets its target
+(`H0_COMPLETION_CEILING`), every task is unreachable inside the expansion cap
+(`H0_UNREACHABLE_WITHIN_CAP`), or the open pack mixes those two conditions
+(`H0_NO_POSITIVE_CALIBRATION_SAMPLE`). Those outcomes do not run a diagnostic
+because no median positive allowance exists. `COMPLETION_CEILING` requires
+**all three** arms to complete every open episode. The stated open sensitivity
+criterion is remaining comparator headroom: a positive H0 calibration sample
+and at least one H1 noncompletion (`COMPARATOR_HEADROOM_REMAINS`). HG may
+complete all 24 open episodes while H1 remains below 24; that still has useful
+comparator headroom. `SENSITIVITY_CRITERION_UNMET` means the positive H0
+sample exists but H1 is saturated without an all-arm ceiling. Every status is
+diagnostic only and never grants protected-dispatch readiness. Record both
+successful and failed calibrations; do not tune a fresh protected pack from
+completion counts.
 
 ## Required sequence
 
