@@ -172,3 +172,25 @@ func TestResourceReceiptRejectsContradictoryRawEvidence(t *testing.T) {
 		t.Fatal("changed decision escaped collection integrity")
 	}
 }
+
+func TestG4ResourceScreenUsesOnlyTheFrozenThreeArms(t *testing.T) {
+	p, b := resourceFixture()
+	r, err := RunG4ResourceScreen(p, b, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Version != G4ResourceDesignVersion || r.EvidenceLabel != G4ResourceEvidenceLabel || r.Assessment != "completed-protected-execution-unverified" {
+		t.Fatalf("G4 execution overstated or used the wrong receipt contract: %+v", r)
+	}
+	if len(r.Arms) != 3 || len(r.Cells) != 3 || r.Completions["task-only"] != 0 {
+		t.Fatalf("G4 execution must omit task-only: arms=%v cells=%d totals=%v", r.Arms, len(r.Cells), r.Completions)
+	}
+	for _, c := range r.Cells {
+		if c.Arm == "task-only" {
+			t.Fatal("task-only cell leaked into G4 execution")
+		}
+	}
+	if err := r.Reassess(); err != nil || r.Assessment != "completed-protected-execution-unverified" {
+		t.Fatalf("cold reassessment changed G4 scope: %v %+v", err, r)
+	}
+}

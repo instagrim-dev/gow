@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,6 +13,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/instagrim-dev/newf/internal/g4pack"
+	"github.com/instagrim-dev/newf/internal/screen"
+	"github.com/instagrim-dev/newf/internal/sealedrun"
+	"github.com/instagrim-dev/newf/internal/toolreg"
 )
 
 type g4PackResponse struct {
@@ -111,6 +116,64 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 	_ = bind.MarkFlagRequired("observed-metadata")
 	_ = bind.MarkFlagRequired("out")
 
+	var executionManifest, episodePack, resourceCeiling, executionOut string
+	execute := &cobra.Command{Use: "execute", Short: "Execute a bounded three-arm G4-lite screen from sealed artifacts", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+		m, _, err := readG4Manifest(executionManifest)
+		if err != nil {
+			return wrapCommandError("g4 execute", err)
+		}
+		if m.RunDesign.SeedPolicy != "single_run_budget_constrained" {
+			return wrapCommandError("g4 execute", errors.New("this executor supports only single_run_budget_constrained manifests"))
+		}
+		packRaw, err := readG4BoundedFile(episodePack, sealedrun.MaxShapingPackBytes, "G4-lite episode pack")
+		if err != nil {
+			return wrapCommandError("g4 execute", err)
+		}
+		if g4pack.Digest(packRaw) != m.EpisodeManifest.SHA256 || int64(len(packRaw)) != m.EpisodeManifest.ByteLength {
+			return wrapCommandError("g4 execute", errors.New("episode pack does not match the final manifest identity"))
+		}
+		pack, err := sealedrun.DecodeShapingPack(packRaw)
+		if err != nil {
+			return wrapCommandError("g4 execute", err)
+		}
+		resourceRaw, err := readG4BoundedFile(resourceCeiling, 64<<10, "G4-lite resource ceiling")
+		if err != nil {
+			return wrapCommandError("g4 execute", err)
+		}
+		if g4pack.Digest(resourceRaw) != m.Arms.ResourceCeiling.SHA256 || int64(len(resourceRaw)) != m.Arms.ResourceCeiling.ByteLength {
+			return wrapCommandError("g4 execute", errors.New("resource ceiling does not match the final manifest identity"))
+		}
+		budget, err := decodeG4ResourceCeiling(resourceRaw)
+		if err != nil {
+			return wrapCommandError("g4 execute", err)
+		}
+		path, pending, err := prepareShapingReceipt(executionOut)
+		if err != nil {
+			return wrapCommandError("g4 execute", err)
+		}
+		defer pending.Close()
+		receipt, runErr := sealedrun.RunG4ResourceScreen(pack, budget, cmd.Context().Done())
+		if err := publishShapingReceipt(pending, path, receipt); err != nil {
+			return wrapCommandError("g4 execute", err)
+		}
+		if runErr != nil {
+			return wrapCommandError("g4 execute", fmt.Errorf("execution blocked; receipt saved at %s: %w", path, runErr))
+		}
+		return writeJSON(stdout, struct {
+			OK         bool                      `json:"ok"`
+			Receipt    string                    `json:"receipt"`
+			Scope      string                    `json:"scope"`
+			Diagnostic sealedrun.ResourceReceipt `json:"diagnostic"`
+		}{true, path, "three-arm execution only; custody and authority unverified", receipt})
+	}}
+	execute.Flags().StringVar(&executionManifest, "manifest", "", "Final g4-lite-pack/2 metadata")
+	execute.Flags().StringVar(&episodePack, "episode-pack", "", "Exact separately held shaping-pack/1 episode artifact")
+	execute.Flags().StringVar(&resourceCeiling, "resource-ceiling", "", "Exact separately held g4-resource-ceiling/1 artifact")
+	execute.Flags().StringVar(&executionOut, "out", "", "New custodian-local execution receipt")
+	for _, name := range []string{"manifest", "episode-pack", "resource-ceiling", "out"} {
+		_ = execute.MarkFlagRequired(name)
+	}
+
 	var inspectInput string
 	inspect := &cobra.Command{Use: "inspect <seal>", Short: "Read a G4-lite seal and optionally verify its exact metadata binding", Args: cobra.ExactArgs(1), RunE: func(_ *cobra.Command, args []string) error {
 		receipt, err := readG4Seal(args[0])
@@ -142,6 +205,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 	}}
 	inspect.Flags().StringVar(&inspectInput, "input", "", "Optional metadata JSON to compare by exact bytes; protected content is never read")
 	pack.AddCommand(validate, seal, bind, inspect)
+	cmd.AddCommand(execute)
 	cmd.AddCommand(pack)
 	return cmd
 }
@@ -183,6 +247,55 @@ func readG4ObservedMetadataBytes(path string) ([]byte, error) {
 		return nil, err
 	}
 	return raw, nil
+}
+
+func validateG4EpisodePopulation(pack sealedrun.Pack) error {
+	if len(pack.Episodes) != 24 {
+		return fmt.Errorf("G4-lite execution requires 24 episodes, got %d", len(pack.Episodes))
+	}
+	counts := map[screen.Stratum]int{}
+	families := map[string]bool{}
+	for _, ep := range pack.Episodes {
+		counts[ep.Decl.Stratum]++
+		if ep.Decl.Stratum == screen.StratumInformative {
+			families[ep.Decl.Family] = true
+		}
+	}
+	if counts[screen.StratumInformative] != screen.RequiredInformative || counts[screen.StratumLowValue] != screen.RequiredLowValue || counts[screen.StratumMisleading] != screen.RequiredMisleading || len(families) < screen.RequiredInformativeFams {
+		return errors.New("episode pack does not meet the fixed G4-lite 12/6/6 population and informative-family minimum")
+	}
+	return nil
+}
+
+type g4ResourceCeiling struct {
+	Schema           string `json:"schema"`
+	Expansions       int    `json:"expansions"`
+	RuleApplications int    `json:"rule_applications"`
+	Candidates       int    `json:"candidates"`
+	HistoryBytes     int    `json:"history_bytes"`
+	CheckAssignments int64  `json:"check_assignments"`
+	MaxStates        int    `json:"max_states"`
+	MaxTermNodes     int    `json:"max_term_nodes"`
+}
+
+func decodeG4ResourceCeiling(raw []byte) (sealedrun.ResourceBudget, error) {
+	keys := []string{"schema", "expansions", "rule_applications", "candidates", "history_bytes", "check_assignments", "max_states", "max_term_nodes"}
+	if err := toolreg.StrictKeys(raw, "G4-lite resource ceiling", keys, 2); err != nil {
+		return sealedrun.ResourceBudget{}, err
+	}
+	d := json.NewDecoder(bytes.NewReader(raw))
+	d.DisallowUnknownFields()
+	var c g4ResourceCeiling
+	if err := d.Decode(&c); err != nil {
+		return sealedrun.ResourceBudget{}, err
+	}
+	if err := d.Decode(new(any)); err != io.EOF {
+		return sealedrun.ResourceBudget{}, errors.New("resource ceiling must contain exactly one JSON object")
+	}
+	if c.Schema != "g4-resource-ceiling/1" {
+		return sealedrun.ResourceBudget{}, fmt.Errorf("unsupported resource ceiling schema %q", c.Schema)
+	}
+	return sealedrun.ResourceBudget{Expansions: c.Expansions, RuleApplications: c.RuleApplications, Candidates: c.Candidates, HistoryBytes: c.HistoryBytes, CheckAssignments: c.CheckAssignments, MaxStates: c.MaxStates, MaxTermNodes: c.MaxTermNodes}, nil
 }
 
 func readG4BoundedFile(path string, max int, label string) ([]byte, error) {

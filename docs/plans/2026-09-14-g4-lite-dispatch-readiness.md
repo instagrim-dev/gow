@@ -1,8 +1,6 @@
 # G4-lite dispatch readiness
 
-**Status: preparation only. Do not dispatch a protected G4-lite batch from
-this document.** The final-pack contract is implemented, but the public CLI
-has no three-arm protected-screen execution command.
+**Status: execution interface delivered; dispatch remains unauthorized.** The public CLI now has a bounded three-arm command for the disclosed deterministic one-run design, but no manifest or command establishes custody, approval, or a funding result.
 
 ## Delivered preparation
 
@@ -16,26 +14,25 @@ This does not authorize execution, validate custody, compare actual arm or
 resource records against their frozen identities, score the grid, or decide
 funding.
 
-## Blocking execution seam
+## Delivered execution seam
 
-The shipped public commands are intentionally insufficient for a protected
-G4-lite run:
+`newf g4 execute` accepts a final `g4-lite-pack/2` manifest, the exact
+separately held `shaping-pack/1` episode artifact, and a bounded
+`g4-resource-ceiling/1` artifact. It verifies both content identities before
+work, requires the 24-episode 12/6/6 population, supports only the disclosed
+`single_run_budget_constrained` design, and executes H0/H1/HG only. It writes
+a custodian-local `g4-lite-three-arm-execution/1` receipt with the explicit
+label `protected-execution/custody-unverified`.
 
-- `newf g4 pack {validate,seal,bind-execution,inspect}` handles content-free
-  metadata only.
-- `newf shaping diagnose --pack-file` accepts episode data, but runs the
-  four-arm development diagnostic, forces a development evidence label, and
-  does not bind a `g4-lite-pack/2` manifest.
+The command deliberately does not read answer material, compare actual arm
+records to frozen snapshots, verify custody, accept an approval reference as
+authority, or make a funding decision. Multi-seed execution remains a separate
+extension. `shaping diagnose` remains the unrelated four-arm development
+diagnostic.
 
-The internal runner and screen arithmetic do not substitute for a public,
-data-only custodian interface. Running them through tests, source edits, or an
-ad hoc Go program would violate the public-interface boundary of a protected
-batch.
+## Required dispatch sequence
 
-## Required sequence after the executor exists
-
-1. Pin the release that exposes a three-arm G4-lite execution command and
-   freeze the H0, H1, HG, checker, tool, model, and task-directed resource
+1. Pin the release that exposes `g4 execute` and freeze the H0, H1, HG, checker, tool, model, and task-directed resource
    identities.
 2. A fresh custodian context authors 24 protected episodes and separate answer,
    calibration, arm-snapshot, resource, and seed artifacts. The custodian
@@ -50,13 +47,9 @@ batch.
 6. A grader separately checks artifact identity/parity and evaluates the fixed
    screen rule. It must retain invalid, incomplete, and blocked outcomes.
 
-## Next engineering slice
+## Remaining dispatch inputs
 
-Provide a data-only `g4` execution command that accepts only a sealed final
-manifest, the separately held episode and resource artifacts, and explicit
-bounded output paths. It must verify supplied artifact identities before work,
-execute exactly H0/H1/HG under the frozen run design, retain task-directed and
-custody ledgers separately, reject resource-truncated cells rather than scoring
-them as misses, and emit a content-free observed-metadata record for later
-binding. That command must still report unverified custody and cannot create
-execution authority from an `approval_ref`.
+A fresh custodian-held pack, real arm/resource/seed artifacts, explicit
+execution authorization, separately metered custody, and a grader remain
+required. The deterministic one-run executor does not supply a multi-seed
+implementation or any external-evidence authority.

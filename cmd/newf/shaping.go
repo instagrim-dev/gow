@@ -210,7 +210,7 @@ func readShapingReceipt(path string) (sealedrun.ResourceReceipt, error) {
 	if err := dec.Decode(new(any)); err != io.EOF {
 		return receipt, errors.New("receipt must contain exactly one JSON object")
 	}
-	if receipt.Version != sealedrun.ResourceDesignVersion {
+	if receipt.Version != sealedrun.ResourceDesignVersion && receipt.Version != sealedrun.G4ResourceDesignVersion {
 		return receipt, fmt.Errorf("unsupported receipt version %q", receipt.Version)
 	}
 	return receipt, nil

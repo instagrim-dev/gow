@@ -14,6 +14,8 @@ import (
 
 const ResourceDesignVersion = "shaping-resource-diagnostic/1"
 const ResourceEvidenceLabel = "development/resource-diagnostic/freshness-unverified"
+const G4ResourceDesignVersion = "g4-lite-three-arm-execution/1"
+const G4ResourceEvidenceLabel = "protected-execution/custody-unverified"
 
 // ResourceBudget is a vector, not a conversion from the historical expansion
 // allowance. Probe and search share each arm's rule/candidate allowances.
@@ -82,6 +84,7 @@ type ResourceReceipt struct {
 	CollectionHash    string
 	CheckerVersion    string
 	Controllers       map[string]string
+	Arms              []string
 	Budget            ResourceBudget
 	Tasks             []ResourceTask
 	RuleIdentities    []string
@@ -109,11 +112,26 @@ func digestJSON(v any) string {
 // HG, and task-only immediate-reduction order. It always emits development
 // evidence and makes no freshness, independence, or population-value claim.
 func RunResourceDiagnostic(p Pack, b ResourceBudget, cancel <-chan struct{}) (ResourceReceipt, error) {
-	rec := ResourceReceipt{Version: ResourceDesignVersion,
-		EvidenceLabel:   ResourceEvidenceLabel,
+	return runResourceScreen(p, b, cancel, ResourceDesignVersion, ResourceEvidenceLabel, []string{"H0", "H1", "HG", "task-only"})
+}
+
+// RunG4ResourceScreen executes only the sealed screen arms. It carries no
+// custody or authorization assertion; a later grader owns those conclusions.
+func RunG4ResourceScreen(p Pack, b ResourceBudget, cancel <-chan struct{}) (ResourceReceipt, error) {
+	return runResourceScreen(p, b, cancel, G4ResourceDesignVersion, G4ResourceEvidenceLabel, []string{"H0", "H1", "HG"})
+}
+
+func runResourceScreen(p Pack, b ResourceBudget, cancel <-chan struct{}, designVersion, evidenceLabel string, arms []string) (ResourceReceipt, error) {
+	controllers := map[string]string{"H0": "catalog-order/1", "H1": shape.ComparatorVersion, "HG": shape.ControllerVersionV2Bounded}
+	for _, arm := range arms {
+		if arm == "task-only" {
+			controllers[arm] = shape.TaskProbeControllerVersion
+		}
+	}
+	rec := ResourceReceipt{Version: designVersion,
+		EvidenceLabel:   evidenceLabel,
 		SourcePackLabel: p.Label, SourceProvenance: p.Provenance,
-		CheckerVersion: finite.CheckerVersion, Budget: b, Assessment: "blocked",
-		Controllers: map[string]string{"H0": "catalog-order/1", "H1": shape.ComparatorVersion, "HG": shape.ControllerVersionV2Bounded, "task-only": shape.TaskProbeControllerVersion}}
+		CheckerVersion: finite.CheckerVersion, Budget: b, Assessment: "blocked", Arms: append([]string(nil), arms...), Controllers: controllers}
 	fail := func(err error) (ResourceReceipt, error) {
 		rec.Error = err.Error()
 		rec.ExecutionError = err.Error()
@@ -203,7 +221,7 @@ func RunResourceDiagnostic(p Pack, b ResourceBudget, cancel <-chan struct{}) (Re
 			rules = append(rules, pool[name])
 		}
 		input := shape.InputV2{Input: shape.Input{TaskStart: task.Start, Target: ep.TargetCost, Catalog: ep.CatalogNames, History: ep.History}, Task: ep.Start, Domain: task.Domain, Rules: rules}
-		for _, arm := range []string{"H0", "H1", "HG", "task-only"} {
+		for _, arm := range arms {
 			started := time.Now()
 			wallet := &rewrite.WorkBudget{MaxRuleApplications: b.RuleApplications, MaxCandidates: b.Candidates}
 			lim := rewrite.Limits{MaxStates: b.MaxStates, MaxTermNodes: b.MaxTermNodes, Cancel: cancel, Work: wallet}
@@ -261,10 +279,24 @@ func RunResourceDiagnostic(p Pack, b ResourceBudget, cancel <-chan struct{}) (Re
 // a selector/search or reinterpreting certificates as independently replayed.
 // Partial or blocked collections retain raw cells and yield no totals.
 func (r *ResourceReceipt) Reassess() error {
-	r.EvidenceLabel = ResourceEvidenceLabel
 	r.Completions = nil
 	r.Assessment = "blocked"
-	if r.Version != ResourceDesignVersion || r.TaskHash != digestJSON(r.Tasks) || r.CatalogHash != digestJSON(r.RuleIdentities) || r.DesignHash != r.designHash() || r.CollectionHash != r.collectionHash() {
+	if r.Version == ResourceDesignVersion {
+		r.EvidenceLabel = ResourceEvidenceLabel
+		if len(r.Arms) == 0 {
+			r.Arms = []string{"H0", "H1", "HG", "task-only"}
+		}
+	} else if r.Version == G4ResourceDesignVersion {
+		r.EvidenceLabel = G4ResourceEvidenceLabel
+		if len(r.Arms) == 0 {
+			r.Error = "G4 resource receipt omits its arm set"
+			return fmt.Errorf("%s", r.Error)
+		}
+	} else {
+		r.Error = "unsupported resource receipt version"
+		return fmt.Errorf("%s", r.Error)
+	}
+	if r.TaskHash != digestJSON(r.Tasks) || r.CatalogHash != digestJSON(r.RuleIdentities) || r.DesignHash != r.designHash() || r.CollectionHash != r.collectionHash() {
 		r.Error = "unsupported or mismatched resource receipt identities"
 		return fmt.Errorf("%s", r.Error)
 	}
@@ -272,7 +304,7 @@ func (r *ResourceReceipt) Reassess() error {
 		r.Error = err.Error()
 		return err
 	}
-	if len(r.Tasks) == 0 || len(r.Cells) != 4*len(r.Tasks) {
+	if len(r.Tasks) == 0 || len(r.Arms) == 0 || len(r.Cells) != len(r.Arms)*len(r.Tasks) {
 		r.Error = "incomplete resource diagnostic collection"
 		return fmt.Errorf("%s", r.Error)
 	}
@@ -287,7 +319,10 @@ func (r *ResourceReceipt) Reassess() error {
 		targets[t.EpisodeID] = t.TargetCost
 		tasks[t.EpisodeID] = t
 	}
-	totals := map[string]int{"H0": 0, "H1": 0, "HG": 0, "task-only": 0}
+	totals := make(map[string]int, len(r.Arms))
+	for _, arm := range r.Arms {
+		totals[arm] = 0
+	}
 	for _, c := range r.Cells {
 		_, armOK := totals[c.Arm]
 		target, taskOK := targets[c.EpisodeID]
@@ -331,7 +366,11 @@ func (r *ResourceReceipt) Reassess() error {
 			totals[c.Arm]++
 		}
 	}
-	r.Completions, r.Assessment, r.Error = totals, "completed-development-diagnostic", ""
+	if r.Version == G4ResourceDesignVersion {
+		r.Completions, r.Assessment, r.Error = totals, "completed-protected-execution-unverified", ""
+	} else {
+		r.Completions, r.Assessment, r.Error = totals, "completed-development-diagnostic", ""
+	}
 	return nil
 }
 
@@ -350,8 +389,9 @@ func (r ResourceReceipt) designHash() string {
 	return digestJSON(struct {
 		Version, Checker, Tasks, Catalog string
 		Controllers                      map[string]string
+		Arms                             []string
 		Budget                           ResourceBudget
-	}{r.Version, r.CheckerVersion, r.TaskHash, r.CatalogHash, r.Controllers, r.Budget})
+	}{r.Version, r.CheckerVersion, r.TaskHash, r.CatalogHash, r.Controllers, r.Arms, r.Budget})
 }
 
 // historySize saturates at cap+1, avoiding a serialization allocation before
