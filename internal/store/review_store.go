@@ -214,6 +214,21 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?)
 	return o, nil
 }
 
+// FindReviewObligation returns the immutable obligation identified by its
+// semantic key and revision. The bool distinguishes a missing identity from a
+// storage error so callers can safely reuse unchanged revisions.
+func (s *Store) FindReviewObligation(ctx context.Context, key string, revision int) (ReviewObligationRow, bool, error) {
+	var o ReviewObligationRow
+	err := s.db.QueryRowContext(ctx, `SELECT id, obligation_key, semantic_revision, requirement, acceptance_criteria, applicability_rule, primary_owner, created_at FROM review_obligations WHERE obligation_key = ? AND semantic_revision = ?`, key, revision).Scan(&o.ID, &o.ObligationKey, &o.SemanticRevision, &o.Requirement, &o.AcceptanceCriteria, &o.ApplicabilityRule, &o.PrimaryOwner, &o.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ReviewObligationRow{}, false, nil
+	}
+	if err != nil {
+		return ReviewObligationRow{}, false, err
+	}
+	return o, true, nil
+}
+
 // PersistReviewApplicabilityDecision writes one applicability decision.
 func (s *Store) PersistReviewApplicabilityDecision(ctx context.Context, d ReviewApplicabilityDecisionRow) (ReviewApplicabilityDecisionRow, error) {
 	if err := domain.ValidateReviewApplicabilityDecisionID(d.ID); err != nil {

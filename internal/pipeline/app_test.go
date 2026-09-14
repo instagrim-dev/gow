@@ -504,6 +504,10 @@ func (f *fakeProblemStore) PersistReviewObligation(context.Context, store.Review
 	return store.ReviewObligationRow{}, errors.New("unexpected call")
 }
 
+func (f *fakeProblemStore) FindReviewObligation(context.Context, string, int) (store.ReviewObligationRow, bool, error) {
+	return store.ReviewObligationRow{}, false, errors.New("unexpected call")
+}
+
 func (f *fakeProblemStore) PersistReviewApplicabilityDecision(context.Context, store.ReviewApplicabilityDecisionRow) (store.ReviewApplicabilityDecisionRow, error) {
 	return store.ReviewApplicabilityDecisionRow{}, errors.New("unexpected call")
 }

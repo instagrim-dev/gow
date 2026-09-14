@@ -141,6 +141,7 @@ type problemStore interface {
 	// LoadReviewCoverage.
 	PersistReviewPolicy(context.Context, store.ReviewPolicyRecord) (store.ReviewPolicyRow, error)
 	PersistReviewObligation(context.Context, store.ReviewObligationRow) (store.ReviewObligationRow, error)
+	FindReviewObligation(context.Context, string, int) (store.ReviewObligationRow, bool, error)
 	PersistReviewApplicabilityDecision(context.Context, store.ReviewApplicabilityDecisionRow) (store.ReviewApplicabilityDecisionRow, error)
 	PersistReviewDependencyManifest(context.Context, store.ReviewDependencyManifestRow) (store.ReviewDependencyManifestRow, error)
 	PersistReviewCheckAttempt(context.Context, store.ReviewCheckAttemptRow) (store.ReviewCheckAttemptRow, error)

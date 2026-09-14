@@ -308,6 +308,24 @@ func projectObligation(o ObligationRecords) ObligationProjection {
 	p.Contradiction = len(outcomes) > 1
 	if p.Contradiction {
 		p.Notes = append(p.Notes, "assessments disagree; every outcome is retained rather than resolved by recency")
+		// A compatible conformance cannot grant current authority while a
+		// contrary nonconformance has unknown current relevance. The latter is
+		// not known stale, so selecting the favorable record would silently
+		// resolve the disagreement. Preserve the demonstrated negative as
+		// history and require its compatibility to be resolved first.
+		for _, positive := range validAssessments {
+			if positive.Outcome != Conforms || compatibilityOf(positive) != CompatibilityCompatible {
+				continue
+			}
+			for _, adverse := range validAssessments {
+				if adverse.Outcome == Nonconforms && compatibilityOf(adverse) == CompatibilityUnknown {
+					p.State = StateInconclusive
+					p.Reasons = append(p.Reasons, ReasonCompatibilityUnknown)
+					p.Notes = append(p.Notes, "compatible conformance cannot govern while contrary nonconformance has unknown compatibility: "+adverse.ID)
+					return p
+				}
+			}
+		}
 	}
 
 	// A demonstrated nonconformance governs whenever one exists and is not

@@ -192,6 +192,19 @@ func TestProjectUnknownCompatibilityDoesNotGrantCurrentEligibility(t *testing.T)
 	}
 }
 
+func TestProjectCompatibleConformanceWithUnknownContraryNonconformanceIsUndetermined(t *testing.T) {
+	t.Parallel()
+	o := baseObligation()
+	o.Assessments = []AssessmentRecord{
+		{ID: "positive", SubjectRef: "s", ContextRef: "c", Outcome: Conforms, Argument: "a", Assessor: "w", ManifestID: "m", CheckAttemptIDs: []string{"rchk_1"}, CreatedAt: "t2", Compatibility: CompatibilityCompatible},
+		{ID: "adverse", SubjectRef: "s", ContextRef: "c", Outcome: Nonconforms, Argument: "a", Assessor: "w", ManifestID: "m", CreatedAt: "t1", Compatibility: CompatibilityUnknown, CompatibilityReason: "current population was not supplied"},
+	}
+	got := Project(basePolicy(o))
+	if got.Decision != DecisionUndetermined || !contains(got.Reasons, ReasonCompatibilityUnknown) {
+		t.Fatalf("decision=%s reasons=%v, want undetermined unknown compatibility", got.Decision, got.Reasons)
+	}
+}
+
 // TestProjectUnknownAndStaleReasonsCoexistWhenBothPresent guards against the
 // two states being collapsed. When one assessment is stale and another is
 // unknown, both reason codes must be reported so the caller knows what is

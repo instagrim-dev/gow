@@ -114,11 +114,19 @@ func (a *App) DefineReviewPolicy(ctx context.Context, in ReviewPolicyDefineInput
 			return ReviewPolicyDefineResponse{}, fmt.Errorf("obligation %s: a primary owner is required", spec.Key)
 		}
 		obligationID := domain.NewReviewObligationID(now)
-		if _, err := repoStore.PersistReviewObligation(ctx, store.ReviewObligationRow{
+		candidate := store.ReviewObligationRow{
 			ID: obligationID, ObligationKey: spec.Key, SemanticRevision: spec.SemanticRevision,
 			Requirement: spec.Requirement, AcceptanceCriteria: spec.AcceptanceCriteria,
 			ApplicabilityRule: spec.ApplicabilityRule, PrimaryOwner: spec.PrimaryOwner, CreatedAt: ts,
-		}); err != nil {
+		}
+		if existing, found, err := repoStore.FindReviewObligation(ctx, spec.Key, spec.SemanticRevision); err != nil {
+			return ReviewPolicyDefineResponse{}, err
+		} else if found {
+			if existing.Requirement != candidate.Requirement || existing.AcceptanceCriteria != candidate.AcceptanceCriteria || existing.ApplicabilityRule != candidate.ApplicabilityRule || existing.PrimaryOwner != candidate.PrimaryOwner {
+				return ReviewPolicyDefineResponse{}, fmt.Errorf("obligation %s@%d already exists with different semantic content; increment semantic revision", spec.Key, spec.SemanticRevision)
+			}
+			obligationID = existing.ID
+		} else if _, err := repoStore.PersistReviewObligation(ctx, candidate); err != nil {
 			return ReviewPolicyDefineResponse{}, err
 		}
 		out.ObligationIDs[obligationKey(spec.Key, spec.SemanticRevision)] = obligationID
