@@ -1,6 +1,11 @@
 # G4-lite dispatch readiness
 
-**Status: execution interface delivered; dispatch remains unauthorized.** The public CLI now has a bounded three-arm command for the disclosed deterministic one-run design, but no manifest or command establishes custody, approval, or a funding result.
+**Status: execution and preflight interfaces delivered; V1 is retained invalid.**
+The public CLI has a bounded three-arm command for the disclosed deterministic
+one-run design. A private V1 dispatch completed operationally but failed
+frozen-controller identity conformance; see
+[`2026-09-14-g4-lite-v1-invalid-disposition.md`](2026-09-14-g4-lite-v1-invalid-disposition.md).
+No manifest or command establishes custody, approval, or a funding result.
 
 ## Delivered preparation
 
@@ -60,7 +65,9 @@ protected design is frozen.
 
 ## Remaining dispatch inputs
 
-A fresh custodian-held pack, real arm/resource/seed artifacts, explicit
-execution authorization, separately metered custody, and a grader remain
-required. The deterministic one-run executor does not supply a multi-seed
-implementation or any external-evidence authority.
+First retain a non-ceiling open sensitivity calibration and pass runtime-identity
+preflight for the successor release. Then a fresh custodian-held pack, real
+arm/resource/seed artifacts, explicit execution authorization, separately
+metered custody, and a grader remain required. The deterministic one-run
+executor does not supply a multi-seed implementation or any external-evidence
+authority.
