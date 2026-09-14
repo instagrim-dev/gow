@@ -1,10 +1,12 @@
 # G4-lite dispatch readiness
 
-**Status: execution and preflight interfaces delivered; V1 is retained invalid.**
-The public CLI has a bounded three-arm command for the disclosed deterministic
-one-run design. A private V1 dispatch completed operationally but failed
-frozen-controller identity conformance; see
+**Status: execution and preflight interfaces delivered; V1 is invalid and V2S
+is inconclusive.** The public CLI has a bounded three-arm command for the
+disclosed deterministic one-run design. A private V1 dispatch completed
+operationally but failed frozen-controller identity conformance; see
 [`2026-09-14-g4-lite-v1-invalid-disposition.md`](2026-09-14-g4-lite-v1-invalid-disposition.md).
+The fresh V2S run passed its content-free integrity grade but saturated all
+three arms; see [`2026-09-14-g4-v2s-inconclusive-disposition.md`](2026-09-14-g4-v2s-inconclusive-disposition.md).
 No manifest or command establishes custody, approval, or a funding result.
 
 ## Delivered preparation
@@ -69,6 +71,14 @@ corresponding identity retained by the non-ceiling calibration. This completes
 the public calibration/preflight preparation for the unchanged controller and
 resource vector; it remains non-authorizing.
 
+V2S nevertheless saturated its fresh 12/6/6 protected grid at H0=24, H1=24,
+HG=24. The independent content-free grade found no artifact or identity
+invalidity, but classified the result `INCONCLUSIVE_INCOMPLETE` because the
+one-run ceiling produced no discriminating evaluation outcome. The retained
+open calibration did not carry enough task-generation/resource pressure into
+that protected population. Its resolution is a new open generation/resource
+procedure and fresh calibration, not a V2S rerun.
+
 ## Required dispatch sequence
 
 1. Pin the release; export and preflight the actual H0, H1, and HG runtime
@@ -89,9 +99,10 @@ resource vector; it remains non-authorizing.
 
 ## Remaining dispatch inputs
 
-Retain a fresh open calibration and repeat runtime preflight if the controller
-or resource vector changes. Otherwise, a fresh custodian-held pack, real
-arm/resource/seed artifacts, explicit execution authorization, separately
-metered custody, and a grader are the remaining requirements. The deterministic
+Define and retain a fresh non-ceiling open calibration from a revised
+task-generation/resource procedure, then repeat runtime preflight if the
+controller or resource vector changes. Only then may a fresh custodian-held
+pack, real arm/resource/seed artifacts, explicit execution authorization,
+separately metered custody, and a grader be assembled. The deterministic
 one-run executor does not supply a multi-seed implementation or any
 external-evidence authority.

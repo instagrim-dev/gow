@@ -1,0 +1,120 @@
+{
+  "schema": "g4-v2s-data-only-grade/1",
+  "graded_at": "2026-09-14T19:39:52Z",
+  "grader_scope": "content-free custody, integrity, identity, population, and completion review; no executable run, source inspection, answer inspection, scoring, or funding decision",
+  "pack_id": "g4-v2s-final-fresh-protected-24",
+  "grade": {
+    "status": "INCONCLUSIVE_INCOMPLETE",
+    "precedence_applied": [
+      "invalid",
+      "inconclusive-incomplete",
+      "pass/evaluated-negative"
+    ],
+    "invalid_artifact_or_relationship_found": false,
+    "terminal_basis": "The receipt establishes a complete execution grid only. The 24/24/24 one-run ceiling leaves no further authorized cells and this data-only review has no evaluated outcome or score arithmetic. Therefore the batch is inconclusive as an evaluation, without an inference about shaping value, funding, custody, or authority.",
+    "score_or_funding_decision": "not produced"
+  },
+  "integrity": {
+    "manifest": {
+      "byte_length": 3042,
+      "sha256": "98cd6f02ad80bc73073e5bb768d100844a1815a3344f034e6d4aaf7a818bccec",
+      "matches_seal_and_return_packet": true
+    },
+    "pre_execution_seal": {
+      "byte_length": 791,
+      "sha256": "2e1c88bae46f41f52f2c81fe922a18dc6354511e0e0a7037b2623559f43aa4b7",
+      "matches_binding_and_observed_metadata": true
+    },
+    "observed_metadata": {
+      "byte_length": 743,
+      "sha256": "33bfc99dd08989aa1cf3e46b83e348ead62fd59fb83035e1cda8c720ab768169",
+      "matches_execution_binding": true
+    },
+    "execution_receipt": {
+      "byte_length": 251941,
+      "sha256": "4ef84f0578f1fa35f91ab3e60954002cffb781fe156ba996b6f1662f07b97bbb",
+      "matches_arm_execution_resource_ledger_result_grid_and_execution_summary": true
+    },
+    "protected_artifacts": {
+      "answers_manifest_hash_matches": true,
+      "episodes_manifest_hash_matches": true,
+      "answers_content_read": false
+    }
+  },
+  "chain_and_identity": {
+    "authorization": {
+      "declared_one_run_scope_matches_manifest_episode_resource_and_three_snapshot_locators": true,
+      "independent_authority_determination": "not made"
+    },
+    "execution_binding": {
+      "seal_to_observed_metadata_link_matches": true,
+      "observed_metadata_to_arm_resource_grid_manifests_match": true,
+      "binding_artifact_hash_matches_return_packet": true
+    },
+    "runtime_and_preflight_evidence": {
+      "runtime_identity_action": "recorded_ok_for_H0_H1_HG",
+      "arm_preflight": "recorded_passed",
+      "snapshot_hashes_match_metadata_and_runtime_resource_record": true,
+      "executable_identity": {
+        "declared_sha256": "46c0efd04e45bc5f5e53ea201d0fb4e68536fb2892ffcbf929bc8e7ef58acd77",
+        "independently_reexecuted_or_inspected": false
+      }
+    },
+    "resource_identity": {
+      "byte_length": 174,
+      "sha256": "445b266d42443c27f04935e2121e9c5047fd4ce7f7b182a25ab12126f6ac43de",
+      "matches_metadata_runtime_record_resource_ledger_and_preflight_log": true,
+      "resource_compliance_determination": "not made"
+    }
+  },
+  "population": {
+    "declared": {
+      "total": 24,
+      "history_informative": 12,
+      "history_low_value": 6,
+      "history_misleading": 6,
+      "minimum_families": 2
+    },
+    "observed_open_fields": {
+      "total": 24,
+      "history_informative": 12,
+      "history_low_value": 6,
+      "history_misleading": 6,
+      "family_count": 4
+    },
+    "matches_declaration": true
+  },
+  "execution_completion": {
+    "arms": ["H0", "H1", "HG"],
+    "episodes": 24,
+    "runs_per_cell": 1,
+    "expected_cells": 72,
+    "observed_unique_arm_episode_cells": 72,
+    "completion_totals": {
+      "H0": 24,
+      "H1": 24,
+      "HG": 24
+    },
+    "started_totals": {
+      "H0": 24,
+      "H1": 24,
+      "HG": 24
+    },
+    "blocked_cells": 0,
+    "receipt_shape_valid": true,
+    "one_run_completion_ceiling_reached": true,
+    "evaluation_outcome_present_to_this_grader": false
+  },
+  "provenance_and_limits": {
+    "custody": "declared-unverified; no custody conclusion made",
+    "prior_v2_and_v2r": "retained stopped-preexecution provenance only; not treated as V2S execution defects",
+    "not_evaluated": [
+      "answer content",
+      "execution result quality or shaping value",
+      "spending-rule arithmetic",
+      "funding",
+      "custody authority",
+      "external runtime behavior"
+    ]
+  }
+}
