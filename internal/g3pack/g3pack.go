@@ -21,14 +21,15 @@ import (
 )
 
 const (
-	Schema                = "g3-pack/1"
-	SealSchema            = "g3-pack-seal/1"
-	MaxManifestBytes      = 256 << 10
-	MaxSealBytes          = 64 << 10
-	PreparedNotAuthorized = "PREPARED_NOT_AUTHORIZED"
-	NoProtectedExecution  = "protected execution is not authorized by this manifest or its seal"
-	CustodyNotVerified    = "custody declarations are retained but not independently verified"
-	SealScope             = "metadata-only seal; protected execution remains unauthorized; custody remains unverified"
+	Schema                 = "g3-pack/1"
+	SealSchema             = "g3-pack-seal/1"
+	ExecutionBindingSchema = "g3-execution-binding/1"
+	MaxManifestBytes       = 256 << 10
+	MaxSealBytes           = 64 << 10
+	PreparedNotAuthorized  = "PREPARED_NOT_AUTHORIZED"
+	NoProtectedExecution   = "protected execution is not authorized by this manifest or its seal"
+	CustodyNotVerified     = "custody declarations are retained but not independently verified"
+	SealScope              = "metadata-only seal; protected execution remains unauthorized; custody remains unverified"
 )
 
 var sha256Hex = regexp.MustCompile(`^[0-9a-f]{64}$`)
@@ -100,6 +101,38 @@ type Seal struct {
 	PackID         string     `json:"pack_id"`
 	Validation     Validation `json:"validation"`
 	Scope          string     `json:"scope"`
+}
+
+// ExecutionBinding links post-execution metadata to its earlier seal without
+// exposing protected task or answer material.
+type ExecutionBinding struct {
+	Schema                 string `json:"schema"`
+	CreatedAt              string `json:"created_at"`
+	PreExecutionSealSHA256 string `json:"pre_execution_seal_sha256"`
+	PreExecutionSealBytes  int    `json:"pre_execution_seal_bytes"`
+	ObservedMetadataSHA256 string `json:"observed_metadata_sha256"`
+	ObservedMetadataBytes  int    `json:"observed_metadata_bytes"`
+}
+
+func BindExecution(pre, observed []byte, at time.Time) (ExecutionBinding, error) {
+	if len(pre) == 0 || len(observed) == 0 {
+		return ExecutionBinding{}, fmt.Errorf("pre-execution seal and observed metadata are required")
+	}
+	return ExecutionBinding{Schema: ExecutionBindingSchema, CreatedAt: at.UTC().Format(time.RFC3339Nano), PreExecutionSealSHA256: Digest(pre), PreExecutionSealBytes: len(pre), ObservedMetadataSHA256: Digest(observed), ObservedMetadataBytes: len(observed)}, nil
+}
+
+func (b ExecutionBinding) Validate() error {
+	if b.Schema != ExecutionBindingSchema || !sha256Hex.MatchString(b.PreExecutionSealSHA256) || !sha256Hex.MatchString(b.ObservedMetadataSHA256) || b.PreExecutionSealBytes < 1 || b.ObservedMetadataBytes < 1 {
+		return fmt.Errorf("execution binding has an invalid identity")
+	}
+	if _, err := time.Parse(time.RFC3339Nano, b.CreatedAt); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b ExecutionBinding) Matches(pre, observed []byte) bool {
+	return b.PreExecutionSealSHA256 == Digest(pre) && b.PreExecutionSealBytes == len(pre) && b.ObservedMetadataSHA256 == Digest(observed) && b.ObservedMetadataBytes == len(observed)
 }
 
 func Decode(raw []byte) (Manifest, error) {

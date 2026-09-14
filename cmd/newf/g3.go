@@ -65,6 +65,51 @@ func newG3Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 	_ = seal.MarkFlagRequired("input")
 	_ = seal.MarkFlagRequired("out")
 
+	var preSeal, observed, bindingOut string
+	bind := &cobra.Command{Use: "bind-execution", Short: "Bind observed metadata to an earlier pre-execution seal", Args: cobra.NoArgs, RunE: func(_ *cobra.Command, _ []string) error {
+		pre, err := os.ReadFile(preSeal)
+		if err != nil {
+			return wrapCommandError("g3 pack bind-execution", err)
+		}
+		obs, err := os.ReadFile(observed)
+		if err != nil {
+			return wrapCommandError("g3 pack bind-execution", err)
+		}
+		binding, err := g3pack.BindExecution(pre, obs, time.Now())
+		if err != nil {
+			return wrapCommandError("g3 pack bind-execution", err)
+		}
+		path, pending, err := prepareG3Seal(bindingOut)
+		if err != nil {
+			return wrapCommandError("g3 pack bind-execution", err)
+		}
+		defer func() { _ = pending.Close(); _ = os.Remove(pending.Name()) }()
+		if err := writeJSON(pending, binding); err != nil {
+			return wrapCommandError("g3 pack bind-execution", err)
+		}
+		if err := pending.Sync(); err != nil {
+			return wrapCommandError("g3 pack bind-execution", err)
+		}
+		if err := pending.Close(); err != nil {
+			return wrapCommandError("g3 pack bind-execution", err)
+		}
+		if err := os.Link(pending.Name(), path); err != nil {
+			return wrapCommandError("g3 pack bind-execution", err)
+		}
+		_ = os.Remove(pending.Name())
+		return writeJSON(stdout, struct {
+			OK      bool                    `json:"ok"`
+			Binding string                  `json:"binding"`
+			Receipt g3pack.ExecutionBinding `json:"receipt"`
+		}{true, path, binding})
+	}}
+	bind.Flags().StringVar(&preSeal, "pre-execution-seal", "", "Existing content-free pre-execution seal")
+	bind.Flags().StringVar(&observed, "observed-metadata", "", "Content-free observed metadata")
+	bind.Flags().StringVar(&bindingOut, "out", "", "New binding receipt path")
+	_ = bind.MarkFlagRequired("pre-execution-seal")
+	_ = bind.MarkFlagRequired("observed-metadata")
+	_ = bind.MarkFlagRequired("out")
+
 	var inspectInput string
 	inspect := &cobra.Command{Use: "inspect <seal>", Short: "Read a G3 seal and optionally verify its exact metadata binding", Args: cobra.ExactArgs(1), RunE: func(_ *cobra.Command, args []string) error {
 		receipt, err := readG3Seal(args[0])
@@ -95,7 +140,7 @@ func newG3Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 		return err
 	}}
 	inspect.Flags().StringVar(&inspectInput, "input", "", "Optional metadata JSON to compare by exact bytes; protected content is never read")
-	pack.AddCommand(validate, seal, inspect)
+	pack.AddCommand(validate, seal, bind, inspect)
 	cmd.AddCommand(pack)
 	return cmd
 }
