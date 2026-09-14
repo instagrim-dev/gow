@@ -94,10 +94,14 @@ newf policy mutate --problem <problem-id> [--no-provider]
 newf policy list --problem <problem-id>
 newf policy show [policy-revision-id] [--problem <problem-id>]
 newf composition commit --input <attempt.json> --out <commitment.json>
+newf composition commit --task <task.json> --candidate <candidate.json> --out <commitment.json>
 newf composition observe <commitment.json> --out <observation.json>
 newf g1 pack validate --input <metadata.json>
 newf g1 pack seal --input <metadata.json> --out <new-seal.json>
 newf g1 pack inspect <seal.json> [--input <metadata.json>]
+newf g3 pack validate --input <metadata.json>
+newf g3 pack seal --input <metadata.json> --out <new-seal.json>
+newf g3 pack inspect <seal.json> [--input <metadata.json>]
 ```
 
 Requires **Go 1.25 or newer**. The floor is declared once, by the `go` directive
@@ -119,7 +123,7 @@ By default the CLI stores state in:
 
 Override the database location with `--db <path>` or `NEWF_DB=<path>`.
 
-For the bounded residual-driven composition path, use `newf composition commit` to create a pre-observation record and `newf composition observe` to replay it and measure the original objective separately. See [`docs/composition.md`](docs/composition.md).
+For the bounded residual-driven composition path, a task author can issue a `composition-task/1` file and a proposer can return a task-digest-bound `composition-candidate/1` file. `newf composition commit --task ... --candidate ...` creates the pre-observation record; `newf composition observe` replays it and measures the original objective separately. `newf g3 pack` seals only the separately held task and answer manifest identities. See [`docs/composition.md`](docs/composition.md) and [`docs/g3-protected-pack.md`](docs/g3-protected-pack.md).
 
 ### Example
 

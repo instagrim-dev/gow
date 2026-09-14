@@ -13,8 +13,9 @@ the task is protected, or that this development path improves task performance.
 ## Protocol
 
 ```text
-composition-attempt/1
-  -> composition commit
+composition-task/1 (custodian-authored, no candidate)
+  + composition-candidate/1 (task-digest-bound proposer submission)
+  -> composition commit --task ... --candidate ...
        (schema warrants, preconditions, trace composition, menu boundary)
   -> composition-commitment/1
   -> composition observe
@@ -28,9 +29,13 @@ Observation recompiles and replays that retained attempt; it does not trust the
 stored structural result.
 
 ```bash
-newf composition commit --input attempt.json --out commitment.json
+newf composition commit --task task.json --candidate candidate.json --out commitment.json
 newf composition observe commitment.json --out observation.json
 ```
+
+`composition-attempt/1` and `--input` remain available for development
+fixtures. They cannot represent the author/proposer separation required for a
+protected G3 evaluation.
 
 `commit` does **not** measure the task's execution-cost objective. It returns
 `structural_fidelity.status = verified` or `refuted`. A refuted commitment is
@@ -42,7 +47,23 @@ structural result and a separate `original_objective` result:
 - `not-evaluated`: structural fidelity was already refuted, or the fresh
   endpoint replay refuted it. This is not an objective miss.
 
-## Attempt contract
+## Separate task and candidate contracts
+
+`composition-task/1` has every field in the task-facing portion of the
+example below: `task`, `residual`, `capability_requirement`,
+`initial_capabilities`, `action_menu`, and `intervention_schemas`. It refuses
+`candidate`. Its compact UTF-8 JSON SHA-256 is the task identity.
+
+`composition-candidate/1` has exactly `schema`, `task_sha256`, and
+`candidate`. Its `task_sha256` must equal the compact task identity supplied
+to `commit`; a candidate for one task cannot be redirected onto another. The
+implementation then joins the already bound inputs into the existing
+pre-observation receipt and applies the same structural checks.
+
+The legacy combined format is retained below as a development convenience.
+It is not a protected-task authoring interface.
+
+## Legacy development attempt contract
 
 `composition-attempt/1` is strict data-only JSON, limited to 1 MiB. Unknown,
 duplicate, case-variant, missing, or malformed fields are refused before a

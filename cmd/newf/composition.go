@@ -42,17 +42,36 @@ func newCompositionCommand(stdout io.Writer, opts *rootOptions) *cobra.Command {
 			"Task authorship provenance is recorded from the input; custody is established\n" +
 			"by the external dispatch protocol, not by this local command.",
 	}
-	var commitInput, commitOut string
+	var commitInput, commitTask, commitCandidate, commitOut string
 	commit := &cobra.Command{
 		Use:   "commit",
 		Short: "Create an immutable pre-observation composition commitment",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			raw, err := readCompositionFile(commitInput, composition.MaxAttemptBytes, "composition attempt")
-			if err != nil {
-				return wrapCommandError("composition commit", err)
+			var receipt composition.Commitment
+			var err error
+			switch {
+			case commitInput != "" && (commitTask != "" || commitCandidate != ""):
+				return wrapCommandError("composition commit", errors.New("--input cannot be combined with --task or --candidate"))
+			case commitInput != "":
+				raw, readErr := readCompositionFile(commitInput, composition.MaxAttemptBytes, "composition attempt")
+				if readErr != nil {
+					return wrapCommandError("composition commit", readErr)
+				}
+				receipt, err = composition.Commit(raw)
+			case commitTask != "" && commitCandidate != "":
+				taskRaw, readErr := readCompositionFile(commitTask, composition.MaxAttemptBytes, "composition task")
+				if readErr != nil {
+					return wrapCommandError("composition commit", readErr)
+				}
+				candidateRaw, readErr := readCompositionFile(commitCandidate, composition.MaxAttemptBytes, "composition candidate")
+				if readErr != nil {
+					return wrapCommandError("composition commit", readErr)
+				}
+				receipt, err = composition.CommitTaskCandidate(taskRaw, candidateRaw)
+			default:
+				return wrapCommandError("composition commit", errors.New("provide either --input or both --task and --candidate"))
 			}
-			receipt, err := composition.Commit(raw)
 			if err != nil {
 				return wrapCommandError("composition commit", err)
 			}
@@ -75,9 +94,10 @@ func newCompositionCommand(stdout io.Writer, opts *rootOptions) *cobra.Command {
 			return err
 		},
 	}
-	commit.Flags().StringVar(&commitInput, "input", "", "Data-only composition-attempt/1 JSON file")
+	commit.Flags().StringVar(&commitInput, "input", "", "Legacy data-only composition-attempt/1 JSON file")
+	commit.Flags().StringVar(&commitTask, "task", "", "Data-only composition-task/1 JSON file")
+	commit.Flags().StringVar(&commitCandidate, "candidate", "", "Data-only composition-candidate/1 JSON file bound to --task")
 	commit.Flags().StringVar(&commitOut, "out", "", "New commitment path; existing files are never replaced")
-	_ = commit.MarkFlagRequired("input")
 	_ = commit.MarkFlagRequired("out")
 	cmd.AddCommand(commit)
 

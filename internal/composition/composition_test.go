@@ -1,6 +1,7 @@
 package composition
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -171,4 +172,69 @@ func TestStrictInputAndCommitmentBinding(t *testing.T) {
 	if _, err := Observe(commitment); err == nil || !strings.Contains(err.Error(), "digest") {
 		t.Fatalf("tampered retained input must be refused before observation: %v", err)
 	}
+}
+
+func TestSeparateTaskAndCandidateBindBeforeCommit(t *testing.T) {
+	task, candidate := splitAttemptForTest(t, []byte(validAttempt))
+	if _, err := DecodeTaskInput(task); err != nil {
+		t.Fatalf("task-only contract rejected: %v", err)
+	}
+	if _, err := DecodeCandidateInput(candidate, task); err != nil {
+		t.Fatalf("candidate binding rejected: %v", err)
+	}
+	commitment, err := CommitTaskCandidate(task, candidate)
+	if err != nil {
+		t.Fatalf("separate commit: %v", err)
+	}
+	if commitment.StructuralFidelity.Status != "verified" {
+		t.Fatalf("separate input lost composition result: %+v", commitment.StructuralFidelity)
+	}
+	var candidateWire map[string]json.RawMessage
+	if err := json.Unmarshal(candidate, &candidateWire); err != nil {
+		t.Fatal(err)
+	}
+	candidateWire["task_sha256"] = json.RawMessage(`"0000000000000000000000000000000000000000000000000000000000000000"`)
+	wrongTask, err := json.Marshal(candidateWire)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CommitTaskCandidate(task, wrongTask); err == nil || !strings.Contains(err.Error(), "does not bind") {
+		t.Fatalf("candidate must be refused when it names another task: %v", err)
+	}
+}
+
+func TestTaskOnlyContractRefusesCandidateField(t *testing.T) {
+	task, _ := splitAttemptForTest(t, []byte(validAttempt))
+	task = []byte(strings.Replace(string(task), `"schema":"composition-task/1"`, `"schema":"composition-task/1","candidate":[]`, 1))
+	if _, err := DecodeTaskInput(task); err == nil {
+		t.Fatal("task-only contract accepted a supplied candidate")
+	}
+}
+
+func splitAttemptForTest(t *testing.T, raw []byte) ([]byte, []byte) {
+	t.Helper()
+	var attempt map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &attempt); err != nil {
+		t.Fatal(err)
+	}
+	task := map[string]json.RawMessage{
+		"schema": json.RawMessage(`"composition-task/1"`),
+		"task":   attempt["task"], "residual": attempt["residual"], "capability_requirement": attempt["capability_requirement"],
+		"initial_capabilities": attempt["initial_capabilities"], "action_menu": attempt["action_menu"], "intervention_schemas": attempt["intervention_schemas"],
+	}
+	taskRaw, err := json.Marshal(task)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest, err := TaskDigest(taskRaw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	candidateRaw, err := json.Marshal(map[string]json.RawMessage{
+		"schema": json.RawMessage(`"composition-candidate/1"`), "task_sha256": json.RawMessage(`"` + digest + `"`), "candidate": attempt["candidate"],
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return taskRaw, candidateRaw
 }

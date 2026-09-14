@@ -90,6 +90,7 @@ func newRootCommand(stdout io.Writer, app *pipeline.App, opts *rootOptions, vers
 	cmd.AddCommand(newReviewCommand(stdout, app, opts))
 	cmd.AddCommand(newShapingCommand(stdout, opts, version))
 	cmd.AddCommand(newG1Command(stdout, opts))
+	cmd.AddCommand(newG3Command(stdout, opts))
 
 	return cmd
 }

@@ -118,6 +118,58 @@ func TestCompositionCLIRecordsStructuralFailure(t *testing.T) {
 	}
 }
 
+func TestCompositionCLICommitsSeparateTaskAndCandidate(t *testing.T) {
+	dir := t.TempDir()
+	taskRaw, candidateRaw := splitCompositionCLIInput(t, []byte(compositionCLIAttempt))
+	taskPath := filepath.Join(dir, "task.json")
+	candidatePath := filepath.Join(dir, "candidate.json")
+	commitPath := filepath.Join(dir, "commitment.json")
+	if err := os.WriteFile(taskPath, taskRaw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(candidatePath, candidateRaw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := execute(context.Background(), []string{"--json", "composition", "commit", "--task", taskPath, "--candidate", candidatePath, "--out", commitPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("separate commit failed: code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	var response compositionCommitResponse
+	if err := json.Unmarshal(stdout.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	if !response.OK || response.Fidelity.Status != "verified" {
+		t.Fatalf("separate commitment response: %+v", response)
+	}
+}
+
+func splitCompositionCLIInput(t *testing.T, raw []byte) ([]byte, []byte) {
+	t.Helper()
+	var attempt map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &attempt); err != nil {
+		t.Fatal(err)
+	}
+	taskRaw, err := json.Marshal(map[string]json.RawMessage{
+		"schema": json.RawMessage(`"composition-task/1"`), "task": attempt["task"], "residual": attempt["residual"],
+		"capability_requirement": attempt["capability_requirement"], "initial_capabilities": attempt["initial_capabilities"],
+		"action_menu": attempt["action_menu"], "intervention_schemas": attempt["intervention_schemas"],
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest, err := composition.TaskDigest(taskRaw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	candidateRaw, err := json.Marshal(map[string]json.RawMessage{
+		"schema": json.RawMessage(`"composition-candidate/1"`), "task_sha256": json.RawMessage(`"` + digest + `"`), "candidate": attempt["candidate"],
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return taskRaw, candidateRaw
+}
+
 func TestCompositionPublicationRaceRetainsCompletedPendingResult(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "commitment.json")
 	_, pending, err := prepareCompositionOutput(path, "commitment")

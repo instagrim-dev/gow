@@ -21,6 +21,8 @@ import (
 
 const (
 	AttemptSchema     = "composition-attempt/1"
+	TaskSchema        = "composition-task/1"
+	CandidateSchema   = "composition-candidate/1"
 	CommitmentSchema  = "composition-commitment/1"
 	ObservationSchema = "composition-observation/1"
 
