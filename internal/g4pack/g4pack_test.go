@@ -15,11 +15,12 @@ func validManifest(t *testing.T) []byte {
 	t.Helper()
 	m := Manifest{
 		Schema: Schema, PackID: "g4-lite-custodian-001",
-		EpisodeManifest:     testRef("a", 12, "protected/episodes/MANIFEST.json"),
-		AnswerManifest:      testRef("b", 13, "protected/answers/MANIFEST.json"),
-		CalibrationManifest: testRef("c", 14, "protected/calibration/MANIFEST.json"),
-		Custody:             CustodyDeclaration{EpisodeAuthorExposure: "unexposed_to_implementation_cases", ImplementerAccess: "no_protected_content", AnswerSeparation: "separate_answer_manifest", RecordRef: "protected/custody.json"},
-		Population:          Population{Total: 24, HistoryInformative: 12, HistoryLowValue: 6, HistoryMisleading: 6, MinFamilies: 2},
+		EpisodeManifest:             testRef("a", 12, "protected/episodes/MANIFEST.json"),
+		AnswerManifest:              testRef("b", 13, "protected/answers/MANIFEST.json"),
+		CalibrationManifest:         testRef("c", 14, "protected/calibration/MANIFEST.json"),
+		GenerationProcedureManifest: testRef("d", 15, "frozen/generation-procedure.json"),
+		Custody:                     CustodyDeclaration{EpisodeAuthorExposure: "unexposed_to_implementation_cases", ImplementerAccess: "no_protected_content", AnswerSeparation: "separate_answer_manifest", RecordRef: "protected/custody.json"},
+		Population:                  Population{Total: 24, HistoryInformative: 12, HistoryLowValue: 6, HistoryMisleading: 6, MinFamilies: 2},
 		Arms: ArmContract{
 			H0:                ArmSnapshot{ControllerID: "catalog-order/1", Snapshot: testRef("d", 15, "frozen/h0.json")},
 			H1:                ArmSnapshot{ControllerID: "same-history-direct/1", Snapshot: testRef("e", 16, "frozen/h1.json")},
@@ -60,6 +61,31 @@ func TestDecodeAndSealPreserveContentFreeFreezeBoundary(t *testing.T) {
 	}
 	if !decoded.MatchesManifest(m, raw) || decoded.MatchesManifest(m, append(raw, ' ')) {
 		t.Fatal("seal did not bind exact metadata")
+	}
+}
+
+func TestDecodeRetainsHistoricalV2ManifestAndSealReadability(t *testing.T) {
+	raw := validManifest(t)
+	var manifest Manifest
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	manifest.Schema = LegacySchema
+	manifest.GenerationProcedureManifest = ManifestRef{}
+	legacyRaw, err := json.Marshal(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Decode(legacyRaw); err != nil {
+		t.Fatalf("historical manifest became unreadable: %v", err)
+	}
+	seal := Seal{Schema: LegacySealSchema, CreatedAt: time.Now().UTC().Format(time.RFC3339Nano), ManifestSHA256: Digest(legacyRaw), ManifestBytes: len(legacyRaw), PackID: manifest.PackID, Validation: manifest.Readiness(), Scope: SealScope}
+	sealRaw, err := json.Marshal(seal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeSeal(sealRaw); err != nil {
+		t.Fatalf("historical seal became unreadable: %v", err)
 	}
 }
 

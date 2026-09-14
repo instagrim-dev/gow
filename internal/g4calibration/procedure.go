@@ -182,6 +182,24 @@ func (p Procedure) ValidateOpenPack(raw []byte, pack sealedrun.Pack) error {
 	return nil
 }
 
+// ValidateProtectedPack checks only the frozen structural controls that can be
+// evaluated from the executor's supplied episode artifact. It deliberately
+// does not inspect answers or turn authoring declarations into custody proof.
+func (p Procedure) ValidateProtectedPack(pack sealedrun.Pack) error {
+	for _, ep := range pack.Episodes {
+		if !strings.HasPrefix(ep.Decl.Family, p.Separation.ProtectedFamilyPrefix) {
+			return fmt.Errorf("episode %q family %q does not use protected family prefix %q", ep.Decl.ID, ep.Decl.Family, p.Separation.ProtectedFamilyPrefix)
+		}
+		if len(ep.CatalogNames) < p.Difficulty.MinBranchingAlternatives {
+			return fmt.Errorf("episode %q has fewer catalog alternatives than the frozen difficulty control", ep.Decl.ID)
+		}
+		if expressionDepth(ep.Start) < p.Difficulty.MinRewriteDepth {
+			return fmt.Errorf("episode %q has rewrite depth below the frozen difficulty control", ep.Decl.ID)
+		}
+	}
+	return nil
+}
+
 func Digest(raw []byte) string { sum := sha256.Sum256(raw); return hex.EncodeToString(sum[:]) }
 
 func expressionDepth(e finite.Expr) int {

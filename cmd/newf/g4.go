@@ -510,7 +510,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 		_ = preflight.MarkFlagRequired(name)
 	}
 
-	var executionManifest, episodePack, resourceCeiling, executionH0, executionH1, executionHG, executionOut string
+	var executionManifest, episodePack, resourceCeiling, executionH0, executionH1, executionHG, executionProcedure, executionOut string
 	execute := &cobra.Command{Use: "execute", Short: "Execute a bounded three-arm G4-lite screen from sealed artifacts", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 		m, _, err := readG4Manifest(executionManifest)
 		if err != nil {
@@ -532,6 +532,25 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 		}
 		if err := validateG4EpisodePopulation(pack); err != nil {
 			return wrapCommandError("g4 execute", err)
+		}
+		if m.Schema == g4pack.Schema {
+			if executionProcedure == "" {
+				return wrapCommandError("g4 execute", errors.New("--generation-procedure is required for g4-lite-pack/3 execution"))
+			}
+			procedureRaw, err := readG4BoundedFile(executionProcedure, g4calibration.MaxProcedureBytes, "G4-lite generation procedure")
+			if err != nil {
+				return wrapCommandError("g4 execute", err)
+			}
+			if g4calibration.Digest(procedureRaw) != m.GenerationProcedureManifest.SHA256 || int64(len(procedureRaw)) != m.GenerationProcedureManifest.ByteLength {
+				return wrapCommandError("g4 execute", errors.New("generation procedure does not match the final manifest identity"))
+			}
+			procedure, err := g4calibration.Decode(procedureRaw)
+			if err != nil {
+				return wrapCommandError("g4 execute", err)
+			}
+			if err := procedure.ValidateProtectedPack(pack); err != nil {
+				return wrapCommandError("g4 execute", err)
+			}
 		}
 		resourceRaw, err := readG4BoundedFile(resourceCeiling, 64<<10, "G4-lite resource ceiling")
 		if err != nil {
@@ -570,12 +589,13 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 			Diagnostic sealedrun.ResourceReceipt `json:"diagnostic"`
 		}{true, path, "three-arm execution only; custody and authority unverified", receipt})
 	}}
-	execute.Flags().StringVar(&executionManifest, "manifest", "", "Final g4-lite-pack/2 metadata")
+	execute.Flags().StringVar(&executionManifest, "manifest", "", "Final g4-lite-pack/3 metadata (historical /2 remains readable)")
 	execute.Flags().StringVar(&episodePack, "episode-pack", "", "Exact separately held shaping-pack/1 episode artifact")
 	execute.Flags().StringVar(&resourceCeiling, "resource-ceiling", "", "Exact separately held g4-resource-ceiling/1 artifact")
 	execute.Flags().StringVar(&executionH0, "h0-snapshot", "", "Exact separately held H0 runtime-identity artifact")
 	execute.Flags().StringVar(&executionH1, "h1-snapshot", "", "Exact separately held H1 runtime-identity artifact")
 	execute.Flags().StringVar(&executionHG, "hg-snapshot", "", "Exact separately held HG runtime-identity artifact")
+	execute.Flags().StringVar(&executionProcedure, "generation-procedure", "", "Exact frozen g4-lite-calibration-procedure/1 artifact required by /3")
 	execute.Flags().StringVar(&executionOut, "out", "", "New custodian-local execution receipt")
 	for _, name := range []string{"manifest", "episode-pack", "resource-ceiling", "h0-snapshot", "h1-snapshot", "hg-snapshot", "out"} {
 		_ = execute.MarkFlagRequired(name)

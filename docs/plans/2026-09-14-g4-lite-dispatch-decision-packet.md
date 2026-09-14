@@ -11,12 +11,12 @@ real values immediately before dispatch.
 | Resource vector | Exact `g4-resource-ceiling/1` bytes, identity, provider-call/spend ceiling, wall-clock ceiling, and custody-metering method | A metadata locator does not define an executable budget. |
 | Run design | `single_run_budget_constrained` and its disclosed constraint, or a separately implemented fixed-seed runner | The shipped executor supports only the former. |
 | Custody | Fresh-context identifier, protected storage locations, access controls, exposure log, and result recipient | Role names do not establish isolation. |
-| Population | Fresh 24-episode artifact, separate answer/calibration manifests, 12/6/6 counts, informative-family count, and provenance | Development or previously exposed episodes cannot enter the batch. |
+| Population | Fresh 24-episode artifact, separate answer/calibration manifests, the frozen generation-procedure artifact, 12/6/6 counts, informative-family count, and provenance | Development or previously exposed episodes cannot enter the batch. |
 | Authority | Effective operator reference, permitted command and output paths, stop conditions, and cancellation rule | An `approval_ref` in the manifest cannot self-authorize. |
 | Grading | Named grader, supplied artifact set, parity checks, invalid/incomplete precedence, and recipient | Binding is not grading. |
 
 The custodian sequence is fixed: pin the release; record the design/resource
-artifacts; author protected material; seal the final `g4-lite-pack/2`; execute
+artifacts; author protected material under the frozen procedure; seal the final `g4-lite-pack/3`; execute
 `g4 execute`; create observed metadata; bind it to the pre-execution seal; and
 send only the authorized return packet to the grader. Stop for a hash mismatch,
 missing value, unexpected artifact, resource truncation, exposure boundary

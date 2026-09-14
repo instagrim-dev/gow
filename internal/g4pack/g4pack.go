@@ -20,8 +20,10 @@ import (
 )
 
 const (
-	Schema                   = "g4-lite-pack/2"
-	SealSchema               = "g4-lite-pack-seal/2"
+	Schema                   = "g4-lite-pack/3"
+	LegacySchema             = "g4-lite-pack/2"
+	SealSchema               = "g4-lite-pack-seal/3"
+	LegacySealSchema         = "g4-lite-pack-seal/2"
 	MaxManifestBytes         = 256 << 10
 	MaxSealBytes             = 64 << 10
 	MaxObservedMetadataBytes = 256 << 10
@@ -39,18 +41,19 @@ const (
 var sha256Hex = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
 type Manifest struct {
-	Schema              string               `json:"schema"`
-	PackID              string               `json:"pack_id"`
-	EpisodeManifest     ManifestRef          `json:"episode_manifest"`
-	AnswerManifest      ManifestRef          `json:"answer_manifest"`
-	CalibrationManifest ManifestRef          `json:"calibration_manifest"`
-	Custody             CustodyDeclaration   `json:"custody"`
-	Population          Population           `json:"population"`
-	Arms                ArmContract          `json:"arms"`
-	RunDesign           RunDesign            `json:"run_design"`
-	Endpoint            Endpoint             `json:"endpoint"`
-	SpendingRule        SpendingRule         `json:"spending_rule"`
-	Execution           ExecutionDeclaration `json:"execution"`
+	Schema                      string               `json:"schema"`
+	PackID                      string               `json:"pack_id"`
+	EpisodeManifest             ManifestRef          `json:"episode_manifest"`
+	AnswerManifest              ManifestRef          `json:"answer_manifest"`
+	CalibrationManifest         ManifestRef          `json:"calibration_manifest"`
+	GenerationProcedureManifest ManifestRef          `json:"generation_procedure_manifest"`
+	Custody                     CustodyDeclaration   `json:"custody"`
+	Population                  Population           `json:"population"`
+	Arms                        ArmContract          `json:"arms"`
+	RunDesign                   RunDesign            `json:"run_design"`
+	Endpoint                    Endpoint             `json:"endpoint"`
+	SpendingRule                SpendingRule         `json:"spending_rule"`
+	Execution                   ExecutionDeclaration `json:"execution"`
 }
 
 type ManifestRef struct {
@@ -167,7 +170,7 @@ func Decode(raw []byte) (Manifest, error) {
 		return m, fmt.Errorf("G4-lite pack manifest is empty, invalid UTF-8, or exceeds %d bytes", MaxManifestBytes)
 	}
 	keys := []string{
-		"schema", "pack_id", "episode_manifest", "answer_manifest", "calibration_manifest", "custody", "population", "arms", "run_design", "endpoint", "spending_rule", "execution",
+		"schema", "pack_id", "episode_manifest", "answer_manifest", "calibration_manifest", "generation_procedure_manifest", "custody", "population", "arms", "run_design", "endpoint", "spending_rule", "execution",
 		"sha256", "byte_length", "locator", "episode_author_exposure", "implementer_access", "answer_separation", "record_ref",
 		"total", "history_informative", "history_low_value", "history_misleading", "min_families",
 		"h0", "h1", "hg", "controller_id", "snapshot", "model_config_sha256", "tool_catalog_sha256", "checker_version", "resource_ceiling", "custody_outside_ceiling", "h1_review_ref", "h1_reviewer_role",
@@ -191,8 +194,8 @@ func Decode(raw []byte) (Manifest, error) {
 }
 
 func (m Manifest) Validate() error {
-	if m.Schema != Schema || strings.TrimSpace(m.PackID) == "" || len(m.PackID) > 256 {
-		return fmt.Errorf("G4-lite pack requires schema %q and a pack_id", Schema)
+	if (m.Schema != Schema && m.Schema != LegacySchema) || strings.TrimSpace(m.PackID) == "" || len(m.PackID) > 256 {
+		return fmt.Errorf("G4-lite pack requires schema %q (or historical %q) and a pack_id", Schema, LegacySchema)
 	}
 	refs := map[string]ManifestRef{
 		"episode_manifest": m.EpisodeManifest, "answer_manifest": m.AnswerManifest,
@@ -201,6 +204,11 @@ func (m Manifest) Validate() error {
 	}
 	if m.RunDesign.SeedPolicy == "fixed_three_seeds" {
 		refs["run_design.seed_manifest"] = m.RunDesign.SeedManifest
+	}
+	if m.Schema == Schema {
+		refs["generation_procedure_manifest"] = m.GenerationProcedureManifest
+	} else if m.GenerationProcedureManifest != (ManifestRef{}) {
+		return fmt.Errorf("historical %s manifests cannot carry generation_procedure_manifest", LegacySchema)
 	}
 	for name, ref := range refs {
 		if err := validateRef(name, ref); err != nil {
@@ -319,7 +327,7 @@ func DecodeObservedMetadata(raw []byte) (ObservedMetadata, error) {
 }
 
 func (s Seal) Validate() error {
-	if s.Schema != SealSchema || !sha256Hex.MatchString(s.ManifestSHA256) || s.ManifestBytes < 1 || strings.TrimSpace(s.PackID) == "" {
+	if (s.Schema != SealSchema && s.Schema != LegacySealSchema) || !sha256Hex.MatchString(s.ManifestSHA256) || s.ManifestBytes < 1 || strings.TrimSpace(s.PackID) == "" {
 		return fmt.Errorf("G4-lite pack seal has an invalid identity")
 	}
 	if _, err := time.Parse(time.RFC3339Nano, s.CreatedAt); err != nil {

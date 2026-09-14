@@ -142,7 +142,7 @@ func writeG4ExecuteFixture(t *testing.T, episodes []string, resourceRaw []byte) 
 		}
 		snapshotRaw[identity.Arm] = raw
 	}
-	m := g4pack.Manifest{Schema: g4pack.Schema, PackID: "g4-execute-cli", EpisodeManifest: ref(packRaw, "protected/episodes.json"), AnswerManifest: g4pack.ManifestRef{SHA256: strings.Repeat("a", 64), ByteLength: 1, Locator: "protected/answers.json"}, CalibrationManifest: g4pack.ManifestRef{SHA256: strings.Repeat("b", 64), ByteLength: 1, Locator: "protected/calibration.json"}, Custody: g4pack.CustodyDeclaration{EpisodeAuthorExposure: "unexposed_to_implementation_cases", ImplementerAccess: "no_protected_content", AnswerSeparation: "separate_answer_manifest", RecordRef: "protected/custody.json"}, Population: g4pack.Population{Total: 24, HistoryInformative: 12, HistoryLowValue: 6, HistoryMisleading: 6, MinFamilies: 2}, Arms: g4pack.ArmContract{H0: g4pack.ArmSnapshot{ControllerID: identities[0].ControllerID, Snapshot: ref(snapshotRaw["H0"], "frozen/h0.json")}, H1: g4pack.ArmSnapshot{ControllerID: identities[1].ControllerID, Snapshot: ref(snapshotRaw["H1"], "frozen/h1.json")}, HG: g4pack.ArmSnapshot{ControllerID: identities[2].ControllerID, Snapshot: ref(snapshotRaw["HG"], "frozen/hg.json")}, ModelConfigSHA256: strings.Repeat("f", 64), ToolCatalogSHA256: strings.Repeat("1", 64), CheckerVersion: "finite-equivalence-checker/1", ResourceCeiling: ref(resourceRaw, "protected/resources.json"), CustodyOutsideCeiling: true, H1ReviewRef: "review://h1", H1ReviewerRole: "non_implementer"}, RunDesign: g4pack.RunDesign{RunsPerCell: 1, SeedPolicy: "single_run_budget_constrained", BudgetConstraintRef: "budget://one-run"}, Endpoint: g4pack.Endpoint{Kind: "exact_objective_within_same_task_directed_resource_cap/1", IncludesTargetCost: true, SameTaskDirectedResourceCeiling: true}, SpendingRule: g4pack.SpendingRule{MaxInvalidCertified: 0, MinHGOverH1: 3, MaxHGLossLowAndMisleading: 1, MinDifferenceFamilies: 2, RequireHGAtLeastH0: true, DecisionArithmetic: "run_summed_exact/1", ControlLossArithmetic: "net_control_stratum_run_summed/1", FamilyAdvantageArithmetic: "informative_positive_run_summed/1", TaskDirectedResourcesOnly: true}, Execution: g4pack.ExecutionDeclaration{ResourceCeilingRef: "protected/resources.json"}}
+	m := g4pack.Manifest{Schema: g4pack.LegacySchema, PackID: "g4-execute-cli", EpisodeManifest: ref(packRaw, "protected/episodes.json"), AnswerManifest: g4pack.ManifestRef{SHA256: strings.Repeat("a", 64), ByteLength: 1, Locator: "protected/answers.json"}, CalibrationManifest: g4pack.ManifestRef{SHA256: strings.Repeat("b", 64), ByteLength: 1, Locator: "protected/calibration.json"}, Custody: g4pack.CustodyDeclaration{EpisodeAuthorExposure: "unexposed_to_implementation_cases", ImplementerAccess: "no_protected_content", AnswerSeparation: "separate_answer_manifest", RecordRef: "protected/custody.json"}, Population: g4pack.Population{Total: 24, HistoryInformative: 12, HistoryLowValue: 6, HistoryMisleading: 6, MinFamilies: 2}, Arms: g4pack.ArmContract{H0: g4pack.ArmSnapshot{ControllerID: identities[0].ControllerID, Snapshot: ref(snapshotRaw["H0"], "frozen/h0.json")}, H1: g4pack.ArmSnapshot{ControllerID: identities[1].ControllerID, Snapshot: ref(snapshotRaw["H1"], "frozen/h1.json")}, HG: g4pack.ArmSnapshot{ControllerID: identities[2].ControllerID, Snapshot: ref(snapshotRaw["HG"], "frozen/hg.json")}, ModelConfigSHA256: strings.Repeat("f", 64), ToolCatalogSHA256: strings.Repeat("1", 64), CheckerVersion: "finite-equivalence-checker/1", ResourceCeiling: ref(resourceRaw, "protected/resources.json"), CustodyOutsideCeiling: true, H1ReviewRef: "review://h1", H1ReviewerRole: "non_implementer"}, RunDesign: g4pack.RunDesign{RunsPerCell: 1, SeedPolicy: "single_run_budget_constrained", BudgetConstraintRef: "budget://one-run"}, Endpoint: g4pack.Endpoint{Kind: "exact_objective_within_same_task_directed_resource_cap/1", IncludesTargetCost: true, SameTaskDirectedResourceCeiling: true}, SpendingRule: g4pack.SpendingRule{MaxInvalidCertified: 0, MinHGOverH1: 3, MaxHGLossLowAndMisleading: 1, MinDifferenceFamilies: 2, RequireHGAtLeastH0: true, DecisionArithmetic: "run_summed_exact/1", ControlLossArithmetic: "net_control_stratum_run_summed/1", FamilyAdvantageArithmetic: "informative_positive_run_summed/1", TaskDirectedResourcesOnly: true}, Execution: g4pack.ExecutionDeclaration{ResourceCeilingRef: "protected/resources.json"}}
 	manifestRaw, err := json.Marshal(m)
 	if err != nil {
 		t.Fatal(err)
@@ -170,6 +170,45 @@ func TestG4ExecuteVerifiesArtifactsAndRunsOnlyThreeArms(t *testing.T) {
 	}
 	if receipt.Version != sealedrun.G4ResourceDesignVersion || receipt.EvidenceLabel != sealedrun.G4ResourceEvidenceLabel || len(receipt.Cells) != 72 || len(receipt.Arms) != 3 {
 		t.Fatalf("wrong G4 receipt: %+v", receipt)
+	}
+}
+
+func TestG4V3ExecuteBindsAndAppliesFrozenGenerationProcedure(t *testing.T) {
+	manifest, episodesPath, resources, h0Snapshot, h1Snapshot, hgSnapshot, out := writeG4ExecuteFixture(t, g4TestEpisodes(), g4ValidResourceCeiling)
+	episodeRaw, err := os.ReadFile(episodesPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	episodeRaw = []byte(strings.ReplaceAll(strings.ReplaceAll(string(episodeRaw), `"family":"fam-`, `"family":"protected-fam-`), `"catalog":["double-not"]`, `"catalog":["double-not","not-intro"]`))
+	if err := os.WriteFile(episodesPath, episodeRaw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	procedureRaw := []byte(`{"schema":"g4-lite-calibration-procedure/1","procedure_id":"frozen-protected-v1","open_calibration_pack":{"sha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","byte_length":1},"difficulty":{"min_rewrite_depth":2,"min_branching_alternatives":2,"min_cost_neutral_enabling_steps":1,"targets_independently_verified":true},"history_construction":{"method":"independent schedule","independently_specified":true},"resource_choices":[{"id":"low","expansions":1,"rule_applications":128,"candidates":256,"history_bytes":65536,"check_assignments":4096,"max_states":1024,"max_term_nodes":1024},{"id":"high","expansions":2,"rule_applications":128,"candidates":256,"history_bytes":65536,"check_assignments":4096,"max_states":1024,"max_term_nodes":1024}],"primary_resource_id":"high","family_exposure_separation":{"open_family_prefix":"open-","protected_family_prefix":"protected-","open_exposure":"implementation_exposed_open_calibration","protected_exposure":"custodian_only_unexposed_to_implementation_cases"},"protected_authoring":{"freeze_before_authoring":true,"no_post_target_adjustment":true}}`)
+	procedurePath := filepath.Join(filepath.Dir(manifest), "procedure.json")
+	if err := os.WriteFile(procedurePath, procedureRaw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	manifestRaw, err := os.ReadFile(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := g4pack.Decode(manifestRaw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Schema = g4pack.Schema
+	m.EpisodeManifest = g4pack.ManifestRef{SHA256: g4pack.Digest(episodeRaw), ByteLength: int64(len(episodeRaw)), Locator: "protected/episodes.json"}
+	m.GenerationProcedureManifest = g4pack.ManifestRef{SHA256: g4calibration.Digest(procedureRaw), ByteLength: int64(len(procedureRaw)), Locator: "frozen/generation-procedure.json"}
+	manifestRaw, err = json.Marshal(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(manifest, manifestRaw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := execute(context.Background(), []string{"--json", "g4", "execute", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--h0-snapshot", h0Snapshot, "--h1-snapshot", h1Snapshot, "--hg-snapshot", hgSnapshot, "--generation-procedure", procedurePath, "--out", out}, &stdout, &stderr); code != 0 {
+		t.Fatalf("v3 execute did not bind the frozen procedure: %d %s %s", code, stdout.String(), stderr.String())
 	}
 }
 

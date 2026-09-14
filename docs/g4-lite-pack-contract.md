@@ -16,10 +16,10 @@ newf g4 calibrate-procedure --episode-pack open-episodes.json --procedure proced
 newf g4 arm-preflight --resource-ceiling resource.json --h0-snapshot h0.json --h1-snapshot h1.json --hg-snapshot hg.json
 newf g4 execute --manifest g4-lite-metadata.json --episode-pack episodes.json \
   --resource-ceiling resource.json --h0-snapshot h0.json --h1-snapshot h1.json \
-  --hg-snapshot hg.json --out protected/execution-receipt.json
+  --hg-snapshot hg.json --generation-procedure procedure.json --out protected/execution-receipt.json
 ```
 
-The final input schema is `g4-lite-pack/2`. It is one UTF-8 JSON object of at
+The final input schema is `g4-lite-pack/3`. It is one UTF-8 JSON object of at
 most 256 KiB. Unknown, duplicate, and case-variant fields are refused. The
 manifest contains only identity references and declarations:
 
@@ -27,6 +27,7 @@ manifest contains only identity references and declarations:
 |---|---|
 | `episode_manifest`, `answer_manifest` | Separate lower-case SHA-256 identities, positive byte lengths, and locators. No protected bytes appear in the record. |
 | `calibration_manifest` | Identity of the separately retained open-case sensitivity calibration. It documents pre-seal calibration and does not permit protected-case tuning. |
+| `generation_procedure_manifest` | Identity of the frozen `g4-lite-calibration-procedure/1` used for open calibration and protected authoring. The executor receives those bytes, verifies this identity, and checks the protected pack's family prefix, catalog branching, and rewrite depth against it. |
 | `custody` | Declares `unexposed_to_implementation_cases`, `no_protected_content`, `separate_answer_manifest`, and a custody record. These remain declarations rather than independently verified facts. |
 | `population` | Exactly 24 episodes: 12 `history_informative`, 6 `history_low_value`, and 6 `history_misleading`, with at least two construction families. |
 | `arms` | Three distinct frozen controller snapshots: H0, H1, and HG. They bind one model configuration digest, one tool-catalog digest, the current finite checker, and one per-arm task-directed resource-ceiling identity. H1 requires a recorded `non_implementer` review. Custody work is outside that ceiling and must later be metered. |
@@ -97,8 +98,11 @@ cannot consume a cell.
 
 `g4 execute` is the public data-only executor for a final manifest with
 `single_run_budget_constrained`. Before doing work it verifies the exact bytes
-of the supplied episode, resource, and runtime-identity artifacts against the
-identities in the final manifest. The episode artifact is `shaping-pack/1` and
+of the supplied episode, resource, runtime-identity, and (for `/3`) frozen
+generation-procedure artifacts against the identities in the final manifest.
+It uses the procedure only to enforce its protected family namespace, catalog
+branching, and rewrite-depth controls; it does not inspect answers or verify
+custody. The episode artifact is `shaping-pack/1` and
 must contain the fixed 24-episode 12/6/6 population. The resource artifact is
 one strict JSON object:
 
@@ -184,7 +188,7 @@ procedure, not a spending, grading, custody, or dispatch decision.
    design-stage reference; it does not include future episode or answer hashes.
 3. The custodian authors the fresh protected episodes and separately seals the
    episode, answer, calibration, arm-snapshot, resource, and seed artifacts.
-4. The custodian builds and seals the final `g4-lite-pack/2` manifest with
+4. The custodian builds and seals the final `g4-lite-pack/3` manifest with
    those real identities. It must not invent future hashes or mutate a prior
    final-pack seal.
 5. Under a separate execution authorization, the custodian executes the full

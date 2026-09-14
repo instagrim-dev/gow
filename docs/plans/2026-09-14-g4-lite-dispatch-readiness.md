@@ -11,7 +11,7 @@ No manifest or command establishes custody, approval, or a funding result.
 
 ## Delivered preparation
 
-`g4-lite-pack/2` validates and seals the final content-free manifest after the
+`g4-lite-pack/3` validates and seals the final content-free manifest after the
 custodian has separately produced real episode, answer, calibration, arm,
 resource, and seed identities. `g4 pack bind-execution` validates the final
 pack seal and a bounded `g4-lite-observed-metadata/1` record, then binds their
@@ -23,10 +23,14 @@ funding.
 
 ## Delivered execution seam
 
-`newf g4 execute` accepts a final `g4-lite-pack/2` manifest, the exact
+`newf g4 execute` accepts a final `g4-lite-pack/3` manifest, the exact
 separately held `shaping-pack/1` episode artifact, and a bounded
 `g4-resource-ceiling/1` artifact. It also requires the exact three
 content-free runtime-identity artifacts that the final manifest freezes.
+For a new `/3` manifest, it also requires the exact frozen generation-procedure
+artifact and checks its protected family namespace, catalog branching, and
+rewrite-depth controls against the supplied episode pack. Historical `/2`
+manifests remain readable as completed evidence but cannot carry this binding.
 `g4 runtime-identity` exports the pinned executable's actual H0/H1/HG decision
 identities; `g4 arm-preflight` must match those records before protected
 authoring. Execution repeats the comparison before work, requires the
@@ -99,7 +103,7 @@ This is stronger preparation, not protected evidence or a dispatch decision.
 2. A fresh custodian context authors 24 protected episodes and separate answer,
    calibration, arm-snapshot, resource, and seed artifacts. The custodian
    records actual isolation, access controls, exposure history, and H1 review.
-3. The custodian creates and seals the final `g4-lite-pack/2` metadata using
+3. The custodian creates and seals the final `g4-lite-pack/3` metadata using
    those real identities.
 4. The operator supplies an explicit authorization naming the executable hash,
    permitted command, resource and provider ceilings, storage location,
