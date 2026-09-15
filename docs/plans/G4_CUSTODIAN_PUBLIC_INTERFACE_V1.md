@@ -104,7 +104,8 @@ Send only this content-free record to the named grader:
 {"schema":"g4-custodian-return/1","dispatch_id":"<dispatch-id>","release_revision":"<pinned-revision>","executable_sha256":"<pinned-sha256>","procedure":{"sha256":"<sha256>","byte_length":<positive>},"manifest":{"sha256":"<sha256>","byte_length":<positive>},"pre_execution_seal":{"sha256":"<sha256>","byte_length":<positive>},"execution_receipt":{"sha256":"<sha256>","byte_length":<positive>},"observed_metadata":{"sha256":"<sha256>","byte_length":<positive>},"execution_binding":{"sha256":"<sha256>","byte_length":<positive>},"completion_state":"<completed|execution_interrupted|resource_exhausted|verification_blocked|interface_unrepresentable>","custody_limitations":["<UPPERCASE_CONTENT_FREE_CODE>"],"blocked_actions":["<UPPERCASE_CONTENT_FREE_CODE>"]}
 ```
 
-For a pre-execution stop, retain the identities that exist, omit unavailable
-artifact members, and use the matching completion state. The custodian does
+For a completed return, every listed artifact identity must be distinct. For a
+pre-execution stop, retain the identities that exist, omit unavailable artifact
+members, and use the matching completion state. The custodian does
 not grade the run. The designated grader validates its own
 `g4-lite-substantive-grade/2` return separately.

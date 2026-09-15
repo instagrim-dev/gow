@@ -232,6 +232,16 @@ func TestDecodeCustodianReturnRequiresCompleteOrStoppedArtifactChain(t *testing.
 		t.Fatalf("completed content-free custodian return was refused: %v", err)
 	}
 
+	aliased := completed
+	aliased.ExecutionBinding = aliased.Procedure
+	raw, err = json.Marshal(aliased)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeCustodianReturn(raw); err == nil {
+		t.Fatal("completed custodian return reused an artifact identity")
+	}
+
 	incomplete := completed
 	incomplete.ExecutionBinding = nil
 	raw, err = json.Marshal(incomplete)

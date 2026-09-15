@@ -435,10 +435,18 @@ func (r CustodianReturn) Validate() error {
 		"procedure": r.Procedure, "manifest": r.Manifest, "pre_execution_seal": r.PreExecutionSeal,
 		"execution_receipt": r.ExecutionReceipt, "observed_metadata": r.ObservedMetadata, "execution_binding": r.ExecutionBinding,
 	}
+	seenArtifactHashes := make(map[string]string, len(refs))
 	for name, ref := range refs {
-		if ref != nil && (!sha256Hex.MatchString(ref.SHA256) || ref.ByteLength < 1) {
+		if ref == nil {
+			continue
+		}
+		if !sha256Hex.MatchString(ref.SHA256) || ref.ByteLength < 1 {
 			return fmt.Errorf("custodian return %s has an invalid artifact identity", name)
 		}
+		if prior, duplicate := seenArtifactHashes[ref.SHA256]; duplicate {
+			return fmt.Errorf("custodian return %s and %s must identify distinct artifacts", prior, name)
+		}
+		seenArtifactHashes[ref.SHA256] = name
 	}
 	if r.ExecutionBinding != nil && (r.PreExecutionSeal == nil || r.ObservedMetadata == nil || r.ExecutionReceipt == nil) {
 		return fmt.Errorf("custodian return execution_binding requires pre_execution_seal, observed_metadata, and execution_receipt")

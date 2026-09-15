@@ -88,7 +88,8 @@ completion state, and uppercase content-free limitation or blocked-action
 codes. It has no locators or protected content fields.
 
 A `completed` return requires procedure, final manifest, pre-execution seal,
-execution receipt, observed metadata, and execution-binding identities. An
+execution receipt, observed metadata, and execution-binding identities. Every
+present custodian-return artifact identity must be distinct. An
 `execution_interrupted` or `resource_exhausted` return requires the procedure,
 manifest, seal, and retained receipt plus a blocked-action code. A
 `verification_blocked` or `interface_unrepresentable` return records at least
