@@ -154,11 +154,12 @@ and HG, writes a new custodian-local receipt, and labels it
 custody, validates an authorization reference, or scores/funds the batch.
 
 `g4 execution-preflight` performs the same bounded input, population,
-procedure, resource, and runtime-identity checks as `g4 execute`, but does
-not run cells or write a receipt. A custodian uses it after sealing and before
-execution authorization to catch schema or identity incompatibility without
-consuming an execution attempt. Its output contains only content-free input
-identities and scope.
+procedure, resource, runtime-identity, and shared runner-admission checks as
+`g4 execute`, but does not run cells or write a receipt. This includes episode
+identity uniqueness, catalog admission, and endpoint-check reservation. A
+custodian uses it after sealing and before execution authorization to catch
+schema or identity incompatibility without consuming an execution attempt. Its
+output contains only content-free input identities and scope.
 
 ## Open sensitivity calibration
 

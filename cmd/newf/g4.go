@@ -799,6 +799,9 @@ func preflightG4Execution(ctx context.Context, manifestPath, episodePath, resour
 	if err != nil {
 		return g4ExecutionPreflight{}, err
 	}
+	if err := sealedrun.ValidateResourceScreenInput(pack, budget); err != nil {
+		return g4ExecutionPreflight{}, err
+	}
 	if frozenProcedure != nil && !frozenProcedure.MatchesPrimaryResource(budget) {
 		return g4ExecutionPreflight{}, errors.New("resource ceiling does not match the generation procedure primary resource choice")
 	}

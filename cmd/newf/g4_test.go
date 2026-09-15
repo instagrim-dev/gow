@@ -234,6 +234,68 @@ func TestG4ExecutionPreflightRefusesUnknownEpisodeKeysBeforeExecution(t *testing
 	}
 }
 
+func TestG4ExecutionPreflightSharesRunnerInputAdmission(t *testing.T) {
+	tests := []struct {
+		name            string
+		mutateEpisodes  func([]string) []string
+		mutateResources func([]byte) []byte
+		want            string
+	}{
+		{
+			name: "duplicate episode ID",
+			mutateEpisodes: func(episodes []string) []string {
+				episodes = append([]string(nil), episodes...)
+				episodes[1] = strings.Replace(episodes[1], `"ep-01"`, `"ep-00"`, 1)
+				return episodes
+			},
+			mutateResources: func(raw []byte) []byte { return raw },
+			want:            "unique",
+		},
+		{
+			name: "off-menu rule",
+			mutateEpisodes: func(episodes []string) []string {
+				episodes = append([]string(nil), episodes...)
+				episodes[0] = strings.Replace(episodes[0], `"double-not"`, `"invented-rule"`, 1)
+				return episodes
+			},
+			mutateResources: func(raw []byte) []byte { return raw },
+			want:            "unknown menu rule",
+		},
+		{
+			name: "insufficient endpoint-check reservation",
+			mutateEpisodes: func(episodes []string) []string {
+				episodes = append([]string(nil), episodes...)
+				episodes[0] = strings.Replace(episodes[0], `"variables":["x"]`, `"variables":["x","y","z"]`, 1)
+				return episodes
+			},
+			mutateResources: func(raw []byte) []byte {
+				return []byte(strings.Replace(string(raw), `"check_assignments":4096`, `"check_assignments":63`, 1))
+			},
+			want: "final checker needs",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			manifest, episodesPath, resources, h0Snapshot, h1Snapshot, hgSnapshot, out := writeG4ExecuteFixture(t, tc.mutateEpisodes(g4TestEpisodes()), tc.mutateResources(g4ValidResourceCeiling))
+			var stdout, stderr bytes.Buffer
+			preflightArgs := []string{"g4", "execution-preflight", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--h0-snapshot", h0Snapshot, "--h1-snapshot", h1Snapshot, "--hg-snapshot", hgSnapshot}
+			if code := execute(context.Background(), preflightArgs, &stdout, &stderr); code == 0 || !strings.Contains(stderr.String(), tc.want) {
+				t.Fatalf("preflight accepted invalid input: code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+			}
+			stdout.Reset()
+			stderr.Reset()
+			executeArgs := append([]string{"g4", "execute"}, preflightArgs[2:]...)
+			executeArgs = append(executeArgs, "--out", out)
+			if code := execute(context.Background(), executeArgs, &stdout, &stderr); code == 0 || !strings.Contains(stderr.String(), tc.want) {
+				t.Fatalf("execution accepted invalid input: code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+			}
+			if _, err := os.Stat(out); !os.IsNotExist(err) {
+				t.Fatalf("invalid input allocated an execution receipt: %v", err)
+			}
+		})
+	}
+}
+
 func TestG4ExecuteVerifiesArtifactsAndRunsOnlyThreeArms(t *testing.T) {
 	manifest, episodesPath, resources, h0Snapshot, h1Snapshot, hgSnapshot, out := writeG4ExecuteFixture(t, g4TestEpisodes(), g4ValidResourceCeiling)
 	var stdout, stderr bytes.Buffer

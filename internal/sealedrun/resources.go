@@ -124,6 +124,59 @@ func RunG4ResourceScreen(p Pack, b ResourceBudget, cancel <-chan struct{}) (Reso
 	return runResourceScreen(p, b, cancel, G4ResourceDesignVersion, G4ResourceEvidenceLabel, []string{"H0", "H1", "HG"})
 }
 
+// ValidateResourceScreenInput admits the pack and resource vector before a
+// caller allocates a receipt. It owns the shared semantic boundary used by
+// both non-executing preflight and the resource runner.
+func ValidateResourceScreenInput(p Pack, b ResourceBudget) error {
+	if err := b.Validate(); err != nil {
+		return err
+	}
+	if len(p.Episodes) == 0 || len(p.Episodes) > 24 {
+		return fmt.Errorf("resource diagnostic requires 1..24 episodes")
+	}
+	menu := Menu()
+	ids := map[string]bool{}
+	for _, ep := range p.Episodes {
+		if ep.Decl.ID == "" || ids[ep.Decl.ID] {
+			return fmt.Errorf("episode IDs must be nonempty and unique: %q", ep.Decl.ID)
+		}
+		ids[ep.Decl.ID] = true
+		if len(ep.CatalogNames) > len(menu) {
+			return fmt.Errorf("episode %s: catalog exceeds menu size", ep.Decl.ID)
+		}
+		names := map[string]bool{}
+		for _, name := range ep.CatalogNames {
+			if names[name] {
+				return fmt.Errorf("episode %s: duplicate catalog rule %q", ep.Decl.ID, name)
+			}
+			names[name] = true
+			if _, ok := menu[name]; !ok {
+				return fmt.Errorf("episode %s: unknown menu rule %q", ep.Decl.ID, name)
+			}
+		}
+		d := finite.Domain{Width: 4, Vars: ep.Vars}
+		if len(ep.Vars) < 1 || len(ep.Vars) > 3 {
+			return fmt.Errorf("episode %s requires 1..3 variables", ep.Decl.ID)
+		}
+		if defects := finite.ValidateExpr(ep.Start, d); len(defects) > 0 {
+			return fmt.Errorf("episode %s: %v", ep.Decl.ID, defects)
+		}
+		if rewrite.NodeCount(ep.Start) > int64(b.MaxTermNodes) {
+			return fmt.Errorf("episode %s: initial expression exceeds declared node allowance", ep.Decl.ID)
+		}
+		if ep.TargetCost < 0 {
+			return fmt.Errorf("episode %s: negative target", ep.Decl.ID)
+		}
+		if d.Size() > b.CheckAssignments {
+			return fmt.Errorf("episode %s: final checker needs %d reserved assignments, allowance is %d", ep.Decl.ID, d.Size(), b.CheckAssignments)
+		}
+		if historySize(ep.History, b.HistoryBytes) > b.HistoryBytes {
+			return fmt.Errorf("episode %s: history exceeds declared byte allowance", ep.Decl.ID)
+		}
+	}
+	return nil
+}
+
 func runResourceScreen(p Pack, b ResourceBudget, cancel <-chan struct{}, designVersion, evidenceLabel string, arms []string) (ResourceReceipt, error) {
 	controllers := map[string]string{"H0": "catalog-order/1", "H1": shape.ComparatorVersion, "HG": shape.ControllerVersionV2Bounded}
 	for _, arm := range arms {
@@ -140,51 +193,13 @@ func runResourceScreen(p Pack, b ResourceBudget, cancel <-chan struct{}, designV
 		rec.ExecutionError = err.Error()
 		return rec, err
 	}
-	if err := b.Validate(); err != nil {
+	if err := ValidateResourceScreenInput(p, b); err != nil {
 		return fail(err)
-	}
-	if len(p.Episodes) == 0 || len(p.Episodes) > 24 {
-		return fail(fmt.Errorf("resource diagnostic requires 1..24 episodes"))
 	}
 	menu := Menu()
 	pool := map[string]rewrite.Rule{}
-	ids := map[string]bool{}
 	for _, ep := range p.Episodes {
-		if ep.Decl.ID == "" || ids[ep.Decl.ID] {
-			return fail(fmt.Errorf("episode IDs must be nonempty and unique: %q", ep.Decl.ID))
-		}
-		ids[ep.Decl.ID] = true
-		if len(ep.CatalogNames) > len(menu) {
-			return fail(fmt.Errorf("episode %s: catalog exceeds menu size", ep.Decl.ID))
-		}
-		names := map[string]bool{}
-		for _, name := range ep.CatalogNames {
-			if names[name] {
-				return fail(fmt.Errorf("episode %s: duplicate catalog rule %q", ep.Decl.ID, name))
-			}
-			names[name] = true
-		}
 		d := finite.Domain{Width: 4, Vars: ep.Vars}
-		if len(ep.Vars) < 1 || len(ep.Vars) > 3 {
-			return fail(fmt.Errorf("episode %s requires 1..3 variables", ep.Decl.ID))
-		}
-		if defects := finite.ValidateExpr(ep.Start, d); len(defects) > 0 {
-			return fail(fmt.Errorf("episode %s: %v", ep.Decl.ID, defects))
-		}
-		if rewrite.NodeCount(ep.Start) > int64(b.MaxTermNodes) {
-			return fail(fmt.Errorf("episode %s: initial expression exceeds declared node allowance", ep.Decl.ID))
-		}
-		if ep.TargetCost < 0 {
-			return fail(fmt.Errorf("episode %s: negative target", ep.Decl.ID))
-		}
-		if d.Size() > b.CheckAssignments {
-			return fail(fmt.Errorf("episode %s: final checker needs %d reserved assignments, allowance is %d", ep.Decl.ID, d.Size(), b.CheckAssignments))
-		}
-		// Bound before serialization and selection; each rendered history byte
-		// and rule-name byte is included, even when it earns no preference.
-		if historySize(ep.History, b.HistoryBytes) > b.HistoryBytes {
-			return fail(fmt.Errorf("episode %s: history exceeds declared byte allowance", ep.Decl.ID))
-		}
 		rec.Tasks = append(rec.Tasks, ResourceTask{EpisodeID: ep.Decl.ID, Start: finite.Render(ep.Start), Domain: d, TargetCost: ep.TargetCost, Catalog: ep.CatalogNames, History: ep.History})
 		for _, name := range ep.CatalogNames {
 			if _, exists := pool[name]; exists {
