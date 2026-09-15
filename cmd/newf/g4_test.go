@@ -185,6 +185,55 @@ func writeG4ExecuteFixture(t *testing.T, episodes []string, resourceRaw []byte) 
 
 var g4ValidResourceCeiling = []byte(`{"schema":"g4-resource-ceiling/1","expansions":2,"rule_applications":128,"candidates":256,"history_bytes":65536,"check_assignments":4096,"max_states":1024,"max_term_nodes":1024}`)
 
+func TestG4ExecutionPreflightValidatesInputsWithoutCreatingReceipt(t *testing.T) {
+	manifest, episodesPath, resources, h0Snapshot, h1Snapshot, hgSnapshot, out := writeG4ExecuteFixture(t, g4TestEpisodes(), g4ValidResourceCeiling)
+	var stdout, stderr bytes.Buffer
+	if code := execute(context.Background(), []string{"--json", "g4", "execution-preflight", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--h0-snapshot", h0Snapshot, "--h1-snapshot", h1Snapshot, "--hg-snapshot", hgSnapshot}, &stdout, &stderr); code != 0 {
+		t.Fatalf("g4 execution-preflight failed: %d %s %s", code, stdout.String(), stderr.String())
+	}
+	if !bytes.Contains(stdout.Bytes(), []byte(`"command": "g4 execution-preflight"`)) || !bytes.Contains(stdout.Bytes(), []byte(`no execution receipt or screen result`)) {
+		t.Fatalf("preflight did not describe its non-executing scope: %s", stdout.String())
+	}
+	if _, err := os.Stat(out); !os.IsNotExist(err) {
+		t.Fatalf("preflight created an execution receipt: %v", err)
+	}
+}
+
+func TestG4ExecutionPreflightRefusesUnknownEpisodeKeysBeforeExecution(t *testing.T) {
+	manifest, episodesPath, resources, h0Snapshot, h1Snapshot, hgSnapshot, out := writeG4ExecuteFixture(t, g4TestEpisodes(), g4ValidResourceCeiling)
+	packRaw, err := os.ReadFile(episodesPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	packRaw = []byte(strings.Replace(string(packRaw), `"label":"custodian-assertion"`, `"label":"custodian-assertion","exposure":"custodian-only"`, 1))
+	if err := os.WriteFile(episodesPath, packRaw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	manifestRaw, err := os.ReadFile(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := g4pack.Decode(manifestRaw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.EpisodeManifest.SHA256, m.EpisodeManifest.ByteLength = g4pack.Digest(packRaw), int64(len(packRaw))
+	manifestRaw, err = json.Marshal(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(manifest, manifestRaw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := execute(context.Background(), []string{"g4", "execution-preflight", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--h0-snapshot", h0Snapshot, "--h1-snapshot", h1Snapshot, "--hg-snapshot", hgSnapshot}, &stdout, &stderr); code == 0 || !strings.Contains(stderr.String(), "unknown") {
+		t.Fatalf("preflight accepted an episode pack with an unknown key: code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	if _, err := os.Stat(out); !os.IsNotExist(err) {
+		t.Fatalf("invalid preflight created an execution receipt: %v", err)
+	}
+}
+
 func TestG4ExecuteVerifiesArtifactsAndRunsOnlyThreeArms(t *testing.T) {
 	manifest, episodesPath, resources, h0Snapshot, h1Snapshot, hgSnapshot, out := writeG4ExecuteFixture(t, g4TestEpisodes(), g4ValidResourceCeiling)
 	var stdout, stderr bytes.Buffer

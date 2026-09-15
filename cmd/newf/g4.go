@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -534,69 +535,38 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 		_ = preflight.MarkFlagRequired(name)
 	}
 
+	var preflightExecutionManifest, preflightEpisodePack, preflightResourceCeiling, preflightExecutionH0, preflightExecutionH1, preflightExecutionHG, preflightProcedure string
+	preflightExecution := &cobra.Command{Use: "execution-preflight", Short: "Validate a sealed G4-lite execution input without running any cells", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+		prepared, err := preflightG4Execution(cmd.Context(), preflightExecutionManifest, preflightEpisodePack, preflightResourceCeiling, preflightExecutionH0, preflightExecutionH1, preflightExecutionHG, preflightProcedure)
+		if err != nil {
+			return wrapCommandError("g4 execution-preflight", err)
+		}
+		return writeJSON(stdout, struct {
+			OK                    bool   `json:"ok"`
+			Command               string `json:"command"`
+			PackID                string `json:"pack_id"`
+			ManifestSHA256        string `json:"manifest_sha256"`
+			ManifestBytes         int64  `json:"manifest_bytes"`
+			EpisodeManifestSHA256 string `json:"episode_manifest_sha256"`
+			EpisodeManifestBytes  int64  `json:"episode_manifest_bytes"`
+			Scope                 string `json:"scope"`
+		}{true, "g4 execution-preflight", prepared.Manifest.PackID, g4pack.Digest(prepared.ManifestRaw), int64(len(prepared.ManifestRaw)), prepared.Manifest.EpisodeManifest.SHA256, prepared.Manifest.EpisodeManifest.ByteLength, "input and runtime identity validation only; no execution receipt or screen result"})
+	}}
+	preflightExecution.Flags().StringVar(&preflightExecutionManifest, "manifest", "", "Final g4-lite-pack/3 metadata (historical /2 remains readable)")
+	preflightExecution.Flags().StringVar(&preflightEpisodePack, "episode-pack", "", "Exact separately held shaping-pack/1 episode artifact")
+	preflightExecution.Flags().StringVar(&preflightResourceCeiling, "resource-ceiling", "", "Exact separately held g4-resource-ceiling/1 artifact")
+	preflightExecution.Flags().StringVar(&preflightExecutionH0, "h0-snapshot", "", "Exact separately held H0 runtime-identity artifact")
+	preflightExecution.Flags().StringVar(&preflightExecutionH1, "h1-snapshot", "", "Exact separately held H1 runtime-identity artifact")
+	preflightExecution.Flags().StringVar(&preflightExecutionHG, "hg-snapshot", "", "Exact separately held HG runtime-identity artifact")
+	preflightExecution.Flags().StringVar(&preflightProcedure, "generation-procedure", "", "Exact frozen g4-lite-calibration-procedure/1 artifact required by /3")
+	for _, name := range []string{"manifest", "episode-pack", "resource-ceiling", "h0-snapshot", "h1-snapshot", "hg-snapshot"} {
+		_ = preflightExecution.MarkFlagRequired(name)
+	}
+
 	var executionManifest, episodePack, resourceCeiling, executionH0, executionH1, executionHG, executionProcedure, executionOut string
 	execute := &cobra.Command{Use: "execute", Short: "Execute a bounded three-arm G4-lite screen from sealed artifacts", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
-		m, _, err := readG4Manifest(executionManifest)
+		prepared, err := preflightG4Execution(cmd.Context(), executionManifest, episodePack, resourceCeiling, executionH0, executionH1, executionHG, executionProcedure)
 		if err != nil {
-			return wrapCommandError("g4 execute", err)
-		}
-		if m.RunDesign.SeedPolicy != "single_run_budget_constrained" {
-			return wrapCommandError("g4 execute", errors.New("this executor supports only single_run_budget_constrained manifests"))
-		}
-		packRaw, err := readG4BoundedFile(episodePack, sealedrun.MaxShapingPackBytes, "G4-lite episode pack")
-		if err != nil {
-			return wrapCommandError("g4 execute", err)
-		}
-		if g4pack.Digest(packRaw) != m.EpisodeManifest.SHA256 || int64(len(packRaw)) != m.EpisodeManifest.ByteLength {
-			return wrapCommandError("g4 execute", errors.New("episode pack does not match the final manifest identity"))
-		}
-		pack, err := sealedrun.DecodeShapingPack(packRaw)
-		if err != nil {
-			return wrapCommandError("g4 execute", err)
-		}
-		if err := validateG4EpisodePopulation(pack); err != nil {
-			return wrapCommandError("g4 execute", err)
-		}
-		var frozenProcedure *g4calibration.Procedure
-		if m.Schema == g4pack.Schema {
-			if executionProcedure == "" {
-				return wrapCommandError("g4 execute", errors.New("--generation-procedure is required for g4-lite-pack/3 execution"))
-			}
-			procedureRaw, err := readG4BoundedFile(executionProcedure, g4calibration.MaxProcedureBytes, "G4-lite generation procedure")
-			if err != nil {
-				return wrapCommandError("g4 execute", err)
-			}
-			if g4calibration.Digest(procedureRaw) != m.GenerationProcedureManifest.SHA256 || int64(len(procedureRaw)) != m.GenerationProcedureManifest.ByteLength {
-				return wrapCommandError("g4 execute", errors.New("generation procedure does not match the final manifest identity"))
-			}
-			procedure, err := g4calibration.Decode(procedureRaw)
-			if err != nil {
-				return wrapCommandError("g4 execute", err)
-			}
-			if err := procedure.ValidateProtectedPack(pack); err != nil {
-				return wrapCommandError("g4 execute", err)
-			}
-			frozenProcedure = &procedure
-		}
-		resourceRaw, err := readG4BoundedFile(resourceCeiling, 64<<10, "G4-lite resource ceiling")
-		if err != nil {
-			return wrapCommandError("g4 execute", err)
-		}
-		if g4pack.Digest(resourceRaw) != m.Arms.ResourceCeiling.SHA256 || int64(len(resourceRaw)) != m.Arms.ResourceCeiling.ByteLength {
-			return wrapCommandError("g4 execute", errors.New("resource ceiling does not match the final manifest identity"))
-		}
-		budget, err := decodeG4ResourceCeiling(resourceRaw)
-		if err != nil {
-			return wrapCommandError("g4 execute", err)
-		}
-		if frozenProcedure != nil && !frozenProcedure.MatchesPrimaryResource(budget) {
-			return wrapCommandError("g4 execute", errors.New("resource ceiling does not match the generation procedure primary resource choice"))
-		}
-		identities, snapshots, err := readAndVerifyG4ArmIdentities(budget, cmd.Context().Done() != nil, m.Schema == g4pack.Schema, executionH0, executionH1, executionHG)
-		if err != nil {
-			return wrapCommandError("g4 execute", err)
-		}
-		if err := verifyG4ManifestArmIdentities(m, identities, snapshots); err != nil {
 			return wrapCommandError("g4 execute", err)
 		}
 		path, pending, err := prepareShapingReceipt(executionOut)
@@ -604,7 +574,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 			return wrapCommandError("g4 execute", err)
 		}
 		defer pending.Close()
-		receipt, runErr := sealedrun.RunG4ResourceScreen(pack, budget, cmd.Context().Done())
+		receipt, runErr := sealedrun.RunG4ResourceScreen(prepared.Pack, prepared.Budget, cmd.Context().Done())
 		if err := publishShapingReceipt(pending, path, receipt); err != nil {
 			return wrapCommandError("g4 execute", err)
 		}
@@ -703,7 +673,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 	_ = gradeValidate.MarkFlagRequired("input")
 	grade.AddCommand(gradeValidate)
 	pack.AddCommand(validate, seal, bind, inspect)
-	cmd.AddCommand(runtimeIdentity, calibrate, calibrateProcedure, artifactIdentity, preflight, execute, custodianReturn, grade)
+	cmd.AddCommand(runtimeIdentity, calibrate, calibrateProcedure, artifactIdentity, preflight, preflightExecution, execute, custodianReturn, grade)
 	cmd.AddCommand(pack)
 	return cmd
 }
@@ -763,6 +733,83 @@ func validateG4EpisodePopulation(pack sealedrun.Pack) error {
 		return errors.New("episode pack does not meet the fixed G4-lite 12/6/6 population and informative-family minimum")
 	}
 	return nil
+}
+
+// g4ExecutionPreflight contains only the decoded inputs that execute needs
+// after all data and runtime-identity checks have passed. Constructing it does
+// not run a screen or create an execution receipt.
+type g4ExecutionPreflight struct {
+	Manifest    g4pack.Manifest
+	ManifestRaw []byte
+	Pack        sealedrun.Pack
+	Budget      sealedrun.ResourceBudget
+}
+
+func preflightG4Execution(ctx context.Context, manifestPath, episodePath, resourcePath, h0Path, h1Path, hgPath, procedurePath string) (g4ExecutionPreflight, error) {
+	m, manifestRaw, err := readG4Manifest(manifestPath)
+	if err != nil {
+		return g4ExecutionPreflight{}, err
+	}
+	if m.RunDesign.SeedPolicy != "single_run_budget_constrained" {
+		return g4ExecutionPreflight{}, errors.New("this executor supports only single_run_budget_constrained manifests")
+	}
+	packRaw, err := readG4BoundedFile(episodePath, sealedrun.MaxShapingPackBytes, "G4-lite episode pack")
+	if err != nil {
+		return g4ExecutionPreflight{}, err
+	}
+	if g4pack.Digest(packRaw) != m.EpisodeManifest.SHA256 || int64(len(packRaw)) != m.EpisodeManifest.ByteLength {
+		return g4ExecutionPreflight{}, errors.New("episode pack does not match the final manifest identity")
+	}
+	pack, err := sealedrun.DecodeShapingPack(packRaw)
+	if err != nil {
+		return g4ExecutionPreflight{}, err
+	}
+	if err := validateG4EpisodePopulation(pack); err != nil {
+		return g4ExecutionPreflight{}, err
+	}
+	var frozenProcedure *g4calibration.Procedure
+	if m.Schema == g4pack.Schema {
+		if procedurePath == "" {
+			return g4ExecutionPreflight{}, errors.New("--generation-procedure is required for g4-lite-pack/3 execution")
+		}
+		procedureRaw, err := readG4BoundedFile(procedurePath, g4calibration.MaxProcedureBytes, "G4-lite generation procedure")
+		if err != nil {
+			return g4ExecutionPreflight{}, err
+		}
+		if g4calibration.Digest(procedureRaw) != m.GenerationProcedureManifest.SHA256 || int64(len(procedureRaw)) != m.GenerationProcedureManifest.ByteLength {
+			return g4ExecutionPreflight{}, errors.New("generation procedure does not match the final manifest identity")
+		}
+		procedure, err := g4calibration.Decode(procedureRaw)
+		if err != nil {
+			return g4ExecutionPreflight{}, err
+		}
+		if err := procedure.ValidateProtectedPack(pack); err != nil {
+			return g4ExecutionPreflight{}, err
+		}
+		frozenProcedure = &procedure
+	}
+	resourceRaw, err := readG4BoundedFile(resourcePath, 64<<10, "G4-lite resource ceiling")
+	if err != nil {
+		return g4ExecutionPreflight{}, err
+	}
+	if g4pack.Digest(resourceRaw) != m.Arms.ResourceCeiling.SHA256 || int64(len(resourceRaw)) != m.Arms.ResourceCeiling.ByteLength {
+		return g4ExecutionPreflight{}, errors.New("resource ceiling does not match the final manifest identity")
+	}
+	budget, err := decodeG4ResourceCeiling(resourceRaw)
+	if err != nil {
+		return g4ExecutionPreflight{}, err
+	}
+	if frozenProcedure != nil && !frozenProcedure.MatchesPrimaryResource(budget) {
+		return g4ExecutionPreflight{}, errors.New("resource ceiling does not match the generation procedure primary resource choice")
+	}
+	identities, snapshots, err := readAndVerifyG4ArmIdentities(budget, ctx.Done() != nil, m.Schema == g4pack.Schema, h0Path, h1Path, hgPath)
+	if err != nil {
+		return g4ExecutionPreflight{}, err
+	}
+	if err := verifyG4ManifestArmIdentities(m, identities, snapshots); err != nil {
+		return g4ExecutionPreflight{}, err
+	}
+	return g4ExecutionPreflight{Manifest: m, ManifestRaw: manifestRaw, Pack: pack, Budget: budget}, nil
 }
 
 type g4ResourceCeiling struct {

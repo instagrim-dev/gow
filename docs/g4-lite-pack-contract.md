@@ -15,6 +15,9 @@ newf g4 calibrate --episode-pack open-episodes.json --resource-ceiling resource.
 newf g4 calibrate-procedure --episode-pack open-episodes.json --procedure procedure.json --out calibration-receipt.json
 newf g4 arm-preflight --resource-ceiling resource.json --h0-snapshot h0.json --h1-snapshot h1.json --hg-snapshot hg.json
 newf g4 artifact-identity --input bounded-private-artifact.json
+newf g4 execution-preflight --manifest g4-lite-metadata.json --episode-pack episodes.json \
+  --resource-ceiling resource.json --h0-snapshot h0.json --h1-snapshot h1.json \
+  --hg-snapshot hg.json --generation-procedure procedure.json
 newf g4 execute --manifest g4-lite-metadata.json --episode-pack episodes.json \
   --resource-ceiling resource.json --h0-snapshot h0.json --h1-snapshot h1.json \
   --hg-snapshot hg.json --generation-procedure procedure.json --out protected/execution-receipt.json
@@ -149,6 +152,13 @@ All numeric values are explicit nonnegative ceilings except `max_states` and
 and HG, writes a new custodian-local receipt, and labels it
 `protected-execution/custody-unverified`. It never reads answers, establishes
 custody, validates an authorization reference, or scores/funds the batch.
+
+`g4 execution-preflight` performs the same bounded input, population,
+procedure, resource, and runtime-identity checks as `g4 execute`, but does
+not run cells or write a receipt. A custodian uses it after sealing and before
+execution authorization to catch schema or identity incompatibility without
+consuming an execution attempt. Its output contains only content-free input
+identities and scope.
 
 ## Open sensitivity calibration
 
