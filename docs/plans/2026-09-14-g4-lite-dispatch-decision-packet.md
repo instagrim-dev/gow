@@ -7,20 +7,20 @@ real values immediately before dispatch.
 ## Current public preparation
 
 The following values are frozen preparation inputs, not authority. A future
-operator may pin release `fe2edcdf23acf20adcd38cdf702abc1b53aa06b1` and build
+operator may pin release `bc8d538a7428a2da3f166e2677e496c934343e46` and build
 `go build -o newf ./cmd/newf`; its recorded executable SHA-256 is
-`d8d361d292bfb6e04bf3c95f65cb47ba2b37e6661f880a41b139afd6cabf15e8`.
+`014fb95f6e5ec3d5039e56623adee395157e64365a972001ae287f451688e402`.
 That release contains the exact-vector calibration correction. Do not rebuild
 from a different revision and reuse this identity: the Go build embeds VCS
 metadata, so even a documentation-only revision can produce different bytes.
 
 | Public input | Frozen value |
 |---|---|
-| G4 contract | [`docs/g4-lite-pack-contract.md`](../g4-lite-pack-contract.md), SHA-256 `9fe221920923e908a57e8b1514f22938f714b3805d2e2756e2b3669d48429e4b` |
+| G4 contract | [`docs/g4-lite-pack-contract.md`](../g4-lite-pack-contract.md), SHA-256 `5ee12dca77737c99ce4ec20d1a7c0a3ef3bf0ab57835a299cef7064995a4acd5` |
 | Generation procedure | [`procedure.json`](artifacts/2026-09-14-g4-calibration-procedure-exact/procedure.json), SHA-256 `93a5535e78b6db5c023dcefd94f9a9d8dd921a18f7338526112df8913b2bcc63` |
 | Exact open calibration | [`calibration receipt`](artifacts/2026-09-14-g4-calibration-procedure-exact/calibration-receipt.json), SHA-256 `5db6802f08d2ee3f934488820e63b1519243d732a7a1a9920274eb1703fe1ab9` |
-| Primary resource vector | [`resource ceiling`](artifacts/2026-09-14-g4-runtime-preflight-v6-custodian-return/resource-ceiling.json), SHA-256 `0c387b4e1b9a3bda04281ed17dda5063fa6b34dc36c638c48da23163092d83d2` |
-| Controller parity | [`arm preflight`](artifacts/2026-09-14-g4-runtime-preflight-v6-custodian-return/preflight.json), SHA-256 `a402b476ef8898915b80cfa8c2bb0a2a06c03543266e3c8ba01130b95bc8d053` |
+| Primary resource vector | [`resource ceiling`](artifacts/2026-09-14-g4-runtime-preflight-v7-distinct-returns/resource-ceiling.json), SHA-256 `0c387b4e1b9a3bda04281ed17dda5063fa6b34dc36c638c48da23163092d83d2` |
+| Controller parity | [`arm preflight`](artifacts/2026-09-14-g4-runtime-preflight-v7-distinct-returns/preflight.json), SHA-256 `04f1de5fb474c79ea6cdaec019a7cf138a1d2f5116cd69b211d858e16d75e40e` |
 | Grader return | `g4-lite-substantive-grade/2`; completed pass/negative returns require all assessments and identities, while early invalid/incomplete returns require assessment state and a stop reason |
 | Custodian interface | [G4 custodian brief](G4_CUSTODIAN_INTERFACE_BRIEF_V1.md) and [public interface](G4_CUSTODIAN_PUBLIC_INTERFACE_V1.md); freeze and hash both into a future authorization |
 
