@@ -24,7 +24,8 @@ The operator supplies these exact files under `<dispatch-root>/packet/`:
 - `h0-runtime-identity.json`, `h1-runtime-identity.json`, and
   `hg-runtime-identity.json` — executable-bound
   `g4-lite-arm-runtime-identity/2` records; and
-- this interface, the paired brief, and an authorization naming their hashes,
+- this interface, the paired brief, and a frozen authorization produced from
+  `G4_DISPATCH_AUTHORIZATION_TEMPLATE_V1.md`, naming their hashes,
   `<dispatch-id>`, `<custodian-id>`, `<output-root>`, the exact command below,
   resource/provider ceilings, stop conditions, cancellation rule, and grader.
 

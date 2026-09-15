@@ -23,6 +23,7 @@ metadata, so even a documentation-only revision can produce different bytes.
 | Controller parity | [`arm preflight`](artifacts/2026-09-14-g4-runtime-preflight-v7-distinct-returns/preflight.json), SHA-256 `04f1de5fb474c79ea6cdaec019a7cf138a1d2f5116cd69b211d858e16d75e40e` |
 | Grader return | `g4-lite-substantive-grade/2`; completed pass/negative returns require all assessments and identities, while early invalid/incomplete returns require assessment state and a stop reason |
 | Custodian interface | [G4 custodian brief](G4_CUSTODIAN_INTERFACE_BRIEF_V1.md) and [public interface](G4_CUSTODIAN_PUBLIC_INTERFACE_V1.md); freeze and hash both into a future authorization |
+| Authorization form | [G4 dispatch authorization template](G4_DISPATCH_AUTHORIZATION_TEMPLATE_V1.md); fill, freeze, and hash it from observed dispatch facts |
 
 The custodian, protected population, answer/calibration manifests, final pack,
 authorization reference, output location, cancellation rule, and outcome

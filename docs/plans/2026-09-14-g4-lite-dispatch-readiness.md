@@ -126,9 +126,10 @@ non-authorizing.
    controls, exposure history, and H1 review.
 3. The custodian creates and seals the final `g4-lite-pack/3` metadata using
    those real identities.
-4. The operator supplies an explicit authorization naming the executable hash,
-   permitted command, resource and provider ceilings, storage location,
-   recipient, run design, and stop conditions.
+4. The operator fills and freezes the [G4 dispatch authorization template](G4_DISPATCH_AUTHORIZATION_TEMPLATE_V1.md)
+   from observed facts, naming the executable hash, permitted command, resource
+   and provider ceilings, storage location, recipient, run design, and stop
+   conditions.
 5. The custodian executes the complete grid, retains all cells and cost
    ledgers, creates observed metadata, and binds it to the earlier seal.
 6. A substantive grader separately checks artifact identity/parity, protected
