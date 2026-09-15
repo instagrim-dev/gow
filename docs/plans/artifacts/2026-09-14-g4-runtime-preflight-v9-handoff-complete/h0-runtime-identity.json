@@ -1,0 +1,8 @@
+{
+  "schema": "g4-lite-arm-runtime-identity/2",
+  "arm": "H0",
+  "controller_id": "catalog-order/1",
+  "decision_snapshot_sha256": "70efc9f7ef8059d1d1c6ee64874439a00048f7e4dbeefa4d75b5daddcc0282f4",
+  "decision_snapshot_encoding": "go-json-sha256/1",
+  "executable_sha256": "9188bb798616666bd470fbf14b94dab37d79b11e41e8031a3da12ab3e51ed8bb"
+}

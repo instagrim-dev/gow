@@ -100,13 +100,16 @@ advantage of 18 and two informative families with H1 headroom, so the stated
 one-run margin and family thresholds are attainable in this open construction.
 This is stronger preparation, not protected evidence or a dispatch decision.
 
-The [current executable-bound `/3` preflight](artifacts/2026-09-14-g4-runtime-preflight-v8-artifact-identity/)
-was built from `1eac07f` under that procedure's primary resource vector. It
+The [current executable-bound `/3` preflight](artifacts/2026-09-14-g4-runtime-preflight-v9-handoff-complete/)
+was built from `9c2da4a` under that procedure's primary resource vector. It
 exports `/2` arm identities that bind H0/H1/HG controller snapshots to
-executable SHA-256 `cf0c7ce783d3fdc347d9f7af27575e095f8a2390f8b8ee7b0bbb1f10444967d3`
+executable SHA-256 `9188bb798616666bd470fbf14b94dab37d79b11e41e8031a3da12ab3e51ed8bb`
 and passes `g4 arm-preflight`. That same executable validates the bounded
-content-free custodian return before it reaches the substantive grader, and
-emits bounded content-free identities needed for final metadata. The prior `/1` identity preflights remain historical evidence only; `/3` execution
+content-free custodian return before it reaches the substantive grader, including
+a hard interruption without a surviving receipt, and emits bounded content-free
+identities needed for final metadata. The paired public authoring specification
+and authorization template now bind the complete custodian input packet and a
+read-only protected-evidence grant for the named grader before execution. The prior `/1` identity preflights remain historical evidence only; `/3` execution
 now requires executable-bound `/2` records. This completes release and
 controller-identity preparation for a fresh `/3` custodian pack; it remains
 non-authorizing.
@@ -117,9 +120,10 @@ non-authorizing.
    the release and export/preflight the actual H0, H1, and HG runtime
    identities under the task-directed resource ceiling; then freeze those exact
    snapshot artifacts with the checker, tool, and model identities.
-2. The operator freezes [the G4 custodian brief](G4_CUSTODIAN_INTERFACE_BRIEF_V1.md)
-   and [public interface](G4_CUSTODIAN_PUBLIC_INTERFACE_V1.md), records their
-   hashes in the authorization, and gives the fresh custodian only that packet,
+2. The operator freezes [the G4 custodian brief](G4_CUSTODIAN_INTERFACE_BRIEF_V1.md),
+   [public interface](G4_CUSTODIAN_PUBLIC_INTERFACE_V1.md), and
+   [public authoring specification](G4_PUBLIC_AUTHORING_SPEC_V1.md), records
+   their hashes in the authorization, and gives the fresh custodian only that packet,
    the pinned executable, and empty protected storage. The custodian authors
    24 protected episodes and separate answer, calibration, arm-snapshot,
    resource, and seed artifacts, then records actual isolation, access
@@ -128,8 +132,8 @@ non-authorizing.
    those real identities.
 4. The operator fills and freezes the [G4 dispatch authorization template](G4_DISPATCH_AUTHORIZATION_TEMPLATE_V1.md)
    from observed facts, naming the executable hash, permitted command, resource
-   and provider ceilings, storage location, recipient, run design, and stop
-   conditions.
+   and provider ceilings, storage location, recipient, run design, stop
+   conditions, and the grader's read-only protected-evidence mapping.
 5. The custodian executes the complete grid, retains all cells and cost
    ledgers, creates observed metadata, and binds it to the earlier seal.
 6. A substantive grader separately checks artifact identity/parity, protected
