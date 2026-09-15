@@ -479,12 +479,19 @@ func (r CustodianReturn) Validate() error {
 				return fmt.Errorf("completed custodian return requires %s", name)
 			}
 		}
-	case "execution_interrupted", "resource_exhausted":
-		if r.Procedure == nil || r.Manifest == nil || r.PreExecutionSeal == nil || r.ExecutionReceipt == nil {
-			return fmt.Errorf("%s custodian return requires procedure, manifest, pre_execution_seal, and execution_receipt", r.CompletionState)
+	case "execution_interrupted":
+		if r.Procedure == nil || r.Manifest == nil || r.PreExecutionSeal == nil {
+			return fmt.Errorf("execution_interrupted custodian return requires procedure, manifest, and pre_execution_seal")
 		}
 		if len(r.BlockedActions) == 0 {
-			return fmt.Errorf("%s custodian return requires a blocked action", r.CompletionState)
+			return fmt.Errorf("execution_interrupted custodian return requires a blocked action")
+		}
+	case "resource_exhausted":
+		if r.Procedure == nil || r.Manifest == nil || r.PreExecutionSeal == nil || r.ExecutionReceipt == nil {
+			return fmt.Errorf("resource_exhausted custodian return requires procedure, manifest, pre_execution_seal, and execution_receipt")
+		}
+		if len(r.BlockedActions) == 0 {
+			return fmt.Errorf("resource_exhausted custodian return requires a blocked action")
 		}
 	case "verification_blocked", "interface_unrepresentable":
 		if len(r.BlockedActions) == 0 {

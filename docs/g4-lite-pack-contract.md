@@ -100,8 +100,9 @@ codes. It has no locators or protected content fields.
 A `completed` return requires procedure, final manifest, pre-execution seal,
 execution receipt, observed metadata, and execution-binding identities. Every
 present custodian-return artifact identity must be distinct. An
-`execution_interrupted` or `resource_exhausted` return requires the procedure,
-manifest, seal, and retained receipt plus a blocked-action code. A
+`execution_interrupted` return requires the procedure, manifest, seal, and a
+blocked-action code; a hard interruption may have no surviving receipt.
+`resource_exhausted` requires those fields and a retained receipt. A
 `verification_blocked` or `interface_unrepresentable` return records at least
 one blocked-action code and only the identities that exist. The command checks
 syntax and internal artifact-chain presence; it does not validate artifact

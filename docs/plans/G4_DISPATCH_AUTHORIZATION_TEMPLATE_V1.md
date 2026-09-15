@@ -30,6 +30,9 @@ inside this document. A missing, ambiguous, or mismatched field is a stop.
 |---|---|
 | Release | `<full-commit-sha>`, build command, executable SHA-256, platform, and Go version |
 | G4 contract | SHA-256 and exact supplied copy of `docs/g4-lite-pack-contract.md` |
+| Public authoring specification | SHA-256 and exact supplied copy of `G4_PUBLIC_AUTHORING_SPEC_V1.md` |
+| Open calibration receipt | SHA-256, byte length, and supplied path |
+| Operator bindings | SHA-256, byte length, and supplied path for `operator-bindings.json` |
 | Generation procedure | SHA-256, byte length, and supplied path |
 | Resource ceiling | SHA-256, byte length, and supplied path |
 | H0/H1/HG runtime identities | SHA-256 and byte length of each `/2` artifact, plus passed `g4 arm-preflight` output identity |
@@ -83,10 +86,18 @@ The authorization grants no permission to inspect binary contents, disclose
 protected material, modify frozen public artifacts, classify a stop as a
 screen outcome, decide spending, or publish a claim.
 
-## Completion handoff
+## Grader protected-evidence grant and completion handoff
 
-After execution, the custodian validates a `g4-custodian-return/1` record and
-sends only that content-free record and the authorized content-free artifact
-identities to the named grader. The grader separately returns
-`g4-lite-substantive-grade/2`. Neither record establishes custody or grants
-any funding decision.
+Before execution, the operator creates a read-only protected-artifact mapping
+for the named substantive grader and records its access-control mechanism and
+locator here: `<grader-read-only-grant-and-locator>`. It must include the final
+manifest, episode and answer artifacts, calibration and generation procedure,
+arm snapshots, resource and run-design records, construction-route evidence,
+custody/access records, execution receipt or interruption record, observed
+metadata, execution binding, and resource ledger/result grid manifests. The
+custodian cannot alter that mapping after the final manifest seal.
+
+The grader's input is this authorized protected evidence. Its outgoing result
+is only a content-free `g4-lite-substantive-grade/2` judgment. The custodian
+also validates and sends its content-free `g4-custodian-return/1` record. No
+return record establishes custody or grants a funding decision.

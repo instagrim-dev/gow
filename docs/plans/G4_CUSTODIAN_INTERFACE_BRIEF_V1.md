@@ -11,7 +11,7 @@ This is preparation for a future protected G4-lite evaluation. It is not a
 release pin, execution authorization, custody finding, grading result, or
 spending approval. At launch the operator freezes an instance of this brief
 and the paired public interface, names both hashes in the authorization, and
-supplies only the listed public artifacts, the pinned executable, and an empty
+supplies the complete listed public packet, the pinned executable, and an empty
 custodian-controlled storage root.
 
 The custodian receives no repository history, source, tests, development
@@ -37,7 +37,8 @@ artifact, broaden access, or turn interruption into a semantic result.
 1. Verify the supplied executable hash against the frozen authorization.
 2. Verify each supplied `/2` arm identity and the frozen resource ceiling with
    `g4 arm-preflight`. A mismatch stops the run.
-3. Author 24 fresh episodes (12 informative, 6 low-value, 6 misleading) under
+3. Read the supplied public authoring specification and operator bindings, then
+   author 24 fresh episodes (12 informative, 6 low-value, 6 misleading) under
    the frozen procedure's protected family prefix. Keep protected episode,
    answer, provenance, and construction-route records in custodian storage.
 4. Use `g4 artifact-identity` for every bounded protected episode, answer,

@@ -9,9 +9,10 @@ paired_brief: G4_CUSTODIAN_INTERFACE_BRIEF_V1.md
 # G4 custodian public interface v1
 
 At dispatch, replace every angle-bracket value with an operator-supplied,
-frozen value. This template and its paired brief are the custodian's only
-workflow instructions. They contain no protected episode or answer material.
-An omitted command, field, or artifact is `interface_unrepresentable`.
+frozen value. This interface, its paired brief, and the supplied public
+authoring specification are the custodian's complete workflow instructions.
+They contain no protected episode or answer material. An omitted command,
+field, or artifact is `interface_unrepresentable`.
 
 ## Supplied public packet
 
@@ -23,14 +24,19 @@ The operator supplies these exact files under `<dispatch-root>/packet/`:
 - `resource-ceiling.json` — the primary `g4-resource-ceiling/1` vector;
 - `h0-runtime-identity.json`, `h1-runtime-identity.json`, and
   `hg-runtime-identity.json` — executable-bound
-  `g4-lite-arm-runtime-identity/2` records; and
+  `g4-lite-arm-runtime-identity/2` records;
+- `calibration-receipt.json`, `operator-bindings.json`, an exact copy of
+  `g4-lite-pack-contract.md`, and `G4_PUBLIC_AUTHORING_SPEC_V1.md`; and
 - this interface, the paired brief, and a frozen authorization produced from
   `G4_DISPATCH_AUTHORIZATION_TEMPLATE_V1.md`, naming their hashes,
   `<dispatch-id>`, `<custodian-id>`, `<output-root>`, the exact command below,
   resource/provider ceilings, stop conditions, cancellation rule, and grader.
 
 The protected root is `<dispatch-root>/protected/`. The custodian may write
-only there and to the approved content-free return path.
+only there and to the approved content-free return path. The supplied authoring
+specification is authoritative for the strict episode syntax, catalog, fixed
+manifest values, and operator bindings; the custodian does not infer them from
+the executable.
 
 ## Allowlisted commands
 
@@ -107,8 +113,10 @@ Send only this content-free record to the named grader:
 {"schema":"g4-custodian-return/1","dispatch_id":"<dispatch-id>","release_revision":"<pinned-revision>","executable_sha256":"<pinned-sha256>","procedure":{"sha256":"<sha256>","byte_length":<positive>},"manifest":{"sha256":"<sha256>","byte_length":<positive>},"pre_execution_seal":{"sha256":"<sha256>","byte_length":<positive>},"execution_receipt":{"sha256":"<sha256>","byte_length":<positive>},"observed_metadata":{"sha256":"<sha256>","byte_length":<positive>},"execution_binding":{"sha256":"<sha256>","byte_length":<positive>},"completion_state":"<completed|execution_interrupted|resource_exhausted|verification_blocked|interface_unrepresentable>","custody_limitations":["<UPPERCASE_CONTENT_FREE_CODE>"],"blocked_actions":["<UPPERCASE_CONTENT_FREE_CODE>"]}
 ```
 
-For a completed return, every listed artifact identity must be distinct. For a
-pre-execution stop, retain the identities that exist, omit unavailable artifact
-members, and use the matching completion state. The custodian does
-not grade the run. The designated grader validates its own
-`g4-lite-substantive-grade/2` return separately.
+For a completed return, every listed artifact identity must be distinct. An
+`execution_interrupted` return may omit the receipt only when interruption
+prevents receipt publication; it retains the procedure, manifest, seal, and a
+blocked-action code. For a pre-execution stop, retain the identities that
+exist, omit unavailable artifact members, and use the matching completion
+state. The custodian does not grade the run. The designated grader validates
+its own `g4-lite-substantive-grade/2` return separately.

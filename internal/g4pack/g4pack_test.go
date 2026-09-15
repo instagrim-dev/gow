@@ -270,8 +270,18 @@ func TestDecodeCustodianReturnRequiresCompleteOrStoppedArtifactChain(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, err := DecodeCustodianReturn(raw); err != nil {
+		t.Fatalf("interrupted custodian return without a surviving receipt was refused: %v", err)
+	}
+
+	resourceExhausted := interrupted
+	resourceExhausted.CompletionState = "resource_exhausted"
+	raw, err = json.Marshal(resourceExhausted)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if _, err := DecodeCustodianReturn(raw); err == nil {
-		t.Fatal("interrupted custodian return without receipt was accepted")
+		t.Fatal("resource-exhausted custodian return without receipt was accepted")
 	}
 }
 
