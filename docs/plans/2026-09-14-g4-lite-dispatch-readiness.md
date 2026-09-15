@@ -100,13 +100,13 @@ advantage of 18 and two informative families with H1 headroom, so the stated
 one-run margin and family thresholds are attainable in this open construction.
 This is stronger preparation, not protected evidence or a dispatch decision.
 
-The [current executable-bound `/3` preflight](artifacts/2026-09-14-g4-runtime-preflight-v7-distinct-returns/)
-was built from `bc8d538` under that procedure's primary resource vector. It
+The [current executable-bound `/3` preflight](artifacts/2026-09-14-g4-runtime-preflight-v8-artifact-identity/)
+was built from `1eac07f` under that procedure's primary resource vector. It
 exports `/2` arm identities that bind H0/H1/HG controller snapshots to
-executable SHA-256 `014fb95f6e5ec3d5039e56623adee395157e64365a972001ae287f451688e402`
+executable SHA-256 `cf0c7ce783d3fdc347d9f7af27575e095f8a2390f8b8ee7b0bbb1f10444967d3`
 and passes `g4 arm-preflight`. That same executable validates the bounded
-content-free custodian return before it reaches the substantive grader. The
-prior `/1` identity preflights remain historical evidence only; `/3` execution
+content-free custodian return before it reaches the substantive grader, and
+emits bounded content-free identities needed for final metadata. The prior `/1` identity preflights remain historical evidence only; `/3` execution
 now requires executable-bound `/2` records. This completes release and
 controller-identity preparation for a fresh `/3` custodian pack; it remains
 non-authorizing.

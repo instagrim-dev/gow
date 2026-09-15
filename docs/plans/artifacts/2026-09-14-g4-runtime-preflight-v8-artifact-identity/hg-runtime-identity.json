@@ -1,0 +1,8 @@
+{
+  "schema": "g4-lite-arm-runtime-identity/2",
+  "arm": "HG",
+  "controller_id": "shape-selector/2-budgeted/1",
+  "decision_snapshot_sha256": "f505e90626033ea7542539ee033a54fa28c6fe21e8b23b62b89957e100065983",
+  "decision_snapshot_encoding": "go-json-sha256/1",
+  "executable_sha256": "cf0c7ce783d3fdc347d9f7af27575e095f8a2390f8b8ee7b0bbb1f10444967d3"
+}
