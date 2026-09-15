@@ -690,3 +690,27 @@ func TestG4CustodianReturnCLIValidatesContentFreeHandoff(t *testing.T) {
 		t.Fatalf("content-bearing custodian return was accepted: %d %s %s", code, stdout.String(), stderr.String())
 	}
 }
+
+func TestG4ArtifactIdentityCLIEmitsOnlyBoundedIdentity(t *testing.T) {
+	dir := t.TempDir()
+	input := filepath.Join(dir, "private-artifact.json")
+	raw := []byte(`{"private":"bytes stay out of output"}`)
+	if err := os.WriteFile(input, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := execute(context.Background(), []string{"--json", "g4", "artifact-identity", "--input", input}, &stdout, &stderr); code != 0 {
+		t.Fatalf("artifact identity failed: %d %s %s", code, stdout.String(), stderr.String())
+	}
+	if !bytes.Contains(stdout.Bytes(), []byte(g4pack.Digest(raw))) || bytes.Contains(stdout.Bytes(), []byte("private")) {
+		t.Fatalf("artifact identity exposed input or omitted digest: %s", stdout.String())
+	}
+	if err := os.WriteFile(input, []byte(strings.Repeat("x", sealedrun.MaxShapingPackBytes+1)), 0600); err != nil {
+		t.Fatal(err)
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := execute(context.Background(), []string{"g4", "artifact-identity", "--input", input}, &stdout, &stderr); code == 0 || !strings.Contains(stderr.String(), "exceeds") {
+		t.Fatalf("oversized artifact identity input was accepted: %d %s %s", code, stdout.String(), stderr.String())
+	}
+}

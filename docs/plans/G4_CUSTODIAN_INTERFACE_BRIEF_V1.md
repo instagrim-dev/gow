@@ -40,8 +40,9 @@ artifact, broaden access, or turn interruption into a semantic result.
 3. Author 24 fresh episodes (12 informative, 6 low-value, 6 misleading) under
    the frozen procedure's protected family prefix. Keep protected episode,
    answer, provenance, and construction-route records in custodian storage.
-4. Separately seal the episode, answer, calibration, arm-snapshot, resource,
-   and run-design artifacts; then create and seal the final `g4-lite-pack/3`
+4. Use `g4 artifact-identity` for every bounded protected episode, answer,
+   calibration, arm-snapshot, resource, and run-design artifact; separately
+   retain those artifacts, then create and seal the final `g4-lite-pack/3`
    manifest with their real identities.
 5. Only after explicit execution authorization, run the exact `g4 execute`
    command from the interface. Retain the complete receipt and resource ledger.

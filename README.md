@@ -110,6 +110,7 @@ newf g4 runtime-identity --resource-ceiling <resource.json> --arm <H0|H1|HG>
 newf g4 calibrate --episode-pack <open-episodes.json> --resource-ceiling <resource.json> --out <calibration-receipt.json>
 newf g4 calibrate-procedure --episode-pack <open-episodes.json> --procedure <procedure.json> --out <calibration-receipt.json>
 newf g4 arm-preflight --resource-ceiling <resource.json> --h0-snapshot <h0.json> --h1-snapshot <h1.json> --hg-snapshot <hg.json>
+newf g4 artifact-identity --input <bounded-private-artifact>
 newf g4 execute --manifest <metadata.json> --episode-pack <episodes.json> --resource-ceiling <resource.json> --h0-snapshot <h0.json> --h1-snapshot <h1.json> --hg-snapshot <hg.json> --generation-procedure <procedure.json> --out <receipt.json>
 newf g4 custodian-return validate --input <content-free-custodian-return.json>
 newf g4 grade validate --input <content-free-substantive-grade.json>

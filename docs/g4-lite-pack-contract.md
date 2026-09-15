@@ -14,6 +14,7 @@ newf g4 runtime-identity --resource-ceiling resource.json --arm H0
 newf g4 calibrate --episode-pack open-episodes.json --resource-ceiling resource.json --out calibration-receipt.json
 newf g4 calibrate-procedure --episode-pack open-episodes.json --procedure procedure.json --out calibration-receipt.json
 newf g4 arm-preflight --resource-ceiling resource.json --h0-snapshot h0.json --h1-snapshot h1.json --hg-snapshot hg.json
+newf g4 artifact-identity --input bounded-private-artifact.json
 newf g4 execute --manifest g4-lite-metadata.json --episode-pack episodes.json \
   --resource-ceiling resource.json --h0-snapshot h0.json --h1-snapshot h1.json \
   --hg-snapshot hg.json --generation-procedure procedure.json --out protected/execution-receipt.json
@@ -78,6 +79,15 @@ pre-execution seal's `pre_execution_seal_sha256` and
 `byte_length`, `locator` shape. `g4 pack bind-execution` validates and binds
 those byte identities; it does not establish that their private contents
 conform to the frozen design.
+
+## Artifact identity
+
+`g4 artifact-identity` reads one artifact of at most 1 MiB and emits only
+`g4-artifact-identity/1`, its lower-case SHA-256, and byte length. It never
+prints the input path or bytes. The custodian uses it to construct the
+content references for protected episode, answer, calibration, arm, resource,
+and run-design artifacts before final metadata sealing. An artifact exceeding
+the bound is a stop, not a partially recorded identity.
 
 ## Custodian return
 

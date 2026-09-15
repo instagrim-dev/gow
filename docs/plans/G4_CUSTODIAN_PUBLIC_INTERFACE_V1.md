@@ -43,6 +43,8 @@ After the integrity hash check, the only executable commands are:
   --h1-snapshot <dispatch-root>/packet/h1-runtime-identity.json \
   --hg-snapshot <dispatch-root>/packet/hg-runtime-identity.json
 
+<dispatch-root>/packet/newf --json g4 artifact-identity --input <dispatch-root>/protected/<bounded-artifact>.json
+
 <dispatch-root>/packet/newf --json g4 pack validate --input <dispatch-root>/protected/g4-pack.json
 <dispatch-root>/packet/newf --json g4 pack seal --input <dispatch-root>/protected/g4-pack.json --out <dispatch-root>/protected/g4-pack.seal.json
 <dispatch-root>/packet/newf --json g4 pack inspect <dispatch-root>/protected/g4-pack.seal.json --input <dispatch-root>/protected/g4-pack.json

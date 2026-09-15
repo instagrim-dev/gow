@@ -11,8 +11,8 @@ This template has no authority while any placeholder remains. It does not
 create a release pin, custody finding, execution permission, grading result,
 spending approval, or publication permission. Before a dispatch, the operator
 must fill every value from observed records, freeze this completed document,
-and record its SHA-256 with the custodian packet. A missing, ambiguous, or
-mismatched field is a stop.
+and record its SHA-256 beside the custodian packet. Do not write that digest
+inside this document. A missing, ambiguous, or mismatched field is a stop.
 
 ## Dispatch identity
 
@@ -35,7 +35,7 @@ mismatched field is a stop.
 | H0/H1/HG runtime identities | SHA-256 and byte length of each `/2` artifact, plus passed `g4 arm-preflight` output identity |
 | Custodian brief | SHA-256 of the frozen `G4_CUSTODIAN_INTERFACE_BRIEF_V1.md` instance |
 | Public interface | SHA-256 of the frozen `G4_CUSTODIAN_PUBLIC_INTERFACE_V1.md` instance |
-| This authorization | SHA-256 after every row is filled and before protected authoring begins |
+| This authorization | Its SHA-256 is recorded beside the frozen document after every row is filled and before protected authoring begins; it is not a field inside this document |
 
 The executable hash must equal each supplied arm identity's
 `executable_sha256`. The resource ceiling and arm snapshots must be exactly the
@@ -49,7 +49,7 @@ requires a new authorization and preflight.
 - Content-free return path: `<approved-return-path>`
 - Custody record and access-log path: `<custody-record-and-access-log-path>`
 - Access controls and implementer exclusion: `<observed-controls-and-limitations>`
-- Provider/network/package/browser permissions: `<explicit-permissions-or-none>`
+- Provider/network/package/browser permissions: `none`
 
 The custodian receives only the frozen public packet, pinned executable, and
 empty protected root. It must not access repository history, source, tests,
@@ -73,7 +73,7 @@ the authorization additionally names these fixed limits:
 | Limit | Required filled value |
 |---|---|
 | Task-directed resource ceiling | `<exact-resource-ceiling-identity>` |
-| Provider call ceiling and spend ceiling | `<calls-and-cents>` |
+| Provider call ceiling and spend ceiling | `0 calls; 0 cents` |
 | Separately metered custody ceiling | `<custody-metering-method-and-limit>` |
 | Wall-clock ceiling | `<duration>` |
 | Allowed output paths | `<execution-receipt-observed-metadata-binding-and-return-paths>` |

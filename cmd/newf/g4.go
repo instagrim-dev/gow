@@ -492,6 +492,21 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 	_ = calibrateProcedure.MarkFlagRequired("procedure")
 	_ = calibrateProcedure.MarkFlagRequired("out")
 
+	var artifactIdentityInput string
+	artifactIdentity := &cobra.Command{Use: "artifact-identity", Short: "Emit a bounded artifact's content-free G4 identity", Args: cobra.NoArgs, RunE: func(_ *cobra.Command, _ []string) error {
+		raw, err := readG4BoundedFile(artifactIdentityInput, sealedrun.MaxShapingPackBytes, "G4 artifact identity input")
+		if err != nil {
+			return wrapCommandError("g4 artifact-identity", err)
+		}
+		return writeJSON(stdout, struct {
+			Schema     string `json:"schema"`
+			SHA256     string `json:"sha256"`
+			ByteLength int    `json:"byte_length"`
+		}{"g4-artifact-identity/1", g4pack.Digest(raw), len(raw)})
+	}}
+	artifactIdentity.Flags().StringVar(&artifactIdentityInput, "input", "", "Bounded artifact whose bytes remain private")
+	_ = artifactIdentity.MarkFlagRequired("input")
+
 	var preflightResource, preflightH0, preflightH1, preflightHG string
 	preflight := &cobra.Command{Use: "arm-preflight", Short: "Verify frozen arm identities before protected authoring", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 		raw, err := readG4BoundedFile(preflightResource, 64<<10, "G4-lite resource ceiling")
@@ -688,7 +703,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 	_ = gradeValidate.MarkFlagRequired("input")
 	grade.AddCommand(gradeValidate)
 	pack.AddCommand(validate, seal, bind, inspect)
-	cmd.AddCommand(runtimeIdentity, calibrate, calibrateProcedure, preflight, execute, custodianReturn, grade)
+	cmd.AddCommand(runtimeIdentity, calibrate, calibrateProcedure, artifactIdentity, preflight, execute, custodianReturn, grade)
 	cmd.AddCommand(pack)
 	return cmd
 }
