@@ -824,12 +824,21 @@ func TestG4ArtifactIdentityCLIEmitsOnlyBoundedIdentity(t *testing.T) {
 	if !bytes.Contains(stdout.Bytes(), []byte(g4pack.Digest(raw))) || bytes.Contains(stdout.Bytes(), []byte("private")) {
 		t.Fatalf("artifact identity exposed input or omitted digest: %s", stdout.String())
 	}
-	if err := os.WriteFile(input, []byte(strings.Repeat("x", sealedrun.MaxShapingPackBytes+1)), 0600); err != nil {
+	if err := os.WriteFile(input, []byte(strings.Repeat("x", maxShapingReceiptBytes+1)), 0600); err != nil {
 		t.Fatal(err)
 	}
 	stdout.Reset()
 	stderr.Reset()
 	if code := execute(context.Background(), []string{"g4", "artifact-identity", "--input", input}, &stdout, &stderr); code == 0 || !strings.Contains(stderr.String(), "exceeds") {
 		t.Fatalf("oversized artifact identity input was accepted: %d %s %s", code, stdout.String(), stderr.String())
+	}
+	large := []byte(strings.Repeat("x", sealedrun.MaxShapingPackBytes+1))
+	if err := os.WriteFile(input, large, 0600); err != nil {
+		t.Fatal(err)
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := execute(context.Background(), []string{"--json", "g4", "artifact-identity", "--input", input}, &stdout, &stderr); code != 0 || !bytes.Contains(stdout.Bytes(), []byte(g4pack.Digest(large))) {
+		t.Fatalf("receipt-sized artifact identity failed: %d %s %s", code, stdout.String(), stderr.String())
 	}
 }

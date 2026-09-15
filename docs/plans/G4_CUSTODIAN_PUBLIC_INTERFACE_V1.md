@@ -25,8 +25,8 @@ The operator supplies these exact files under `<dispatch-root>/packet/`:
 - `h0-runtime-identity.json`, `h1-runtime-identity.json`, and
   `hg-runtime-identity.json` — executable-bound
   `g4-lite-arm-runtime-identity/2` records;
-- `calibration-receipt.json`, `operator-bindings.json`, an exact copy of
-  `g4-lite-pack-contract.md`, and `G4_PUBLIC_AUTHORING_SPEC_V1.md`; and
+- `calibration-manifest-reference.json`, `operator-bindings.json`, an exact
+  copy of `g4-lite-pack-contract.md`, and `G4_PUBLIC_AUTHORING_SPEC_V1.md`; and
 - this interface, the paired brief, and a frozen authorization produced from
   `G4_DISPATCH_AUTHORIZATION_TEMPLATE_V1.md`, naming their hashes,
   `<dispatch-id>`, `<custodian-id>`, `<output-root>`, the exact command below,
@@ -37,6 +37,12 @@ only there and to the approved content-free return path. The supplied authoring
 specification is authoritative for the strict episode syntax, catalog, fixed
 manifest values, and operator bindings; the custodian does not infer them from
 the executable.
+
+`calibration-manifest-reference.json` carries only the SHA-256, positive byte
+length, and locator of the operator-retained full calibration receipt. The
+full receipt, including worked development material, remains in
+operator/grader evidence storage; its identity is copied unchanged into
+`calibration_manifest`.
 
 ## Allowlisted commands
 

@@ -67,8 +67,11 @@ exact bytes.
 
 The supplied H0/H1/HG runtime identities provide the three controller IDs and
 exact snapshot artifact identities. The supplied resource ceiling provides the
-single primary resource vector. The supplied open calibration receipt is the
-`calibration_manifest` reference. The supplied generation procedure is the
+single primary resource vector. The operator-retained open calibration receipt
+is represented to the custodian only by the content-free
+`calibration-manifest-reference.json`; its identity is the
+`calibration_manifest` reference. The full receipt is not a custodian input.
+The supplied generation procedure is the
 `generation_procedure_manifest` reference.
 
 ## Final manifest skeleton

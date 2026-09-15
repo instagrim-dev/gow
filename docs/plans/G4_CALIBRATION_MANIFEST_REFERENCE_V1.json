@@ -1,0 +1,6 @@
+{
+  "schema": "g4-calibration-manifest-reference/1",
+  "sha256": "<64-lowercase-hex-of-operator-retained-calibration-receipt>",
+  "byte_length": "<positive-byte-length-of-operator-retained-calibration-receipt>",
+  "locator": "<content-free-operator-grader-locator>"
+}

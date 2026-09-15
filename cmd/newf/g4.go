@@ -495,7 +495,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 
 	var artifactIdentityInput string
 	artifactIdentity := &cobra.Command{Use: "artifact-identity", Short: "Emit a bounded artifact's content-free G4 identity", Args: cobra.NoArgs, RunE: func(_ *cobra.Command, _ []string) error {
-		raw, err := readG4BoundedFile(artifactIdentityInput, sealedrun.MaxShapingPackBytes, "G4 artifact identity input")
+		digest, byteLength, err := streamG4ArtifactIdentity(artifactIdentityInput, maxShapingReceiptBytes, "G4 artifact identity input")
 		if err != nil {
 			return wrapCommandError("g4 artifact-identity", err)
 		}
@@ -503,7 +503,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 			Schema     string `json:"schema"`
 			SHA256     string `json:"sha256"`
 			ByteLength int    `json:"byte_length"`
-		}{"g4-artifact-identity/1", g4pack.Digest(raw), len(raw)})
+		}{"g4-artifact-identity/1", digest, byteLength})
 	}}
 	artifactIdentity.Flags().StringVar(&artifactIdentityInput, "input", "", "Bounded artifact whose bytes remain private")
 	_ = artifactIdentity.MarkFlagRequired("input")
@@ -676,6 +676,23 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 	cmd.AddCommand(runtimeIdentity, calibrate, calibrateProcedure, artifactIdentity, preflight, preflightExecution, execute, custodianReturn, grade)
 	cmd.AddCommand(pack)
 	return cmd
+}
+
+func streamG4ArtifactIdentity(path string, max int, label string) (string, int, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", 0, err
+	}
+	defer f.Close()
+	h := sha256.New()
+	n, err := io.Copy(h, io.LimitReader(f, int64(max)+1))
+	if err != nil {
+		return "", 0, err
+	}
+	if n > int64(max) {
+		return "", 0, fmt.Errorf("%s exceeds %d bytes", label, max)
+	}
+	return hex.EncodeToString(h.Sum(nil)), int(n), nil
 }
 
 func readG4Manifest(path string) (g4pack.Manifest, []byte, error) {
