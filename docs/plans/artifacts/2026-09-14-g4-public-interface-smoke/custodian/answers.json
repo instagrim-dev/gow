@@ -1,0 +1,102 @@
+{
+  "schema": "development-only-g4-answers/1",
+  "scope": "open synthetic smoke material; no protected answers",
+  "answers": [
+    {
+      "episode_id": "development-protected-00",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-01",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-02",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-03",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-04",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-05",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-06",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-07",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-08",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-09",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-10",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-11",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-12",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-13",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-14",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-15",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-16",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-17",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-18",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-19",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-20",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-21",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-22",
+      "declared_target_cost": 1
+    },
+    {
+      "episode_id": "development-protected-23",
+      "declared_target_cost": 1
+    }
+  ]
+}

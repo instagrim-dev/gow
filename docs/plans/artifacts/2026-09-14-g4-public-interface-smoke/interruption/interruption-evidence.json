@@ -1,0 +1,9 @@
+{
+  "schema": "development-only-g4-hard-interruption/1",
+  "signal": "SIGKILL",
+  "pending_receipt_allocated": true,
+  "receipt_published": false,
+  "process_exit_status": 137,
+  "pending_receipt_basename": ".shaping-receipt-161073570.pending",
+  "scope": "open synthetic handoff smoke; no protected material"
+}

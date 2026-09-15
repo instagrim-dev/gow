@@ -1,0 +1,126 @@
+{
+  "schema": "development-only-g4-construction-routes/1",
+  "scope": "open synthetic smoke material",
+  "episodes": [
+    {
+      "episode_id": "development-protected-00",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-01",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-02",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-03",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-04",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-05",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-06",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-07",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-08",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-09",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-10",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-11",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-12",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-13",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-14",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-15",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-16",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-17",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-18",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-19",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-20",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-21",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-22",
+      "source": "open development construction",
+      "route_recorded": true
+    },
+    {
+      "episode_id": "development-protected-23",
+      "source": "open development construction",
+      "route_recorded": true
+    }
+  ]
+}

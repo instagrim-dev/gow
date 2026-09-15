@@ -1,0 +1,6 @@
+{
+  "schema": "development-only-g4-run-design/1",
+  "runs_per_cell": 1,
+  "seed_policy": "single_run_budget_constrained",
+  "budget_constraint_ref": "development-only://single-run-smoke"
+}

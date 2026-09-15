@@ -1,0 +1,26 @@
+{
+  "schema": "g4-development-grader-read-only-mapping/1",
+  "scope": "development-only; paths expose open synthetic material, never protected evaluation content",
+  "grantee": "development-grader",
+  "mode": "read-only after final seal",
+  "artifacts": [
+    "protected/g4-pack.json",
+    "protected/episodes.json",
+    "protected/answers.json",
+    "packet/calibration-receipt.json",
+    "packet/procedure.json",
+    "packet/h0-runtime-identity.json",
+    "packet/h1-runtime-identity.json",
+    "packet/hg-runtime-identity.json",
+    "packet/resource-ceiling.json",
+    "protected/run-design.json",
+    "protected/construction-routes.json",
+    "protected/custody-access.json",
+    "protected/execution-receipt.json",
+    "protected/arm-execution-manifest.json",
+    "protected/resource-ledger-manifest.json",
+    "protected/result-grid-manifest.json",
+    "protected/observed-metadata.json",
+    "protected/execution-binding.json"
+  ]
+}

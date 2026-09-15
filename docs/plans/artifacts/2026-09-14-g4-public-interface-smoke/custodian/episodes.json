@@ -1,0 +1,1213 @@
+{
+  "schema": "shaping-pack/1",
+  "label": "development-only-public-interface-smoke",
+  "provenance": "open synthetic development handoff smoke; never protected material",
+  "episodes": [
+    {
+      "id": "development-protected-00",
+      "stratum": "history_informative",
+      "family": "protected-development-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "development-protected-01",
+      "stratum": "history_informative",
+      "family": "protected-development-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "development-protected-02",
+      "stratum": "history_informative",
+      "family": "protected-development-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "development-protected-03",
+      "stratum": "history_informative",
+      "family": "protected-development-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "development-protected-04",
+      "stratum": "history_informative",
+      "family": "protected-development-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "development-protected-05",
+      "stratum": "history_informative",
+      "family": "protected-development-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "development-protected-06",
+      "stratum": "history_informative",
+      "family": "protected-development-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "development-protected-07",
+      "stratum": "history_informative",
+      "family": "protected-development-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "development-protected-08",
+      "stratum": "history_informative",
+      "family": "protected-development-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "development-protected-09",
+      "stratum": "history_informative",
+      "family": "protected-development-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "development-protected-10",
+      "stratum": "history_informative",
+      "family": "protected-development-a",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "development-protected-11",
+      "stratum": "history_informative",
+      "family": "protected-development-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "development-protected-12",
+      "stratum": "history_low_value",
+      "family": "protected-development-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": []
+    },
+    {
+      "id": "development-protected-13",
+      "stratum": "history_low_value",
+      "family": "protected-development-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": []
+    },
+    {
+      "id": "development-protected-14",
+      "stratum": "history_low_value",
+      "family": "protected-development-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": []
+    },
+    {
+      "id": "development-protected-15",
+      "stratum": "history_low_value",
+      "family": "protected-development-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": []
+    },
+    {
+      "id": "development-protected-16",
+      "stratum": "history_low_value",
+      "family": "protected-development-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": []
+    },
+    {
+      "id": "development-protected-17",
+      "stratum": "history_low_value",
+      "family": "protected-development-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": []
+    },
+    {
+      "id": "development-protected-18",
+      "stratum": "history_misleading",
+      "family": "protected-development-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "development-protected-19",
+      "stratum": "history_misleading",
+      "family": "protected-development-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "development-protected-20",
+      "stratum": "history_misleading",
+      "family": "protected-development-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "development-protected-21",
+      "stratum": "history_misleading",
+      "family": "protected-development-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "development-protected-22",
+      "stratum": "history_misleading",
+      "family": "protected-development-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    },
+    {
+      "id": "development-protected-23",
+      "stratum": "history_misleading",
+      "family": "protected-development-b",
+      "start": {
+        "op": "not",
+        "args": [
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "const": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variables": [
+        "x"
+      ],
+      "catalog": [
+        "double-not",
+        "add-zero",
+        "not-intro"
+      ],
+      "target_cost": 1,
+      "history": [
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "not-intro"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": true,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        },
+        {
+          "start": "not(not(add(x, 0)))",
+          "rules_applied": [
+            "double-not",
+            "add-zero"
+          ],
+          "final_cost": 9,
+          "target": 1,
+          "completed": false,
+          "endpoint": "HOLDS_ON_DECLARED_DOMAIN"
+        }
+      ]
+    }
+  ]
+}

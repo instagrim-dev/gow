@@ -1,0 +1,588 @@
+{
+  "schema": "development-only-g4-result-grid-manifest/1",
+  "source_receipt_sha256": "86b3cbc04f60046cc15c6697b31dc52041aaaf07d9420d6dacb83a09133c65fa",
+  "completions": {
+    "H0": 24,
+    "H1": 6,
+    "HG": 24
+  },
+  "assessment": "completed-protected-execution-unverified",
+  "cells": [
+    {
+      "episode_id": "development-protected-00",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-00",
+      "arm": "H1",
+      "completed": false,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 3
+    },
+    {
+      "episode_id": "development-protected-00",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-01",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-01",
+      "arm": "H1",
+      "completed": false,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 3
+    },
+    {
+      "episode_id": "development-protected-01",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-02",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-02",
+      "arm": "H1",
+      "completed": false,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 3
+    },
+    {
+      "episode_id": "development-protected-02",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-03",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-03",
+      "arm": "H1",
+      "completed": false,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 3
+    },
+    {
+      "episode_id": "development-protected-03",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-04",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-04",
+      "arm": "H1",
+      "completed": false,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 3
+    },
+    {
+      "episode_id": "development-protected-04",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-05",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-05",
+      "arm": "H1",
+      "completed": false,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 3
+    },
+    {
+      "episode_id": "development-protected-05",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-06",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-06",
+      "arm": "H1",
+      "completed": false,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 3
+    },
+    {
+      "episode_id": "development-protected-06",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-07",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-07",
+      "arm": "H1",
+      "completed": false,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 3
+    },
+    {
+      "episode_id": "development-protected-07",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-08",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-08",
+      "arm": "H1",
+      "completed": false,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 3
+    },
+    {
+      "episode_id": "development-protected-08",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-09",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-09",
+      "arm": "H1",
+      "completed": false,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 3
+    },
+    {
+      "episode_id": "development-protected-09",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-10",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-10",
+      "arm": "H1",
+      "completed": false,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 3
+    },
+    {
+      "episode_id": "development-protected-10",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-11",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-11",
+      "arm": "H1",
+      "completed": false,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 3
+    },
+    {
+      "episode_id": "development-protected-11",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-12",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-12",
+      "arm": "H1",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-12",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-13",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-13",
+      "arm": "H1",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-13",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-14",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-14",
+      "arm": "H1",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-14",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-15",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-15",
+      "arm": "H1",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-15",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-16",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-16",
+      "arm": "H1",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-16",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-17",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-17",
+      "arm": "H1",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-17",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-18",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-18",
+      "arm": "H1",
+      "completed": false,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 3
+    },
+    {
+      "episode_id": "development-protected-18",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-19",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-19",
+      "arm": "H1",
+      "completed": false,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 3
+    },
+    {
+      "episode_id": "development-protected-19",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-20",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-20",
+      "arm": "H1",
+      "completed": false,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 3
+    },
+    {
+      "episode_id": "development-protected-20",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-21",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-21",
+      "arm": "H1",
+      "completed": false,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 3
+    },
+    {
+      "episode_id": "development-protected-21",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-22",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-22",
+      "arm": "H1",
+      "completed": false,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 3
+    },
+    {
+      "episode_id": "development-protected-22",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-23",
+      "arm": "H0",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    },
+    {
+      "episode_id": "development-protected-23",
+      "arm": "H1",
+      "completed": false,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 3
+    },
+    {
+      "episode_id": "development-protected-23",
+      "arm": "HG",
+      "completed": true,
+      "blocked_reason": "",
+      "endpoint_verified": true,
+      "best_cost": 1
+    }
+  ]
+}

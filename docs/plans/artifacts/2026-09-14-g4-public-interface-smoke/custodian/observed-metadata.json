@@ -1,0 +1,20 @@
+{
+  "schema": "g4-lite-observed-metadata/1",
+  "pre_execution_seal_sha256": "a7d8645c478fbba658860ac679283119634576e0af98a2f282e85c538d273f43",
+  "pre_execution_seal_bytes": 801,
+  "arm_execution_manifest": {
+    "sha256": "bc99eb2facbe4300ce7c7dcca9af31ccb2fa370dab8ef933d06d9fd075e76c50",
+    "byte_length": 225888,
+    "locator": "protected/arm-execution-manifest.json"
+  },
+  "resource_ledger_manifest": {
+    "sha256": "a33000b762d3bf9fb984878dfc5c90c7fbefdf74773ce6c04e764842fa025fe8",
+    "byte_length": 16373,
+    "locator": "protected/resource-ledger-manifest.json"
+  },
+  "result_grid_manifest": {
+    "sha256": "74003be97dd3bc471ed6f3fe926ae62d7b4feb640bd3d7a0793a9e5e1d5de6ad",
+    "byte_length": 13779,
+    "locator": "protected/result-grid-manifest.json"
+  }
+}

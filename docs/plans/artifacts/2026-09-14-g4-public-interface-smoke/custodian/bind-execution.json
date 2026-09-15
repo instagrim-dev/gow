@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "binding": "/tmp/newf-g4-public-interface-smoke/protected/execution-binding.json",
+  "receipt": {
+    "schema": "g4-lite-execution-binding/2",
+    "created_at": "2026-09-15T05:44:00.87765Z",
+    "pre_execution_seal_sha256": "a7d8645c478fbba658860ac679283119634576e0af98a2f282e85c538d273f43",
+    "pre_execution_seal_bytes": 801,
+    "observed_metadata_sha256": "acd03db9da79c6fe4324e66e85b24624d1f916841b75e8b906884e029b2ed499",
+    "observed_metadata_bytes": 775
+  }
+}

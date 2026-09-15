@@ -1,0 +1,6 @@
+{
+  "schema": "development-only-g4-custody-access/1",
+  "scope": "open handoff smoke; custody not asserted",
+  "author_exposure": "implementation exposed",
+  "grader_mapping": "grader-read-only/mapping.json"
+}

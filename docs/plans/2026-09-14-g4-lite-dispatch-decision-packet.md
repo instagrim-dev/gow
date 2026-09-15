@@ -22,6 +22,7 @@ so even a documentation-only revision can produce different bytes.
 | Exact open calibration | [`calibration receipt`](artifacts/2026-09-14-g4-calibration-procedure-exact/calibration-receipt.json), SHA-256 `5db6802f08d2ee3f934488820e63b1519243d732a7a1a9920274eb1703fe1ab9` |
 | Primary resource vector | [`resource ceiling`](artifacts/2026-09-14-g4-runtime-preflight-v9-handoff-complete/resource-ceiling.json), SHA-256 `0c387b4e1b9a3bda04281ed17dda5063fa6b34dc36c638c48da23163092d83d2` |
 | Controller parity | [`arm preflight`](artifacts/2026-09-14-g4-runtime-preflight-v9-handoff-complete/preflight.json), SHA-256 `9d6edcf8780cfa9bf1d7bec5557a2b6aa6979ecc5ea2c5eea93525c645ca48e1` |
+| Public handoff smoke | [`open synthetic execution`](artifacts/2026-09-14-g4-public-interface-smoke/), full packet/return/grade/interruption evidence; it validates interface mechanics only |
 | Grader return | `g4-lite-substantive-grade/2`; completed pass/negative returns require all assessments and identities, while early invalid/incomplete returns require assessment state and a stop reason |
 | Custodian interface | [G4 custodian brief](G4_CUSTODIAN_INTERFACE_BRIEF_V1.md), [public interface](G4_CUSTODIAN_PUBLIC_INTERFACE_V1.md), and [public authoring specification](G4_PUBLIC_AUTHORING_SPEC_V1.md); freeze and hash all three into a future authorization |
 | Authorization form | [G4 dispatch authorization template](G4_DISPATCH_AUTHORIZATION_TEMPLATE_V1.md); fill, freeze, and hash it from observed dispatch facts |

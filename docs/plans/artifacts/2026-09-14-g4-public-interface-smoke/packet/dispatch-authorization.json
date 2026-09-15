@@ -1,0 +1,82 @@
+{
+  "schema": "g4-development-public-dispatch-authorization/1",
+  "scope": "development-only open handoff smoke; not a protected evaluation or funding decision",
+  "dispatch_id": "g4-public-interface-smoke-001",
+  "release_revision": "9c2da4afbc7a281d8c057dab2e5035e35bfe82c7",
+  "executable_sha256": "9188bb798616666bd470fbf14b94dab37d79b11e41e8031a3da12ab3e51ed8bb",
+  "execute_permitted": true,
+  "public_artifacts": [
+    {
+      "path": "packet/G4_CUSTODIAN_INTERFACE_BRIEF_V1.md",
+      "sha256": "83d608a6a23e2f3aa577d803071b15d8b22376b67a82bb5e731ad19c44ad0196",
+      "byte_length": 2919
+    },
+    {
+      "path": "packet/G4_CUSTODIAN_PUBLIC_INTERFACE_V1.md",
+      "sha256": "e96a521a5e7557a50d6d8fb2240e6065f3394892cd443d437876cb65b0d54fb6",
+      "byte_length": 6907
+    },
+    {
+      "path": "packet/G4_DISPATCH_AUTHORIZATION_TEMPLATE_V1.md",
+      "sha256": "6264bf21dbe5856ff9ccec7b568ea891fe502280d30492affe2e94602a18ea7f",
+      "byte_length": 5380
+    },
+    {
+      "path": "packet/G4_PUBLIC_AUTHORING_SPEC_V1.md",
+      "sha256": "b8316b473b96a777709d0b4a64c626ea6c74dc92e6af41c4c7c8f4be2276ef05",
+      "byte_length": 6088
+    },
+    {
+      "path": "packet/calibration-receipt.json",
+      "sha256": "5db6802f08d2ee3f934488820e63b1519243d732a7a1a9920274eb1703fe1ab9",
+      "byte_length": 852524
+    },
+    {
+      "path": "packet/g4-lite-pack-contract.md",
+      "sha256": "6007bf4a7bacfb689f1191d532fabe0980c2f5219ac33f2ba7adbe57e466dfaa",
+      "byte_length": 17253
+    },
+    {
+      "path": "packet/h0-runtime-identity.json",
+      "sha256": "82305ac8f91dbef8894a633c30790597ddcf3f0c8996703a4e576e0e2d6d9474",
+      "byte_length": 343
+    },
+    {
+      "path": "packet/h1-runtime-identity.json",
+      "sha256": "d2a18ab5870890a15ed12a12217344f3d3f8c756647697a39617a55c7775526b",
+      "byte_length": 342
+    },
+    {
+      "path": "packet/hg-runtime-identity.json",
+      "sha256": "87de5de8daea5c10efd3038ea1ff0dc6e1186a881a141ed0057cf0032e7a3140",
+      "byte_length": 355
+    },
+    {
+      "path": "packet/operator-bindings.json",
+      "sha256": "121050d8cecd5a9986de22497264da53ca9fbb2588292896dc7bd8bb9947424d",
+      "byte_length": 363
+    },
+    {
+      "path": "packet/procedure.json",
+      "sha256": "93a5535e78b6db5c023dcefd94f9a9d8dd921a18f7338526112df8913b2bcc63",
+      "byte_length": 1484
+    },
+    {
+      "path": "packet/resource-ceiling.json",
+      "sha256": "0c387b4e1b9a3bda04281ed17dda5063fa6b34dc36c638c48da23163092d83d2",
+      "byte_length": 210
+    }
+  ],
+  "custodian_id": "development-custodian",
+  "substantive_grader": "development-grader",
+  "protected_root": "protected/",
+  "grader_read_only_mapping": "grader-read-only/mapping.json",
+  "resource_and_provider_limits": "packet/resource-ceiling.json; 0 calls; 0 cents",
+  "stop_conditions": [
+    "HASH_MISMATCH",
+    "RESOURCE_TRUNCATION",
+    "CANCELLATION",
+    "EXPOSURE_FAILURE",
+    "MISSING_COST"
+  ]
+}

@@ -1,0 +1,664 @@
+{
+  "schema": "development-only-g4-resource-ledger-manifest/1",
+  "source_receipt_sha256": "86b3cbc04f60046cc15c6697b31dc52041aaaf07d9420d6dacb83a09133c65fa",
+  "budget": {
+    "Expansions": 4,
+    "RuleApplications": 128,
+    "Candidates": 256,
+    "HistoryBytes": 65536,
+    "CheckAssignments": 4096,
+    "MaxStates": 1024,
+    "MaxTermNodes": 1024
+  },
+  "setup_assignments": 96,
+  "cells": [
+    {
+      "episode_id": "development-protected-00",
+      "arm": "H0",
+      "rule_applications": 12,
+      "candidates": 26,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 48875
+    },
+    {
+      "episode_id": "development-protected-00",
+      "arm": "H1",
+      "rule_applications": 12,
+      "candidates": 37,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 28333
+    },
+    {
+      "episode_id": "development-protected-00",
+      "arm": "HG",
+      "rule_applications": 15,
+      "candidates": 33,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 35250
+    },
+    {
+      "episode_id": "development-protected-01",
+      "arm": "H0",
+      "rule_applications": 12,
+      "candidates": 26,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 13125
+    },
+    {
+      "episode_id": "development-protected-01",
+      "arm": "H1",
+      "rule_applications": 12,
+      "candidates": 37,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 20125
+    },
+    {
+      "episode_id": "development-protected-01",
+      "arm": "HG",
+      "rule_applications": 15,
+      "candidates": 33,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 25291
+    },
+    {
+      "episode_id": "development-protected-02",
+      "arm": "H0",
+      "rule_applications": 12,
+      "candidates": 26,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 12083
+    },
+    {
+      "episode_id": "development-protected-02",
+      "arm": "H1",
+      "rule_applications": 12,
+      "candidates": 37,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 18625
+    },
+    {
+      "episode_id": "development-protected-02",
+      "arm": "HG",
+      "rule_applications": 15,
+      "candidates": 33,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 24125
+    },
+    {
+      "episode_id": "development-protected-03",
+      "arm": "H0",
+      "rule_applications": 12,
+      "candidates": 26,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 11542
+    },
+    {
+      "episode_id": "development-protected-03",
+      "arm": "H1",
+      "rule_applications": 12,
+      "candidates": 37,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 20458
+    },
+    {
+      "episode_id": "development-protected-03",
+      "arm": "HG",
+      "rule_applications": 15,
+      "candidates": 33,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 22750
+    },
+    {
+      "episode_id": "development-protected-04",
+      "arm": "H0",
+      "rule_applications": 12,
+      "candidates": 26,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 12583
+    },
+    {
+      "episode_id": "development-protected-04",
+      "arm": "H1",
+      "rule_applications": 12,
+      "candidates": 37,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 19666
+    },
+    {
+      "episode_id": "development-protected-04",
+      "arm": "HG",
+      "rule_applications": 15,
+      "candidates": 33,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 23458
+    },
+    {
+      "episode_id": "development-protected-05",
+      "arm": "H0",
+      "rule_applications": 12,
+      "candidates": 26,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 13167
+    },
+    {
+      "episode_id": "development-protected-05",
+      "arm": "H1",
+      "rule_applications": 12,
+      "candidates": 37,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 18833
+    },
+    {
+      "episode_id": "development-protected-05",
+      "arm": "HG",
+      "rule_applications": 15,
+      "candidates": 33,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 24167
+    },
+    {
+      "episode_id": "development-protected-06",
+      "arm": "H0",
+      "rule_applications": 12,
+      "candidates": 26,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 14750
+    },
+    {
+      "episode_id": "development-protected-06",
+      "arm": "H1",
+      "rule_applications": 12,
+      "candidates": 37,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 17666
+    },
+    {
+      "episode_id": "development-protected-06",
+      "arm": "HG",
+      "rule_applications": 15,
+      "candidates": 33,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 22333
+    },
+    {
+      "episode_id": "development-protected-07",
+      "arm": "H0",
+      "rule_applications": 12,
+      "candidates": 26,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 20792
+    },
+    {
+      "episode_id": "development-protected-07",
+      "arm": "H1",
+      "rule_applications": 12,
+      "candidates": 37,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 19041
+    },
+    {
+      "episode_id": "development-protected-07",
+      "arm": "HG",
+      "rule_applications": 15,
+      "candidates": 33,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 22959
+    },
+    {
+      "episode_id": "development-protected-08",
+      "arm": "H0",
+      "rule_applications": 12,
+      "candidates": 26,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 12750
+    },
+    {
+      "episode_id": "development-protected-08",
+      "arm": "H1",
+      "rule_applications": 12,
+      "candidates": 37,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 18875
+    },
+    {
+      "episode_id": "development-protected-08",
+      "arm": "HG",
+      "rule_applications": 15,
+      "candidates": 33,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 22833
+    },
+    {
+      "episode_id": "development-protected-09",
+      "arm": "H0",
+      "rule_applications": 12,
+      "candidates": 26,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 12792
+    },
+    {
+      "episode_id": "development-protected-09",
+      "arm": "H1",
+      "rule_applications": 12,
+      "candidates": 37,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 22791
+    },
+    {
+      "episode_id": "development-protected-09",
+      "arm": "HG",
+      "rule_applications": 15,
+      "candidates": 33,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 25792
+    },
+    {
+      "episode_id": "development-protected-10",
+      "arm": "H0",
+      "rule_applications": 12,
+      "candidates": 26,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 12750
+    },
+    {
+      "episode_id": "development-protected-10",
+      "arm": "H1",
+      "rule_applications": 12,
+      "candidates": 37,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 20667
+    },
+    {
+      "episode_id": "development-protected-10",
+      "arm": "HG",
+      "rule_applications": 15,
+      "candidates": 33,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 26250
+    },
+    {
+      "episode_id": "development-protected-11",
+      "arm": "H0",
+      "rule_applications": 12,
+      "candidates": 26,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 13167
+    },
+    {
+      "episode_id": "development-protected-11",
+      "arm": "H1",
+      "rule_applications": 12,
+      "candidates": 37,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 19667
+    },
+    {
+      "episode_id": "development-protected-11",
+      "arm": "HG",
+      "rule_applications": 15,
+      "candidates": 33,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 24666
+    },
+    {
+      "episode_id": "development-protected-12",
+      "arm": "H0",
+      "rule_applications": 8,
+      "candidates": 25,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 12083
+    },
+    {
+      "episode_id": "development-protected-12",
+      "arm": "H1",
+      "rule_applications": 8,
+      "candidates": 25,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 11208
+    },
+    {
+      "episode_id": "development-protected-12",
+      "arm": "HG",
+      "rule_applications": 10,
+      "candidates": 29,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 16875
+    },
+    {
+      "episode_id": "development-protected-13",
+      "arm": "H0",
+      "rule_applications": 8,
+      "candidates": 25,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 12042
+    },
+    {
+      "episode_id": "development-protected-13",
+      "arm": "H1",
+      "rule_applications": 8,
+      "candidates": 25,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 13875
+    },
+    {
+      "episode_id": "development-protected-13",
+      "arm": "HG",
+      "rule_applications": 10,
+      "candidates": 29,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 21708
+    },
+    {
+      "episode_id": "development-protected-14",
+      "arm": "H0",
+      "rule_applications": 8,
+      "candidates": 25,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 13792
+    },
+    {
+      "episode_id": "development-protected-14",
+      "arm": "H1",
+      "rule_applications": 8,
+      "candidates": 25,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 13541
+    },
+    {
+      "episode_id": "development-protected-14",
+      "arm": "HG",
+      "rule_applications": 10,
+      "candidates": 29,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 21167
+    },
+    {
+      "episode_id": "development-protected-15",
+      "arm": "H0",
+      "rule_applications": 8,
+      "candidates": 25,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 15167
+    },
+    {
+      "episode_id": "development-protected-15",
+      "arm": "H1",
+      "rule_applications": 8,
+      "candidates": 25,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 13917
+    },
+    {
+      "episode_id": "development-protected-15",
+      "arm": "HG",
+      "rule_applications": 10,
+      "candidates": 29,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 20750
+    },
+    {
+      "episode_id": "development-protected-16",
+      "arm": "H0",
+      "rule_applications": 8,
+      "candidates": 25,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 14375
+    },
+    {
+      "episode_id": "development-protected-16",
+      "arm": "H1",
+      "rule_applications": 8,
+      "candidates": 25,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 13250
+    },
+    {
+      "episode_id": "development-protected-16",
+      "arm": "HG",
+      "rule_applications": 10,
+      "candidates": 29,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 20709
+    },
+    {
+      "episode_id": "development-protected-17",
+      "arm": "H0",
+      "rule_applications": 8,
+      "candidates": 25,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 13917
+    },
+    {
+      "episode_id": "development-protected-17",
+      "arm": "H1",
+      "rule_applications": 8,
+      "candidates": 25,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 13375
+    },
+    {
+      "episode_id": "development-protected-17",
+      "arm": "HG",
+      "rule_applications": 10,
+      "candidates": 29,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 20875
+    },
+    {
+      "episode_id": "development-protected-18",
+      "arm": "H0",
+      "rule_applications": 12,
+      "candidates": 26,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 17667
+    },
+    {
+      "episode_id": "development-protected-18",
+      "arm": "H1",
+      "rule_applications": 12,
+      "candidates": 37,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 27041
+    },
+    {
+      "episode_id": "development-protected-18",
+      "arm": "HG",
+      "rule_applications": 15,
+      "candidates": 33,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 34750
+    },
+    {
+      "episode_id": "development-protected-19",
+      "arm": "H0",
+      "rule_applications": 12,
+      "candidates": 26,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 17750
+    },
+    {
+      "episode_id": "development-protected-19",
+      "arm": "H1",
+      "rule_applications": 12,
+      "candidates": 37,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 26416
+    },
+    {
+      "episode_id": "development-protected-19",
+      "arm": "HG",
+      "rule_applications": 15,
+      "candidates": 33,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 32167
+    },
+    {
+      "episode_id": "development-protected-20",
+      "arm": "H0",
+      "rule_applications": 12,
+      "candidates": 26,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 17583
+    },
+    {
+      "episode_id": "development-protected-20",
+      "arm": "H1",
+      "rule_applications": 12,
+      "candidates": 37,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 26333
+    },
+    {
+      "episode_id": "development-protected-20",
+      "arm": "HG",
+      "rule_applications": 15,
+      "candidates": 33,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 32875
+    },
+    {
+      "episode_id": "development-protected-21",
+      "arm": "H0",
+      "rule_applications": 12,
+      "candidates": 26,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 18042
+    },
+    {
+      "episode_id": "development-protected-21",
+      "arm": "H1",
+      "rule_applications": 12,
+      "candidates": 37,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 26541
+    },
+    {
+      "episode_id": "development-protected-21",
+      "arm": "HG",
+      "rule_applications": 15,
+      "candidates": 33,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 32708
+    },
+    {
+      "episode_id": "development-protected-22",
+      "arm": "H0",
+      "rule_applications": 12,
+      "candidates": 26,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 18834
+    },
+    {
+      "episode_id": "development-protected-22",
+      "arm": "H1",
+      "rule_applications": 12,
+      "candidates": 37,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 25584
+    },
+    {
+      "episode_id": "development-protected-22",
+      "arm": "HG",
+      "rule_applications": 15,
+      "candidates": 33,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 38667
+    },
+    {
+      "episode_id": "development-protected-23",
+      "arm": "H0",
+      "rule_applications": 12,
+      "candidates": 26,
+      "history_bytes": 0,
+      "check_assignments": 16,
+      "elapsed_nanos": 17709
+    },
+    {
+      "episode_id": "development-protected-23",
+      "arm": "H1",
+      "rule_applications": 12,
+      "candidates": 37,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 25250
+    },
+    {
+      "episode_id": "development-protected-23",
+      "arm": "HG",
+      "rule_applications": 15,
+      "candidates": 33,
+      "history_bytes": 244,
+      "check_assignments": 16,
+      "elapsed_nanos": 31916
+    }
+  ]
+}

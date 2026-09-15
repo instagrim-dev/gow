@@ -1,0 +1,21 @@
+{
+  "schema": "development-only-g4-execution-summary/1",
+  "source_receipt_sha256": "86b3cbc04f60046cc15c6697b31dc52041aaaf07d9420d6dacb83a09133c65fa",
+  "source_receipt_byte_length": 248311,
+  "arms": [
+    "H0",
+    "H1",
+    "HG"
+  ],
+  "episodes": 24,
+  "cells": 72,
+  "completions": {
+    "H0": 24,
+    "H1": 6,
+    "HG": 24
+  },
+  "assessment": "completed-protected-execution-unverified",
+  "custody_measured": false,
+  "cpu_measured": false,
+  "scope": "open synthetic handoff smoke; not a protected result"
+}

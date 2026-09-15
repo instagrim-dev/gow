@@ -1,0 +1,36 @@
+{
+  "schema": "g4-custodian-return/1",
+  "dispatch_id": "g4-public-interface-smoke-001",
+  "release_revision": "9c2da4afbc7a281d8c057dab2e5035e35bfe82c7",
+  "executable_sha256": "9188bb798616666bd470fbf14b94dab37d79b11e41e8031a3da12ab3e51ed8bb",
+  "procedure": {
+    "sha256": "93a5535e78b6db5c023dcefd94f9a9d8dd921a18f7338526112df8913b2bcc63",
+    "byte_length": 1484
+  },
+  "manifest": {
+    "sha256": "7f5ba6249299c682c95d0c33a48a8029bd45b7e92e22bc89430ad39a4d5bcc38",
+    "byte_length": 3543
+  },
+  "pre_execution_seal": {
+    "sha256": "a7d8645c478fbba658860ac679283119634576e0af98a2f282e85c538d273f43",
+    "byte_length": 801
+  },
+  "execution_receipt": {
+    "sha256": "86b3cbc04f60046cc15c6697b31dc52041aaaf07d9420d6dacb83a09133c65fa",
+    "byte_length": 248311
+  },
+  "observed_metadata": {
+    "sha256": "acd03db9da79c6fe4324e66e85b24624d1f916841b75e8b906884e029b2ed499",
+    "byte_length": 775
+  },
+  "execution_binding": {
+    "sha256": "8538a531459f99c3ae20aecb84e7ee197ba1cc57f212c22c995ba3e8cd6e8f8b",
+    "byte_length": 358
+  },
+  "completion_state": "completed",
+  "custody_limitations": [
+    "DEVELOPMENT_ONLY_OPEN_MATERIAL",
+    "CUSTODY_UNVERIFIED"
+  ],
+  "blocked_actions": []
+}

@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "command": "g4 grade validate",
+  "judgment": {
+    "schema": "g4-lite-substantive-grade/2",
+    "graded_at": "2026-09-15T05:44:25.010561Z",
+    "grader_role": "substantive_protected_evidence_grader",
+    "return_scope": "protected_evidence_inspected_content_free_return",
+    "manifest": {
+      "sha256": "7f5ba6249299c682c95d0c33a48a8029bd45b7e92e22bc89430ad39a4d5bcc38",
+      "byte_length": 3543,
+      "locator": "protected/g4-pack.json"
+    },
+    "execution_receipt": {
+      "sha256": "86b3cbc04f60046cc15c6697b31dc52041aaaf07d9420d6dacb83a09133c65fa",
+      "byte_length": 248311,
+      "locator": "protected/execution-receipt.json"
+    },
+    "execution_binding": {
+      "sha256": "8538a531459f99c3ae20aecb84e7ee197ba1cc57f212c22c995ba3e8cd6e8f8b",
+      "byte_length": 358,
+      "locator": "protected/execution-binding.json"
+    },
+    "checks": {
+      "answers_assessed": true,
+      "result_quality_assessed": true,
+      "resource_compliance_assessed": true,
+      "spending_arithmetic_assessed": true
+    },
+    "assessment_states": {
+      "answers": "ASSESSED",
+      "result_quality": "ASSESSED",
+      "resource_compliance": "ASSESSED",
+      "spending_arithmetic": "ASSESSED",
+      "construction_route_evidence": "ASSESSED"
+    },
+    "verdict": "INCONCLUSIVE_INCOMPLETE"
+  }
+}

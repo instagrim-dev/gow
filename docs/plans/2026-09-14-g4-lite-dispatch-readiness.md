@@ -114,6 +114,17 @@ now requires executable-bound `/2` records. This completes release and
 controller-identity preparation for a fresh `/3` custodian pack; it remains
 non-authorizing.
 
+The [public-interface handoff smoke](artifacts/2026-09-14-g4-public-interface-smoke/)
+then used that exact binary with an openly retained synthetic 12/6/6 fixture.
+It constructed the packet, passed arm preflight, validated/sealed/inspected the
+manifest, executed and bound a 72-cell receipt, validated the completed
+custodian return, and gave the development grader the mapped inputs needed for
+its content-free `/2` return. A separate SIGKILL after pending-receipt
+allocation left no published receipt; the honest `execution_interrupted` return
+validated. This is a handoff regression test only: its required custody strings
+are schema fixtures, the material is implementation-exposed, and it makes no
+protected-evaluation, custody, grading, spending, or funding claim.
+
 ## Required dispatch sequence
 
 1. Freeze and retain a fresh procedure before protected authoring, then pin

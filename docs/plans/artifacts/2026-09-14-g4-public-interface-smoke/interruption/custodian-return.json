@@ -1,0 +1,26 @@
+{
+  "schema": "g4-custodian-return/1",
+  "dispatch_id": "g4-public-interface-smoke-001",
+  "release_revision": "9c2da4afbc7a281d8c057dab2e5035e35bfe82c7",
+  "executable_sha256": "9188bb798616666bd470fbf14b94dab37d79b11e41e8031a3da12ab3e51ed8bb",
+  "procedure": {
+    "sha256": "93a5535e78b6db5c023dcefd94f9a9d8dd921a18f7338526112df8913b2bcc63",
+    "byte_length": 1484
+  },
+  "manifest": {
+    "sha256": "7f5ba6249299c682c95d0c33a48a8029bd45b7e92e22bc89430ad39a4d5bcc38",
+    "byte_length": 3543
+  },
+  "pre_execution_seal": {
+    "sha256": "a7d8645c478fbba658860ac679283119634576e0af98a2f282e85c538d273f43",
+    "byte_length": 801
+  },
+  "completion_state": "execution_interrupted",
+  "custody_limitations": [
+    "DEVELOPMENT_ONLY_OPEN_MATERIAL",
+    "CUSTODY_UNVERIFIED"
+  ],
+  "blocked_actions": [
+    "HARD_TERMINATION_BEFORE_RECEIPT_PUBLICATION"
+  ]
+}

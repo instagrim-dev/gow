@@ -1,0 +1,101 @@
+{
+  "schema": "g4-lite-pack/3",
+  "pack_id": "g4-development-public-interface-smoke-001",
+  "episode_manifest": {
+    "sha256": "3680673c1663cec21b972012fc32b2626a7384f499d8442aaf0dcdc0cb1d0ed8",
+    "byte_length": 26029,
+    "locator": "protected/episodes.json"
+  },
+  "answer_manifest": {
+    "sha256": "66c8b02c55cde0e65e75c5c1882d89fb19f2b41eb1de6783a2411a0e25932eea",
+    "byte_length": 2365,
+    "locator": "protected/answers.json"
+  },
+  "calibration_manifest": {
+    "sha256": "5db6802f08d2ee3f934488820e63b1519243d732a7a1a9920274eb1703fe1ab9",
+    "byte_length": 852524,
+    "locator": "packet/calibration-receipt.json"
+  },
+  "generation_procedure_manifest": {
+    "sha256": "93a5535e78b6db5c023dcefd94f9a9d8dd921a18f7338526112df8913b2bcc63",
+    "byte_length": 1484,
+    "locator": "packet/procedure.json"
+  },
+  "custody": {
+    "episode_author_exposure": "unexposed_to_implementation_cases",
+    "implementer_access": "no_protected_content",
+    "answer_separation": "separate_answer_manifest",
+    "record_ref": "protected/custody-access.json"
+  },
+  "population": {
+    "total": 24,
+    "history_informative": 12,
+    "history_low_value": 6,
+    "history_misleading": 6,
+    "min_families": 2
+  },
+  "arms": {
+    "h0": {
+      "controller_id": "catalog-order/1",
+      "snapshot": {
+        "sha256": "82305ac8f91dbef8894a633c30790597ddcf3f0c8996703a4e576e0e2d6d9474",
+        "byte_length": 343,
+        "locator": "packet/h0-runtime-identity.json"
+      }
+    },
+    "h1": {
+      "controller_id": "h1-frequency/0",
+      "snapshot": {
+        "sha256": "d2a18ab5870890a15ed12a12217344f3d3f8c756647697a39617a55c7775526b",
+        "byte_length": 342,
+        "locator": "packet/h1-runtime-identity.json"
+      }
+    },
+    "hg": {
+      "controller_id": "shape-selector/2-budgeted/1",
+      "snapshot": {
+        "sha256": "87de5de8daea5c10efd3038ea1ff0dc6e1186a881a141ed0057cf0032e7a3140",
+        "byte_length": 355,
+        "locator": "packet/hg-runtime-identity.json"
+      }
+    },
+    "model_config_sha256": "72fd70df38e3051a202ee08376bc1dd47be20cc2b3b9f2f45b95b52eb8172be5",
+    "tool_catalog_sha256": "f84ea2c33b6c46ffcbaf4ddefbb0ecc027c1d4a77917a672543c41c9f3175bcb",
+    "checker_version": "finite-equivalence-checker/1",
+    "resource_ceiling": {
+      "sha256": "0c387b4e1b9a3bda04281ed17dda5063fa6b34dc36c638c48da23163092d83d2",
+      "byte_length": 210,
+      "locator": "packet/resource-ceiling.json"
+    },
+    "custody_outside_ceiling": true,
+    "h1_review_ref": "development-only://h1-review/complete",
+    "h1_reviewer_role": "non_implementer"
+  },
+  "run_design": {
+    "runs_per_cell": 1,
+    "seed_policy": "single_run_budget_constrained",
+    "budget_constraint_ref": "protected/run-design.json"
+  },
+  "endpoint": {
+    "kind": "exact_objective_within_same_task_directed_resource_cap/1",
+    "includes_target_cost": true,
+    "same_task_directed_resource_ceiling": true
+  },
+  "spending_rule": {
+    "max_invalid_certified": 0,
+    "min_hg_over_h1": 3,
+    "max_hg_loss_low_and_misleading": 1,
+    "min_difference_families": 2,
+    "require_hg_at_least_h0": true,
+    "decision_arithmetic": "run_summed_exact/1",
+    "control_loss_arithmetic": "net_control_stratum_run_summed/1",
+    "family_advantage_arithmetic": "informative_positive_run_summed/1",
+    "task_directed_resources_only": true
+  },
+  "execution": {
+    "resource_ceiling_ref": "packet/resource-ceiling.json",
+    "provider_call_ceiling": 0,
+    "provider_spend_cents": 0,
+    "approval_ref": "packet/dispatch-authorization.json"
+  }
+}

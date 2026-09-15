@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "command": "g4 pack validate",
+  "manifest_sha256": "7f5ba6249299c682c95d0c33a48a8029bd45b7e92e22bc89430ad39a4d5bcc38",
+  "manifest_bytes": 3543,
+  "pack_id": "g4-development-public-interface-smoke-001",
+  "validation": {
+    "structurally_valid": true,
+    "readiness": "PREPARED_NOT_AUTHORIZED",
+    "protected_execution_authorized": false,
+    "custody_verified": false,
+    "blockers": [
+      "protected execution is not authorized by this manifest or its seal",
+      "custody declarations are retained but not independently verified",
+      "approval reference is declared but not verified by this command"
+    ]
+  }
+}
