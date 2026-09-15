@@ -310,6 +310,14 @@ func TestG4V3ExecuteBindsAndAppliesFrozenGenerationProcedure(t *testing.T) {
 		t.Fatal(err)
 	}
 	var stdout, stderr bytes.Buffer
+	if code := execute(context.Background(), []string{"--json", "g4", "execution-preflight", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--h0-snapshot", h0Snapshot, "--h1-snapshot", h1Snapshot, "--hg-snapshot", hgSnapshot, "--generation-procedure", procedurePath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("v3 execution-preflight did not bind the frozen procedure: %d %s %s", code, stdout.String(), stderr.String())
+	}
+	if _, err := os.Stat(out); !os.IsNotExist(err) {
+		t.Fatalf("v3 execution-preflight created a receipt: %v", err)
+	}
+	stdout.Reset()
+	stderr.Reset()
 	if code := execute(context.Background(), []string{"--json", "g4", "execute", "--manifest", manifest, "--episode-pack", episodesPath, "--resource-ceiling", resources, "--h0-snapshot", h0Snapshot, "--h1-snapshot", h1Snapshot, "--hg-snapshot", hgSnapshot, "--generation-procedure", procedurePath, "--out", out}, &stdout, &stderr); code != 0 {
 		t.Fatalf("v3 execute did not bind the frozen procedure: %d %s %s", code, stdout.String(), stderr.String())
 	}
