@@ -673,7 +673,7 @@ func newG4Command(stdout io.Writer, opts *rootOptions) *cobra.Command {
 	_ = gradeValidate.MarkFlagRequired("input")
 	grade.AddCommand(gradeValidate)
 	pack.AddCommand(validate, seal, bind, inspect)
-	cmd.AddCommand(runtimeIdentity, calibrate, calibrateProcedure, artifactIdentity, preflight, preflightExecution, execute, custodianReturn, grade)
+	cmd.AddCommand(runtimeIdentity, calibrate, calibrateProcedure, artifactIdentity, preflight, preflightExecution, execute, custodianReturn, grade, newG4AuthoringMaterializeCommand(stdout))
 	cmd.AddCommand(pack)
 	return cmd
 }

@@ -139,6 +139,51 @@ func TestUnadmittedRuleRefused(t *testing.T) {
 	}
 }
 
+func TestApplyAtPathDerivesUniqueSuccessor(t *testing.T) {
+	d4a := dom(4, "a")
+	rule := admit(t, "add-zero",
+		finite.Binary{Op: finite.OpAdd, X: finite.Var{Name: "a"}, Y: finite.Const{Value: 0}},
+		finite.Var{Name: "a"}, d4a)
+	d := dom(4, "x")
+	start := finite.Unary{Op: finite.OpNot, X: finite.Binary{Op: finite.OpAdd, X: finite.Var{Name: "x"}, Y: finite.Const{Value: 0}}}
+	after, err := rule.ApplyAtPath(start, d, false, []int{0}, []StepBinding{{Variable: "a", Term: finite.Var{Name: "x"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := finite.Render(after); got != "not(x)" {
+		t.Fatalf("derived target = %q, want not(x)", got)
+	}
+	if _, err := rule.ApplyAtPath(start, d, false, nil, []StepBinding{{Variable: "a", Term: finite.Var{Name: "x"}}}); err == nil {
+		t.Fatal("wrong application location accepted")
+	}
+}
+
+func TestReverseApplicationWithUnboundTargetRequiresConstruction(t *testing.T) {
+	d4a := dom(4, "a")
+	rule := admit(t, "xor-self-zero",
+		finite.Binary{Op: finite.OpXor, X: finite.Var{Name: "a"}, Y: finite.Var{Name: "a"}},
+		finite.Const{Value: 0}, d4a)
+	d := dom(4, "x")
+	if !rule.RequiresExplicitConstruction(true) {
+		t.Fatal("reverse zero expansion must require an authored construction")
+	}
+	if _, err := rule.ApplyAtPath(finite.Const{Value: 0}, d, true, nil, nil); err == nil {
+		t.Fatal("host derived an underdetermined target")
+	}
+	after := finite.Binary{Op: finite.OpXor, X: finite.Var{Name: "x"}, Y: finite.Var{Name: "x"}}
+	ok, err := rule.ReplaysOneStepWithBindings(finite.Const{Value: 0}, after, d, true, []StepBinding{{Variable: "a", Term: finite.Var{Name: "x"}}})
+	if err != nil || !ok {
+		t.Fatalf("explicit construction did not replay: ok=%v err=%v", ok, err)
+	}
+	constructed, err := rule.ConstructAtPathWithBindings(finite.Const{Value: 0}, d, true, nil, []StepBinding{{Variable: "a", Term: finite.Var{Name: "x"}}})
+	if err != nil || finite.Render(constructed) != "xor(x, x)" {
+		t.Fatalf("bound construction = %v, err=%v", constructed, err)
+	}
+	if _, err := rule.ConstructAtPathWithBindings(finite.Const{Value: 0}, d, true, nil, nil); err == nil {
+		t.Fatal("construction accepted a missing erased-metavariable binding")
+	}
+}
+
 // Budget exhaustion is reported as best-found, never as optimality; the
 // endpoint replay still runs on whatever was found.
 func TestBudgetStopIsBestFoundNotOptimal(t *testing.T) {

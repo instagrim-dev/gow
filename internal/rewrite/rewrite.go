@@ -517,6 +517,192 @@ func (r Rule) ReplaysOneStepWithBindings(before, after finite.Expr, d finite.Dom
 	return r.replaysOneStep(before, after, d, reverse, &bindings)
 }
 
+// RequiresExplicitConstruction reports whether the oriented rule's target has
+// metavariables that matching the source cannot bind. Such an application is
+// not uniquely determined by rule, direction, and location alone; an author
+// must provide the constructed target rather than letting the host invent it.
+func (r Rule) RequiresExplicitConstruction(reverse bool) bool {
+	source, target := r.lhs, r.rhs
+	if reverse {
+		source, target = target, source
+	}
+	sourceVars := freeVars(source)
+	for name := range freeVars(target) {
+		if !sourceVars[name] {
+			return true
+		}
+	}
+	return false
+}
+
+// ApplyAtPath derives the unique successor for one oriented positional rule
+// application. Path components are child indexes: 0 for a unary child or a
+// binary left child, and 1 for a binary right child. It refuses rules whose
+// target contains an unbound metavariable; those require an explicitly
+// authored construction checked through ReplaysOneStepWithBindings.
+func (r Rule) ApplyAtPath(before finite.Expr, d finite.Domain, reverse bool, path []int, bindings []StepBinding) (finite.Expr, error) {
+	if defects := finite.ValidateExpr(before, d); len(defects) > 0 {
+		return nil, fmt.Errorf("invalid rewrite source: %v", defects)
+	}
+	if err := r.ValidateForDomain(d); err != nil {
+		return nil, err
+	}
+	oriented := r
+	if reverse {
+		oriented.lhs, oriented.rhs = r.rhs, r.lhs
+	}
+	if r.RequiresExplicitConstruction(reverse) {
+		return nil, fmt.Errorf("oriented rule %q does not uniquely determine its target", r.name)
+	}
+	root := indexTerm(before, nil)
+	at := root
+	ancestors := make([]ancestor, 0, len(path))
+	for depth, child := range path {
+		if child != 0 && child != 1 {
+			return nil, fmt.Errorf("path component %d is %d; only 0 and 1 are valid", depth, child)
+		}
+		switch node := at.expr.(type) {
+		case finite.Unary:
+			if child != 0 {
+				return nil, fmt.Errorf("path component %d selects child 1 of a unary expression", depth)
+			}
+			ancestors = append(ancestors, ancestor{expr: node})
+			at = at.x
+		case finite.Binary:
+			ancestors = append(ancestors, ancestor{expr: node, right: child == 1})
+			if child == 0 {
+				at = at.x
+			} else {
+				at = at.y
+			}
+		default:
+			return nil, fmt.Errorf("path continues through a leaf at component %d", depth)
+		}
+	}
+	actual := map[string]*termInfo{}
+	if !matchTerm(oriented.lhs, at, d, actual, nil) {
+		return nil, fmt.Errorf("rule %q does not match the expression at the declared path", r.name)
+	}
+	if !bindingsMatch(actual, bindings) {
+		return nil, fmt.Errorf("reported substitutions do not equal the rule match")
+	}
+	remaining := finite.MaxExprNodes - (root.nodes - at.nodes)
+	depthBounded := false
+	if !measureSubstitution(oriented.rhs, actual, &remaining, len(ancestors), &depthBounded, nil) {
+		return nil, fmt.Errorf("derived target exceeds expression bounds")
+	}
+	next := instantiate(oriented.rhs, actual, d, nil)
+	for i := len(ancestors) - 1; i >= 0; i-- {
+		parent := ancestors[i]
+		switch node := parent.expr.(type) {
+		case finite.Unary:
+			next = finite.Unary{Op: node.Op, X: next}
+		case finite.Binary:
+			if parent.right {
+				next = finite.Binary{Op: node.Op, X: node.X, Y: next}
+			} else {
+				next = finite.Binary{Op: node.Op, X: next, Y: node.Y}
+			}
+		}
+	}
+	return next, nil
+}
+
+// ReplaysAtPathWithBindings checks an explicitly authored target at one exact
+// location. Unlike ApplyAtPath it supports an oriented rule whose target has
+// metavariables absent from its source, but only when the reported bindings
+// provide every metavariable used by the admitted equality.
+func (r Rule) ReplaysAtPathWithBindings(before, after finite.Expr, d finite.Domain, reverse bool, path []int, bindings []StepBinding) (bool, error) {
+	next, ok, err := r.constructAtPathWithBindings(before, d, reverse, path, bindings)
+	if err != nil || !ok {
+		return false, err
+	}
+	return finite.Render(next) == finite.Render(after), nil
+}
+
+// ConstructAtPathWithBindings constructs the exact successor selected by an
+// admitted rule, direction, location, and complete model-authored binding set.
+// Unlike ApplyAtPath it can construct an oriented target containing a
+// metavariable erased from the source, but it never invents that value: every
+// metavariable from both sides must be supplied and agree with the source
+// match. This is deterministic construction, not rule or path search.
+func (r Rule) ConstructAtPathWithBindings(before finite.Expr, d finite.Domain, reverse bool, path []int, bindings []StepBinding) (finite.Expr, error) {
+	next, ok, err := r.constructAtPathWithBindings(before, d, reverse, path, bindings)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, fmt.Errorf("rule %q, path, and reported substitutions do not match the source", r.name)
+	}
+	return next, nil
+}
+
+func (r Rule) constructAtPathWithBindings(before finite.Expr, d finite.Domain, reverse bool, path []int, bindings []StepBinding) (finite.Expr, bool, error) {
+	if defects := finite.ValidateExpr(before, d); len(defects) > 0 {
+		return nil, false, fmt.Errorf("invalid replay source: %v", defects)
+	}
+	if err := r.ValidateForDomain(d); err != nil {
+		return nil, false, err
+	}
+	oriented := r
+	if reverse {
+		oriented.lhs, oriented.rhs = r.rhs, r.lhs
+	}
+	root := indexTerm(before, nil)
+	at := root
+	ancestors := make([]ancestor, 0, len(path))
+	for depth, child := range path {
+		if child != 0 && child != 1 {
+			return nil, false, fmt.Errorf("path component %d is %d; only 0 and 1 are valid", depth, child)
+		}
+		switch node := at.expr.(type) {
+		case finite.Unary:
+			if child != 0 {
+				return nil, false, fmt.Errorf("path component %d selects child 1 of a unary expression", depth)
+			}
+			ancestors = append(ancestors, ancestor{expr: node})
+			at = at.x
+		case finite.Binary:
+			ancestors = append(ancestors, ancestor{expr: node, right: child == 1})
+			if child == 0 {
+				at = at.x
+			} else {
+				at = at.y
+			}
+		default:
+			return nil, false, fmt.Errorf("path continues through a leaf at component %d", depth)
+		}
+	}
+	actual := map[string]*termInfo{}
+	if !matchTerm(oriented.lhs, at, d, actual, nil) {
+		return nil, false, nil
+	}
+	merged, ok := mergeBindings(actual, bindings, d, oriented.lhs, oriented.rhs)
+	if !ok {
+		return nil, false, nil
+	}
+	remaining := finite.MaxExprNodes - (root.nodes - at.nodes)
+	depthBounded := false
+	if !measureSubstitution(oriented.rhs, merged, &remaining, len(ancestors), &depthBounded, nil) {
+		return nil, false, fmt.Errorf("constructed target exceeds expression bounds")
+	}
+	next := instantiate(oriented.rhs, merged, d, nil)
+	for i := len(ancestors) - 1; i >= 0; i-- {
+		parent := ancestors[i]
+		switch node := parent.expr.(type) {
+		case finite.Unary:
+			next = finite.Unary{Op: node.Op, X: next}
+		case finite.Binary:
+			if parent.right {
+				next = finite.Binary{Op: node.Op, X: node.X, Y: next}
+			} else {
+				next = finite.Binary{Op: node.Op, X: next, Y: node.Y}
+			}
+		}
+	}
+	return next, true, nil
+}
+
 func (r Rule) replaysOneStep(before, after finite.Expr, d finite.Domain, reverse bool, expected *[]StepBinding) (bool, error) {
 	if defects := finite.ValidateExpr(before, d); len(defects) > 0 {
 		return false, fmt.Errorf("invalid replay source: %v", defects)
@@ -531,6 +717,9 @@ func (r Rule) replaysOneStep(before, after finite.Expr, d finite.Domain, reverse
 	if reverse {
 		oriented.lhs, oriented.rhs = r.rhs, r.lhs
 	}
+	if expected == nil && r.RequiresExplicitConstruction(reverse) {
+		return false, nil
+	}
 	target := finite.Render(after)
 	found := false
 	root := indexTerm(before, nil)
@@ -538,6 +727,13 @@ func (r Rule) replaysOneStep(before, after finite.Expr, d finite.Domain, reverse
 	walk = func(at *termInfo, path []ancestor) bool {
 		actual := map[string]*termInfo{}
 		if matchTerm(oriented.lhs, at, d, actual, nil) {
+			if expected != nil {
+				merged, ok := mergeBindings(actual, *expected, d, oriented.lhs, oriented.rhs)
+				if !ok {
+					goto descend
+				}
+				actual = merged
+			}
 			remaining := finite.MaxExprNodes - (root.nodes - at.nodes)
 			depthBounded := false
 			if measureSubstitution(oriented.rhs, actual, &remaining, len(path), &depthBounded, nil) {
@@ -555,12 +751,13 @@ func (r Rule) replaysOneStep(before, after finite.Expr, d finite.Domain, reverse
 						}
 					}
 				}
-				if finite.Render(next) == target && (expected == nil || bindingsMatch(actual, *expected)) {
+				if finite.Render(next) == target {
 					found = true
 					return false
 				}
 			}
 		}
+	descend:
 		if at.x != nil && !walk(at.x, append(path, ancestor{expr: at.expr})) {
 			return false
 		}
@@ -568,6 +765,36 @@ func (r Rule) replaysOneStep(before, after finite.Expr, d finite.Domain, reverse
 	}
 	walk(root, nil)
 	return found, nil
+}
+
+func mergeBindings(actual map[string]*termInfo, expected []StepBinding, d finite.Domain, left, right finite.Expr) (map[string]*termInfo, bool) {
+	required := freeVars(left)
+	for name := range freeVars(right) {
+		required[name] = true
+	}
+	if len(expected) != len(required) {
+		return nil, false
+	}
+	merged := make(map[string]*termInfo, len(required))
+	for name, term := range actual {
+		merged[name] = term
+	}
+	seen := make(map[string]bool, len(expected))
+	for _, binding := range expected {
+		if binding.Variable == "" || seen[binding.Variable] || !required[binding.Variable] || binding.Term == nil {
+			return nil, false
+		}
+		seen[binding.Variable] = true
+		if defects := finite.ValidateExpr(binding.Term, d); len(defects) > 0 {
+			return nil, false
+		}
+		term := indexTerm(binding.Term, nil)
+		if existing, ok := merged[binding.Variable]; ok && !equalTerms(existing, term, nil) {
+			return nil, false
+		}
+		merged[binding.Variable] = term
+	}
+	return merged, len(merged) == len(required)
 }
 
 func bindingsMatch(actual map[string]*termInfo, expected []StepBinding) bool {

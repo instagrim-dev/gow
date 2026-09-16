@@ -85,6 +85,23 @@ func Menu() map[string]ruleDef {
 	}
 }
 
+// AdmitMenuRule returns one warrant-admitted rule from the fixed G4 menu.
+// Authoring materializers use the same rule definitions and admission path as
+// execution, avoiding a second rule-semantics table at the transport layer.
+func AdmitMenuRule(name string) (rewrite.Rule, error) {
+	def, ok := Menu()[name]
+	if !ok {
+		return rewrite.Rule{}, fmt.Errorf("unknown G4 menu rule %q", name)
+	}
+	d := finite.Domain{Width: 4, Vars: append([]string(nil), def.domainVars...)}
+	cert := finite.AssessEquivalence(finite.Binding{Sentence: name, Domain: d}, def.lhs, def.rhs)
+	rule, defects := rewrite.AdmitRule(name, cert, def.lhs, def.rhs, d)
+	if len(defects) > 0 {
+		return rewrite.Rule{}, fmt.Errorf("G4 menu rule %q refused admission: %v", name, defects)
+	}
+	return rule, nil
+}
+
 // CellTrace retains execution independently of comparison validity. Result
 // includes the best candidate, rewrite path, endpoint certificate, and work
 // counters, even if a resource stop prevents a completion measurement.

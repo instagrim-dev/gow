@@ -1,0 +1,26 @@
+{
+  "schema": "g4-open-authoring-terminal-summary/1",
+  "disposition": "STOP_DELIVERY_BLOCKED",
+  "status": "verification_blocked",
+  "blocked_action": "AUTHORING_OUTPUT_FAILURE",
+  "admission_category": "MALFORMED_EXPRESSION_REPRESENTATION",
+  "http_status": 200,
+  "attempted_units": 1,
+  "validated_units": 0,
+  "staged_units": 0,
+  "unattempted_units": 23,
+  "assembled_staging_created": false,
+  "protected_response_contents_inspected": false,
+  "retained_record_identities": {
+    "stop": {"sha256": "66d3987af7c5062916d7ff623e16e3ee631ff1e51afb42904312374653ac5175", "byte_length": 359},
+    "progress": {"sha256": "d45415f4c1b28ca9b70cd12fd884a9a55cb770805711ee9e038a72f832489969", "byte_length": 326},
+    "unit_00_receipt": {"sha256": "2e37160b3ac239751fc3a61d797dd0ec3cd4cb58e9fdb33be456a5739c953693", "byte_length": 255}
+  },
+  "interpretation": "The response was rejected at expression admission. The underlying cause is unresolved. No admissible pack or G4 effectiveness result exists.",
+  "authority": {
+    "v7_retry_permitted": false,
+    "protected_response_inspection_permitted": false,
+    "protected_dispatch_permitted": false,
+    "open_only_interface_repair_permitted": true
+  }
+}

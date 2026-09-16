@@ -1,0 +1,47 @@
+{
+  "schema": "g4-open-authoring-runtime-binding/1",
+  "implementation": {
+    "build_source_identity": "32164bf1cac47949a29e655276d7b0132164c0f634de3f6c1c90969df99130b0",
+    "base_revision": "3e647806342dd8b22498aef4e0952ad237cd3d8f",
+    "vcs_modified": true,
+    "build_command": "go build -o .newf/reviews/2026-09-16-g4-typed-history-v7/original/newf-public-v7 ./cmd/newf",
+    "executable": {
+      "sha256": "cfe9f593af1c005d0d9581bac97409409b52032dda31272c42a2dccb69ccdcbf",
+      "byte_length": 19460242
+    }
+  },
+  "serving_path": {
+    "adapter": "ollama-api-chat",
+    "endpoint": "127.0.0.1:11434",
+    "model": "qwen2.5:7b-instruct",
+    "stream": false,
+    "keep_alive": "0s",
+    "response_constraint": "materialized response schema supplied in the Ollama format field",
+    "tool_schema_supplied": false,
+    "host_tool_dispatch": "absent"
+  },
+  "limits": {
+    "invocations": 24,
+    "generated_tokens_per_invocation": 2048,
+    "absolute_seconds_per_invocation": 45,
+    "aggregate_generated_tokens": 49152,
+    "aggregate_seconds": 1080,
+    "retries": 0
+  },
+  "artifacts": [
+    {"path": "docs/plans/G4_SHARDED_UNIT_REQUEST_TEMPLATE_V7.json", "sha256": "6cda8c101e32c51984b5eecc0114e41fb32747ae81879dedc4149b87f12fffbd", "byte_length": 7775},
+    {"path": "docs/plans/G4_SHARDED_AUTHORING_ENVELOPE_V7.md", "sha256": "96e7adebff6264f6480ae761ef235c3a0851b43e4ced0da0695da4a6aa4498cd", "byte_length": 1918},
+    {"path": "docs/plans/G4_ROUTE_SELECTION_SPEC_V7.md", "sha256": "b4a0cce2edbea2320d74a28752375d3ddcb9b8a31fe456bca76902571dc77d7c", "byte_length": 1498},
+    {"path": "docs/plans/G4_TYPED_HISTORY_SPEC_V7.md", "sha256": "1e280a3506d6e907d6b09cc2c74bb77c3691e9ca58bc095129fc2f02b50bfdb0", "byte_length": 2445},
+    {"path": "docs/plans/G4_SHARDED_AUTHORING_PLAN_V7.json", "sha256": "f4ea711053de5165939365083bb5edb575ed25edcd19539e81ab4ed40894b704", "byte_length": 3088},
+    {"path": "docs/plans/G4_SHARDED_AUTHORING_PROTOCOL_V7.md", "sha256": "06815fc30044b32fcc5b139becbff1c7b7b201a9a4c63af5c026f84961ffcee4", "byte_length": 2950},
+    {"path": "tools/g4_sharded_authoring_v7.py", "sha256": "4111edfff829f2e5afeaf245e152a9b1f9749cf89257034b493691e54d5f9091", "byte_length": 24382},
+    {"path": "tools/g4_sharded_unit_schema_v7.py", "sha256": "ab100b13e7822ce85dc9fb91a08e5b5d89b483834b988749c62cb59de7136537", "byte_length": 13795},
+    {"path": "tools/g4_sharded_unit_schema.py", "sha256": "53100b086f005c3b012f9436156d0db3f451fcf10bbc74f209765f6ac281cd54", "byte_length": 5627}
+  ],
+  "limitations": [
+    "The executable was built from a retained dirty source identity and is not attributed to clean HEAD.",
+    "The exact executable is retained outside Git; this record pins its bytes without embedding the binary.",
+    "Supplying a JSON Schema in this adapter field does not itself establish provider enforcement or domain correctness."
+  ]
+}

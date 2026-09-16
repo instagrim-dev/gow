@@ -1,0 +1,139 @@
+{
+  "schema": "g4-sharded-authoring-plan/7",
+  "unit_schema": "g4-authoring-unit-intent/5",
+  "materialized_unit_schema": "g4-authoring-unit-materialized/1",
+  "unit_count": 24,
+  "generation_order": "unit-00-through-unit-23",
+  "per_response": {
+    "max_tokens": 2048,
+    "max_elapsed_seconds": 45,
+    "retries": 0
+  },
+  "aggregate": {
+    "max_invocations": 24,
+    "max_tokens": 49152,
+    "max_elapsed_seconds": 1080
+  },
+  "units": [
+    {
+      "id": "unit-00",
+      "stratum": "history_informative",
+      "family": "protected-inf-a"
+    },
+    {
+      "id": "unit-01",
+      "stratum": "history_informative",
+      "family": "protected-inf-a"
+    },
+    {
+      "id": "unit-02",
+      "stratum": "history_informative",
+      "family": "protected-inf-a"
+    },
+    {
+      "id": "unit-03",
+      "stratum": "history_informative",
+      "family": "protected-inf-a"
+    },
+    {
+      "id": "unit-04",
+      "stratum": "history_informative",
+      "family": "protected-inf-a"
+    },
+    {
+      "id": "unit-05",
+      "stratum": "history_informative",
+      "family": "protected-inf-a"
+    },
+    {
+      "id": "unit-06",
+      "stratum": "history_informative",
+      "family": "protected-inf-b"
+    },
+    {
+      "id": "unit-07",
+      "stratum": "history_informative",
+      "family": "protected-inf-b"
+    },
+    {
+      "id": "unit-08",
+      "stratum": "history_informative",
+      "family": "protected-inf-b"
+    },
+    {
+      "id": "unit-09",
+      "stratum": "history_informative",
+      "family": "protected-inf-b"
+    },
+    {
+      "id": "unit-10",
+      "stratum": "history_informative",
+      "family": "protected-inf-b"
+    },
+    {
+      "id": "unit-11",
+      "stratum": "history_informative",
+      "family": "protected-inf-b"
+    },
+    {
+      "id": "unit-12",
+      "stratum": "history_low_value",
+      "family": "protected-low"
+    },
+    {
+      "id": "unit-13",
+      "stratum": "history_low_value",
+      "family": "protected-low"
+    },
+    {
+      "id": "unit-14",
+      "stratum": "history_low_value",
+      "family": "protected-low"
+    },
+    {
+      "id": "unit-15",
+      "stratum": "history_low_value",
+      "family": "protected-low"
+    },
+    {
+      "id": "unit-16",
+      "stratum": "history_low_value",
+      "family": "protected-low"
+    },
+    {
+      "id": "unit-17",
+      "stratum": "history_low_value",
+      "family": "protected-low"
+    },
+    {
+      "id": "unit-18",
+      "stratum": "history_misleading",
+      "family": "protected-misleading"
+    },
+    {
+      "id": "unit-19",
+      "stratum": "history_misleading",
+      "family": "protected-misleading"
+    },
+    {
+      "id": "unit-20",
+      "stratum": "history_misleading",
+      "family": "protected-misleading"
+    },
+    {
+      "id": "unit-21",
+      "stratum": "history_misleading",
+      "family": "protected-misleading"
+    },
+    {
+      "id": "unit-22",
+      "stratum": "history_misleading",
+      "family": "protected-misleading"
+    },
+    {
+      "id": "unit-23",
+      "stratum": "history_misleading",
+      "family": "protected-misleading"
+    }
+  ]
+}

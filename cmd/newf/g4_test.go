@@ -54,6 +54,35 @@ func TestG4PackCLISealsAndInspectsContentFreeFreeze(t *testing.T) {
 	}
 }
 
+func TestG4MaterializeAuthoringUnit(t *testing.T) {
+	dir := t.TempDir()
+	input := filepath.Join(dir, "intent.json")
+	raw := `{"schema":"g4-authoring-unit-intent/1","id":"unit-00","stratum":"history_informative","episode":{"id":"unit-00","stratum":"history_informative","family":"public","start_term":"not(not(add(x, 0)))","variables":["x"],"catalog":["double-not","add-zero"],"target_cost":1},"answer":{"schema":"g4-custodian-answer/1","id":"unit-00","endpoint":"HOLDS_ON_DECLARED_DOMAIN","justification":"public synthetic"},"route":{"schema":"g4-custodian-route-intent/1","id":"unit-00","steps":[{"rule":"double-not","direction":"forward","input_ref":"episode.start","path":[],"substitutions":{"a":"add(x, 0)"},"premise_refs":["g4-menu-rule:double-not"]},{"rule":"add-zero","direction":"forward","input_ref":"route.steps[0]","path":[],"substitutions":{"a":"x"},"premise_refs":["g4-menu-rule:add-zero"]}]}}`
+	if err := os.WriteFile(input, []byte(raw), 0600); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := execute(context.Background(), []string{"--json", "g4", "materialize-authoring-unit", "--input", input}, &stdout, &stderr); code != 0 {
+		t.Fatalf("materialize failed: %s", stderr.String())
+	}
+	if !bytes.Contains(stdout.Bytes(), []byte(`"ok": true`)) || !bytes.Contains(stdout.Bytes(), []byte(`"construction_origin": "host_derived"`)) || !bytes.Contains(stdout.Bytes(), []byte(`"schema": "g4-authoring-unit-materialized/1"`)) {
+		t.Fatalf("unexpected response: %s", stdout.String())
+	}
+
+	bad := strings.Replace(raw, `"start_term":"not(not(add(x, 0)))"`, `"start_term":"add(x,"`, 1)
+	if err := os.WriteFile(input, []byte(bad), 0600); err != nil {
+		t.Fatal(err)
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := execute(context.Background(), []string{"--json", "g4", "materialize-authoring-unit", "--input", input}, &stdout, &stderr); code != 0 {
+		t.Fatalf("classified rejection should be a successful check operation: %s", stderr.String())
+	}
+	if !bytes.Contains(stdout.Bytes(), []byte(`"ok": false`)) || !bytes.Contains(stdout.Bytes(), []byte(`MALFORMED_EXPRESSION_REPRESENTATION`)) {
+		t.Fatalf("classification missing: %s", stdout.String())
+	}
+}
+
 func TestG4GradeCLIRequiresSubstantiveContentFreeReturn(t *testing.T) {
 	dir := t.TempDir()
 	input := filepath.Join(dir, "grade.json")
