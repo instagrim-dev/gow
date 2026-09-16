@@ -39,7 +39,7 @@ func newG4AuthoringMaterializeCommand(stdout io.Writer) *cobra.Command {
 			return writeJSON(stdout, g4AuthoringMaterializeResponse{OK: true, Command: "g4 materialize-authoring-unit", Unit: &unit})
 		},
 	}
-	cmd.Flags().StringVar(&input, "input", "", "bounded g4-authoring-unit-intent/1, /2, /3, or /4 JSON")
+	cmd.Flags().StringVar(&input, "input", "", "bounded g4-authoring-unit-intent/1 through /6 JSON")
 	_ = cmd.MarkFlagRequired("input")
 	return cmd
 }

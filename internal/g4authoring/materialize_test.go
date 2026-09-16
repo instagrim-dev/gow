@@ -341,6 +341,119 @@ func TestMaterializeV5RejectsInvalidTypedHistoryWithoutRepair(t *testing.T) {
 	}
 }
 
+func derivedSelectionUnit() map[string]any {
+	return map[string]any{
+		"schema": IntentSchemaV6, "id": "unit-00", "stratum": "history_informative",
+		"episode": map[string]any{
+			"id": "unit-00", "stratum": "history_informative", "family": "open-inf-a", "variables": []string{"x"},
+			"history_intents": []any{
+				map[string]any{"recipe_id": "commute-add-eliminate", "endpoint": map[string]any{"var": "x"}},
+			},
+		},
+		"answer": map[string]any{"schema": "g4-custodian-answer/1", "id": "unit-00", "endpoint": "HOLDS_ON_DECLARED_DOMAIN", "justification": "open synthetic derived state"},
+		"route": map[string]any{
+			"schema": RouteIntentSchemaV6, "id": "unit-00", "recipe_id": "commute-add-double-not-eliminate", "endpoint": map[string]any{"var": "x"},
+		},
+	}
+}
+
+func TestMaterializeV6DerivesHistoryAndRouteState(t *testing.T) {
+	out, err := Materialize(rawUnit(t, derivedSelectionUnit()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.ConstructionBoundary != "model_selected_typed_endpoints_and_versioned_recipes_host_derived_history_and_route_state_independent_endpoint_checks" {
+		t.Fatalf("construction boundary = %q", out.ConstructionBoundary)
+	}
+	if len(out.Route.Steps) != 3 || out.Episode.TargetCost != 1 || len(out.Episode.History) != 1 {
+		t.Fatalf("unexpected materialized unit: %+v", out)
+	}
+	for _, step := range out.Route.Steps {
+		if step.ConstructionOrigin != "host_derived_from_model_typed_endpoint_and_recipe" {
+			t.Fatalf("construction origin = %q", step.ConstructionOrigin)
+		}
+	}
+	var history recipeHistory
+	if err := json.Unmarshal(out.Episode.History[0], &history); err != nil {
+		t.Fatal(err)
+	}
+	if history.Start == nil || *history.Start != "add(0, x)" || history.RulesApplied == nil || !reflect.DeepEqual(*history.RulesApplied, []string{"add-comm", "add-zero"}) || history.FinalCost == nil || *history.FinalCost != 1 || history.Target == nil || *history.Target != 1 || history.Completed == nil || !*history.Completed || history.Endpoint == nil || *history.Endpoint != "HOLDS_ON_DECLARED_DOMAIN" {
+		t.Fatalf("history was not host-derived from the selected intent: %+v", history)
+	}
+}
+
+func TestMaterializeV6UsesSamePathForEveryStratum(t *testing.T) {
+	for _, stratum := range []string{"history_informative", "history_low_value", "history_misleading"} {
+		t.Run(stratum, func(t *testing.T) {
+			unit := derivedSelectionUnit()
+			unit["stratum"] = stratum
+			episode := unit["episode"].(map[string]any)
+			episode["stratum"] = stratum
+			episode["family"] = "open-" + stratum
+			out, err := Materialize(rawUnit(t, unit))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if out.Stratum != stratum || len(out.Route.Steps) != 3 {
+				t.Fatalf("unexpected materialization: %+v", out)
+			}
+		})
+	}
+}
+
+func TestMaterializeV6RejectsInvalidIntentWithoutRepair(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		mutate func(map[string]any)
+		path   string
+	}{
+		{"undeclared-route-variable", func(unit map[string]any) { unit["route"].(map[string]any)["endpoint"] = map[string]any{"var": "y"} }, "$.route.endpoint"},
+		{"unknown-history-recipe", func(unit map[string]any) {
+			unit["episode"].(map[string]any)["history_intents"].([]any)[0].(map[string]any)["recipe_id"] = "invented"
+		}, "$.episode.history_intents[0].recipe_id"},
+		{"malformed-history-expression", func(unit map[string]any) {
+			unit["episode"].(map[string]any)["history_intents"].([]any)[0].(map[string]any)["endpoint"] = map[string]any{"op": "add", "args": []any{map[string]any{"var": "x"}}}
+		}, "$.episode.history_intents[0].endpoint"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			unit := derivedSelectionUnit()
+			test.mutate(unit)
+			_, err := Materialize(rawUnit(t, unit))
+			var failure *Failure
+			if !errors.As(err, &failure) || failure.Path != test.path {
+				t.Fatalf("error = %v, want failure at %s", err, test.path)
+			}
+		})
+	}
+}
+
+func TestMaterializeV6RejectsRedundantAuthoredState(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		mutate func(map[string]any)
+	}{
+		{"episode-history", func(unit map[string]any) { unit["episode"].(map[string]any)["history"] = []any{} }},
+		{"route-endpoint-term", func(unit map[string]any) { unit["route"].(map[string]any)["endpoint_term"] = "x" }},
+		{"route-steps", func(unit map[string]any) { unit["route"].(map[string]any)["steps"] = []any{} }},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			unit := derivedSelectionUnit()
+			test.mutate(unit)
+			if _, err := Materialize(rawUnit(t, unit)); err == nil {
+				t.Fatal("redundant authored state was accepted")
+			}
+		})
+	}
+}
+
+func TestMaterializeV6IsOpenOnly(t *testing.T) {
+	unit := derivedSelectionUnit()
+	unit["episode"].(map[string]any)["family"] = "protected-inf-a"
+	if _, err := Materialize(rawUnit(t, unit)); err == nil {
+		t.Fatal("open-only authoring intent accepted a protected family")
+	}
+}
+
 func TestMaterializeClassifiesFailures(t *testing.T) {
 	for _, test := range []struct {
 		name   string

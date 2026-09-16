@@ -81,6 +81,19 @@ func TestG4MaterializeAuthoringUnit(t *testing.T) {
 	if !bytes.Contains(stdout.Bytes(), []byte(`"ok": false`)) || !bytes.Contains(stdout.Bytes(), []byte(`MALFORMED_EXPRESSION_REPRESENTATION`)) {
 		t.Fatalf("classification missing: %s", stdout.String())
 	}
+
+	derived := `{"schema":"g4-authoring-unit-intent/6","id":"unit-00","stratum":"history_informative","episode":{"id":"unit-00","stratum":"history_informative","family":"open-inf-a","variables":["x"],"history_intents":[{"recipe_id":"commute-add-eliminate","endpoint":{"var":"x"}}]},"answer":{"schema":"g4-custodian-answer/1","id":"unit-00","endpoint":"HOLDS_ON_DECLARED_DOMAIN","justification":"open synthetic"},"route":{"schema":"g4-custodian-route-selection/3","id":"unit-00","recipe_id":"commute-add-double-not-eliminate","endpoint":{"var":"x"}}}`
+	if err := os.WriteFile(input, []byte(derived), 0600); err != nil {
+		t.Fatal(err)
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := execute(context.Background(), []string{"--json", "g4", "materialize-authoring-unit", "--input", input}, &stdout, &stderr); code != 0 {
+		t.Fatalf("derived materialization failed: %s", stderr.String())
+	}
+	if !bytes.Contains(stdout.Bytes(), []byte(`"construction_boundary": "model_selected_typed_endpoints_and_versioned_recipes_host_derived_history_and_route_state_independent_endpoint_checks"`)) || !bytes.Contains(stdout.Bytes(), []byte(`"construction_origin": "host_derived_from_model_typed_endpoint_and_recipe"`)) {
+		t.Fatalf("derived attribution missing: %s", stdout.String())
+	}
 }
 
 func TestG4GradeCLIRequiresSubstantiveContentFreeReturn(t *testing.T) {

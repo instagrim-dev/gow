@@ -6,6 +6,7 @@ package g4authoring
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"sort"
@@ -29,6 +30,8 @@ const (
 	RouteIntentSchemaV4 = "g4-custodian-route-selection/1"
 	IntentSchemaV5      = "g4-authoring-unit-intent/5"
 	RouteIntentSchemaV5 = "g4-custodian-route-selection/2"
+	IntentSchemaV6      = "g4-authoring-unit-intent/6"
+	RouteIntentSchemaV6 = "g4-custodian-route-selection/3"
 	MaterializedSchema  = "g4-authoring-unit-materialized/1"
 	MaxUnitBytes        = 256 << 10
 )
@@ -61,14 +64,15 @@ type UnitIntent struct {
 }
 
 type EpisodeIntent struct {
-	ID         string            `json:"id"`
-	Stratum    string            `json:"stratum"`
-	Family     string            `json:"family"`
-	Start      string            `json:"start_term"`
-	Variables  []string          `json:"variables"`
-	Catalog    []string          `json:"catalog"`
-	TargetCost int64             `json:"target_cost"`
-	History    []json.RawMessage `json:"history,omitempty"`
+	ID             string            `json:"id"`
+	Stratum        string            `json:"stratum"`
+	Family         string            `json:"family"`
+	Start          string            `json:"start_term"`
+	Variables      []string          `json:"variables"`
+	Catalog        []string          `json:"catalog"`
+	TargetCost     int64             `json:"target_cost"`
+	History        []json.RawMessage `json:"history,omitempty"`
+	HistoryIntents []json.RawMessage `json:"history_intents,omitempty"`
 }
 
 type Answer struct {
@@ -79,11 +83,12 @@ type Answer struct {
 }
 
 type RouteIntent struct {
-	Schema   string       `json:"schema"`
-	ID       string       `json:"id"`
-	RecipeID string       `json:"recipe_id,omitempty"`
-	Endpoint string       `json:"endpoint_term,omitempty"`
-	Steps    []StepIntent `json:"steps"`
+	Schema             string                    `json:"schema"`
+	ID                 string                    `json:"id"`
+	RecipeID           string                    `json:"recipe_id,omitempty"`
+	Endpoint           string                    `json:"endpoint_term,omitempty"`
+	EndpointExpression *toolreg.FiniteExpression `json:"endpoint,omitempty"`
+	Steps              []StepIntent              `json:"steps"`
 }
 
 type StepIntent struct {
@@ -153,6 +158,11 @@ type typedRecipeHistory struct {
 	Endpoint     *string                   `json:"endpoint"`
 }
 
+type derivedHistoryIntent struct {
+	RecipeID string                    `json:"recipe_id"`
+	Endpoint *toolreg.FiniteExpression `json:"endpoint"`
+}
+
 // Decode admits only a complete strict JSON object. It performs structural
 // decoding; expression syntax and semantics remain separate later stages.
 func Decode(raw []byte) (UnitIntent, error) {
@@ -176,7 +186,8 @@ func Decode(raw []byte) (UnitIntent, error) {
 	recipeIntent := unit.Schema == IntentSchemaV3 && unit.Route.Schema == RouteIntentSchemaV3
 	selectionIntent := unit.Schema == IntentSchemaV4 && unit.Route.Schema == RouteIntentSchemaV4
 	typedHistorySelectionIntent := unit.Schema == IntentSchemaV5 && unit.Route.Schema == RouteIntentSchemaV5
-	if !legacyIntent && !orderedIntent && !recipeIntent && !selectionIntent && !typedHistorySelectionIntent {
+	derivedSelectionIntent := unit.Schema == IntentSchemaV6 && unit.Route.Schema == RouteIntentSchemaV6
+	if !legacyIntent && !orderedIntent && !recipeIntent && !selectionIntent && !typedHistorySelectionIntent && !derivedSelectionIntent {
 		return unit, fmt.Errorf("unsupported authoring or route intent schema")
 	}
 	if unit.ID == "" || unit.Stratum == "" || unit.Episode.ID != unit.ID || unit.Episode.Stratum != unit.Stratum || unit.Answer.ID != unit.ID || unit.Route.ID != unit.ID {
@@ -188,7 +199,16 @@ func Decode(raw []byte) (UnitIntent, error) {
 	if len(unit.Episode.Variables) < 1 || len(unit.Episode.Variables) > 3 || strings.TrimSpace(unit.Episode.Family) == "" {
 		return unit, fmt.Errorf("episode cardinalities are invalid")
 	}
-	if selectionIntent || typedHistorySelectionIntent {
+	if derivedSelectionIntent {
+		if err := rejectDerivedRedundantFields(raw); err != nil {
+			return unit, err
+		}
+		if unit.Episode.Start != "" || len(unit.Episode.Catalog) != 0 || unit.Episode.TargetCost != 0 || len(unit.Episode.History) != 0 || len(unit.Episode.HistoryIntents) == 0 || len(unit.Episode.HistoryIntents) > 8 || !strings.HasPrefix(unit.Episode.Family, "open-") || strings.TrimSpace(unit.Route.RecipeID) == "" || unit.Route.EndpointExpression == nil || unit.Route.Endpoint != "" || len(unit.Route.Steps) != 0 || unit.Answer.Endpoint != "HOLDS_ON_DECLARED_DOMAIN" {
+			return unit, fmt.Errorf("derived route selection requires an open family, history_intents, recipe_id, a typed endpoint, and the finite-domain answer verdict")
+		}
+	} else if len(unit.Episode.HistoryIntents) != 0 || unit.Route.EndpointExpression != nil {
+		return unit, fmt.Errorf("history_intents and typed route endpoint require authoring intent /6")
+	} else if selectionIntent || typedHistorySelectionIntent {
 		if unit.Episode.Start != "" || len(unit.Episode.Catalog) != 0 || unit.Episode.TargetCost != 0 || len(unit.Episode.History) == 0 || !strings.HasPrefix(unit.Episode.Family, "protected-") || strings.TrimSpace(unit.Route.RecipeID) == "" || strings.TrimSpace(unit.Route.Endpoint) == "" || len(unit.Route.Steps) != 0 || unit.Answer.Endpoint != "HOLDS_ON_DECLARED_DOMAIN" {
 			return unit, fmt.Errorf("route selection requires a protected family, history, recipe_id, endpoint_term, and the finite-domain answer verdict")
 		}
@@ -202,6 +222,27 @@ func Decode(raw []byte) (UnitIntent, error) {
 	return unit, nil
 }
 
+func rejectDerivedRedundantFields(raw []byte) error {
+	var object struct {
+		Episode map[string]json.RawMessage `json:"episode"`
+		Route   map[string]json.RawMessage `json:"route"`
+	}
+	if err := json.Unmarshal(raw, &object); err != nil {
+		return err
+	}
+	for _, field := range []string{"start_term", "catalog", "target_cost", "history"} {
+		if _, present := object.Episode[field]; present {
+			return fmt.Errorf("$.episode.%s is host-derived and must not be authored", field)
+		}
+	}
+	for _, field := range []string{"endpoint_term", "steps"} {
+		if _, present := object.Route[field]; present {
+			return fmt.Errorf("$.route.%s is host-derived and must not be authored", field)
+		}
+	}
+	return nil
+}
+
 // Materialize parses compact expressions, checks each route intention against
 // the admitted G4 rule, derives unique results, and retains explicit authored
 // constructions only for orientations that are not uniquely determined.
@@ -211,6 +252,9 @@ func Materialize(raw []byte) (MaterializedUnit, error) {
 		return MaterializedUnit{}, err
 	}
 	domain := finite.Domain{Width: 4, Vars: append([]string(nil), unit.Episode.Variables...)}
+	if unit.Schema == IntentSchemaV6 {
+		return materializeDerivedSelection(unit, domain)
+	}
 	if unit.Schema == IntentSchemaV4 || unit.Schema == IntentSchemaV5 {
 		return materializeRecipeSelection(unit, domain)
 	}
@@ -432,13 +476,47 @@ func materializeRecipeSelection(unit UnitIntent, domain finite.Domain) (Material
 	if err != nil {
 		return MaterializedUnit{}, err
 	}
+	steps, err := expandRecipeSteps(unit.Route.RecipeID, endpoint, "$.route.recipe_id")
+	if err != nil {
+		return MaterializedUnit{}, err
+	}
+	catalog, names := recipeCatalog()
+	if typedHistory {
+		canonicalHistory, historyErr := canonicalizeTypedRecipeHistory(unit.Episode.History, domain, catalog)
+		if historyErr != nil {
+			return MaterializedUnit{}, historyErr
+		}
+		unit.Episode.History = canonicalHistory
+	}
+	expanded := unit
+	expanded.Schema = IntentSchemaV3
+	expanded.Episode.Catalog = names
+	expanded.Episode.TargetCost = rewrite.NodeCount(endpoint)
+	expanded.Route.Schema = RouteIntentSchemaV3
+	expanded.Route.RecipeID = ""
+	expanded.Route.Steps = steps
+	out, err := materializeRecipe(expanded, domain, catalog)
+	if err != nil {
+		return MaterializedUnit{}, err
+	}
+	out.ConstructionBoundary = "model_selected_versioned_recipe_and_endpoint_host_expanded_rules_bindings_and_states"
+	if typedHistory {
+		out.ConstructionBoundary = "model_authored_typed_history_start_host_validated_and_canonicalized_model_selected_versioned_recipe_and_endpoint_host_expanded_route_only"
+	}
+	for index := range out.Route.Steps {
+		out.Route.Steps[index].ConstructionOrigin = "host_expanded_from_model_recipe_selection"
+	}
+	return out, nil
+}
+
+func expandRecipeSteps(recipeID string, endpoint finite.Expr, path string) ([]StepIntent, error) {
 	endpointText := finite.Render(endpoint)
 	zeroText := finite.Render(finite.Const{Value: 0})
 	step := func(rule string, path []int, substitutions map[string]string) StepIntent {
 		return StepIntent{Rule: rule, Path: path, Substitutions: substitutions, PremiseRefs: []string{"g4-menu-rule:" + rule}}
 	}
 	var steps []StepIntent
-	switch unit.Route.RecipeID {
+	switch recipeID {
 	case "commute-add-eliminate":
 		steps = []StepIntent{
 			step("add-comm", nil, map[string]string{"a": zeroText, "b": endpointText}),
@@ -452,7 +530,7 @@ func materializeRecipeSelection(unit UnitIntent, domain finite.Domain) (Material
 	case "commute-add-double-not-eliminate", "commute-add-neg-neg-eliminate", "commute-add-or-self-eliminate", "commute-add-and-self-eliminate", "commute-add-mul-one-eliminate":
 		var innerRule string
 		var wrapped finite.Expr
-		switch unit.Route.RecipeID {
+		switch recipeID {
 		case "commute-add-double-not-eliminate":
 			innerRule = "double-not"
 			wrapped = finite.Unary{Op: finite.OpNot, X: finite.Unary{Op: finite.OpNot, X: endpoint}}
@@ -475,43 +553,139 @@ func materializeRecipeSelection(unit UnitIntent, domain finite.Domain) (Material
 			step("add-zero", nil, map[string]string{"a": endpointText}),
 		}
 	default:
-		return MaterializedUnit{}, &Failure{Class: UnjustifiedTransform, Path: "$.route.recipe_id", Detail: "unknown versioned recipe selection"}
+		return nil, &Failure{Class: UnjustifiedTransform, Path: path, Detail: "unknown versioned recipe selection"}
 	}
+	return steps, nil
+}
+
+func recipeCatalog() (map[string]bool, []string) {
 	catalog := make(map[string]bool)
 	for name := range sealedrun.Menu() {
 		catalog[name] = true
-	}
-	if typedHistory {
-		canonicalHistory, historyErr := canonicalizeTypedRecipeHistory(unit.Episode.History, domain, catalog)
-		if historyErr != nil {
-			return MaterializedUnit{}, historyErr
-		}
-		unit.Episode.History = canonicalHistory
 	}
 	names := make([]string, 0, len(catalog))
 	for name := range catalog {
 		names = append(names, name)
 	}
 	sort.Strings(names)
+	return catalog, names
+}
+
+func materializeDerivedSelection(unit UnitIntent, domain finite.Domain) (MaterializedUnit, error) {
+	catalog, names := recipeCatalog()
+	history := make([]json.RawMessage, 0, len(unit.Episode.HistoryIntents))
+	for index, raw := range unit.Episode.HistoryIntents {
+		path := fmt.Sprintf("$.episode.history_intents[%d]", index)
+		decoder := json.NewDecoder(bytes.NewReader(raw))
+		decoder.DisallowUnknownFields()
+		var intent derivedHistoryIntent
+		if err := decoder.Decode(&intent); err != nil {
+			return MaterializedUnit{}, fmt.Errorf("%s: %w", path, err)
+		}
+		if err := decoder.Decode(new(any)); err != io.EOF {
+			return MaterializedUnit{}, fmt.Errorf("%s must contain exactly one object", path)
+		}
+		endpoint, err := compileTypedExpression(intent.Endpoint, path+".endpoint", domain)
+		if err != nil {
+			return MaterializedUnit{}, err
+		}
+		steps, err := expandRecipeSteps(intent.RecipeID, endpoint, path+".recipe_id")
+		if err != nil {
+			return MaterializedUnit{}, err
+		}
+		temporary := unit
+		temporary.Schema = IntentSchemaV3
+		temporary.Episode.Catalog = append([]string(nil), names...)
+		temporary.Episode.TargetCost = rewrite.NodeCount(endpoint)
+		temporary.Episode.History = nil
+		temporary.Episode.HistoryIntents = nil
+		temporary.Route.Schema = RouteIntentSchemaV3
+		temporary.Route.RecipeID = ""
+		temporary.Route.Endpoint = finite.Render(endpoint)
+		temporary.Route.EndpointExpression = nil
+		temporary.Route.Steps = steps
+		materialized, err := materializeRecipe(temporary, domain, catalog)
+		if err != nil {
+			var failure *Failure
+			if errors.As(err, &failure) {
+				return MaterializedUnit{}, &Failure{Class: failure.Class, Path: path, Detail: failure.Detail}
+			}
+			return MaterializedUnit{}, fmt.Errorf("%s: %w", path, err)
+		}
+		start, err := renderMaterializedExpression(materialized.Episode.Start, path+".endpoint", domain)
+		if err != nil {
+			return MaterializedUnit{}, err
+		}
+		rules := make([]string, 0, len(materialized.Route.Steps))
+		for _, step := range materialized.Route.Steps {
+			rules = append(rules, step.Rule)
+		}
+		cost := materialized.Episode.TargetCost
+		completed := true
+		verdict := materialized.EndpointVerification
+		encoded, err := json.Marshal(recipeHistory{Start: &start, RulesApplied: &rules, FinalCost: &cost, Target: &cost, Completed: &completed, Endpoint: &verdict})
+		if err != nil {
+			return MaterializedUnit{}, fmt.Errorf("%s: encode derived history: %w", path, err)
+		}
+		history = append(history, encoded)
+	}
+	endpoint, err := compileTypedExpression(unit.Route.EndpointExpression, "$.route.endpoint", domain)
+	if err != nil {
+		return MaterializedUnit{}, err
+	}
+	steps, err := expandRecipeSteps(unit.Route.RecipeID, endpoint, "$.route.recipe_id")
+	if err != nil {
+		return MaterializedUnit{}, err
+	}
 	expanded := unit
 	expanded.Schema = IntentSchemaV3
 	expanded.Episode.Catalog = names
 	expanded.Episode.TargetCost = rewrite.NodeCount(endpoint)
+	expanded.Episode.History = history
+	expanded.Episode.HistoryIntents = nil
 	expanded.Route.Schema = RouteIntentSchemaV3
 	expanded.Route.RecipeID = ""
+	expanded.Route.Endpoint = finite.Render(endpoint)
+	expanded.Route.EndpointExpression = nil
 	expanded.Route.Steps = steps
 	out, err := materializeRecipe(expanded, domain, catalog)
 	if err != nil {
 		return MaterializedUnit{}, err
 	}
-	out.ConstructionBoundary = "model_selected_versioned_recipe_and_endpoint_host_expanded_rules_bindings_and_states"
-	if typedHistory {
-		out.ConstructionBoundary = "model_authored_typed_history_start_host_validated_and_canonicalized_model_selected_versioned_recipe_and_endpoint_host_expanded_route_only"
-	}
+	out.ConstructionBoundary = "model_selected_typed_endpoints_and_versioned_recipes_host_derived_history_and_route_state_independent_endpoint_checks"
 	for index := range out.Route.Steps {
-		out.Route.Steps[index].ConstructionOrigin = "host_expanded_from_model_recipe_selection"
+		out.Route.Steps[index].ConstructionOrigin = "host_derived_from_model_typed_endpoint_and_recipe"
 	}
 	return out, nil
+}
+
+func compileTypedExpression(expression *toolreg.FiniteExpression, path string, domain finite.Domain) (finite.Expr, error) {
+	compiled, err := expression.Compile()
+	if err != nil {
+		return nil, &Failure{Class: MalformedRepresentation, Path: path, Detail: err.Error()}
+	}
+	if defects := finite.ValidateExpr(compiled, domain); len(defects) > 0 {
+		return nil, &Failure{Class: InvalidExpression, Path: path, Detail: strings.Join(defects, "; ")}
+	}
+	return compiled, nil
+}
+
+func renderMaterializedExpression(value any, path string, domain finite.Domain) (string, error) {
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return "", fmt.Errorf("%s: encode host-derived expression: %w", path, err)
+	}
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	var expression toolreg.FiniteExpression
+	if err := decoder.Decode(&expression); err != nil {
+		return "", fmt.Errorf("%s: decode host-derived expression: %w", path, err)
+	}
+	compiled, err := compileTypedExpression(&expression, path, domain)
+	if err != nil {
+		return "", err
+	}
+	return finite.Render(compiled), nil
 }
 
 func canonicalizeTypedRecipeHistory(history []json.RawMessage, domain finite.Domain, catalog map[string]bool) ([]json.RawMessage, error) {

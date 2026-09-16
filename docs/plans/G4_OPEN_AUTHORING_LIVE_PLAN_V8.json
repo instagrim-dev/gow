@@ -1,0 +1,34 @@
+{
+  "schema": "g4-open-authoring-live-plan/8",
+  "unit_schema": "g4-authoring-unit-intent/6",
+  "materialized_unit_schema": "g4-authoring-unit-materialized/1",
+  "unit_count": 3,
+  "generation_order": "live-open-00-through-live-open-02",
+  "per_response": {
+    "max_tokens": 1536,
+    "max_elapsed_seconds": 90,
+    "retries": 0
+  },
+  "aggregate": {
+    "max_invocations": 3,
+    "max_tokens": 4608,
+    "max_elapsed_seconds": 270
+  },
+  "units": [
+    {
+      "id": "live-open-00",
+      "stratum": "history_informative",
+      "family": "open-live-inf"
+    },
+    {
+      "id": "live-open-01",
+      "stratum": "history_low_value",
+      "family": "open-live-low"
+    },
+    {
+      "id": "live-open-02",
+      "stratum": "history_misleading",
+      "family": "open-live-misleading"
+    }
+  ]
+}
