@@ -187,6 +187,7 @@ func TestIntegrationCurrentAssessmentAuthorityObligation(t *testing.T) {
 		t.Fatalf("C2: a withheld observation must not enter the population: %d -> %d",
 			popBefore.ClusterRun.SignatureCount, popAfterWithhold.ClusterRun.SignatureCount)
 	}
+	assertStringSetEqual(t, clusterSignatureSet(popAfterWithhold.ClusterRun), clusterSignatureSet(popBefore.ClusterRun))
 	c2 := ledger.recordCase(t, ctx, app, dbPath, "C2", "app.Evaluate + app.AdmitEvidence (rule pass)",
 		"evaluation="+ev.ID, review.CheckCompleted,
 		"withheld_basis="+withheld.Withheld[0].Basis+"; population_unchanged="+popBefore.ClusterRun.ID, "")
@@ -811,12 +812,12 @@ func assertStringSetEqual(t *testing.T, got, want map[string]bool) {
 	t.Helper()
 	for k := range want {
 		if !got[k] {
-			t.Fatalf("C3: population missing signature %s; got=%v want=%v", k, got, want)
+			t.Fatalf("population missing signature %s; got=%v want=%v", k, got, want)
 		}
 	}
 	for k := range got {
 		if !want[k] {
-			t.Fatalf("C3: population has unexpected signature %s; got=%v want=%v", k, got, want)
+			t.Fatalf("population has unexpected signature %s; got=%v want=%v", k, got, want)
 		}
 	}
 }
