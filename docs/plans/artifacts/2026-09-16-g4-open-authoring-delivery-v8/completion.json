@@ -1,0 +1,60 @@
+{
+  "schema": "g4-open-authoring-delivery-completion/1",
+  "status": "completed",
+  "source_revision": "5cc77a96ed548d5838825f37f7f2b6b97ed74953",
+  "executable": {
+    "sha256": "bbbba4e9e031c8797deed0f1e8c49d51a4053d97a3b84d6400bff405d1310782",
+    "byte_length": 19444450
+  },
+  "deterministic_acceptance": {
+    "unit_count": 24,
+    "per_invocation_output_tokens": 2048,
+    "per_invocation_elapsed_seconds": 45,
+    "aggregate_output_tokens": 49152,
+    "aggregate_elapsed_seconds": 1080,
+    "retries": 0,
+    "result": "complete_assembly_identity_and_return",
+    "failure_controls": [
+      "malformed_provider_json",
+      "malformed_expression",
+      "undeclared_variable",
+      "unsupported_recipe",
+      "transport_timeout",
+      "materializer_timeout",
+      "interruption_after_partial_staging",
+      "tampered_return"
+    ]
+  },
+  "live_open_delivery": {
+    "provider_path": "ollama_api_chat_format_json_schema",
+    "model": "qwen2.5:7b-instruct",
+    "model_digest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+    "attempted_invocations": 3,
+    "validated_staged_units": 3,
+    "retries": 0,
+    "per_invocation_output_tokens": 1536,
+    "per_invocation_elapsed_seconds": 90,
+    "aggregate_output_tokens": 4608,
+    "aggregate_elapsed_ceiling_seconds": 270,
+    "observed_elapsed_seconds": 22.761,
+    "assembled": {
+      "sha256": "1230ae80ced0a4fb0d5a88885db50e92b3836153084f8e277dbce052c0fc7e99",
+      "byte_length": 6107
+    },
+    "plan": {
+      "sha256": "e251267dff67b019c03bba4872c5d93994c59b6bfd242a5505102743c1e1ef1c",
+      "byte_length": 799
+    },
+    "return_sha256": "95de29e02b7461b722595d0266b18110f16b79197b18be33efe229a79fcfffa4",
+    "progress_sha256": "f653db8acdbc778a283fee921e5f3ac69c05abaafc692002127e2c52e25a8a61",
+    "terminal_sha256": "858899307850fc7c9832cd0d30017af3a4714903c3e9c45754838ffda106f791"
+  },
+  "scope": {
+    "open_delivery_established": true,
+    "protected_authoring_established": false,
+    "protected_retry_authorized": false,
+    "g4_effectiveness_result": false,
+    "g5_advancement": false,
+    "hg_changed": false
+  }
+}

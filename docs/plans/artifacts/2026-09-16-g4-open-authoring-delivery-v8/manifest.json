@@ -1,0 +1,17 @@
+{
+  "files": {
+    "README.md": {
+      "byte_length": 2249,
+      "sha256": "f2f0058341ebd611f67b1c95e0ad573fec07acbb0776a0b8b58c57df33732336"
+    },
+    "boundary.json": {
+      "byte_length": 650,
+      "sha256": "76d84b050375a89ffbddd7775be8a37c8eeee90ba24f7f0cef5cdfd36e17760e"
+    },
+    "completion.json": {
+      "byte_length": 2126,
+      "sha256": "8210eb0ccaed9a44aaff0e208f6a623a1781885afb3677bd357c70222dbdb457"
+    }
+  },
+  "schema": "g4-open-authoring-delivery-manifest/1"
+}

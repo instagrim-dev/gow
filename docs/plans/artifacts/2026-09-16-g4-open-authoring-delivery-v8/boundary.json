@@ -1,0 +1,21 @@
+{
+  "schema": "g4-open-authoring-boundary-diagnostic/1",
+  "fixture": "open_synthetic",
+  "v7": {
+    "json_decoding": "pass",
+    "advertised_schema_conformance": "pass",
+    "expression_admission": {
+      "status": "rejected",
+      "class": "MALFORMED_EXPRESSION_REPRESENTATION",
+      "path": "$.route.endpoint_term"
+    },
+    "route_history_compatibility": "not_reached",
+    "staging": "withheld"
+  },
+  "request_constraint": {
+    "serving_path": "ollama_api_chat",
+    "mechanism": "format_json_schema",
+    "openai_strict_structured_outputs_established": false
+  },
+  "scope": "public_reproducer_only_protected_root_cause_unadjudicated"
+}
