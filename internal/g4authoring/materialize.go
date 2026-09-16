@@ -203,8 +203,9 @@ func Decode(raw []byte) (UnitIntent, error) {
 		if err := rejectDerivedRedundantFields(raw); err != nil {
 			return unit, err
 		}
-		if unit.Episode.Start != "" || len(unit.Episode.Catalog) != 0 || unit.Episode.TargetCost != 0 || len(unit.Episode.History) != 0 || len(unit.Episode.HistoryIntents) == 0 || len(unit.Episode.HistoryIntents) > 8 || !strings.HasPrefix(unit.Episode.Family, "open-") || strings.TrimSpace(unit.Route.RecipeID) == "" || unit.Route.EndpointExpression == nil || unit.Route.Endpoint != "" || len(unit.Route.Steps) != 0 || unit.Answer.Endpoint != "HOLDS_ON_DECLARED_DOMAIN" {
-			return unit, fmt.Errorf("derived route selection requires an open family, history_intents, recipe_id, a typed endpoint, and the finite-domain answer verdict")
+		phaseBoundFamily := strings.HasPrefix(unit.Episode.Family, "open-") || strings.HasPrefix(unit.Episode.Family, "protected-")
+		if unit.Episode.Start != "" || len(unit.Episode.Catalog) != 0 || unit.Episode.TargetCost != 0 || len(unit.Episode.History) != 0 || len(unit.Episode.HistoryIntents) == 0 || len(unit.Episode.HistoryIntents) > 8 || !phaseBoundFamily || strings.TrimSpace(unit.Route.RecipeID) == "" || unit.Route.EndpointExpression == nil || unit.Route.Endpoint != "" || len(unit.Route.Steps) != 0 || unit.Answer.Endpoint != "HOLDS_ON_DECLARED_DOMAIN" {
+			return unit, fmt.Errorf("derived route selection requires an open or protected family, history_intents, recipe_id, a typed endpoint, and the finite-domain answer verdict")
 		}
 	} else if len(unit.Episode.HistoryIntents) != 0 || unit.Route.EndpointExpression != nil {
 		return unit, fmt.Errorf("history_intents and typed route endpoint require authoring intent /6")

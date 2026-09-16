@@ -446,11 +446,18 @@ func TestMaterializeV6RejectsRedundantAuthoredState(t *testing.T) {
 	}
 }
 
-func TestMaterializeV6IsOpenOnly(t *testing.T) {
+func TestMaterializeV6RequiresPhaseBoundFamily(t *testing.T) {
+	for _, family := range []string{"open-inf-a", "protected-inf-a"} {
+		unit := derivedSelectionUnit()
+		unit["episode"].(map[string]any)["family"] = family
+		if _, err := Materialize(rawUnit(t, unit)); err != nil {
+			t.Fatalf("phase-bound family %q rejected: %v", family, err)
+		}
+	}
 	unit := derivedSelectionUnit()
-	unit["episode"].(map[string]any)["family"] = "protected-inf-a"
+	unit["episode"].(map[string]any)["family"] = "unscoped"
 	if _, err := Materialize(rawUnit(t, unit)); err == nil {
-		t.Fatal("open-only authoring intent accepted a protected family")
+		t.Fatal("unscoped family accepted")
 	}
 }
 
